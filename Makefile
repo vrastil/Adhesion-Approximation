@@ -12,7 +12,7 @@ CXXLIB +=-lgsl -lgslcblas
 
 OBJ_FILES = $(patsubst %.cpp,%.o,$(wildcard src/*.cpp))
 
-COMPILE.cc = $(CXX) $(CXXFLAGS) -c
+COMPILE.cc = $(CXX) $(CXXFLAGS) -c -I./include
 COMPILE.fin = $(CXX) $(CXXFLAGS) $(CXXLIB_PATH)
 
 adh_app.exe: $(OBJ_FILES)
