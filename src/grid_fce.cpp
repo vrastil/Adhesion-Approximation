@@ -851,41 +851,6 @@ void fin_diff(int mesh_num, double** vec_field, double* potential){
 	}
 }
 
-void gen_init_con_one(int par_num, int Ng, double** vec_field, double** par_pos, double b, int i_min, int i_max){
-	int p_vec[3];
-	double s_q, p_q, x_q;
-	const int mesh_num = Ng*par_num;
-	
-	for(int i=i_min; i< i_max; i++){
-		p_vec[0] = (i / par_num) * Ng;
-		p_vec[1] = (i % par_num) * Ng;
-		for (int j=0; j < par_num; j++){
-			p_vec[2] = j * Ng; // initial coordinates for i-th particle
-			for(int k=0; k<3;k++){
-				s_q = vec_field[k][Ng*Ng*i*(mesh_num + 2)+j]*b;
-				p_q = p_vec[k];
-				x_q = get_per(p_q + s_q, mesh_num); // final position including periodicity
-				par_pos[k][i*(par_num + 2)+j] = x_q;
-			}
-		}
-	}
-}
-
-void gen_init_con_nt(int par_num, int Ng, double** vec_field, double*** par_pos, double b, int nt){
-	int i_min = 0;
-	int i_max = pow(par_num, 2.);
-	int i_inc = i_max / nt;
-	i_max = i_max % nt + i_inc;
-	thread* th_dens = new thread[nt];
-	for (int i = 0; i < nt; i++){
-		th_dens[i] = thread(gen_displ_pos_ng_one, par_num, Ng, vec_field, par_pos, b, i_min, i_max);
-		i_min = i_max;
-		i_max += i_inc;
-	}
-	for (int i = 0; i < nt; i++) th_dens[i].join();
-	delete[] th_dens;	
-}
-
 /* MULTI-THREAD FUNCTIONS */
 
 void init_dens_field_one(int mesh_num, double *delta, int i_min, int i_max){
@@ -1364,8 +1329,8 @@ void dealloc_frozen_pot(void** arrays){
 	fftw_free((fftw_complex*)arrays[3]);	
 	fftw_free(((double**)arrays[0])[0]);	
 	delete[] (double**)arrays[0];
-	delete[] (double**)arrays[1][0];
-	delete[] (double**)arrays[1][2];
+	delete[] ((double***)(arrays[1]))[0];
+	delete[] ((double***)(arrays[1]))[2];
 	delete[] (double***)arrays[1];
 	delete[] arrays;
 }
