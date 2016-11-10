@@ -1,3 +1,7 @@
 gnuplot_scripts/
 output/
 results/
+TODO.md
+adh_app.exe
+cp_anl2out.sh
+cp_src2anl.sh
