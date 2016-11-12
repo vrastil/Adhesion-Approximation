@@ -1,8 +1,10 @@
 gnuplot_scripts/
 output/
 results/
-src/*.o
-src/*.d
+*.o
+*.d
+*.a
+*.so
 TODO.md
 adh_app.exe
 cp_anl2out.sh
