@@ -6,17 +6,16 @@ CXXFLAGS +=-MMD
 CXXLIB_PATH +=-L/usr/local/lib/
 # -L/lib/
 
-CXXLIB +=-lboost_program_options -lboost_filesystem -lboost_system
+CXXLIB +=-lboost_program_options -lboost_filesystem -lboost_system -lboost_thread
 CXXLIB +=-lfftw3 -lfftw3_threads -lpthread
 CXXLIB +=-lgsl -lgslcblas
 
 OBJ_FILES = $(patsubst %.cpp,%.o,$(wildcard src/*.cpp))
 
-COMPILE.cc = $(CXX) $(CXXFLAGS) -c -I./include
+COMPILE.cc = $(CXX) $(CXXFLAGS) -c -I./include -I/usr/local/include/threadpool/boost
 COMPILE.fin = $(CXX) $(CXXFLAGS) $(CXXLIB_PATH)
 
-adh_app.exe: $(OBJ_FILES)
-
+adh_app: $(OBJ_FILES)
 	$(COMPILE.fin) -o $@ $^ $(CXXLIB)
 
 src/%.o: src/%.cpp

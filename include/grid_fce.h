@@ -27,6 +27,8 @@ void normalize_FFT_FORWARD_nt(int, fftw_complex**, int);
 void normalize_FFT_BACKWARD_nt(int, double**, int);
 
 /* GENERAL FUNCTIONS */
+void copy_nt(int mesh_num, double* copy, double* paste, int nt);
+int check_field(double* field, int max_i);
 int isPowerOfTwo (unsigned int);
 const char *humanSize(uint64_t);
 void get_coord_fftw_complex(int, int, int*);
@@ -44,13 +46,16 @@ double generateGaussianNoise(int*, const double&, const double &);
 void gen_gauss_white_noise_nt(int, double*, const double &, const double &, int);
 
 /* APPROXIMATION FUNCTIONS */
+
+void gen_mff_ic_nt(int par_num, int Ng, double** vec_field, double** par_pos, int nt);
+void gen_init_con_nt(int par_num, int Ng, double** vec_field, double*** par_pos, int nt);
 void gen_rho_dist_k(int , int , double*, fftw_plan, t_power , double*, double, int);
 void gen_displ_k_w_nt(int, double**, double*, int);
 void gen_displ_k_nt(int, double**, double*, int);
-void gen_no_displ_pos_vel_nt(int, int, double***, int);
-void gen_no_displ_pos_nt(int, int, double**, int);
+// void gen_no_displ_pos_vel_nt(int par_num, int Ng, double*** field, int nt); WRONG for mesh_num != par_num
+void gen_no_displ_pos_nt(int par_num, int Ng, double** displ_vec, int nt);
 void gen_init_expot(int, double*, double*, double, bool, fftw_plan, int);
-void gen_expot(int, double*, double*, double, double, bool, fftw_plan); // <-- REWRITE TO MULTITHREAD!
+void gen_expot(int, double*, double*, double, double, bool, fftw_plan, int); // <-- REWRITE TO MULTITHREAD! (convolution multithread)
 void fin_diff(int, double**, double*); // <-- REWRITE TO MULTITHREAD!
 
 /* MULTI-THREAD FUNCTIONS */
@@ -62,10 +67,11 @@ void init_dens_field(int, double*, int);
 
 void gen_rho_k_nt(int, int, fftw_complex*, t_power, double*, double, int);
 
+void upd_pos_mff_nt(int par_num, int mesh_num, double** par_pos, double** vec_field, double db, int order, int nt);
 void upd_pos_nt(int, int, double**, double**, double, int, int);
-void upd_pos_vel0_nt(int, int, double**, double**, double, int, int);
+// void upd_pos_vel0_nt(int, int, double**, double**, double, int, int); WRONG for mesh_num != par_num
 void upd_pos_mid_nt(int, int, double***, double**, double, int, int);
-void upd_pos_leapfrog_nt(int par_num, int mesh_num, double*** par_pos, double** vec_field, double db, int order, int nt);
+void upd_pos_leapfrog_nt(int par_num, int mesh_num, double*** par_pos, double** vec_field,  double b_half, double db, int order, int nt);
 void gen_pot_k_nt(int, double*, int);
 void gen_displ_pos_ng_nt(int, int, double**, double**, double, int);
 
@@ -77,3 +83,4 @@ void** alloc_adhesion(int, int, int, int);
 void dealloc_adhesion(void**);
 void** alloc_frozen_pot(int mesh_num, int par_num, int bin_num, int nt);
 void dealloc_frozen_pot(void** arrays);
+void** alloc_mod_frozen_flow(int mesh_num, int par_num, int bin_num, int nt);

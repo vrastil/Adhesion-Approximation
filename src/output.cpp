@@ -7,7 +7,7 @@ using namespace std;
 typedef double(*t_power)(double, double*);
 const double PI = acos(-1.);
 
-string work_dir(string out_dir){
+/*string work_dir(string out_dir){
 	fs::path dir(out_dir.c_str());
 	if(fs::create_directory(dir)){
         cout << "Directory Created: "<< out_dir << endl;
@@ -24,16 +24,42 @@ string work_dir(string out_dir){
 	fs::create_directory(dir);
 	cout << "Directory Created: "<< try_dir << endl;
 	return try_dir;
-}
+}*/
 
 void work_dir_over(string out_dir){
+	string wrk_dir;
 	fs::path dir(out_dir.c_str());
 	if(fs::create_directory(dir)){
         cout << "Directory Created: "<< out_dir << endl;
     }
+	
+	wrk_dir = out_dir + "par_cut/";
+	dir = wrk_dir.c_str();
+	if(fs::create_directory(dir)){
+        cout << "Directory Created: "<< wrk_dir << endl;
+    }
+	
+	wrk_dir = out_dir + "pwr_diff/";
+	dir = wrk_dir.c_str();
+	if(fs::create_directory(dir)){
+        cout << "Directory Created: "<< wrk_dir << endl;
+    }
+	
+	wrk_dir = out_dir + "pwr_spec/";
+	dir = wrk_dir.c_str();
+	if(fs::create_directory(dir)){
+        cout << "Directory Created: "<< wrk_dir << endl;
+    }
+	
+	wrk_dir = out_dir + "rho_map/";
+	dir = wrk_dir.c_str();
+	if(fs::create_directory(dir)){
+        cout << "Directory Created: "<< wrk_dir << endl;
+    }
 }
 
 void print_par_pos(int par_num, int mesh_num, int L, double** displ_vec, string out_dir){
+	out_dir += "par_cut/";
 	FILE* ofile = fopen((out_dir + "par_pos.dat").c_str(), "w");
 	cout << "Writing particle positons into file " << out_dir + "par_pos.dat\n";
 	fprintf (ofile, "# This file contains positions of particles in units [Mpc/h].\n");
@@ -51,6 +77,7 @@ void print_par_pos(int par_num, int mesh_num, int L, double** displ_vec, string 
 }
 
 void print_par_pos_cut(int par_num, int mesh_num, int L, double** displ_vec, string out_dir, string suffix){
+	out_dir += "par_cut/";
 	FILE* ofile = fopen((out_dir + "par_cut" + suffix + ".dat").c_str(), "w");
 	cout << "Writing cut through the box of particles into file " << out_dir + "par_cut" + suffix + ".dat\n";
 	fprintf (ofile, "# This file contains positions of particles in units [Mpc/h].\n");
@@ -72,6 +99,7 @@ void print_par_pos_cut(int par_num, int mesh_num, int L, double** displ_vec, str
 }
 
 void print_par_pos_cut_small(int par_num, int mesh_num, int L, double** displ_vec, string out_dir, string suffix){
+	out_dir += "par_cut/";
 	FILE* ofile = fopen((out_dir + "par_cut" + suffix + ".dat").c_str(), "w");
 	cout << "Writing small cut through the box of particles into file " << out_dir + "par_cut" + suffix + ".dat\n";
 	fprintf (ofile, "# This file contains positions of particles in units [Mpc/h].\n");
@@ -93,7 +121,7 @@ void print_par_pos_cut_small(int par_num, int mesh_num, int L, double** displ_ve
 }
 
 void gen_pow_spec_binned(int mesh_num, fftw_complex* pwr_spec, fftw_complex* pwr_spec_binned, double k_min, double k_max, int bin_num){
-	
+
 	double log_bin = pow(k_max / k_min, 1./bin_num);
 	double k;
 	int bin;
@@ -120,7 +148,7 @@ void gen_pow_spec_binned(int mesh_num, fftw_complex* pwr_spec, fftw_complex* pwr
 }
 
 void print_pow_spec(int mesh_num, fftw_complex* pwr_spec_binned, string out_dir, string suffix, double k_min, double k_max, int bin_num){
-		
+	out_dir += "pwr_spec/";	
 	FILE* pFile;
 	pFile = fopen((out_dir + "pwr_spec" + suffix + ".dat").c_str(), "w");
 	cout << "Writing power spectrum into file " << out_dir + "pwr_spec" + suffix + ".dat\n";
@@ -135,7 +163,7 @@ void print_pow_spec(int mesh_num, fftw_complex* pwr_spec_binned, string out_dir,
 }
 
 void print_pow_spec_diff(int mesh_num, fftw_complex* pwr_spec_binned, fftw_complex* pwr_spec_binned_0, string out_dir, string suffix, double k_min, double k_max, int bin_num, double b){
-	
+	out_dir += "pwr_diff/";
 	FILE* pFile;
 	pFile = fopen((out_dir + "pwr_spec" + suffix + ".dat").c_str(), "w");
 	cout << "Writing power spectrum into file " << out_dir + "pwr_spec" + suffix + ".dat\n";
@@ -156,14 +184,15 @@ void print_pow_spec_diff(int mesh_num, fftw_complex* pwr_spec_binned, fftw_compl
 }
 
 void get_track_par_id(int par_num, int* id, int track_num){
-	int x, y, z, s, k;
+	int x, y, z, k;
+	double s;
 	y = par_num / 2; // middle of the cube
-	s = par_num / (4*(track_num+1));
+	s = par_num / (4.*(track_num+1.)); // quarter of the cube
 	k = 0;
 	for (int i=1; i<=track_num;i++){
-		z = s*i;
+		z = (int)(s*i);
 		for (int j=1; j<=track_num;j++){
-			x = s*j;
+			x = (int)(s*j);
 			id[k] = z*par_num*(par_num + 2)+y*(par_num + 2)+x;
 			k++;
 		}
@@ -178,6 +207,7 @@ void update_track_par(double*** track_pos, double** displ_vec, int step, int* id
 }
 
 void print_track_par(double*** track_pos, int step, int track_num, int mesh_num, int L, string out_dir, string suffix){
+	out_dir += "par_cut/";
 	FILE* ofile = fopen((out_dir + "track_par_pos" + suffix + ".dat").c_str(), "w");
 		
 	cout << "Writing positons of " << track_num*track_num << " tracked particles into file " << out_dir + "track_par_pos" + suffix + ".dat\n";
@@ -193,6 +223,7 @@ void print_track_par(double*** track_pos, int step, int track_num, int mesh_num,
 }
 
 void print_rho_map(int mesh_num, int L,  double* delta, string out_dir, string suffix){
+	out_dir += "rho_map/";
 	FILE* pFile;
 	pFile = fopen((out_dir + "rho_map" + suffix + ".dat").c_str(), "w");
 	cout << "Writing density map into file " << out_dir + "rho_map" + suffix + ".dat\n";

@@ -9,3 +9,7 @@ FFTW libraries (see http://www.fftw.org/)
 
 	fftw3
 	fftw3_threads
+
+GSL - GNU Scientific Library (see https://www.gnu.org/software/gsl/)
+
+

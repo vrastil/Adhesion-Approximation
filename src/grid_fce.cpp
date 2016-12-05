@@ -289,6 +289,42 @@ void normalize_FFT_BACKWARD_nt(int mesh_num, double** out, int nt){
 
 /* GENERAL FUNCTIONS */
 
+void copy_one(int mesh_num, double* copy, double* paste, int i_min, int i_max){
+	for(int i=i_min; i< i_max; i++){
+		for (int j=0; j < mesh_num; j++){
+			paste[i*(mesh_num + 2)+j] = copy[i*(mesh_num + 2)+j];
+		}
+	}	
+}
+
+void copy_nt(int mesh_num, double* copy, double* paste, int nt){
+	int i_min = 0;
+	int i_max = pow(mesh_num, 2.);
+	int i_inc = i_max / nt;
+	i_max = i_max % nt + i_inc;
+	thread* th_dens = new thread[nt];
+	for (int i = 0; i < nt; i++){
+		th_dens[i] = thread(copy_one, mesh_num, copy, paste, i_min, i_max);
+		i_min = i_max;
+		i_max += i_inc;
+	}
+	for (int i = 0; i < nt; i++) th_dens[i].join();
+	delete[] th_dens;
+}
+
+int check_field(double* field, int max_i){
+	// check field of length max_i*max_i*(max_i+2); ignore last 2 element in last dim
+	double check;
+	for (int i = 0; i < max_i; i++){
+		check = field[i * max_i * (max_i + 2) + i * (max_i + 2) + i]; // diagonal
+		if (isfinite(check) == 0){
+			printf("Error while performing random check for NAN or INF! field posititon = %i, value = %f\n", i * max_i * (max_i + 2) + i * (max_i + 2) + i, check);
+			return 1;
+		}
+	}
+	return 0;
+}
+
 int isPowerOfTwo (unsigned int x){
   return ((x != 0) && ((x & (~x + 1)) == x));
 }
@@ -664,31 +700,30 @@ void gen_displ_k_nt(int mesh_num, double** displ_vec, double* potential, int nt)
 	delete[] th_dens;
 }
 
-void gen_no_displ_pos_vel_one(int par_num, int mesh_num, double*** field, int i_min, int i_max){
+/*void gen_no_displ_pos_vel_one(int par_num, int Ng, double*** field, int i_min, int i_max){
 	int p_vec[3];
-	double p_q;	
 	for(int i=i_min; i< i_max; i++){
-		p_vec[0] = i / par_num;
-		p_vec[1] = i % par_num;
+		p_vec[0] = (i / par_num) * Ng;
+		p_vec[1] = (i % par_num) * Ng;
 		for (int j=0; j < par_num; j++){
-			p_vec[2] = j; // initial coordinates for i-th particle
+			p_vec[2] = j * Ng; // initial coordinates for i-th particle
 			for(int k=0; k<3;k++){
-				p_q = p_vec[k] * (double)mesh_num / (double)par_num; // transforming into new computing units
-				field[0][k][i*(par_num + 2)+j] = p_q;
+				field[0][k][i*(par_num + 2)+j] = p_vec[k];
 				field[1][k][i*(par_num + 2)+j] = 0;
 			}
 		}
 	}
 }
+*/
 
-void gen_no_displ_pos_vel_nt(int par_num, int mesh_num, double*** field, int nt){
+/* void gen_no_displ_pos_vel_nt(int par_num, int Ng, double*** field, int nt){
 	int i_min = 0;
-	int i_max = pow(mesh_num, 2.);
+	int i_max = pow(par_num, 2.);
 	int i_inc = i_max / nt;
 	i_max = i_max % nt + i_inc;
 	thread* th_dens = new thread[nt];
 	for (int i = 0; i < nt; i++){
-		th_dens[i] = thread(gen_no_displ_pos_vel_one, par_num, mesh_num, field, i_min, i_max);
+		th_dens[i] = thread(gen_no_displ_pos_vel_one, par_num, Ng, field, i_min, i_max);
 		i_min = i_max;
 		i_max += i_inc;
 	}
@@ -696,36 +731,34 @@ void gen_no_displ_pos_vel_nt(int par_num, int mesh_num, double*** field, int nt)
 	// printf(">>> All threads in routine <gen_no_displ_pos_vel_nt> joined.\n");
 	delete[] th_dens;	
 }
+*/
 
-void gen_no_displ_pos_one(int par_num, int mesh_num, double** displ_vec, int i_min, int i_max){
+void gen_no_displ_pos_one(int par_num, int Ng, double** displ_vec, int i_min, int i_max){
 	int p_vec[3];
-	double p_q;	
 	for(int i=i_min; i< i_max; i++){
-		p_vec[0] = i / par_num;
-		p_vec[1] = i % par_num;
+		p_vec[0] = (i / par_num) * Ng;
+		p_vec[1] = (i % par_num) * Ng;
 		for (int j=0; j < par_num; j++){
-			p_vec[2] = j; // initial coordinates for i-th particle
+			p_vec[2] = j * Ng; // initial coordinates for i-th particle
 			for(int k=0; k<3;k++){
-				p_q = p_vec[k] * (double)mesh_num / (double)par_num; // transforming into new computing units
-				displ_vec[k][i*(par_num + 2)+j] = p_q;
+				displ_vec[k][i*(par_num + 2)+j] = p_vec[k] ;
 			}
 		}
 	}
 }
 
-void gen_no_displ_pos_nt(int par_num, int mesh_num, double** displ_vec, int nt){
+void gen_no_displ_pos_nt(int par_num, int Ng, double** displ_vec, int nt){
 	int i_min = 0;
-	int i_max = pow(mesh_num, 2.);
+	int i_max = pow(par_num, 2.);
 	int i_inc = i_max / nt;
 	i_max = i_max % nt + i_inc;
 	thread* th_dens = new thread[nt];
 	for (int i = 0; i < nt; i++){
-		th_dens[i] = thread(gen_no_displ_pos_one, par_num, mesh_num, displ_vec, i_min, i_max);
+		th_dens[i] = thread(gen_no_displ_pos_one, par_num, Ng, displ_vec, i_min, i_max);
 		i_min = i_max;
 		i_max += i_inc;
 	}
 	for (int i = 0; i < nt; i++) th_dens[i].join();
-	// printf(">>> All threads in routine <gen_no_displ_pos_vel_nt> joined.\n");
 	delete[] th_dens;	
 }
 
@@ -737,13 +770,149 @@ void gen_init_expot(int mesh_num, double* potential, double* expotential_0, doub
 		fftw_execute_dft_r2c(p_F, expotential_0, reinterpret_cast<fftw_complex*>(expotential_0));
 		// we do not care about normalization because of logarithmic derivative	
 	}else{ // convolution using direct sum
+		printf("Storing initial potenital in q-space...\n");
+		copy_nt(mesh_num, potential, expotential_0, nt);
 		/* Computing initial expotential in q-space */
-		printf("Computing initial expotential in q-space...\n");
-		pot2exp_nt(mesh_num, potential, expotential_0, nu, nt);
+	//	printf("Computing initial expotential in q-space...\n");
+	//	pot2exp_nt(mesh_num, potential, expotential_0, nu, nt);
 	}
 }
 
-void gen_expot(int mesh_num, double* potential, double* expotential_0, double nu, double b, bool conv_mod, fftw_plan p_B){
+
+void convolution_y1_one(int mesh_num, double* potential, double* expotential_0, double nu, double b, int i_min, int i_max){
+	// multi-thread index is y3
+	// compute f1 (x1, y2, y3)
+	double exponent;
+	int pos;
+	double sum;
+	
+	for (int x1 = 0; x1 < mesh_num; x1++){
+		for (int y2 = 0; y2 < mesh_num; y2++){
+			for (int y3 = i_min; y3 < i_max; y3++){
+				// summation over y1
+				sum = 0;
+				for (int y1 = 0; y1 < mesh_num; y1++){
+					pos = y1*mesh_num*(mesh_num+2)+y2*(mesh_num+2)+y3;
+					exponent=expotential_0[pos]+pow(x1-y1, 2.)/(2.*b);
+					exponent = -exponent/(2.*nu);
+					sum +=exp(exponent);
+					if (isfinite(sum) == 0) {printf("Error while chcecking for NAN or INF. r = %i, potential = %f, b = %f, exponent = %f, +sum = %f\n",
+						abs(x1-y1), expotential_0[pos], b, exponent, exp(-exponent/(2.*nu))); return;}
+				}
+				pos = x1*mesh_num*(mesh_num+2)+y2*(mesh_num+2)+y3;
+				potential[pos] = sum; // potential is now f1
+			}
+		}
+	}
+}
+
+void convolution_y1_nt(int mesh_num, double* potential, double* expotential_0, double nu, double b, int nt){
+	int i_min = 0;
+	int i_max = mesh_num;
+	int i_inc = i_max / nt;
+	i_max = i_max % nt + i_inc;
+	thread* th_dens = new thread[nt];
+	for (int i = 0; i < nt; i++){
+		th_dens[i] = thread(convolution_y1_one, mesh_num, potential, expotential_0, nu, b, i_min, i_max);
+		i_min = i_max;
+		i_max += i_inc;
+	}
+	for (int i = 0; i < nt; i++) th_dens[i].join();
+	delete[] th_dens;	
+}
+
+void convolution_y2_one(int mesh_num, double* potential, double* gaussian, double nu, double b, int i_min, int i_max){
+	// multi-thread index is x1
+	// compute f1 (x1, y2, y3)
+	int pos;
+	double sum;
+	double* sum_aux = new double[mesh_num];
+	
+	// compute f2 (x1, x2, y3)
+	for (int x1 = i_min; x1 < i_max; x1++){
+		for (int y3 = 0; y3 < mesh_num; y3++){
+			for (int x2 = 0; x2 < mesh_num; x2++){
+				// summation over y2
+				sum = 0;
+				for (int y2 = 0; y2 < mesh_num; y2++){
+					pos = x1*mesh_num*(mesh_num+2)+y2*(mesh_num+2)+y3;
+					sum += potential[pos]*gaussian[abs(x2-y2)];
+					if (isfinite(sum) == 0) {printf("Error while chcecking for NAN or INF. r = %i, potential = %f, gaussian = %f, +sum = %f\n",
+						abs(x2-y2), potential[pos], gaussian[abs(x2-y2)], potential[pos]*gaussian[abs(x2-y2)]); return;}
+				}
+				sum_aux[x2] = sum;
+			}
+
+			for (int x2 = 0; x2 < mesh_num; x2++){
+				pos = x1*mesh_num*(mesh_num+2)+x2*(mesh_num+2)+y3;
+				potential[pos] = sum_aux[x2]; // potential is now f2
+			}
+		}
+	}
+	delete[] sum_aux;
+}
+
+void convolution_y2_nt(int mesh_num, double* potential, double* gaussian, double nu, double b, int nt){
+	int i_min = 0;
+	int i_max = mesh_num;
+	int i_inc = i_max / nt;
+	i_max = i_max % nt + i_inc;
+	thread* th_dens = new thread[nt];
+	for (int i = 0; i < nt; i++){
+		th_dens[i] = thread(convolution_y2_one, mesh_num, potential, gaussian, nu, b, i_min, i_max);
+		i_min = i_max;
+		i_max += i_inc;
+	}
+	for (int i = 0; i < nt; i++) th_dens[i].join();
+	delete[] th_dens;	
+}
+
+void convolution_y3_one(int mesh_num, double* potential, double* gaussian, double nu, double b, int i_min, int i_max){
+	// multi-thread index is x1
+	// compute f1 (x1, y2, y3)
+	int pos;
+	double sum;
+	double* sum_aux = new double[mesh_num];
+
+	// compute f3 (x1, x2, x3) == expotential(x, b)
+	for (int x1 = i_min; x1 < i_max; x1++){
+		for (int x2 = 0; x2 < mesh_num; x2++){
+			for (int x3 = 0; x3 < mesh_num; x3++){
+				// summation over y3
+				sum = 0;
+				for (int y3 = 0; y3 < mesh_num; y3++){
+					pos = x1*mesh_num*(mesh_num+2)+x2*(mesh_num+2)+y3;
+					sum += potential[pos]*gaussian[abs(x3-y3)];
+					if (isfinite(sum) == 0) {printf("Error while chcecking for NAN or INF. r = %i, potential = %f, gaussian = %f, +sum = %f\n",
+						abs(x3-y3), potential[pos], gaussian[abs(x3-y3)], potential[pos]*gaussian[abs(x3-y3)]); return;}
+				}
+				sum_aux[x3] = sum;
+			}
+			for (int x3 = 0; x3 < mesh_num; x3++){
+				pos = x1*mesh_num*(mesh_num+2)+x2*(mesh_num+2)+x3;
+				potential[pos] = sum_aux[x3]; // potential is now f3
+			}
+		}
+	}
+	delete[] sum_aux;
+}
+
+void convolution_y3_nt(int mesh_num, double* potential, double* gaussian, double nu, double b, int nt){
+	int i_min = 0;
+	int i_max = mesh_num;
+	int i_inc = i_max / nt;
+	i_max = i_max % nt + i_inc;
+	thread* th_dens = new thread[nt];
+	for (int i = 0; i < nt; i++){
+		th_dens[i] = thread(convolution_y3_one, mesh_num, potential, gaussian, nu, b, i_min, i_max);
+		i_min = i_max;
+		i_max += i_inc;
+	}
+	for (int i = 0; i < nt; i++) th_dens[i].join();
+	delete[] th_dens;	
+}
+
+void gen_expot(int mesh_num, double* potential, double* expotential_0, double nu, double b, bool conv_mod, fftw_plan p_B, int nt){
 	if (conv_mod){
 		/* Computing convolution using FFT */
 		printf("Computing expotential in k-space...\n");
@@ -768,56 +937,14 @@ void gen_expot(int mesh_num, double* potential, double* expotential_0, double nu
 		
 		// store values of exponential - every convolution uses the same exp(-r^2/4bv)
 		double* gaussian = new double[mesh_num];
-		for (int i = 0; i < mesh_num; i++) gaussian[i]=exp(-i*i/(4.*b*nu));
-		
-		int pos;
-		double sum;
-		
-		// compute f1 (x1, y2, y3)
-		for (int x1 = 0; x1 < mesh_num; x1++){
-			for (int y2 = 0; y2 < mesh_num; y2++){
-				for (int y3 = 0; y3 < mesh_num; y3++){
-					// summation over y1
-					sum = 0;
-					for (int y1 = 0; y1 < mesh_num; y1++){
-						pos = y1*mesh_num*(mesh_num+2)+y2*(mesh_num+2)+y3;
-						sum += expotential_0[pos]*gaussian[abs(x1-y1)];
-					}
-					pos = x1*mesh_num*(mesh_num+2)+y2*(mesh_num+2)+y3;
-					potential[pos] = sum; // potential is now f1
-				}
-			}
+		for (int i = 0; i < mesh_num; i++){
+			gaussian[i]=exp(-i*i/(4.*b*nu));
 		}
-		// compute f2 (x1, x2, y3)
-		for (int x1 = 0; x1 < mesh_num; x1++){
-			for (int x2 = 0; x2 < mesh_num; x2++){
-				for (int y3 = 0; y3 < mesh_num; y3++){
-					// summation over y2
-					sum = 0;
-					for (int y2 = 0; y2 < mesh_num; y2++){
-						pos = x1*mesh_num*(mesh_num+2)+y2*(mesh_num+2)+y3;
-						sum += potential[pos]*gaussian[abs(x2-y2)];
-					}
-					pos = x1*mesh_num*(mesh_num+2)+x2*(mesh_num+2)+y3;
-					potential[pos] = sum; // potential is now f2
-				}
-			}
-		}
-		// compute f3 (x1, x2, x3) == expotential(x, b)
-		for (int x1 = 0; x1 < mesh_num; x1++){
-			for (int x2 = 0; x2 < mesh_num; x2++){
-				for (int x3 = 0; x3 < mesh_num; x3++){
-					// summation over y3
-					sum = 0;
-					for (int y3 = 0; y3 < mesh_num; y3++){
-						pos = x1*mesh_num*(mesh_num+2)+x2*(mesh_num+2)+y3;
-						sum += potential[pos]*gaussian[abs(x3-y3)];
-					}
-					pos = x1*mesh_num*(mesh_num+2)+x2*(mesh_num+2)+x3;
-					potential[pos] = sum; // potential is now f3
-				}
-			}
-		}		
+
+		convolution_y1_nt(mesh_num, potential, expotential_0, nu, b, nt);
+		convolution_y2_nt(mesh_num, potential, gaussian, nu, b, nt);
+		convolution_y3_nt(mesh_num, potential, gaussian, nu, b, nt);
+		
 		delete [] gaussian;
 	}
 }
@@ -935,7 +1062,7 @@ void upd_pos_one(int par_num, int mesh_num, double** par_pos, double** vec_field
 	}
 }
 
-void upd_pos_vel0_one(int par_num, int mesh_num, double** par_pos, double** vec_field, double db, int order, int i_min, int i_max){
+/* void upd_pos_vel0_one(int par_num, int mesh_num, double** par_pos, double** vec_field, double db, int order, int i_min, int i_max){
 	double x[3];
 	double v;
 	for(int i=i_min; i< i_max; i++){
@@ -951,6 +1078,7 @@ void upd_pos_vel0_one(int par_num, int mesh_num, double** par_pos, double** vec_
 		}
 	}
 }
+*/
 
 void upd_pos_mid_one(int par_num, int mesh_num, double*** par_pos, double** vec_field, double db, int order, int i_min, int i_max){
 	// modified MIDPOINT method, need to store previous velocitites
@@ -972,18 +1100,53 @@ void upd_pos_mid_one(int par_num, int mesh_num, double*** par_pos, double** vec_
 	}
 }
 
-void upd_pos_leapfrog_one(int par_num, int mesh_num, double*** par_pos, double** force_field, double db, int order, int i_min, int i_max){
+void upd_pos_leapfrog_one(int par_num, int mesh_num, double*** par_pos, double** force_field, double b_half, double db, int order, int i_min, int i_max){
 	double x[3]; // position at half step
-	double v, a;
+	double v, f;
 	for(int i=i_min; i< i_max; i++){
 		for (int j=0; j < par_num; j++){
 			for(int k=0; k<3;k++) x[k]=par_pos[0][k][i*(par_num + 2)+j] + db/2.*par_pos[1][k][i*(par_num + 2)+j];
+		//	for(int k=0; k<3;k++) x[k]=par_pos[0][k][i*(par_num + 2)+j];
 			for(int k=0; k<3;k++){
-				a = 0;
-				assign_fc(force_field[k], x, a, mesh_num, order, false);
-				v = par_pos[1][k][i*(par_num + 2)+j] + db*a;
-				par_pos[0][k][i*(par_num + 2)+j] = get_per(x[k] + v*db, mesh_num);
+				f = 0;
+				assign_fc(force_field[k], x, f, mesh_num, order, false);				
+				v = par_pos[1][k][i*(par_num + 2)+j];
+				f = -3/(2.*b_half)*(v-f);
+				v = v + f*db;
+				par_pos[0][k][i*(par_num + 2)+j] = get_per(x[k] + v*db/2., mesh_num);
+		//		par_pos[0][k][i*(par_num + 2)+j] = get_per(x[k] + v*db, mesh_num);
 				par_pos[1][k][i*(par_num + 2)+j] = v;
+			}
+		}
+	}
+}
+
+void upd_pos_mff_one(int par_num, int mesh_num, double** par_pos, double** force_field, double db, int order, int i_min, int i_max){
+	double x[3], v_x[3];
+	double v, v_n;
+	double check, rel;
+	for(int i=i_min; i< i_max; i++){
+		for (int j=0; j < par_num; j++){
+			for(int k=0; k<3;k++) x[k]=par_pos[k][i*(par_num + 2)+j];
+			v = par_pos[3][i*(par_num + 2)+j];
+			v_n = 0;
+			for(int k=0; k<3;k++){
+				v_x[k] = 0;
+				assign_fc(force_field[k], x, v_x[k], mesh_num, order, false);
+				v_n += pow (v_x[k], 2);
+			}
+			v_n = sqrt(v_n);
+			check = 0;
+			for(int k=0; k<3;k++){
+				check += pow(v*v_x[k]/v_n, 2.);
+				par_pos[k][i*(par_num + 2)+j] = get_per(x[k] + v*v_x[k]/v_n*db, mesh_num);
+			}
+			check = sqrt(check);
+			rel = abs(v-check)/v;
+			if (rel > 1E-10){
+				printf("Original v = %.12f, but new v = %.12f. Relative error = %.12f\nDirection = (", v, check, abs(v-check)/v);
+				for (int p = 0; p<3; p++) printf(" %f ", v_x[p]);
+				printf(")\tNormalization = %f\n\n", v_n);
 			}
 		}
 	}
@@ -1004,7 +1167,7 @@ void upd_pos_nt(int par_num, int mesh_num, double** par_pos, double** vec_field,
 	delete[] th_dens;	
 }
 
-void upd_pos_vel0_nt(int par_num, int mesh_num, double** par_pos, double** vec_field, double db, int order, int nt){
+/* void upd_pos_vel0_nt(int par_num, int mesh_num, double** par_pos, double** vec_field, double db, int order, int nt){
 	// updating positions based on initial position of particle, i.e. ZA
 	int i_min = 0;
 	int i_max = pow(par_num, 2.);
@@ -1019,6 +1182,7 @@ void upd_pos_vel0_nt(int par_num, int mesh_num, double** par_pos, double** vec_f
 	for (int i = 0; i < nt; i++) th_dens[i].join();
 	delete[] th_dens;	
 }
+*/
 
 void upd_pos_mid_nt(int par_num, int mesh_num, double*** par_pos, double** vec_field, double db, int order, int nt){
 	int i_min = 0;
@@ -1036,14 +1200,29 @@ void upd_pos_mid_nt(int par_num, int mesh_num, double*** par_pos, double** vec_f
 	delete[] th_dens;	
 }
 
-void upd_pos_leapfrog_nt(int par_num, int mesh_num, double*** par_pos, double** vec_field, double db, int order, int nt){
+void upd_pos_leapfrog_nt(int par_num, int mesh_num, double*** par_pos, double** vec_field, double b_half, double db, int order, int nt){
 	int i_min = 0;
 	int i_max = pow(par_num, 2.);
 	int i_inc = i_max / nt;
 	i_max = i_max % nt + i_inc;
 	thread* th_dens = new thread[nt];
 	for (int i = 0; i < nt; i++){
-		th_dens[i] = thread(upd_pos_leapfrog_one, par_num, mesh_num, par_pos, vec_field, db, order, i_min, i_max);
+		th_dens[i] = thread(upd_pos_leapfrog_one, par_num, mesh_num, par_pos, vec_field, b_half, db, order, i_min, i_max);
+		i_min = i_max;
+		i_max += i_inc;
+	}
+	for (int i = 0; i < nt; i++) th_dens[i].join();
+	delete[] th_dens;	
+}
+
+void upd_pos_mff_nt(int par_num, int mesh_num, double** par_pos, double** vec_field, double db, int order, int nt){
+	int i_min = 0;
+	int i_max = pow(par_num, 2.);
+	int i_inc = i_max / nt;
+	i_max = i_max % nt + i_inc;
+	thread* th_dens = new thread[nt];
+	for (int i = 0; i < nt; i++){
+		th_dens[i] = thread(upd_pos_mff_one, par_num, mesh_num, par_pos, vec_field, db, order, i_min, i_max);
 		i_min = i_max;
 		i_max += i_inc;
 	}
@@ -1061,8 +1240,8 @@ void gen_pot_k_one(int mesh_num, double* potential, int i_min, int i_max){
 			potential[2*i] = 0;
 			potential[2*i+1] = 0;
 		} else{
-			potential[2*i] /= (k2*pow(2.*PI/mesh_num, 2.));
-			potential[2*i+1] /= (k2*pow(2.*PI/mesh_num, 2.));
+			potential[2*i] /= -(k2*pow(2.*PI/mesh_num, 2.));
+			potential[2*i+1] /= -(k2*pow(2.*PI/mesh_num, 2.));
 		}
 	}
 }
@@ -1087,14 +1266,16 @@ void gen_displ_pos_ng_one(int par_num, int Ng, double** vec_field, double** par_
 	int p_vec[3];
 	double s_q, p_q, x_q;
 	const int mesh_num = Ng*par_num;
+	int pos;
 	
 	for(int i=i_min; i< i_max; i++){
 		p_vec[0] = (i / par_num) * Ng;
 		p_vec[1] = (i % par_num) * Ng;
 		for (int j=0; j < par_num; j++){
 			p_vec[2] = j * Ng; // initial coordinates for i-th particle
+			pos = get_pos(mesh_num, p_vec); // pos on mesh
 			for(int k=0; k<3;k++){
-				s_q = vec_field[k][Ng*Ng*i*(mesh_num + 2)+j]*b;
+				s_q = vec_field[k][pos]*b;
 				p_q = p_vec[k];
 				x_q = get_per(p_q + s_q, mesh_num); // final position including periodicity
 				par_pos[k][i*(par_num + 2)+j] = x_q;
@@ -1111,6 +1292,76 @@ void gen_displ_pos_ng_nt(int par_num, int Ng, double** vec_field, double** par_p
 	thread* th_dens = new thread[nt];
 	for (int i = 0; i < nt; i++){
 		th_dens[i] = thread(gen_displ_pos_ng_one, par_num, Ng, vec_field, par_pos, b, i_min, i_max);
+		i_min = i_max;
+		i_max += i_inc;
+	}
+	for (int i = 0; i < nt; i++) th_dens[i].join();
+	delete[] th_dens;	
+}
+
+void gen_init_con_one(int par_num, int Ng, double** vec_field, double*** par_pos, int i_min, int i_max){
+	int p_vec[3];
+	const int mesh_num = Ng*par_num;
+	int pos;
+	
+	for(int i=i_min; i< i_max; i++){
+		p_vec[0] = (i / par_num) * Ng;
+		p_vec[1] = (i % par_num) * Ng;
+		for (int j=0; j < par_num; j++){
+			p_vec[2] = j * Ng; // initial coordinates for i-th particle	
+			pos = get_pos(mesh_num, p_vec);			
+			for(int k=0; k<3;k++){
+				par_pos[0][k][i*(par_num + 2)+j] = p_vec[k];
+				par_pos[1][k][i*(par_num + 2)+j] = vec_field[k][pos];
+			}
+		}
+	}
+}
+
+void gen_init_con_nt(int par_num, int Ng, double** vec_field, double*** par_pos, int nt){
+	int i_min = 0;
+	int i_max = pow(par_num, 2.);
+	int i_inc = i_max / nt;
+	i_max = i_max % nt + i_inc;
+	thread* th_dens = new thread[nt];
+	for (int i = 0; i < nt; i++){
+		th_dens[i] = thread(gen_init_con_one, par_num, Ng, vec_field, par_pos, i_min, i_max);
+		i_min = i_max;
+		i_max += i_inc;
+	}
+	for (int i = 0; i < nt; i++) th_dens[i].join();
+	delete[] th_dens;	
+}
+
+void gen_mff_ic_one(int par_num, int Ng, double** vec_field, double** par_pos, int i_min, int i_max){
+	int p_vec[3];
+	const int mesh_num = Ng*par_num;
+	double v;
+	int pos;
+	for(int i=i_min; i< i_max; i++){
+		p_vec[0] = (i / par_num) * Ng;
+		p_vec[1] = (i % par_num) * Ng;
+		for (int j=0; j < par_num; j++){
+			p_vec[2] = j * Ng; // initial coordinates for i-th particle
+			v = 0;
+			pos = get_pos(mesh_num, p_vec);
+			for(int k=0; k<3;k++){
+				par_pos[k][i*(par_num + 2)+j] = p_vec[k];
+				v += pow(vec_field[k][pos], 2.);
+			}
+			par_pos[3][i*(par_num + 2)+j] = sqrt(v);
+		}
+	}
+}
+
+void gen_mff_ic_nt(int par_num, int Ng, double** vec_field, double** par_pos, int nt){
+	int i_min = 0;
+	int i_max = pow(par_num, 2.);
+	int i_inc = i_max / nt;
+	i_max = i_max % nt + i_inc;
+	thread* th_dens = new thread[nt];
+	for (int i = 0; i < nt; i++){
+		th_dens[i] = thread(gen_mff_ic_one, par_num, Ng, vec_field, par_pos, i_min, i_max);
 		i_min = i_max;
 		i_max += i_inc;
 	}
@@ -1189,7 +1440,7 @@ void dealloc_zeldovich(void** arrays){
 
 void** alloc_adhesion(int mesh_num, int par_num, int bin_num, int nt){
 	try{
-		void** alloc_adh = new void* [7];
+		void** alloc_adh = new void* [8];
 		
 		/* Allocate long arrays */
 		const long mem_double =
@@ -1252,8 +1503,8 @@ void dealloc_adhesion(void** arrays){
 	fftw_destroy_plan((fftw_plan)arrays[6]);
 	fftw_destroy_plan((fftw_plan)arrays[7]);
 	fftw_cleanup_threads();
-	fftw_free((fftw_complex*)arrays[4]);	
-	fftw_free(((double**)arrays[0])[0]);	
+	fftw_free((fftw_complex*)arrays[4]);
+	fftw_free(((double**)arrays[0])[0]);
 	delete[] (double**)arrays[0];
 	delete[] (double**)arrays[1];
 	delete[] arrays;
@@ -1329,15 +1580,68 @@ void dealloc_frozen_pot(void** arrays){
 	fftw_free((fftw_complex*)arrays[3]);	
 	fftw_free(((double**)arrays[0])[0]);	
 	delete[] (double**)arrays[0];
-	delete[] ((double***)(arrays[1]))[0];
-	delete[] ((double***)(arrays[1]))[2];
+	delete[] ((double***)arrays[1])[0];
+	delete[] ((double***)arrays[1])[1];
 	delete[] (double***)arrays[1];
 	delete[] arrays;
 }
 
-
-
-
+void** alloc_mod_frozen_flow(int mesh_num, int par_num, int bin_num, int nt){
+	try{
+		void** alloc_zel = new void* [7];
+		
+		/* Allocate long arrays */
+		const long mem_double =
+			3*par_num*par_num*(par_num+2) + // particle positions
+			par_num*par_num*(par_num+2) + // velocity magnitude
+			3*mesh_num*mesh_num*(mesh_num+2) + // velocity field
+			mesh_num*mesh_num*(mesh_num+2); // work space for power spectrum
+		
+		double* alloc_double = (double*) fftw_malloc (sizeof(double)*mem_double);
+		int pos = 0;
+		
+		double** vel_field = new double* [3];
+		for (int i = 0; i < 3; i++){
+			vel_field[i] = alloc_double + pos;
+			pos += mesh_num*mesh_num*(mesh_num+2);
+		}
+		alloc_zel[0] = (void*) vel_field;
+		
+		double** par_pos = new double* [4];
+		for (int i = 0; i < 4; i++){
+			par_pos[i] = alloc_double + pos;
+			pos += par_num*par_num*(par_num+2);
+		}
+		alloc_zel[1] = (void*) par_pos;
+		
+		/* Allocate small arrays */
+		double* power_aux = alloc_double + pos;
+		pos += mesh_num*mesh_num*(mesh_num+2);
+		alloc_zel[2] = (void*) power_aux;
+		
+		fftw_complex* alloc_fftw_c = (fftw_complex*) fftw_malloc (sizeof(fftw_complex)*2*bin_num);
+		alloc_zel[3]=(void*)alloc_fftw_c;
+		alloc_zel[4]=(void*)(alloc_fftw_c+bin_num);
+		
+		if (fftw_init_threads() == 0){
+			printf("Errors while initializing multi-thread!\n");
+			return NULL;
+		}
+		fftw_plan_with_nthreads(nt); // FFTW_ESTIMATE FFTW_MEASURE
+		fftw_plan p_F = fftw_plan_dft_r2c_3d(mesh_num, mesh_num, mesh_num, alloc_double, reinterpret_cast<fftw_complex*>(alloc_double), FFTW_ESTIMATE);
+		fftw_plan p_B = fftw_plan_dft_c2r_3d(mesh_num, mesh_num, mesh_num, reinterpret_cast<fftw_complex*>(alloc_double), alloc_double, FFTW_ESTIMATE);
+		alloc_zel[5]=(void*)p_F;
+		alloc_zel[6]=(void*)p_B;
+		
+		printf("Allocated %s of memory.\n", humanSize(sizeof(double)*mem_double));
+		return alloc_zel;
+	}
+	catch(bad_alloc&){
+		printf("ERROR! Allocation of memory failed!\n");
+		return NULL;
+	}
+	return NULL;
+}
 
 
 

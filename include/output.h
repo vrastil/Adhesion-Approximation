@@ -3,7 +3,7 @@ Header for the output.cpp file
 */
 typedef double(*t_power)(double, double*);
 
-std::string work_dir(std::string);
+//std::string work_dir(std::string);
 
 // REWRITE TO MULTITHREAD!
 
