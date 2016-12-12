@@ -1,4 +1,4 @@
-
+	
 #include <ctime>
 #include <fftw3.h>
 #include "stdafx.h"
@@ -7,8 +7,8 @@
 #include "output.h"
 #include "approximations.h"
 
-#include "mesh.h"
-#include "mod_frozen_pot.h"
+// #include "mesh.h"
+// #include "mod_frozen_pot.h"
 
 using namespace std;
 const double PI = acos(-1.);
@@ -45,21 +45,21 @@ int main(int argc, char* argv[]){
 	clock_gettime(CLOCK_MONOTONIC, &start);
 	
 	/* HANDLE COMMAND LINE OPTIONS */
-	/*
+	
 	if (int err = handle_cmd_line(argc, argv)) return err;
 	par_num = mesh_num / Ng;
 	double parameters[]={A, ns, (double)box_size};
 	power_spectrum_norm(parameters);
 	A  = parameters[0];	
 	print_info();
-	*/
 	
+	/*
 	c_Sim_Param sim; // simulation parameters
 	int err = sim.init(argc, argv);
 	if (err) return err; // read command line options / config file
 	sim.power.norm_pwr(); // compute power spectrum normalization
 	sim.print_info(); // print simulation parameters
-	
+	*/
 	
 	try{
 		
@@ -68,29 +68,29 @@ int main(int argc, char* argv[]){
 //		zel_app(mesh_num, Ng, box_size, power_spectrum_T, parameters, z_in, z_out, nt, out_dir + "ZA_run/");
 
 		/* FROZEN-FLOW APPROXIMATION */
-//		work_dir_over(out_dir + "FF_run/");
-//		frozen_flow(mesh_num, Ng, box_size, power_spectrum_T, parameters, z_in, z_out, nt, out_dir + "FF_run/");
+		work_dir_over(out_dir + "FF_run/");
+		frozen_flow(mesh_num, Ng, box_size, power_spectrum_T, parameters, z_in, z_out, nt, out_dir + "FF_run/");
 		
 		/* TRUNCATED ZEL`DOVICH APPROXIMATION */
 //		work_dir_over(out_dir + "ZAt_run/");
 //		truncated_zeldovich(mesh_num, Ng, box_size, power_spectrum_T, parameters, z_in, z_out, nt, out_dir + "ZAt_run/", k2_G);
 		
 		/* ADEHSION APPROXIMATION */
-//		work_dir_over(out_dir + "AA_run/");
-//		adhesiom_approximation(mesh_num, Ng, box_size, power_spectrum_T, parameters, nu, z_in, z_out, nt, out_dir + "AA_run/");
+		work_dir_over(out_dir + "AA_run/");
+		adhesiom_approximation(mesh_num, Ng, box_size, power_spectrum_T, parameters, nu, z_in, z_out, nt, out_dir + "AA_run/");
 		
 		/* MODIFIED FROZEN-FLOW APPROXIMATION */
 //		work_dir_over(out_dir + "FFm_run/");
 //		mod_frozen_flow(mesh_num, Ng, box_size, power_spectrum_T, parameters, z_in, z_out, nt, out_dir + "FFm_run/");	
 	
 		/* FROZEN-POTENTIAL APPROXIMATION */
-//		work_dir_over(out_dir + "FPA_run/");
-//		frozen_potential(mesh_num, Ng, box_size, power_spectrum_T, parameters, z_in, z_out, nt, out_dir + "FPA_run/");
+		work_dir_over(out_dir + "FPA_run/");
+		frozen_potential(mesh_num, Ng, box_size, power_spectrum_T, parameters, z_in, z_out, nt, out_dir + "FPA_run/");
 
 		/* MODIFIED FROZEN-POTENTIAL APPROXIMATION */
-//		work_dir_over(out_dir + "FPA_mod_run/");
-		err = mod_frozen_potential(sim);
-		printf("Modified frozen-potential approximation exited with status %i", err);
+//		sim.out_dir_app = sim.out_dir + "FPA_mod_run/";
+//		err = mod_frozen_potential(sim);
+//		printf("Modified frozen-potential approximation exited with status %i", err);
 	}
 	catch(...){
 		printf("ERROR!\n");

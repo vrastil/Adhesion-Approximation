@@ -133,6 +133,7 @@ public:
 	double nu;
 	int nt;
 	std::string out_dir;
+	std::string out_dir_app;
 	c_Pow_Spec_Param power;
 	
 	// METHODS
@@ -261,7 +262,9 @@ void fftw_execute_dft_r2c_triple(const fftw_plan &p_F, std::vector<c_Mesh<double
 void fftw_execute_dft_c2r_triple(const fftw_plan &p_B, std::vector<c_Mesh<double>>* rho, c_Pool* pool);
 double wgh_sch(const std::vector<double> &x, const std::vector<int> &y, int mesh_num, int order);
 // int get_per(int vec, int per); TODO, now static, have to get rid of grid_fce.cpp
-
+namespace c11 {
+void work_dir_over(std::string);
+}
 // *****************
 // * MAIN ROUTINES *
 // *****************
@@ -272,7 +275,11 @@ void pwr_spec_k(const c_Sim_Param &sim, const c_Mesh<double> &rho_k, c_Mesh<doub
 void pwr_spec(const c_Sim_Param &sim, c_Mesh<double>* rho, c_Mesh<double>* power_aux, const fftw_plan &p_F, c_Pool* pool);
 void gen_pow_spec_binned(const c_Sim_Param &sim, const c_Mesh<double> &power_aux, std::vector<fftw_complex>* pwr_spec_binned);
 void gen_pot_k(c_Mesh<double>* rho_k, c_Pool* pool);
-void gen_displ_k(std::vector<c_Mesh<double>>* vel_field, const c_Mesh<double> &pot_k, c_Pool* pool);
+void gen_displ_k(std::vector<c_Mesh<double>>* vel_field, c_Mesh<double>* pot_k, c_Pool* pool);
+
+void print_par_pos_cut_small(const std::vector<c_Part_v> &particles, int mesh_num, int L, std::string out_dir, std::string suffix);
+void print_pow_spec(const std::vector<fftw_complex> &pwr_spec_binned, std::string out_dir, std::string suffix);
+
 
 // **********************
 // * TEMPLATE FUNCTIONS *

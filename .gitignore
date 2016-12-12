@@ -9,6 +9,7 @@ adh_app
 *.sh
 *.exe
 *.stackdump
+*.plt
 TODO.md
 Adhesion_Approximation.batch_build
 Adhesion_Approximation.project

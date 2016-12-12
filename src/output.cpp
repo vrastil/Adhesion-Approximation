@@ -56,6 +56,18 @@ void work_dir_over(string out_dir){
 	if(fs::create_directory(dir)){
         cout << "Directory Created: "<< wrk_dir << endl;
     }
+	
+	wrk_dir = out_dir + "supp/";
+	dir = wrk_dir.c_str();
+	if(fs::create_directory(dir)){
+        cout << "Directory Created: "<< wrk_dir << endl;
+    }
+	
+	wrk_dir = out_dir + "rho_bin/";
+	dir = wrk_dir.c_str();
+	if(fs::create_directory(dir)){
+        cout << "Directory Created: "<< wrk_dir << endl;
+    }
 }
 
 void print_par_pos(int par_num, int mesh_num, int L, double** displ_vec, string out_dir){
@@ -162,7 +174,7 @@ void print_pow_spec(int mesh_num, fftw_complex* pwr_spec_binned, string out_dir,
 	fclose (pFile);
 }
 
-void print_pow_spec_diff(int mesh_num, fftw_complex* pwr_spec_binned, fftw_complex* pwr_spec_binned_0, string out_dir, string suffix, double k_min, double k_max, int bin_num, double b){
+void print_pow_spec_diff(fftw_complex* pwr_spec_binned, fftw_complex* pwr_spec_binned_0, string out_dir, string suffix, int bin_num, double b){
 	out_dir += "pwr_diff/";
 	FILE* pFile;
 	pFile = fopen((out_dir + "pwr_spec" + suffix + ".dat").c_str(), "w");
@@ -178,6 +190,40 @@ void print_pow_spec_diff(int mesh_num, fftw_complex* pwr_spec_binned, fftw_compl
 			P_ZA = pwr_spec_binned_0[j][1] * pow(b, 2.);
 			if((P_ZA) && (P_k)) fprintf (pFile, "%f\t%f\n", pwr_spec_binned[j][0], (P_k-P_ZA)/P_ZA);
 		} else printf ("WARNING! Binned power spectra don`t match each other! k = %f, while k_ZA = %f\n", pwr_spec_binned[j][0], pwr_spec_binned_0[j][0]);
+	}
+
+	fclose (pFile);
+}
+
+typedef double t_supp[2];
+
+void upd_suppresion(t_supp* supp, fftw_complex* pwr_spec_binned, fftw_complex* pwr_spec_binned_0, double b, int step)
+{
+	double P_k, P_ZA, supp_tmp = 0;
+	int i = 0;
+	for (int j = 0; j < 100; j++){
+		P_k = pwr_spec_binned[j][1];
+		P_ZA = pwr_spec_binned_0[j][1] * pow(b, 2.);
+		if((P_ZA) && (P_k))
+		{
+			supp_tmp += (P_k-P_ZA)/P_ZA;
+			i++;
+		}
+		if (i == 10) break;
+	}
+	supp[step][0] = b;
+	supp[step][1] = supp_tmp / i;
+}
+
+void print_suppression(t_supp* supp, string out_dir, int num_step, string suffix){
+	FILE* pFile;
+	out_dir += "supp/";
+	pFile = fopen((out_dir + "supp" + suffix + ".dat").c_str(), "w");
+	cout << "Writing power spectrum suppresion into file " << out_dir + "suppresion" + ".dat\n";
+	fprintf (pFile, "# This file contains power spectrum suppresion, i.e. relative difference between power spectrum P(k) and lineary extrapolated power spectrum depending on time.\n");
+	
+	for (int j = 0; j < num_step; j++){
+		fprintf (pFile, "%f\t%f\t%f\n", supp[j][0], supp[j][1], 1/supp[j][0]-1);
 	}
 
 	fclose (pFile);
@@ -236,6 +282,62 @@ void print_rho_map(int mesh_num, int L,  double* delta, string out_dir, string s
 			fprintf (pFile, "%i\t%i\t%f\n", j*L/mesh_num, i*L/mesh_num, delta[pos+j]);
 		}
 		fprintf (pFile, "\n");
+	}
+
+	fclose (pFile);
+}
+
+
+void gen_dens_binned(int mesh_num, int Ng, double* rho, int* dens_binned, int bin_num)
+{
+	int bin;
+	double rho_avg;
+	printf("Computing binned density field...\n");
+	for (int j = 0; j < bin_num; j++){
+		dens_binned[j] = 0;
+	}
+	
+	for (int i = 0; i < mesh_num; i+=Ng)
+	{
+		for (int j = 0; j < mesh_num; j+=Ng)
+		{
+			for (int k = 0; k < mesh_num; k+=Ng)
+			{
+				// Need to go through all mesh cells [i, i+Ng-1]*[j, j+Ng-1], [k, k+Ng, -1]
+				rho_avg = 0;
+				for (int ii = i; ii < i+Ng; ii++)
+				{
+					for (int jj = j; jj  < j+Ng; jj++)
+					{
+						for (int kk = k; kk < k+Ng; kk++)
+						{
+							rho_avg+=rho[ii*mesh_num*(mesh_num+2) + jj*(mesh_num+2) + kk];
+						}
+					}
+				}
+				rho_avg /= pow(Ng, 3);
+				bin = (int)((rho_avg+1)/0.2);
+				if (bin >= bin_num) bin = bin_num - 1;
+				dens_binned[bin]++;
+			}
+		}
+	}
+}
+
+void print_dens_bin(int* dens_binned, string out_dir, string suffix, int bin_num, int mesh_num){
+	out_dir += "rho_bin/";
+	FILE* pFile;
+	pFile = fopen((out_dir + "rho_bin" + suffix + ".dat").c_str(), "w");
+	cout << "Writing power spectrum into file " << out_dir + "rho_bin" + suffix + ".dat\n";
+	fprintf (pFile, "# This file contains binned density field.\n");
+	fprintf (pFile, "# dens\tbin_num\n");
+	
+	double dens;
+	for (int j = 0; j < bin_num; j++)
+	{
+		dens = j*0.2-1;
+		fprintf (pFile, "%f\t%f\n", dens, dens_binned[j] / pow(mesh_num, 3));
+
 	}
 
 	fclose (pFile);

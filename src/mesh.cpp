@@ -5,12 +5,14 @@
 #include <gsl/gsl_sf_bessel.h>
 #include "CBRNG_Random.h"
 #include "threadpool.hpp"
+#include <boost/filesystem.hpp>
 
 // #define CORR
 #define N_MAX 1
 
 using namespace std;
 using namespace boost::threadpool;
+namespace fs = boost::filesystem;
 
 const double PI = acos(-1.);
 
@@ -37,7 +39,7 @@ static const char *humanSize(uint64_t bytes){
 
 template <class c_Type>
 c_Mesh<c_Type>::c_Mesh(int n1, int n2, int n3):
-	N1(n1), N2(n2), N3(n3), len(n1*n2*n3), p_data(len) {}
+	N1(n1), N2(n2), N3(n3), len(n1*n2*n3), p_data(len) { printf("Creating mesh of length %i...\n", len); }
 
 template <class c_Type>
 c_Mesh<c_Type>::c_Mesh(int n):
@@ -94,8 +96,8 @@ template <class c_Type>
 int c_Mesh<c_Type>::get_kz(int index) const
 {
 	int tmp = get_z_c(index);
-	if (tmp < N3/2.) return tmp;
-	else if (tmp > N3/2.) return tmp - N3;
+	if (tmp < N3/2. - 1) return tmp;
+	else if (tmp > N3/2. -1) return tmp - N3;
 	else return 0;
 }
 
@@ -488,9 +490,9 @@ c_Tracking::c_Tracking(int num_track_par, int par_num):
 	}
 }
 
-// *******************
-// * STATIC ROUTINES *
-// *******************
+// ************
+// * ROUTINES *
+// ************
 
 template <typename t_Type>
 t_Type mean(t_Type* p_data, int len)
@@ -524,7 +526,13 @@ double norm(t_Type* p_data)
 
 static void normalize_FFT_FORWARD_th(int i_min, int i_max, c_Mesh<double>* rho)
 {
-	for (int i = i_min; i < i_max; i++) (*rho)[i] /= rho->len;
+	for (int i = i_min; i < i_max; i++) (*rho)[i] /= sqrt(pow(rho->N1, 3));
+//	for (int i = i_min; i < i_max; i++) (*rho)[i] /= pow(rho->N1, 3);
+}
+
+static void normalize_FFT_BACKWARD_th(int i_min, int i_max, c_Mesh<double>* rho)
+{
+	for (int i = i_min; i < i_max; i++) (*rho)[i] /= sqrt(pow(rho->N1, 3));
 }
 
 static void normalize_FFT_FORWARD(c_Mesh<double>* rho, c_Pool* pool)
@@ -535,7 +543,8 @@ static void normalize_FFT_FORWARD(c_Mesh<double>* rho, c_Pool* pool)
 
 static void normalize_FFT_BACKWARD(c_Mesh<double>* rho, c_Pool* pool)
 {
-	return;
+	auto tmp_func = bind(normalize_FFT_BACKWARD_th, placeholders::_1, placeholders::_2, rho);
+	pool->add_task(0, rho->len, tmp_func);	
 }
 
 static double CIC_opt(int index, const c_Mesh<double> &pot)
@@ -593,7 +602,7 @@ static void gen_gauss_white_noise_th(int i_min, int i_max, c_Mesh<double>* rho, 
 	for(int i=i_min; i< i_max; i++)
 	{
 		ikey = slab_keys[i / rho->N2];
-		for (int j=0; j < rho->N3; j++)
+		for (int j=0; j < rho->N3-2; j++)
 		{
 			index = i % rho->N2 + j; // 2D index in slab
 			GetRandomDoublesWhiteNoise(rn1, rn2, ikey, index);
@@ -609,7 +618,7 @@ static void gen_gauss_white_noise(const c_Sim_Param &sim, c_Mesh<double>* rho, c
 	
 	vector<unsigned long> slab_keys;
 	slab_keys.resize(rho->N1);
-	GetSlabKeys(slab_keys.data(), 0, rho->N1, sim.seed);
+	GetSlabKeys(slab_keys.data(), 0, rho->N1-2, sim.seed);
 	
 	// Manage multi-thread
 	auto tmp_func = bind(gen_gauss_white_noise_th, placeholders::_1, placeholders::_2, rho, slab_keys.data());
@@ -645,7 +654,7 @@ void fftw_execute_dft_c2r(const fftw_plan &p_B, c_Mesh<double>* rho, c_Pool* poo
 
 void fftw_execute_dft_r2c_triple(const fftw_plan &p_F, std::vector<c_Mesh<double>>* rho, c_Pool* pool)
 {
-	for (int i = 0; i < 3; i++) fftw_execute_dft_r2c(p_F, rho->data() + i, pool);
+	for (int i = 0; i < 3; i++) fftw_execute_dft_r2c(p_F, &(*rho)[i], pool);
 }
 
 void fftw_execute_dft_c2r_triple(const fftw_plan &p_B, std::vector<c_Mesh<double>>* rho, c_Pool* pool)
@@ -703,22 +712,23 @@ static void gen_pot_k_th(int i_min, int i_max, c_Mesh<double>* rho_k)
 	}
 }
 
-static void gen_displ_k_th(int i_min, int i_max, std::vector<c_Mesh<double>>* vel_field, const c_Mesh<double> &pot_k)
+static void gen_displ_k_th(int i_min, int i_max, vector<c_Mesh<double>>* vel_field, c_Mesh<double>* pot_k)
 {
 	double opt;
 	int k_vec[3];
 	double potential_tmp[2];
 	for(int i=i_min; i <i_max;i++)
 	{
-		potential_tmp[0] = pot_k[2*i]; // prevent overwriting if vel_field[0] == pot_k
-		potential_tmp[1] = pot_k[2*i+1]; // prevent overwriting if vel_field[0] == pot_k
-		opt = CIC_opt(i, pot_k);		
-		pot_k.get_k_vec(i, k_vec);		
+		potential_tmp[0] = (*pot_k)[2*i]; // prevent overwriting if vel_field[0] == pot_k
+		potential_tmp[1] = (*pot_k)[2*i+1]; // prevent overwriting if vel_field[0] == pot_k
+		opt = CIC_opt(i, (*pot_k));
+		(*pot_k).get_k_vec(i, k_vec);		
 		for(int j=0; j<3;j++)
-		{	
-			(*vel_field)[j][2*i] = k_vec[j]*potential_tmp[1]*(2.*PI/pot_k.N1)*opt; // 2*PI/N comes from derivative WITH RESPECT to the mesh coordinates
-			(*vel_field)[j][2*i+1] = -k_vec[j]*potential_tmp[0]*(2.*PI/pot_k.N1)*opt; // 2*PI/N comes from derivative WITH RESPECT to the mesh coordinates	
+		{
+			(*vel_field)[j][2*i] = k_vec[j]*potential_tmp[1]*(2.*PI/(*pot_k).N1)*opt; // 2*PI/N comes from derivative WITH RESPECT to the mesh coordinates
+			(*vel_field)[j][2*i+1] = -k_vec[j]*potential_tmp[0]*(2.*PI/(*pot_k).N1)*opt; // 2*PI/N comes from derivative WITH RESPECT to the mesh coordinates
 		}
+
 	}
 }
 
@@ -781,6 +791,39 @@ static void reset_field(c_Mesh<double>* rho, const double value, c_Pool* pool)
 	pool->add_task(0, rho->len, tmp_func);
 }
 
+namespace c11 {
+void work_dir_over(string out_dir){
+	string wrk_dir;
+	fs::path dir(out_dir.c_str());
+	if(fs::create_directory(dir)){
+        cout << "Directory Created: "<< out_dir << endl;
+    }
+	
+	wrk_dir = out_dir + "par_cut/";
+	dir = wrk_dir.c_str();
+	if(fs::create_directory(dir)){
+        cout << "Directory Created: "<< wrk_dir << endl;
+    }
+	
+	wrk_dir = out_dir + "pwr_diff/";
+	dir = wrk_dir.c_str();
+	if(fs::create_directory(dir)){
+        cout << "Directory Created: "<< wrk_dir << endl;
+    }
+	
+	wrk_dir = out_dir + "pwr_spec/";
+	dir = wrk_dir.c_str();
+	if(fs::create_directory(dir)){
+        cout << "Directory Created: "<< wrk_dir << endl;
+    }
+	
+	wrk_dir = out_dir + "rho_map/";
+	dir = wrk_dir.c_str();
+	if(fs::create_directory(dir)){
+        cout << "Directory Created: "<< wrk_dir << endl;
+    }
+}
+}
 // *****************
 // * MAIN ROUTINES *
 // *****************
@@ -824,8 +867,8 @@ void gen_pow_spec_binned(const c_Sim_Param &sim, const c_Mesh<double> &power_aux
 	int bin;
 	printf("Computing binned power spectrum P(k)...\n");
 	for (int j = 0; j < sim.bin_num; j++){
-		(*pwr_spec_binned)[j][0] = 0;
-		(*pwr_spec_binned)[j][1] = 0;
+		(*pwr_spec_binned)[j][0] = 0.;
+		(*pwr_spec_binned)[j][1] = 0.;
 	}	
 	for (int i = 0; i < power_aux.len / 2; i++){
 		k = power_aux[2*i];
@@ -851,17 +894,72 @@ void gen_pot_k(c_Mesh<double>* rho_k, c_Pool* pool)
 	pool->add_task(0, rho_k->len / 2, tmp_func);
 }
 
-void gen_displ_k(std::vector<c_Mesh<double>>* vel_field, const c_Mesh<double> &pot_k, c_Pool* pool)
+void gen_displ_k(vector<c_Mesh<double>>* vel_field, c_Mesh<double>* pot_k, c_Pool* pool)
 {
 	printf("Computing displacement in k-space...\n");
 	auto tmp_func = bind(gen_displ_k_th, placeholders::_1, placeholders::_2, vel_field, pot_k);
-	pool->add_task(0, pot_k.len / 2, tmp_func);
+	pool->add_task(0, pot_k->len / 2, tmp_func);
 }
 
-void get_rho_from_par(const std::vector<c_Part_v> &particles, c_Mesh<double>* rho, const int order, c_Pool* pool)
+void get_rho_from_par(const vector<c_Part_v> &particles, c_Mesh<double>* rho, const int order, c_Pool* pool)
 {
 	printf("Computing the density field from particle positions...\n");
 	double m = pow((double)rho->N1, 3.)/particles.size();
 	reset_field(rho, -1., pool);
 	for (const auto& one_par : particles) rho->assign_to(one_par.position, m, order);
+}
+
+void print_pow_spec(const vector<fftw_complex> &pwr_spec_binned, string out_dir, string suffix)
+{
+	out_dir += "pwr_spec/";
+	string file_name = out_dir + "pwr_spec" + suffix + ".dat";
+	FILE* pFile;
+	pFile = fopen(file_name.c_str(), "w");
+	if (pFile == NULL)
+	{
+		printf("Error while opening %s\n", file_name.c_str());
+		perror("Error");
+		return;
+	}
+	
+	cout << "Writing power spectrum into file " << file_name << endl;
+	fprintf (pFile, "# This file contains power spectrum P(k) in units [(Mpc/h)^3] depending on wavenumber k in units [h/Mpc].\n");
+	fprintf (pFile, "# k [h/Mpc]\tP(k) [(Mpc/h)^3]\n");
+	
+	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
+		if (pwr_spec_binned[j][1]) fprintf (pFile, "%f\t%f\n",  pwr_spec_binned[j][0], pwr_spec_binned[j][1]);
+	}
+
+	fclose (pFile);
+}
+
+void print_par_pos_cut_small(const vector<c_Part_v> &particles, int mesh_num, int L, string out_dir, string suffix)
+{
+	out_dir += "par_cut/";
+	string file_name = out_dir + "par_cut" + suffix + ".dat";
+	FILE* pFile;
+	pFile = fopen(file_name.c_str(), "w");
+	if (pFile == NULL)
+	{
+		printf("Error while opening %s\n", file_name.c_str());
+		perror("Error");
+		return;
+	}
+	
+	cout << "Writing small cut through the box of particles into file " << out_dir + "par_cut" + suffix + ".dat\n";
+	fprintf (pFile, "# This file contains positions of particles in units [Mpc/h].\n");
+	double x, y, z, dx;
+	for(unsigned i=0; i < particles.size(); i++)
+	{
+		x = particles[i].position[0];
+		y = particles[i].position[1];
+		z = particles[i].position[2];			
+		dx = abs(y - mesh_num/2.);
+		if ((dx < 0.5) && (x < mesh_num/4.) && (z < mesh_num/4.))
+		{
+			// cut (L/4 x L/4 x 0.5)
+			fprintf (pFile, "%f\t%f\n", x/mesh_num*L , z/mesh_num*L);
+		}
+	}
+	fclose (pFile);
 }

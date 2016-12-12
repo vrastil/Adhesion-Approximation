@@ -409,6 +409,11 @@ int get_pos(int mesh_num, int vec[3]){
 	return vec_per[0]*mesh_num*(mesh_num+2) + vec_per[1]*(mesh_num+2) + vec_per[2];
 }
 
+int get_pos(int mesh_num, int i, int j, int k)
+{
+	return i*mesh_num*(mesh_num+2) + j*(mesh_num+2) + k;
+}
+
 double wgh_sch(double *x, int *y, int mesh_num, const int order){
 	// The weighting scheme used to assign values to the mesh points or vice versa
 	// Return value of assigment function on mesh point y from particle in x

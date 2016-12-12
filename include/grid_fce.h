@@ -37,7 +37,8 @@ int get_per(int, int);
 double get_per(double, int);
 double get_k_sq(int , int);
 double get_k_sq(int , int*);
-int get_pos(int, int);
+int get_pos(int, int[3]);
+int get_pos(int mesh_num, int i, int j, int k);
 void assign_fc(double*, double*, double &, int, const int, bool);
 
 /* RANDOM FIELD FUNCTIONS */

@@ -109,7 +109,7 @@ void mod_frozen_flow(int mesh_num, int Ng, int L, t_power power_spectrum, double
 			pwr_spec(mesh_num, par_num, L, power_aux, p_F, nt, 1);
 			gen_pow_spec_binned(mesh_num, reinterpret_cast<fftw_complex*>(power_aux), pwr_spec_binned,  2.*PI/L, 2.*PI*mesh_num/L, bin_num);			
 			print_pow_spec(mesh_num, pwr_spec_binned, out_dir, z_suffix, 2.*PI/L, 2.*PI*mesh_num/L, bin_num);
-			print_pow_spec_diff(mesh_num, pwr_spec_binned, pwr_spec_binned_0, out_dir, "_diff" + z_suffix, 2.*PI/L, 2.*PI*mesh_num/L, bin_num, b);		
+			print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, out_dir, "_diff" + z_suffix, bin_num, b);
 		}
 		i++;
 		if ((b_out - b) < db) db = b_out - b;
@@ -193,6 +193,12 @@ void frozen_potential(int mesh_num, int Ng, int L, t_power power_spectrum, doubl
 	 printf("Initializing IDs of tracked particles...\n");
 	 get_track_par_id(par_num, id, track_num);
 	
+	/* Suppresion initialization */
+	typedef double t_supp[2];
+	t_supp* supp = new t_supp[num_step];
+	
+	/* Statistical properties initialization */
+	int* dens_binned = new int[500]; //5 bin per 1, [-1, 99]
 	
 	/****************
 	* INTEGRATION...*
@@ -206,36 +212,63 @@ void frozen_potential(int mesh_num, int Ng, int L, t_power power_spectrum, doubl
 		upd_pos_leapfrog_nt(par_num, mesh_num, par_pos, force_field, b - db/2., db, 1, nt);
 	
 		
-		if (((i % 5) == 0) or (b == b_out)){
+		if (((i % 2) == 0) or (b == b_out)){
 			z_suffix_num.str("");
 			z_suffix_num << fixed << setprecision(2) << z;
 			z_suffix = z_suffix_const + "z" + z_suffix_num.str();
 			
 			/* Printing positions */
 			print_par_pos_cut_small(par_num, mesh_num, L, par_pos[0], out_dir, z_suffix);
-			if (step < num_step){
-			update_track_par(track_pos, par_pos[0], step, id, track_num);
-			step++;
-			print_track_par(track_pos, step, track_num, mesh_num, L, out_dir, z_suffix);
-			} else printf("Maximal number of tracking steps reched!\n");
 			
 			/* Printing power spectrum */
 			get_rho_par(mesh_num, par_num, par_pos[0], power_aux, nt, 1);
+			gen_dens_binned(mesh_num, Ng, power_aux, dens_binned, 500);
+			
 			print_rho_map(mesh_num, L,  power_aux, out_dir, z_suffix);
+			print_dens_bin(dens_binned, out_dir, z_suffix, 500, mesh_num);
 			
 			pwr_spec(mesh_num, par_num, L, power_aux, p_F, nt, 1);
-			gen_pow_spec_binned(mesh_num, reinterpret_cast<fftw_complex*>(power_aux), pwr_spec_binned,  2.*PI/L, 2.*PI*mesh_num/L, bin_num);			
+			gen_pow_spec_binned(mesh_num, reinterpret_cast<fftw_complex*>(power_aux), pwr_spec_binned,  2.*PI/L, 2.*PI*mesh_num/L, bin_num);
 			print_pow_spec(mesh_num, pwr_spec_binned, out_dir, z_suffix, 2.*PI/L, 2.*PI*mesh_num/L, bin_num);
-			print_pow_spec_diff(mesh_num, pwr_spec_binned, pwr_spec_binned_0, out_dir, "_diff" + z_suffix, 2.*PI/L, 2.*PI*mesh_num/L, bin_num, b);		
+			print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, out_dir, "_diff" + z_suffix, bin_num, b);
+			
+			/* Tracking and suppresion */
+			if (step < num_step){
+			update_track_par(track_pos, par_pos[0], step, id, track_num);
+			upd_suppresion(supp, pwr_spec_binned, pwr_spec_binned_0, b, step);
+			step++;
+			print_track_par(track_pos, step, track_num, mesh_num, L, out_dir, z_suffix);
+			
+			} else printf("Maximal number of tracking steps reched!\n");
+			
 		}
 		i++;
 		if ((b_out - b) < db) db = b_out - b;
-		else db = 0.01;
+		else db = 0.05;
 		b += db;
 	}
-		
+	double resolution = (double)mesh_num / L;
+	
+	z_suffix_num.str("");
+	z_suffix_num << fixed << setprecision(2) << resolution;
+	z_suffix = "_res" + z_suffix_num.str();
+	z_suffix_num.str("");
+	z_suffix_num << fixed << setprecision(0) << Ng;
+	z_suffix = z_suffix + "_R" + z_suffix_num.str();
+	
+	print_suppression(supp, out_dir, step, z_suffix);
+	
 	/* Cleanup */
+	printf("Cleaning...\n");
 	dealloc_frozen_pot(arrays);
+	delete[] id;	
+	for (int j=0; j<track_num*track_num; j++){
+		for (int k=0; k<num_step; k++) delete[] track_pos[j][k];
+		delete[] track_pos[j];
+	}
+	delete[] track_pos;
+	delete[] supp;
+	delete[] dens_binned;
 }
 
 void adhesiom_approximation(int mesh_num, int Ng, int L, t_power power_spectrum, double* parameters, double nu, double z_in, double z_out, int nt, string out_dir){
@@ -308,6 +341,13 @@ void adhesiom_approximation(int mesh_num, int Ng, int L, t_power power_spectrum,
 	 int step = 0;
 	 printf("Initializing IDs of tracked particles...\n");
 	 get_track_par_id(par_num, id, track_num);
+	
+	/* Suppresion initialization */
+	typedef double t_supp[2];
+	t_supp* supp = new t_supp[num_step];
+	
+	/* Statistical properties initialization */
+	int* dens_binned = new int[500]; //5 bin per 1, [-1, 99]
 	 
 	/****************
 	* INTEGRATION...*
@@ -343,39 +383,66 @@ void adhesiom_approximation(int mesh_num, int Ng, int L, t_power power_spectrum,
 		printf("Updating positions of particles...\n");
 		upd_pos_nt(par_num, mesh_num, par_pos, vel_field, db, 1, nt);
 	//	upd_pos_vel0_nt(par_num, mesh_num, par_pos, vel_field, db, 1, nt); // using initial particle position
-
-		if (((i % 1) == 0) or (b == b_out)){
+		
+		if (((i % 2) == 0) or (b == b_out)){
 			z_suffix_num.str("");
 			z_suffix_num << fixed << setprecision(2) << z;
 			z_suffix = z_suffix_const + "z" + z_suffix_num.str();
 			
 			/* Printing positions */
 			print_par_pos_cut_small(par_num, mesh_num, L, par_pos, out_dir, z_suffix);
-			if (step < num_step){
-			update_track_par(track_pos, par_pos, step, id, track_num);
-			step++;
-			print_track_par(track_pos, step, track_num, mesh_num, L, out_dir, z_suffix);
-			} else printf("Maximal number of tracking steps reched!\n");
 			
 			/* Printing power spectrum */
 			get_rho_par(mesh_num, par_num, par_pos, power_aux, nt, 1);
+			gen_dens_binned(mesh_num, Ng, power_aux, dens_binned, 500);
+			
 			print_rho_map(mesh_num, L,  power_aux, out_dir, z_suffix);
+			print_dens_bin(dens_binned, out_dir, z_suffix, 500, mesh_num);
 			
 			pwr_spec(mesh_num, par_num, L, power_aux, p_F, nt, 1);
-			gen_pow_spec_binned(mesh_num, reinterpret_cast<fftw_complex*>(power_aux), pwr_spec_binned,  2.*PI/L, 2.*PI*mesh_num/L, bin_num);			
+			gen_pow_spec_binned(mesh_num, reinterpret_cast<fftw_complex*>(power_aux), pwr_spec_binned,  2.*PI/L, 2.*PI*mesh_num/L, bin_num);
 			print_pow_spec(mesh_num, pwr_spec_binned, out_dir, z_suffix, 2.*PI/L, 2.*PI*mesh_num/L, bin_num);
-			print_pow_spec_diff(mesh_num, pwr_spec_binned, pwr_spec_binned_0, out_dir, "_diff" + z_suffix, 2.*PI/L, 2.*PI*mesh_num/L, bin_num, b);		
+			print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, out_dir, "_diff" + z_suffix, bin_num, b);
+			
+			/* Tracking and suppresion */
+			if (step < num_step){
+			update_track_par(track_pos, par_pos, step, id, track_num);
+			upd_suppresion(supp, pwr_spec_binned, pwr_spec_binned_0, b, step);
+			step++;
+			print_track_par(track_pos, step, track_num, mesh_num, L, out_dir, z_suffix);
+			
+			} else printf("Maximal number of tracking steps reched!\n");
 		}
 		
 		i++;
 		if ((b_out - b) < db) db = b_out - b;
 	//	else if (db > 0.1) db = (b_out - b)/100.;
-		else db = 0.01;
+		else db = 0.05;
 		b += db;
 	}
 	
+	double resolution = (double)mesh_num / L;
+	
+	z_suffix_num.str("");
+	z_suffix_num << fixed << setprecision(2) << resolution;
+	z_suffix = "_res" + z_suffix_num.str();
+	z_suffix_num.str("");
+	z_suffix_num << fixed << setprecision(0) << Ng;
+	z_suffix = z_suffix + "_R" + z_suffix_num.str();
+	
+	print_suppression(supp, out_dir, step, z_suffix);
+	
 	/* Cleanup */
+	printf("Cleaning...\n");
 	dealloc_adhesion(arrays);
+	delete[] id;	
+	for (int j=0; j<track_num*track_num; j++){
+		for (int k=0; k<num_step; k++) delete[] track_pos[j][k];
+		delete[] track_pos[j];
+	}
+	delete[] track_pos;
+	delete[] supp;
+	delete[] dens_binned;
 }
 
 void frozen_flow(int mesh_num, int Ng, int L, t_power power_spectrum, double* parameters, double z_in, double z_out, int nt, string out_dir){
@@ -448,6 +515,13 @@ void frozen_flow(int mesh_num, int Ng, int L, t_power power_spectrum, double* pa
 	 printf("Initializing IDs of tracked particles...\n");
 	 get_track_par_id(par_num, id, track_num);
 	
+	/* Suppresion initialization */
+	typedef double t_supp[2];
+	t_supp* supp = new t_supp[num_step];
+	
+	/* Statistical properties initialization */
+	int* dens_binned = new int[500]; //5 bin per 1, [-1, 99]
+	
 	
 	/****************
 	* INTEGRATION...*
@@ -460,28 +534,35 @@ void frozen_flow(int mesh_num, int Ng, int L, t_power power_spectrum, double* pa
 		printf("Updating positions of particles...\n");
 		upd_pos_nt(par_num, mesh_num, par_pos, vel_field, db, 1, nt);
 	//	upd_pos_vel0_nt(par_num, mesh_num, par_pos, vel_field, db, 1, nt); // using initial particle positions
-	
-		if (((i % 1) == 0) or (b == b_out)){
+			
+		if (((i % 2) == 0) or (b == b_out)){
 			z_suffix_num.str("");
 			z_suffix_num << fixed << setprecision(2) << z;
 			z_suffix = z_suffix_const + "z" + z_suffix_num.str();
 			
 			/* Printing positions */
 			print_par_pos_cut_small(par_num, mesh_num, L, par_pos, out_dir, z_suffix);
-			if (step < num_step){
-			update_track_par(track_pos, par_pos, step, id, track_num);
-			step++;
-			print_track_par(track_pos, step, track_num, mesh_num, L, out_dir, z_suffix);
-			} else printf("Maximal number of tracking steps reched!\n");
 			
 			/* Printing power spectrum */
 			get_rho_par(mesh_num, par_num, par_pos, power_aux, nt, 1);
+			gen_dens_binned(mesh_num, Ng, power_aux, dens_binned, 500);
+			
 			print_rho_map(mesh_num, L,  power_aux, out_dir, z_suffix);
+			print_dens_bin(dens_binned, out_dir, z_suffix, 500, mesh_num);
 			
 			pwr_spec(mesh_num, par_num, L, power_aux, p_F, nt, 1);
-			gen_pow_spec_binned(mesh_num, reinterpret_cast<fftw_complex*>(power_aux), pwr_spec_binned,  2.*PI/L, 2.*PI*mesh_num/L, bin_num);			
+			gen_pow_spec_binned(mesh_num, reinterpret_cast<fftw_complex*>(power_aux), pwr_spec_binned,  2.*PI/L, 2.*PI*mesh_num/L, bin_num);
 			print_pow_spec(mesh_num, pwr_spec_binned, out_dir, z_suffix, 2.*PI/L, 2.*PI*mesh_num/L, bin_num);
-			print_pow_spec_diff(mesh_num, pwr_spec_binned, pwr_spec_binned_0, out_dir, "_diff" + z_suffix, 2.*PI/L, 2.*PI*mesh_num/L, bin_num, b);		
+			print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, out_dir, "_diff" + z_suffix, bin_num, b);
+			
+			/* Tracking and suppresion */
+			if (step < num_step){
+			update_track_par(track_pos, par_pos, step, id, track_num);
+			upd_suppresion(supp, pwr_spec_binned, pwr_spec_binned_0, b, step);
+			step++;
+			print_track_par(track_pos, step, track_num, mesh_num, L, out_dir, z_suffix);
+			
+			} else printf("Maximal number of tracking steps reched!\n");
 		}
 		i++;
 		if ((b_out - b) < db) db = b_out - b;
@@ -489,9 +570,28 @@ void frozen_flow(int mesh_num, int Ng, int L, t_power power_spectrum, double* pa
 		else db = 0.05;
 		b += db;
 	}
-		
+	double resolution = (double)mesh_num / L;
+	
+	z_suffix_num.str("");
+	z_suffix_num << fixed << setprecision(2) << resolution;
+	z_suffix = "_res" + z_suffix_num.str();
+	z_suffix_num.str("");
+	z_suffix_num << fixed << setprecision(0) << Ng;
+	z_suffix = z_suffix + "_R" + z_suffix_num.str();
+	
+	print_suppression(supp, out_dir, step, z_suffix);
+	
 	/* Cleanup */
+	printf("Cleaning...\n");
 	dealloc_zeldovich(arrays);
+	delete[] id;	
+	for (int j=0; j<track_num*track_num; j++){
+		for (int k=0; k<num_step; k++) delete[] track_pos[j][k];
+		delete[] track_pos[j];
+	}
+	delete[] track_pos;
+	delete[] supp;
+	delete[] dens_binned;
 }
 
 void truncated_zeldovich(int mesh_num, int Ng, int L, t_power power_spectrum, double* parameters, double z_in, double z_out, int nt, string out_dir, double k2_G){
@@ -594,8 +694,7 @@ void truncated_zeldovich(int mesh_num, int Ng, int L, t_power power_spectrum, do
 		pwr_spec(mesh_num, par_num, L, power_aux, p_F, nt, 1);
 		gen_pow_spec_binned(mesh_num, reinterpret_cast<fftw_complex*>(power_aux), pwr_spec_binned,  2.*PI/L, 2.*PI*mesh_num/L, bin_num);			
 		print_pow_spec(mesh_num, pwr_spec_binned, out_dir, z_suffix, 2.*PI/L, 2.*PI*mesh_num/L, bin_num);
-		print_pow_spec_diff(mesh_num, pwr_spec_binned, pwr_spec_binned_0, out_dir, "_diff" + z_suffix, 2.*PI/L, 2.*PI*mesh_num/L, bin_num, b);
-
+		print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, out_dir, "_diff" + z_suffix, bin_num, b);
 		if ((b_out - b) < db) db = b_out - b;
 		//	else if (db > 0.1) db = (b_out - b)/100.;
 		else db = 0.01;
