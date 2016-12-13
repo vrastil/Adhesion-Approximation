@@ -18,6 +18,6 @@
 #include <iostream>
 #include <limits>
 #include <random>
+#include <omp.h>
 #include <sstream>
-#include <thread>
 #include <vector>

@@ -3,16 +3,17 @@ CXX = g++
 
 CXXFLAGS +=-g -std=c++11 -Wall
 CXXFLAGS +=-MMD
+CXXFLAGS +=-fopenmp
 CXXLIB_PATH +=-L/usr/local/lib/
 # -L/lib/
 
-CXXLIB +=-lboost_program_options -lboost_filesystem -lboost_system -lboost_thread
-CXXLIB +=-lfftw3 -lfftw3_threads -lpthread
+CXXLIB +=-lboost_program_options -lboost_filesystem -lboost_system
+CXXLIB +=-lfftw3 -lfftw3_omp
 CXXLIB +=-lgsl -lgslcblas
 
 OBJ_FILES = $(patsubst %.cpp,%.o,$(wildcard src/*.cpp))
 
-COMPILE.cc = $(CXX) $(CXXFLAGS) -c -I./include -I/usr/local/include/threadpool/boost
+COMPILE.cc = $(CXX) $(CXXFLAGS) -c -I./include
 COMPILE.fin = $(CXX) $(CXXFLAGS) $(CXXLIB_PATH)
 
 adh_app: $(OBJ_FILES)
