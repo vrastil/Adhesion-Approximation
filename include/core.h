@@ -41,23 +41,53 @@ public:
 };
 
 /**
- * @class:	Vec_3D
+ * @class:	Vec_3D<T>
  * @brief:	class handling basic 3D-vector functions
  */
 
+template <typename T>
 class Vec_3D
 {
 public:
-	// CONSTRUCTORS & DESTRUCTOR
-	Vec_3D();
-	Vec_3D(double x, double y, double z);
+	// CONSTRUCTORS
+	Vec_3D(){};
+	Vec_3D(T x, T y, T z):
+	x(x), y(y), z(z) {};
 	
 	// VARIABLES
-	double x, y, z;
+	T x, y, z;
 		
 	// OPERATORS
-	double& operator[](int i);
-	const double& operator[](int i) const;
+	T& operator[](int i)
+	{
+		switch(i)
+		{
+			case 0 : return x;
+			case 1 : return y;
+			case 2 : return z;
+			default:
+			{
+				printf("Invalid acces in class Vec_3D. Invalid postion '%d'.\n", i);
+				if (i < 0) return x;
+				else return z;
+			}
+		}
+	}
+	const T& operator[](int i) const
+	{
+		switch(i)
+		{
+			case 0 : return x;
+			case 1 : return y;
+			case 2 : return z;
+			default:
+			{
+				printf("Invalid acces in class Vec_3D. Invalid postion '%d'.\n", i);
+				if (i < 0) return x;
+				else return z;
+			}
+		}
+	}
 };
 
 /**
@@ -69,12 +99,13 @@ public:
 class Particle_x
 {
 public:
-	// CONSTRUCTORS & DESTRUCTOR
+	// CONSTRUCTORS
+	Particle_x(){};
 	Particle_x(double x, double y, double z):
-		position(x, y, z) {};
+	position(x,y,z) {};
 	
 	// VARIABLES
-	Vec_3D position;
+	Vec_3D<double> position;
 	
 	// OPERATORS
 	double &operator[](int i){ return position[i]; }
@@ -91,14 +122,13 @@ public:
 class Particle_v : public Particle_x
 {
 public:
-	// CONSTRUCTORS & DESTRUCTOR
-	Particle_v();
+	// CONSTRUCTORS
+	Particle_v(){};
 	Particle_v(double x, double y, double z, double vx, double vy, double vz):
-		Particle_x(x, y, z),
-		velocity(vx, vy, vz) {};
+	Particle_x(x,y,z), velocity(vx,vy,vz) {};
 	
 	// VARIABLES
-	Vec_3D velocity;
+	Vec_3D<double> velocity;
 
 	// OPERATORS
 	double &operator()(int i){ return velocity[i]; }
@@ -116,6 +146,27 @@ struct Pow_Spec_Param
 {
 	double A = 1, ns, k2_G, s8;
 	e_power_spec pwr_type;
+};
+
+/**
+ * @class:	Tracking
+ * @brief:	class storing info about tracked particles
+ */
+
+class Tracking
+{
+public:
+	// CONSTRUCTORS
+	Tracking(int num_track_par, int par_num);
+	
+	// VARIABLES
+	int num_track_par; // square root of number of tracking particles
+	std::vector<int> par_ids;
+	std::vector<Particle_x> par_pos;
+	
+	// METHODS
+	int num_step(){return par_pos.size();};
+	
 };
 
 /**
@@ -145,4 +196,72 @@ public:
 	
 protected:
 	bool is_init = 0;
+};
+
+/**
+ * @class:	App_Var_base
+ * @brief:	class containing core variables for approximations
+ */
+ 
+class App_Var_base
+{
+public:
+	// CONSTRUCTORS
+	App_Var_base(const Sim_Param &sim, std::string app_str);
+	
+	// DESTRUCTOR
+	~App_Var_base();
+	
+	// VARIABLES
+	int err, step = 0, print_every = 1;
+	double b, b_out, db;
+	const std::string z_suffix_const;
+	std::vector<Mesh> app_field;
+	Mesh power_aux;
+	std::vector<fftw_complex> pwr_spec_binned, pwr_spec_binned_0;
+	fftw_plan p_F, p_B;
+	Tracking track;
+	
+	// METHODS
+	double z(){ return 1./b - 1.;}
+	bool integrate(){return (b <= b_out) && (db > 0);}
+	bool printing(){ return ((step % print_every) == 0) or (b == b_out); }
+	void upd_time();
+	
+	std::string z_suffix();
+	
+protected:	
+	std::stringstream z_suffix_num;
+};
+
+/**
+ * @class:	App_Var
+ * @brief:	class containing variables for approximations with particle positions only
+ */
+ 
+ class App_Var: public App_Var_base
+{
+public:
+	// CONSTRUCTORS & DESTRUCTOR
+	App_Var(const Sim_Param &sim, std::string app_str);
+	~App_Var();
+	
+	// VARIABLES
+	Particle_x* particles;
+};
+
+/**
+ * @class:	App_Var_v
+ * @brief:	class containing variables for approximations with particle velocities
+ */
+ 
+ class App_Var_v: public App_Var_base
+{
+public:
+	// CONSTRUCTORS & DESTRUCTOR
+	App_Var_v(const Sim_Param &sim, std::string app_str);
+	~App_Var_v();
+	
+	// VARIABLES
+	Particle_v* particles;
 };

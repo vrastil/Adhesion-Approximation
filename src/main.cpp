@@ -1,27 +1,24 @@
 
 #include "stdafx.h"
 #include "core.h"
+#include "core_power.h"
 
 using namespace std;
 
-struct timespec start, finish;
-double CPU_time, REAL_time;
-
 int main(int argc, char* argv[]){
+	struct timespec start, finish;
+	double CPU_time, REAL_time;
 	const clock_t START = clock();
 	clock_gettime(CLOCK_MONOTONIC, &start);
 	
-	/* HANDLE COMMAND LINE OPTIONS */
+	/* HANDLE COMMAND LINE OPTIONS */	
 	
-	/*
-	c_Sim_Param sim; // simulation parameters
+	Sim_Param sim; // simulation parameters	
 	int err = sim.init(argc, argv);
 	if (err) return err; // read command line options / config file
-	sim.power.norm_pwr(); // compute power spectrum normalization
+	norm_pwr(&sim.power); // compute power spectrum normalization
 	sim.print_info(); // print simulation parameters
-	*/
-	
-	#include "examples.cpp"
+	// #include "examples.cpp"
 	
 	try{
 

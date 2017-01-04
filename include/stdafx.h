@@ -16,6 +16,7 @@
 #include <functional>
 #include <iomanip>
 #include <iostream>
+#include <iterator>
 #include <limits>
 #include <random>
 #include <omp.h>
