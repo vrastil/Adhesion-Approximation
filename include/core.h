@@ -187,7 +187,7 @@ public:
 	double nu;
 	int nt;
 	std::string out_dir;
-	std::string out_dir_app;
+//	std::string out_dir_app;
 	Pow_Spec_Param power;
 	
 	// METHODS

@@ -2,6 +2,7 @@
 #include "stdafx.h"
 #include "core.h"
 #include "core_power.h"
+#include "zeldovich.h"
 
 using namespace std;
 
@@ -18,17 +19,19 @@ int main(int argc, char* argv[]){
 	if (err) return err; // read command line options / config file
 	norm_pwr(&sim.power); // compute power spectrum normalization
 	sim.print_info(); // print simulation parameters
+	
 	// #include "examples.cpp"
 	
 	try{
 
-		/* MODIFIED FROZEN-POTENTIAL APPROXIMATION */
-//		sim.out_dir_app = sim.out_dir + "FPA_mod_run/";
-//		err = mod_frozen_potential(sim);
-//		printf("Modified frozen-potential approximation exited with status %i", err);
+		/* ZEL`DOVICH APPROXIMATION */
+		err = zel_app(sim);
+	}
+	catch(int error){
+		printf("ERROR %i!\n", error);
 	}
 	catch(...){
-		printf("ERROR!\n");
+		printf("UNKNOWN ERROR!\n");
 	}
 
 	clock_gettime(CLOCK_MONOTONIC, &finish);
@@ -36,5 +39,5 @@ int main(int argc, char* argv[]){
 	REAL_time = finish.tv_sec - start.tv_sec + (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
 
 	printf("\nProgram ran for %f s and used %f s of CPU time.\n\n", REAL_time, CPU_time);
-	return 0;
+	return err;
 }

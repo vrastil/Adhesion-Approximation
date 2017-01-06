@@ -4,6 +4,7 @@
  */
  
 #include "stdafx.h"
+#include "core.h"
 
 void get_k_vec(int N, int index, int* k_vec);
 int get_k_sq(int N, int index);
