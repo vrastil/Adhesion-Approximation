@@ -1,7 +1,9 @@
 
 #include "stdafx.h"
+#include <fftw3.h>
 #include "core.h"
 #include "core_cmd.h"
+#include "core_mesh.h"
 
 using namespace std;
 const double PI = acos(-1.);
@@ -32,11 +34,48 @@ const char *humanSize(uint64_t bytes){
 Mesh::Mesh(int n):N(n), length(n*n*(n+2))
 {
 	data = new double[length];
+//	printf("Normal ctor %p\n", this); 
+}
+
+Mesh::Mesh(const Mesh& that): N(that.N), length(that.length)
+{
+	data = new double[length];
+	
+	#pragma omp parallel for
+	for (int i = 0; i < length; i++) data[i] = that.data[i];
+//	printf("Copy ctor %p\n", this);
+}
+
+void swap(Mesh& first, Mesh& second)
+{
+	std::swap(first.length, second.length);
+	std::swap(first.N, second.N);
+	std::swap(first.data, second.data);
+}
+
+Mesh& Mesh::operator=(Mesh& other)
+{
+	swap(*this, other);
+    return *this;
+//	printf("Copy assignemnt %p\n", this);
 }
 
 Mesh::~Mesh()
 {
 	delete[] data;
+//	printf("dtor %p\n", this);
+}
+
+double& Mesh::operator()(Vec_3D<int> pos)
+{
+	get_per(pos, N);
+	return data[pos.x*N*(N+2)+pos.y*(N+2)+pos.z]; 
+}
+
+const double& Mesh::operator()(Vec_3D<int> pos) const
+{
+	get_per(pos, N);
+	return data[pos.x*N*(N+2)+pos.y*(N+2)+pos.z];
 }
 
 Mesh& Mesh::operator+=(const double& rhs)
@@ -146,6 +185,10 @@ App_Var_base::App_Var_base(const Sim_Param &sim, string app_str):
 {
 	// FFTW PREPARATION
 	err = !fftw_init_threads();
+	if (err){
+		printf("Errors during multi-thread initialization!\n");
+		throw err;
+	}
 	fftw_plan_with_nthreads(sim.nt);
 	p_F = fftw_plan_dft_r2c_3d(sim.mesh_num, sim.mesh_num, sim.mesh_num, power_aux.real(),
 		power_aux.complex(), FFTW_ESTIMATE);
@@ -187,8 +230,8 @@ App_Var::App_Var(const Sim_Param &sim, string app_str):
 	particles = new Particle_x[sim.par_num];
 	printf("Allocated %s of memory.\n", humanSize
 	(
-		sizeof(Particle_x)*sim.par_num+
-		sizeof(double)*(app_field[0].length*3+power_aux.length)
+		sizeof(Particle_x)*sim.par_num
+		+sizeof(double)*(app_field[0].length*3+power_aux.length)
 	));
 }
 
@@ -208,8 +251,8 @@ App_Var_v::App_Var_v(const Sim_Param &sim, string app_str):
 	particles = new Particle_v[sim.par_num];
 	printf("Allocated %s of memory.\n", humanSize
 	(
-		sizeof(Particle_v)*sim.par_num+
-		sizeof(double)*(app_field[0].length*3+power_aux.length)
+		sizeof(Particle_v)*sim.par_num
+		+sizeof(double)*(app_field[0].length*3+power_aux.length)
 	));
 }
 

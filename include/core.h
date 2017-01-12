@@ -4,43 +4,6 @@
 #include <fftw3.h>
 
 /**
- * @class:	Mesh
- * @brief:	class handling basic mesh functions, the most important are creating and destroing the underlying data structure
- *			creates a mesh of N*N*(N+2) cells
- */
-
-class Mesh
-{
-private:
-	// VARIABLES
-	double* data;
-	
-public:
-	// CONSTRUCTORS & DESTRUCTOR
-	Mesh(int n);
-	~Mesh();
-	
-	// VARIABLES
-	const int N, length; // acces dimensions and length of mesh
-	
-	// METHODS
-	inline double* real() const { return data;} // acces data
-	inline fftw_complex* complex() const { return reinterpret_cast<fftw_complex*>(data);}
-	
-	// OPERATORS
-	inline double &operator[](int i){ return data[i]; }
-	inline const double &operator[](int i) const{ return data[i]; }
-	
-	inline double& operator()(int i, int j, int k){ return data[i*N*(N+2)+j*(N+2)+k]; }
-	inline const double& operator()(int i, int j, int k) const{ return data[i*N*(N+2)+j*(N+2)+k]; }
-	
-	Mesh& operator+=(const double& rhs);
-	Mesh& operator-=(const double& rhs){ return *this+=-rhs; }
-	Mesh& operator*=(const double& rhs);
-	Mesh& operator/=(const double& rhs);
-};
-
-/**
  * @class:	Vec_3D<T>
  * @brief:	class handling basic 3D-vector functions
  */
@@ -56,6 +19,9 @@ public:
 	
 	// VARIABLES
 	T x, y, z;
+	
+	// METHODS
+	inline double norm(){ return sqrt(x*x+y*y+z*z); }
 		
 	// OPERATORS
 	T& operator[](int i)
@@ -88,6 +54,84 @@ public:
 			}
 		}
 	}
+	Vec_3D<T>& operator+=(const Vec_3D<T>& rhs)
+	{
+		x+=rhs.x;
+		y+=rhs.y;
+		z+=rhs.z;
+		return *this;
+	}
+	friend Vec_3D<T> operator+(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
+	{
+		lhs += rhs;
+		return lhs;
+	}
+	Vec_3D<T>& operator*=(T rhs)
+	{
+		x*=rhs;
+		y*=rhs;
+		z*=rhs;
+		return *this;
+	}
+	friend Vec_3D<T> operator*(Vec_3D<T> lhs, T rhs)
+	{
+		lhs *= rhs;
+		return lhs;
+	}
+	
+	template<class U>
+	explicit operator Vec_3D<U>() const
+	{
+		Vec_3D<U> lhs;
+		lhs.x = static_cast<U>(this->x);
+		lhs.y = static_cast<U>(this->y);
+		lhs.z = static_cast<U>(this->z);
+		return lhs;
+	}
+};
+
+/**
+ * @class:	Mesh
+ * @brief:	class handling basic mesh functions, the most important are creating and destroing the underlying data structure
+ *			creates a mesh of N*N*(N+2) cells
+ */
+
+class Mesh
+{
+private:
+	// VARIABLES
+	double* data;
+	
+public:
+	// CONSTRUCTORS & DESTRUCTOR
+	Mesh(int n);
+	Mesh(const Mesh& that);
+	~Mesh();
+	
+	// VARIABLES
+	int N, length; // acces dimensions and length of mesh
+	
+	// METHODS
+	inline double* real() const { return data;} // acces data
+	inline fftw_complex* complex() const { return reinterpret_cast<fftw_complex*>(data);}
+	
+	// OPERATORS
+	inline double &operator[](int i){ return data[i]; }
+	inline const double &operator[](int i) const{ return data[i]; }
+	
+	inline double& operator()(int i, int j, int k){ return data[i*N*(N+2)+j*(N+2)+k]; }
+	inline const double& operator()(int i, int j, int k) const{ return data[i*N*(N+2)+j*(N+2)+k]; }
+	
+	double& operator()(Vec_3D<int> pos);
+	const double& operator()(Vec_3D<int> pos) const;
+	
+	Mesh& operator+=(const double& rhs);
+	Mesh& operator-=(const double& rhs){ return *this+=-rhs; }
+	Mesh& operator*=(const double& rhs);
+	Mesh& operator/=(const double& rhs);
+	
+	friend void swap(Mesh& first, Mesh& second);
+	Mesh& operator=(Mesh& that);
 };
 
 /**
@@ -103,6 +147,8 @@ public:
 	Particle_x(){};
 	Particle_x(double x, double y, double z):
 	position(x,y,z) {};
+	Particle_x(Vec_3D<double> position):
+	position(position.x,position.y,position.z) {};
 	
 	// VARIABLES
 	Vec_3D<double> position;
@@ -126,6 +172,8 @@ public:
 	Particle_v(){};
 	Particle_v(double x, double y, double z, double vx, double vy, double vz):
 	Particle_x(x,y,z), velocity(vx,vy,vz) {};
+	Particle_v(Vec_3D<double> position, Vec_3D<double> velocity):
+	Particle_x(position), velocity(velocity.x, velocity.y, velocity.z) {};
 	
 	// VARIABLES
 	Vec_3D<double> velocity;
@@ -213,7 +261,7 @@ public:
 	~App_Var_base();
 	
 	// VARIABLES
-	int err, step = 0, print_every = 1;
+	int err = 0, step = 0, print_every = 1;
 	double b, b_out, db;
 	const std::string z_suffix_const;
 	std::vector<Mesh> app_field;
