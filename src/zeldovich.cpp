@@ -50,7 +50,7 @@ int zel_app(const Sim_Param &sim)
 	
 	while(APP.integrate())
 	{
-		printf("Starting computing step with z = %.2f (b = %.3f)\n", APP.z(), APP.b);
+		printf("\nStarting computing step with z = %.2f (b = %.3f)\n", APP.z(), APP.b);
 		
 		/* Computing displaced positions of particles */
 		printf("Computing displaced positions of particles...\n");
@@ -60,7 +60,9 @@ int zel_app(const Sim_Param &sim)
 		{
 			/* Printing positions */
 			print_par_pos_cut_small(APP.particles, sim, out_dir_app, APP.z_suffix());
-			
+			APP.track.update_track_par(APP.particles);
+			print_track_par(APP.track, sim, out_dir_app, APP.z_suffix());
+
 			/* Printing rho map */
 			get_rho_from_par(APP.particles, &APP.power_aux, sim);
 			

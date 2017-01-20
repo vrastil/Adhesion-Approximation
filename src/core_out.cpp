@@ -6,48 +6,22 @@
 namespace fs = boost::filesystem;
 using namespace std;
 
-void work_dir_over(string out_dir){
-	string wrk_dir;
+static void create_dir(string out_dir)
+{
 	fs::path dir(out_dir.c_str());
 	if(fs::create_directory(dir)){
         cout << "Directory Created: "<< out_dir << endl;
     }
-	
-	wrk_dir = out_dir + "par_cut/";
-	dir = wrk_dir.c_str();
-	if(fs::create_directory(dir)){
-        cout << "Directory Created: "<< wrk_dir << endl;
-    }
-	
-	wrk_dir = out_dir + "pwr_diff/";
-	dir = wrk_dir.c_str();
-	if(fs::create_directory(dir)){
-        cout << "Directory Created: "<< wrk_dir << endl;
-    }
-	
-	wrk_dir = out_dir + "pwr_spec/";
-	dir = wrk_dir.c_str();
-	if(fs::create_directory(dir)){
-        cout << "Directory Created: "<< wrk_dir << endl;
-    }
-	
-	wrk_dir = out_dir + "rho_map/";
-	dir = wrk_dir.c_str();
-	if(fs::create_directory(dir)){
-        cout << "Directory Created: "<< wrk_dir << endl;
-    }
-	
-	wrk_dir = out_dir + "supp/";
-	dir = wrk_dir.c_str();
-	if(fs::create_directory(dir)){
-        cout << "Directory Created: "<< wrk_dir << endl;
-    }
-	
-	wrk_dir = out_dir + "rho_bin/";
-	dir = wrk_dir.c_str();
-	if(fs::create_directory(dir)){
-        cout << "Directory Created: "<< wrk_dir << endl;
-    }
+}
+void work_dir_over(string out_dir)
+{
+	create_dir(out_dir);
+	create_dir(out_dir + "par_cut/");
+	create_dir(out_dir + "pwr_diff/");
+	create_dir(out_dir + "pwr_spec/");
+	create_dir(out_dir + "rho_map/");
+	create_dir(out_dir + "supp/");
+	create_dir(out_dir + "rho_bin/");
 }
 
 void print_pow_spec(const vector<fftw_complex> &pwr_spec_binned, string out_dir, string suffix)
@@ -107,17 +81,19 @@ void print_par_pos_cut_small(Particle_x* particles, const Sim_Param &sim, string
 
 void print_track_par(const Tracking& track, const Sim_Param &sim, string out_dir, string suffix){
 	out_dir += "par_cut/";
-	FILE* ofile = fopen((out_dir + "track_par_pos" + suffix + ".dat").c_str(), "w");
-		
-	cout << "Writing positons of " << track_num*track_num << " tracked particles into file " << out_dir + "track_par_pos" + suffix + ".dat\n";
-	fprintf (ofile, "# This file contains positions of particles in units [Mpc/h].\n");
-	fprintf (ofile, "# x [Mpc/h]\tz [Mpc/h]\n");
-	for (int i=0; i<track_num*track_num; i++){
-		for (int j=0; j<step;j++){
-			fprintf (ofile, "%f\t%f\n", track_pos[i][j][0]/mesh_num*L, track_pos[i][j][1]/mesh_num*L);
+	FILE* pFile = fopen((out_dir + "track_par_pos" + suffix + ".dat").c_str(), "w");
+	double x,y,z;
+	cout << "Writing positons of " << track.num_track_par << " tracked particles into file " << out_dir + "track_par_pos" + suffix + ".dat\n";
+	fprintf (pFile, "# This file contains positions of particles in units [Mpc/h].\n");
+	fprintf (pFile, "# x [Mpc/h]\tz [Mpc/h]\n");
+	for (int i=0; i<track.num_track_par; i++){
+		for (int j=0; j<track.num_step();j++){
+			x = track.par_pos[j][i].position.x;
+			y = track.par_pos[j][i].position.y;
+			z = track.par_pos[j][i].position.z;
 			fprintf (pFile, "%f\t%f\t%f\n", x/sim.mesh_num*sim.box_size , z/sim.mesh_num*sim.box_size, y/sim.mesh_num*sim.box_size);
 		}
-		fprintf (ofile, "\n\n");
+		fprintf (pFile, "\n\n");
 	}
-	fclose (ofile);
+	fclose (pFile);
 }

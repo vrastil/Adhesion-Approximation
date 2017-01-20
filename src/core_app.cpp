@@ -59,7 +59,6 @@ void set_pert_pos(const Sim_Param &sim, double db, Particle_x* particles, const 
 	Vec_3D<double> pert_pos;
 	
 	const int par_per_dim = sim.mesh_num / sim.Ng;
-	printf("mesh_num = %i, Ng = %i, par_per_dim = %i\n", sim.mesh_num, sim.Ng, par_per_dim);
 	
 	#pragma omp parallel for private(unpert_pos, displ_field, pert_pos)
 	for(int i=0; i< sim.par_num; i++)

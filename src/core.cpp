@@ -107,23 +107,22 @@ Mesh& Mesh::operator/=(const double& rhs)
  * @brief:	class storing info about tracked particles
  */
 
-Tracking::Tracking(int num_track_par, int par_num):
-	num_track_par(num_track_par)
+Tracking::Tracking(int sqr_num_track_par, int par_num_per_dim):
+	sqr_num_track_par(sqr_num_track_par), num_track_par(sqr_num_track_par*sqr_num_track_par)
 {
 	printf("Initializing IDs of tracked particles...\n");
-	par_ids.reserve(num_track_par*num_track_par);
-	int par_dim = pow(par_num, 1/3.);
+	par_ids.reserve(num_track_par);
 	int x, y, z;
 	double s;
-	y = par_dim / 2; // middle of the cube
-	s = par_dim / (4.*(num_track_par+1.)); // quarter of the cube
-	for (int i=1; i<=num_track_par;i++)
+	y = par_num_per_dim / 2; // middle of the cube
+	s = par_num_per_dim / (4.*(sqr_num_track_par+1.)); // quarter of the cube
+	for (int i=1; i<=sqr_num_track_par;i++)
 	{
 		z = (int)(s*i);
-		for (int j=1; j<=num_track_par;j++)
+		for (int j=1; j<=sqr_num_track_par;j++)
 		{
 			x = (int)(s*j);
-			par_ids.push_back(x*par_dim*par_dim+y*par_dim+z);
+			par_ids.push_back(x*par_num_per_dim*par_num_per_dim+y*par_num_per_dim+z);
 		}
 	}
 }
@@ -131,8 +130,8 @@ Tracking::Tracking(int num_track_par, int par_num):
 void Tracking::update_track_par(Particle_x* particles)
 {
 	vector<Particle_x> par_pos_step;
-	par_pos_step.reserve(num_track_par*num_track_par);
-	for (int i=0; i<num_track_par*num_track_par; i++){
+	par_pos_step.reserve(num_track_par);
+	for (int i=0; i<num_track_par; i++){
 		par_pos_step.push_back(particles[par_ids[i]]);
 	}
 	par_pos.push_back(par_pos_step);
@@ -191,7 +190,7 @@ App_Var_base::App_Var_base(const Sim_Param &sim, string app_str):
 	app_field(3, Mesh(sim.mesh_num)),
 	power_aux (sim.mesh_num),
 	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num),
-	track(4, sim.par_num)
+	track(4, sim.mesh_num/sim.Ng)
 {
 	// FFTW PREPARATION
 	err = !fftw_init_threads();

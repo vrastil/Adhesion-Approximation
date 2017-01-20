@@ -205,15 +205,15 @@ class Tracking
 {
 public:
 	// CONSTRUCTORS
-	Tracking(int num_track_par, int par_num);
+	Tracking(int sqr_num_track_par, int par_num_per_dim);
 	
 	// VARIABLES
-	int num_track_par; // square root of number of tracking particles
+	int sqr_num_track_par, num_track_par; // square root of number of tracking particles
 	std::vector<int> par_ids;
 	std::vector<std::vector<Particle_x>> par_pos;
 	
 	// METHODS
-	int num_step(){return par_pos.size();};
+	inline const int num_step() const{return par_pos.size();};
 	void update_track_par(Particle_x* particles);
 };
 
