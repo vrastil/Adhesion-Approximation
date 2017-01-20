@@ -128,6 +128,16 @@ Tracking::Tracking(int num_track_par, int par_num):
 	}
 }
 
+void Tracking::update_track_par(Particle_x* particles)
+{
+	vector<Particle_x> par_pos_step;
+	par_pos_step.reserve(num_track_par*num_track_par);
+	for (int i=0; i<num_track_par*num_track_par; i++){
+		par_pos_step.push_back(particles[par_ids[i]]);
+	}
+	par_pos.push_back(par_pos_step);
+}
+
 /**
  * @class:	Sim_Param
  * @brief:	class storing simulation parameters

@@ -104,3 +104,20 @@ void print_par_pos_cut_small(Particle_x* particles, const Sim_Param &sim, string
 	}
 	fclose (pFile);
 }
+
+void print_track_par(const Tracking& track, const Sim_Param &sim, string out_dir, string suffix){
+	out_dir += "par_cut/";
+	FILE* ofile = fopen((out_dir + "track_par_pos" + suffix + ".dat").c_str(), "w");
+		
+	cout << "Writing positons of " << track_num*track_num << " tracked particles into file " << out_dir + "track_par_pos" + suffix + ".dat\n";
+	fprintf (ofile, "# This file contains positions of particles in units [Mpc/h].\n");
+	fprintf (ofile, "# x [Mpc/h]\tz [Mpc/h]\n");
+	for (int i=0; i<track_num*track_num; i++){
+		for (int j=0; j<step;j++){
+			fprintf (ofile, "%f\t%f\n", track_pos[i][j][0]/mesh_num*L, track_pos[i][j][1]/mesh_num*L);
+			fprintf (pFile, "%f\t%f\t%f\n", x/sim.mesh_num*sim.box_size , z/sim.mesh_num*sim.box_size, y/sim.mesh_num*sim.box_size);
+		}
+		fprintf (ofile, "\n\n");
+	}
+	fclose (ofile);
+}

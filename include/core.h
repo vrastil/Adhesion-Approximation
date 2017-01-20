@@ -210,11 +210,11 @@ public:
 	// VARIABLES
 	int num_track_par; // square root of number of tracking particles
 	std::vector<int> par_ids;
-	std::vector<Particle_x> par_pos;
+	std::vector<std::vector<Particle_x>> par_pos;
 	
 	// METHODS
 	int num_step(){return par_pos.size();};
-	
+	void update_track_par(Particle_x* particles);
 };
 
 /**
