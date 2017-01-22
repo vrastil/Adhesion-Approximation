@@ -73,13 +73,14 @@ void print_par_pos_cut_small(Particle_x* particles, const Sim_Param &sim, string
 		if ((dx < 0.5) && (x < sim.mesh_num/4.) && (z < sim.mesh_num/4.))
 		{
 			// cut (L/4 x L/4 x 0.5)
-			fprintf (pFile, "%f\t%f\t%f\n", x/sim.mesh_num*sim.box_size , z/sim.mesh_num*sim.box_size, y/sim.mesh_num*sim.box_size);
+			fprintf (pFile, "%f\t%f\t%f\n", x*sim.x_0() , z*sim.x_0(), y*sim.x_0());
 		}
 	}
 	fclose (pFile);
 }
 
-void print_track_par(const Tracking& track, const Sim_Param &sim, string out_dir, string suffix){
+void print_track_par(const Tracking& track, const Sim_Param &sim, string out_dir, string suffix)
+{
 	out_dir += "par_cut/";
 	FILE* pFile = fopen((out_dir + "track_par_pos" + suffix + ".dat").c_str(), "w");
 	double x,y,z;
@@ -91,9 +92,27 @@ void print_track_par(const Tracking& track, const Sim_Param &sim, string out_dir
 			x = track.par_pos[j][i].position.x;
 			y = track.par_pos[j][i].position.y;
 			z = track.par_pos[j][i].position.z;
-			fprintf (pFile, "%f\t%f\t%f\n", x/sim.mesh_num*sim.box_size , z/sim.mesh_num*sim.box_size, y/sim.mesh_num*sim.box_size);
+			fprintf (pFile, "%f\t%f\t%f\n", x*sim.x_0() , z*sim.x_0(), y*sim.x_0());
 		}
 		fprintf (pFile, "\n\n");
 	}
+	fclose (pFile);
+}
+
+void print_rho_map(const Mesh& delta, const Sim_Param &sim, string out_dir, string suffix)
+{
+	out_dir += "rho_map/";
+	FILE* pFile;
+	pFile = fopen((out_dir + "rho_map" + suffix + ".dat").c_str(), "w");
+	cout << "Writing density map into file " << out_dir + "rho_map" + suffix + ".dat\n";
+	fprintf (pFile, "# This file contains density map delta(x).\n");
+	fprintf (pFile, "# x [Mpc/h]\tz [Mpc/h]\tdelta\n");
+	for (int i = 0; i < sim.mesh_num; i++){
+		for (int j = 0; j < sim.mesh_num; j++){
+			fprintf (pFile, "%f\t%f\t%f\n", j*sim.x_0(), i*sim.x_0(), delta(i, sim.mesh_num/2, j));
+		}
+		fprintf (pFile, "\n");
+	}
+
 	fclose (pFile);
 }

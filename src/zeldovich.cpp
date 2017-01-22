@@ -65,6 +65,7 @@ int zel_app(const Sim_Param &sim)
 
 			/* Printing rho map */
 			get_rho_from_par(APP.particles, &APP.power_aux, sim);
+			print_rho_map(APP.power_aux, sim, out_dir_app, APP.z_suffix());
 			
 			/* Printing power spectrum */
 			fftw_execute_dft_r2c(APP.p_F, APP.power_aux);

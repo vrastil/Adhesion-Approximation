@@ -241,6 +241,7 @@ public:
 	// METHODS
 	int init(int ac, char* av[]);
 	void print_info();
+	inline const double x_0() const{return box_size/mesh_num;}
 	
 protected:
 	bool is_init = 0;
