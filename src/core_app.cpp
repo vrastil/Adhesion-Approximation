@@ -292,3 +292,37 @@ void get_rho_from_par(Particle_x* particles, Mesh* rho, const Sim_Param &sim)
 		assign_to(rho, particles[i].position, m, sim.order);
 	}
 }
+
+void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param &sim)
+{
+	printf("Computing binned density field...\n");
+	unsigned bin;
+	double rho_avg;
+	dens_binned.assign(dens_binned.size(), 0);
+	
+	for (int i = 0; i < sim.mesh_num; i+=sim.Ng)
+	{
+		for (int j = 0; j < sim.mesh_num; j+=sim.Ng)
+		{
+			for (int k = 0; k < sim.mesh_num; k+=sim.Ng)
+			{
+				// Need to go through all mesh cells [i, i+Ng-1]*[j, j+Ng-1], [k, k+Ng, -1]
+				rho_avg = 0;
+				for (int ii = i; ii < i+sim.Ng; ii++)
+				{
+					for (int jj = j; jj  < j+sim.Ng; jj++)
+					{
+						for (int kk = k; kk < k+sim.Ng; kk++)
+						{
+							rho_avg+=rho(ii, jj, kk);
+						}
+					}
+				}
+				rho_avg /= pow(sim.Ng, 3);
+				bin = (int)((rho_avg+1)/0.2);
+				if (bin >= dens_binned.capacity()) dens_binned.resize(bin+1);
+				dens_binned[bin]++;
+			}
+		}
+	}
+}

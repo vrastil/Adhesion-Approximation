@@ -190,7 +190,8 @@ App_Var_base::App_Var_base(const Sim_Param &sim, string app_str):
 	app_field(3, Mesh(sim.mesh_num)),
 	power_aux (sim.mesh_num),
 	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num),
-	track(4, sim.mesh_num/sim.Ng)
+	track(4, sim.mesh_num/sim.Ng),
+	dens_binned(20)
 {
 	// FFTW PREPARATION
 	err = !fftw_init_threads();
@@ -226,6 +227,23 @@ void App_Var_base::upd_time()
 	if ((b_out - b) < db) db = b_out - b;
 	else db = 0.01;
 	b += db;
+}
+
+void App_Var_base::upd_supp()
+{
+	double P_k, P_ZA, supp_tmp = 0;
+	int i = 0, j = 0;
+	while (i < 10){
+		P_k = pwr_spec_binned[j][1];
+		P_ZA = pwr_spec_binned_0[j][1] * pow(b, 2.);
+		if((P_ZA) && (P_k))
+		{
+			supp_tmp += (P_k-P_ZA)/P_ZA;
+			i++;
+		}
+		j++;
+	}
+	supp.push_back(double_2{ {b, supp_tmp / i} });
 }
 
 /**

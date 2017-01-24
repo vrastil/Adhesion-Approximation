@@ -63,20 +63,25 @@ int zel_app(const Sim_Param &sim)
 			APP.track.update_track_par(APP.particles);
 			print_track_par(APP.track, sim, out_dir_app, APP.z_suffix());
 
-			/* Printing rho map */
+			/* Printing density */
 			get_rho_from_par(APP.particles, &APP.power_aux, sim);
+			gen_dens_binned(APP.power_aux, APP.dens_binned, sim);
 			print_rho_map(APP.power_aux, sim, out_dir_app, APP.z_suffix());
+			print_dens_bin(APP.dens_binned, sim.mesh_num, out_dir_app, APP.z_suffix());
 			
 			/* Printing power spectrum */
 			fftw_execute_dft_r2c(APP.p_F, APP.power_aux);
 			pwr_spec_k(sim, APP.power_aux, &APP.power_aux);
 			gen_pow_spec_binned(sim, APP.power_aux, &APP.pwr_spec_binned);
 			print_pow_spec(APP.pwr_spec_binned, out_dir_app, APP.z_suffix());
+			print_pow_spec_diff(APP.pwr_spec_binned, APP.pwr_spec_binned_0, APP.b, out_dir_app, APP.z_suffix());
+			
+			APP.upd_supp();
 		}
-		
 		APP.upd_time();
 	}
-	
+	print_suppression(APP.supp, sim, out_dir_app);
+		
 	printf("Zel`dovich approximation ended successfully.\n");
 	return APP.err;
 }

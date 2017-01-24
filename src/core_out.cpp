@@ -48,6 +48,29 @@ void print_pow_spec(const vector<fftw_complex> &pwr_spec_binned, string out_dir,
 	fclose (pFile);
 }
 
+void print_pow_spec_diff(const vector<fftw_complex> &pwr_spec_binned, const vector<fftw_complex> &pwr_spec_binned_0,
+	double b, string out_dir, string suffix)
+{
+	out_dir += "pwr_diff/";
+	FILE* pFile;
+	pFile = fopen((out_dir + "pwr_spec_diff" + suffix + ".dat").c_str(), "w");
+	cout << "Writing power spectrum into file " << out_dir + "pwr_spec_diff" + suffix + ".dat\n";
+	fprintf (pFile, "# This file contains relative difference between power spectrum P(k) and lineary extrapolated power spectrum depending on wavenumber k in units [h/Mpc].\n");
+	fprintf (pFile, "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n");
+	
+	double P_k, P_ZA;
+	
+	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
+		if (pwr_spec_binned[j][0] == pwr_spec_binned_0[j][0]){
+			P_k = pwr_spec_binned[j][1];
+			P_ZA = pwr_spec_binned_0[j][1] * pow(b, 2.);
+			if((P_ZA) && (P_k)) fprintf (pFile, "%f\t%f\n", pwr_spec_binned[j][0], (P_k-P_ZA)/P_ZA);
+		} else printf ("WARNING! Binned power spectra don`t match each other! k = %f, while k_lin = %f\n", pwr_spec_binned[j][0], pwr_spec_binned_0[j][0]);
+	}
+
+	fclose (pFile);
+}
+
 void print_par_pos_cut_small(Particle_x* particles, const Sim_Param &sim, string out_dir, string suffix)
 {
 	out_dir += "par_cut/";
@@ -112,6 +135,48 @@ void print_rho_map(const Mesh& delta, const Sim_Param &sim, string out_dir, stri
 			fprintf (pFile, "%f\t%f\t%f\n", j*sim.x_0(), i*sim.x_0(), delta(i, sim.mesh_num/2, j));
 		}
 		fprintf (pFile, "\n");
+	}
+
+	fclose (pFile);
+}
+
+void print_suppression(const vector<double_2> &supp, const Sim_Param &sim, string out_dir){
+	stringstream suffix_num;
+	string suffix;
+	
+	suffix_num << fixed << setprecision(2) << (double)sim.mesh_num / sim.box_size;
+	suffix = "_res" + suffix_num.str();
+	suffix_num.str("");
+	suffix_num << fixed << setprecision(0) << sim.Ng;
+	suffix = suffix + "_R" + suffix_num.str();
+	
+	FILE* pFile;
+	out_dir += "supp/";
+	pFile = fopen((out_dir + "supp" + suffix + ".dat").c_str(), "w");
+	cout << "\nWriting power spectrum suppresion into file " << out_dir + "suppresion" + ".dat\n";
+	fprintf (pFile, "# This file contains power spectrum suppresion, i.e. relative difference between power spectrum P(k) and lineary extrapolated power spectrum depending on time.\n");
+	
+	for (unsigned j = 0; j < supp.size(); j++){
+		fprintf (pFile, "%f\t%f\t%f\n", supp[j][0], supp[j][1], 1/supp[j][0]-1);
+	}
+
+	fclose (pFile);
+}
+
+void print_dens_bin(const vector<int> &dens_binned, int mesh_num, string out_dir, string suffix){
+	out_dir += "rho_bin/";
+	FILE* pFile;
+	pFile = fopen((out_dir + "rho_bin" + suffix + ".dat").c_str(), "w");
+	cout << "Writing power spectrum into file " << out_dir + "rho_bin" + suffix + ".dat\n";
+	fprintf (pFile, "# This file contains binned density field.\n");
+	fprintf (pFile, "# dens\tbin_num\n");
+	
+	double dens;
+	for (unsigned j = 0; j < dens_binned.size(); j++)
+	{
+		dens = j*0.2-1;
+		fprintf (pFile, "%f\t%f\n", dens, dens_binned[j] / pow(mesh_num, 3));
+
 	}
 
 	fclose (pFile);

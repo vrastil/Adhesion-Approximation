@@ -20,3 +20,4 @@ void gen_displ_k(std::vector<Mesh>* vel_field, const Mesh& pot_k);
 void get_rho_from_par(Particle_x* particles, Mesh* rho, const Sim_Param &sim);
 void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux);
 void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, std::vector<fftw_complex>* pwr_spec_binned);
+void gen_dens_binned(const Mesh& rho, std::vector<int> &dens_binned, const Sim_Param &sim);

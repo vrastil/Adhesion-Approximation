@@ -3,6 +3,8 @@
 #include "stdafx.h"
 #include <fftw3.h>
 
+typedef std::array<double, 2> double_2;
+
 /**
  * @class:	Vec_3D<T>
  * @brief:	class handling basic 3D-vector functions
@@ -270,12 +272,15 @@ public:
 	std::vector<fftw_complex> pwr_spec_binned, pwr_spec_binned_0;
 	fftw_plan p_F, p_B;
 	Tracking track;
+	std::vector<double_2> supp;
+	std::vector<int> dens_binned;
 	
 	// METHODS
 	double z(){ return 1./b - 1.;}
 	bool integrate(){return (b <= b_out) && (db > 0);}
 	bool printing(){ return ((step % print_every) == 0) or (b == b_out); }
 	void upd_time();
+	void upd_supp();
 	
 	std::string z_suffix();
 	
