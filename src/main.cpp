@@ -3,6 +3,7 @@
 #include "core.h"
 #include "core_power.h"
 #include "zeldovich.h"
+#include "frozen_flow.h"
 
 using namespace std;
 
@@ -23,9 +24,11 @@ int main(int argc, char* argv[]){
 	// #include "examples.cpp"
 	
 	try{
-
 		/* ZEL`DOVICH APPROXIMATION */
-		err = zel_app(sim);
+	//	err = zel_app(sim);
+		
+		/* FROZEN-FLOW APPROXIMATION */
+		err = frozen_flow(sim);
 	}
 	catch(int error){
 		printf("ERROR %i!\n", error);
