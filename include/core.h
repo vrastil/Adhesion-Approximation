@@ -24,6 +24,12 @@ public:
 	
 	// METHODS
 	inline double norm(){ return sqrt(x*x+y*y+z*z); }
+	void assign(T x_, T y_, T z_)
+	{
+		x = x_;
+		y = y_;
+		z = z_;
+	}
 		
 	// OPERATORS
 	T& operator[](int i)
@@ -68,6 +74,18 @@ public:
 		lhs += rhs;
 		return lhs;
 	}
+	Vec_3D<T>& operator-=(const Vec_3D<T>& rhs)
+	{
+		x-=rhs.x;
+		y-=rhs.y;
+		z-=rhs.z;
+		return *this;
+	}
+	friend Vec_3D<T> operator-(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
+	{
+		lhs -= rhs;
+		return lhs;
+	}
 	Vec_3D<T>& operator*=(T rhs)
 	{
 		x*=rhs;
@@ -80,7 +98,18 @@ public:
 		lhs *= rhs;
 		return lhs;
 	}
-	
+	Vec_3D<T>& operator/=(T rhs)
+	{
+		x/=rhs;
+		y/=rhs;
+		z/=rhs;
+		return *this;
+	}
+	friend Vec_3D<T> operator/(Vec_3D<T> lhs, T rhs)
+	{
+		lhs /= rhs;
+		return lhs;
+	}
 	template<class U>
 	explicit operator Vec_3D<U>() const
 	{
@@ -217,6 +246,7 @@ public:
 	// METHODS
 	inline const int num_step() const{return par_pos.size();};
 	void update_track_par(Particle_x* particles);
+	void update_track_par(Particle_v* particles);
 };
 
 /**
@@ -269,7 +299,7 @@ public:
 	const std::string z_suffix_const;
 	std::vector<Mesh> app_field;
 	Mesh power_aux;
-	std::vector<fftw_complex> pwr_spec_binned, pwr_spec_binned_0;
+	std::vector<double_2> pwr_spec_binned, pwr_spec_binned_0;
 	fftw_plan p_F, p_B;
 	Tracking track;
 	std::vector<double_2> supp;
@@ -318,4 +348,7 @@ public:
 	
 	// VARIABLES
 	Particle_v* particles;
+	
+	// METHODS
+//	inline Particle_x* particles_x() {return dynamic_cast<Particle_x*>(particles);}
 };

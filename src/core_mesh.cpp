@@ -130,6 +130,11 @@ void assign_from(const Mesh &field, const Vec_3D<double> &position, double* valu
 	}
 }
 
+void assign_from(const vector< Mesh> &field, const Vec_3D<double> &position, Vec_3D<double>* value, int order)
+{
+	for (int i = 0; i < 3; i++) assign_from(field[i], position, &((*value)[i]), order);
+}
+
 static inline void normalize_FFT_FORWARD(Mesh& rho)
 {
 	rho /= pow(rho.N, 1.5);

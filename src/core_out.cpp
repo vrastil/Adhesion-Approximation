@@ -24,7 +24,7 @@ void work_dir_over(string out_dir)
 	create_dir(out_dir + "rho_bin/");
 }
 
-void print_pow_spec(const vector<fftw_complex> &pwr_spec_binned, string out_dir, string suffix)
+void print_pow_spec(const vector<double_2> &pwr_spec_binned, string out_dir, string suffix)
 {
 	out_dir += "pwr_spec/";
 	string file_name = out_dir + "pwr_spec" + suffix + ".dat";
@@ -48,7 +48,7 @@ void print_pow_spec(const vector<fftw_complex> &pwr_spec_binned, string out_dir,
 	fclose (pFile);
 }
 
-void print_pow_spec_diff(const vector<fftw_complex> &pwr_spec_binned, const vector<fftw_complex> &pwr_spec_binned_0,
+void print_pow_spec_diff(const vector<double_2> &pwr_spec_binned, const vector<double_2> &pwr_spec_binned_0,
 	double b, string out_dir, string suffix)
 {
 	out_dir += "pwr_diff/";
@@ -72,6 +72,37 @@ void print_pow_spec_diff(const vector<fftw_complex> &pwr_spec_binned, const vect
 }
 
 void print_par_pos_cut_small(Particle_x* particles, const Sim_Param &sim, string out_dir, string suffix)
+{
+	out_dir += "par_cut/";
+	string file_name = out_dir + "par_cut" + suffix + ".dat";
+	FILE* pFile;
+	pFile = fopen(file_name.c_str(), "w");
+	if (pFile == NULL)
+	{
+		printf("Error while opening %s\n", file_name.c_str());
+		perror("Error");
+		return;
+	}
+	
+	cout << "Writing small cut through the box of particles into file " << out_dir + "par_cut" + suffix + ".dat\n";
+	fprintf (pFile, "# This file contains positions of particles in units [Mpc/h].\n");
+	double x, y, z, dx;
+	for(int i=0; i < sim.par_num; i++)
+	{
+		x = particles[i].position.x;
+		y = particles[i].position.y;
+		z = particles[i].position.z;			
+		dx = abs(y - sim.mesh_num/2.);
+		if ((dx < 0.5) && (x < sim.mesh_num/4.) && (z < sim.mesh_num/4.))
+		{
+			// cut (L/4 x L/4 x 0.5)
+			fprintf (pFile, "%f\t%f\t%f\n", x*sim.x_0() , z*sim.x_0(), y*sim.x_0());
+		}
+	}
+	fclose (pFile);
+}
+
+void print_par_pos_cut_small(Particle_v* particles, const Sim_Param &sim, string out_dir, string suffix)
 {
 	out_dir += "par_cut/";
 	string file_name = out_dir + "par_cut" + suffix + ".dat";

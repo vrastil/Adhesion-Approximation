@@ -17,6 +17,7 @@ void get_per(Vec_3D<int> &position, int per);
 
 void assign_to(Mesh* field, const Vec_3D<double> &position, const double value, int order);
 void assign_from(const Mesh &field, const Vec_3D<double> &position, double* value, int order);
+void assign_from(const std::vector< Mesh> &field, const Vec_3D<double> &position, Vec_3D<double>* value, int order);
 
 void fftw_execute_dft_r2c(const fftw_plan &p_F, Mesh& rho);
 void fftw_execute_dft_c2r(const fftw_plan &p_B, Mesh& rho);

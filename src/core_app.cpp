@@ -71,6 +71,50 @@ void set_pert_pos(const Sim_Param &sim, double db, Particle_x* particles, const 
 	}
 }
 
+void upd_pos_first_order(const Sim_Param &sim, double db, Particle_x* particles, const vector< Mesh> &vel_field)
+{
+	// Euler method
+	
+	Vec_3D<double> v;
+	
+	#pragma omp parallel for private(v)
+	for (int i = 0; i < sim.par_num; i++)
+	{
+		v.assign(0., 0., 0.);
+		assign_from(vel_field, particles[i].position, &v, sim.order);
+		particles[i].position += v*db;
+		get_per(particles[i].position, sim.mesh_num);
+	}
+}
+/*
+void upd_pos_first_order(const Sim_Param &sim, double db, Particle_v* particles, const vector< Mesh> &vel_field)
+{
+	Particle_x* particles_pos_only = static_cast<Particle_x>(particles);
+	upd_pos_first_order(sim, db, particles_pos_only, vel_field);
+}
+*/
+
+void upd_pos_second_order(const Sim_Param &sim, double db, double b, Particle_v* particles, const vector< Mesh> &force_field)
+{
+	// Leapfrog method for frozen-flow
+	
+	Vec_3D<double> f_half;
+	
+	#pragma omp parallel for private(f_half)
+	for (int i = 0; i < sim.par_num; i++)
+	{
+		particles[i].position += particles[i].velocity*(db/2.);
+		f_half.assign(0., 0., 0.);
+		assign_from(force_field, particles[i].position, &f_half, sim.order);
+		
+		f_half = (particles[i].velocity - f_half)*(-3/(2.*(b-db/2.))); // <- FROZEN-FLOW
+		
+		particles[i].velocity += f_half*db;
+		particles[i].position += particles[i].velocity*(db/2.);
+		get_per(particles[i].position, sim.mesh_num);
+	}
+}
+
 static void gen_gauss_white_noise(const Sim_Param &sim, Mesh* rho)
 {
 	// Get keys for each slab in the x axis that this rank contains
@@ -158,7 +202,7 @@ void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux)
 	}
 }
 
-void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, vector<fftw_complex>* pwr_spec_binned)
+void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, vector<double_2>* pwr_spec_binned)
 {
 	double log_bin = pow(sim.k_max / sim.k_min, 1./sim.bin_num);
 	double k;
@@ -276,6 +320,24 @@ void gen_displ_k(vector<Mesh>* vel_field, const Mesh& pot_k)
 }
 
 void get_rho_from_par(Particle_x* particles, Mesh* rho, const Sim_Param &sim)
+{
+	printf("Computing the density field from particle positions...\n");
+	double m = pow(sim.Ng, 3);
+	
+	#pragma omp parallel for
+	for (int i = 0; i < rho->length; i++)
+	{
+		(*rho)[i]=-1.;
+	}
+	
+	#pragma omp parallel for
+	for (int i = 0; i < sim.par_num; i++)
+	{
+		assign_to(rho, particles[i].position, m, sim.order);
+	}
+}
+
+void get_rho_from_par(Particle_v* particles, Mesh* rho, const Sim_Param &sim)
 {
 	printf("Computing the density field from particle positions...\n");
 	double m = pow(sim.Ng, 3);

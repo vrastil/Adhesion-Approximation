@@ -4,6 +4,7 @@
 #include "core_power.h"
 #include "zeldovich.h"
 #include "frozen_flow.h"
+#include "frozen_potential.h"
 
 using namespace std;
 
@@ -28,7 +29,10 @@ int main(int argc, char* argv[]){
 	//	err = zel_app(sim);
 		
 		/* FROZEN-FLOW APPROXIMATION */
-		err = frozen_flow(sim);
+	//	err = frozen_flow(sim);
+	
+		/* FROZEN-POTENTIL APPROXIMATION */
+		err = frozen_potential(sim);
 	}
 	catch(int error){
 		printf("ERROR %i!\n", error);
