@@ -34,7 +34,7 @@ const char *humanSize(uint64_t bytes){
 Mesh::Mesh(int n):N(n), length(n*n*(n+2))
 {
 	data = new double[length];
-//	printf("Normal ctor %p\n", this); 
+	printf("Normal ctor %p\n", this); 
 }
 
 Mesh::Mesh(const Mesh& that): N(that.N), length(that.length)
@@ -43,7 +43,7 @@ Mesh::Mesh(const Mesh& that): N(that.N), length(that.length)
 	
 	#pragma omp parallel for
 	for (int i = 0; i < length; i++) data[i] = that.data[i];
-//	printf("Copy ctor %p\n", this);
+	printf("Copy ctor %p\n", this);
 }
 
 void swap(Mesh& first, Mesh& second)
@@ -53,11 +53,12 @@ void swap(Mesh& first, Mesh& second)
 	std::swap(first.data, second.data);
 }
 
-Mesh& Mesh::operator=(Mesh& other)
+Mesh& Mesh::operator=(const Mesh& other)
 {
-	swap(*this, other);
+	printf("Copy assignemnt %p\n", this);
+	Mesh temp(other);
+	swap(*this, temp);
     return *this;
-//	printf("Copy assignemnt %p\n", this);
 }
 
 Mesh::~Mesh()
@@ -294,6 +295,27 @@ App_Var_v::App_Var_v(const Sim_Param &sim, string app_str):
 }
 
 App_Var_v::~App_Var_v()
+{
+	delete[] particles;
+}
+
+/**
+ * @class:	App_Var_AA
+ * @brief:	class containing variables for adhesion approximation
+ */
+ 
+ App_Var_AA::App_Var_AA(const Sim_Param &sim, string app_str):
+	App_Var_base(sim, app_str), expotential (sim.mesh_num)
+{
+	particles = new Particle_x[sim.par_num];
+	printf("Allocated %s of memory.\n", humanSize
+	(
+		sizeof(Particle_x)*sim.par_num
+		+sizeof(double)*(app_field[0].length*3+power_aux.length +expotential.length)
+	));
+}
+
+App_Var_AA::~App_Var_AA()
 {
 	delete[] particles;
 }

@@ -382,6 +382,7 @@ void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param 
 				}
 				rho_avg /= pow(sim.Ng, 3);
 				bin = (int)((rho_avg+1)/0.2);
+				if (bin > 200) { printf("WARNING! Huge density (%.0f).\n", rho_avg); bin = 200; }
 				if (bin >= dens_binned.capacity()) dens_binned.resize(bin+1);
 				dens_binned[bin]++;
 			}

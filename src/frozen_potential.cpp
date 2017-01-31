@@ -45,9 +45,7 @@ int frozen_potential(const Sim_Param &sim)
 	/* Setting initial positions of particles */
     printf("Setting initial positions of particles...\n");
 	set_unpert_pos_w_vel(sim, APP.particles, APP.app_field);
-//	set_unpert_pos(sim, APP.particles);
-	
-//	print_par_pos_cut_small(APP.particles, sim, out_dir_app, APP.z_suffix_const + "init");
+
 	/** INTEGRATION **/
 	
 	while(APP.integrate())
@@ -56,7 +54,6 @@ int frozen_potential(const Sim_Param &sim)
 		
 		/* Updating positions of particles... */
 		printf("Updating positions of particles...\n");
-	//	upd_pos_first_order(sim, APP.db, APP.particles, APP.app_field);
 		upd_pos_second_order(sim, APP.db, APP.b, APP.particles, APP.app_field);
 		
 		if (APP.printing())

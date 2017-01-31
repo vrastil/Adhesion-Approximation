@@ -5,6 +5,7 @@
 #include "zeldovich.h"
 #include "frozen_flow.h"
 #include "frozen_potential.h"
+#include "adhesion_approximation.h"
 
 using namespace std;
 
@@ -31,8 +32,11 @@ int main(int argc, char* argv[]){
 		/* FROZEN-FLOW APPROXIMATION */
 	//	err = frozen_flow(sim);
 	
-		/* FROZEN-POTENTIL APPROXIMATION */
-		err = frozen_potential(sim);
+		/* FROZEN-POTENTIAL APPROXIMATION */
+	//	err = frozen_potential(sim);
+		
+		/* ADHESION APPROXIMATION */
+		err = adhesion_approximation(sim);
 	}
 	catch(int error){
 		printf("ERROR %i!\n", error);

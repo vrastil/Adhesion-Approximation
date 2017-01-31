@@ -153,6 +153,9 @@ public:
 	inline double& operator()(int i, int j, int k){ return data[i*N*(N+2)+j*(N+2)+k]; }
 	inline const double& operator()(int i, int j, int k) const{ return data[i*N*(N+2)+j*(N+2)+k]; }
 	
+	inline double& operator()(int i, int j){ return data[i*(N+2)+j]; }
+	inline const double& operator()(int i, int j) const{ return data[i*(N+2)+j]; }
+	
 	double& operator()(Vec_3D<int> pos);
 	const double& operator()(Vec_3D<int> pos) const;
 	
@@ -162,7 +165,7 @@ public:
 	Mesh& operator/=(const double& rhs);
 	
 	friend void swap(Mesh& first, Mesh& second);
-	Mesh& operator=(Mesh& that);
+	Mesh& operator=(const Mesh& other);
 };
 
 /**
@@ -306,9 +309,10 @@ public:
 	std::vector<int> dens_binned;
 	
 	// METHODS
-	double z(){ return 1./b - 1.;}
-	bool integrate(){return (b <= b_out) && (db > 0);}
-	bool printing(){ return ((step % print_every) == 0) or (b == b_out); }
+	inline double z(){ return 1./b - 1.;}
+	inline double b_half() {return b - db/2.; }
+	inline bool integrate(){return (b <= b_out) && (db > 0);}
+	inline bool printing(){ return ((step % print_every) == 0) or (b == b_out); }
 	void upd_time();
 	void upd_supp();
 	
@@ -348,7 +352,21 @@ public:
 	
 	// VARIABLES
 	Particle_v* particles;
+};
+
+/**
+ * @class:	App_Var_AA
+ * @brief:	class containing variables for adhesion approximation
+ */
+ 
+ class App_Var_AA: public App_Var_base
+{
+public:
+	// CONSTRUCTORS & DESTRUCTOR
+	App_Var_AA(const Sim_Param &sim, std::string app_str);
+	~App_Var_AA();
 	
-	// METHODS
-//	inline Particle_x* particles_x() {return dynamic_cast<Particle_x*>(particles);}
+	// VARIABLES
+	Particle_x* particles;
+	Mesh expotential;
 };
