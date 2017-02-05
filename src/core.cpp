@@ -43,7 +43,7 @@ Mesh::Mesh(const Mesh& that): N(that.N), length(that.length)
 	
 	#pragma omp parallel for
 	for (int i = 0; i < length; i++) data[i] = that.data[i];
-	printf("Copy ctor %p\n", this);
+//	printf("Copy ctor %p\n", this);
 }
 
 void swap(Mesh& first, Mesh& second)
@@ -55,7 +55,7 @@ void swap(Mesh& first, Mesh& second)
 
 Mesh& Mesh::operator=(const Mesh& other)
 {
-	printf("Copy assignemnt %p\n", this);
+//	printf("Copy assignemnt %p\n", this);
 	Mesh temp(other);
 	swap(*this, temp);
     return *this;

@@ -5,8 +5,8 @@
 #include "core_app.h"
 #include "core_mesh.h"
 
-#define CONV_MOD 0 // convolution using FFT
-// #define CONV_MOD 1 // convolution using direct sum
+// #define CONV_MOD 0 // convolution using FFT
+#define CONV_MOD 1 // convolution using direct sum
 // #define CONV_MOD 2 // TODO: convolution using better FFT
 
 using namespace std;
@@ -16,6 +16,42 @@ static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu, 
 static void pot2exp(const Mesh& potential,  Mesh* expotential, double nu);
 static void exp2pot(Mesh* potential,  const Mesh& expotential, double nu);
 static void gen_expot(Mesh* potential,  const Mesh& expotential, double nu, double b, const fftw_plan &p_B);
+
+static int check_field(const Mesh& field){
+	// check field of length max_i*max_i*(max_i+2); ignore last 2 element in last dim
+	double check;
+	for (int i = 0; i < field.N; i++){
+		for (int j = 0; j < field.N; j++){
+			for (int k = 0; k < field.N; k++){
+				check = field(i, j, k);
+				if (isfinite(check) == 0){
+					printf("Error while performing check for NAN or INF! field posititon = (%i, %i, %i), value = %f\n", 
+					i, j, k, check);
+					return 1;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+static int check_field_pos(const Mesh& field){
+	// check field of length max_i*max_i*(max_i+2); ignore last 2 element in last dim
+	double check;
+	for (int i = 0; i < field.N; i++){
+		for (int j = 0; j < field.N; j++){
+			for (int k = 0; k < field.N; k++){
+				check = field(i, j, k);
+				if (check < 0){
+					printf("Error while performing check for negative values! field posititon = (%i, %i, %i), value = %f\n", 
+					i, j, k, check);
+					return 1;
+				}
+			}
+		}
+	}
+	return 0;
+}
 
 int adhesion_approximation(const Sim_Param &sim)
 {
@@ -43,11 +79,13 @@ int adhesion_approximation(const Sim_Param &sim)
 	
 	/* Computing initial potential in k-space */
 	gen_pot_k(&APP.app_field[0]);
-	
+
 	/* Computing initial expotential */
 	fftw_execute_dft_c2r(APP.p_B, APP.app_field[0]);
+		
 	gen_init_expot(APP.app_field[0], &APP.expotential, sim.nu, APP.p_F);
-	
+	if (check_field(APP.app_field[0])) return 1;
+
 	/* Setting initial positions of particles */
     printf("Setting initial positions of particles...\n");
 	set_unpert_pos(sim, APP.particles);
@@ -59,11 +97,15 @@ int adhesion_approximation(const Sim_Param &sim)
 		printf("\nStarting computing step with z = %.2f (b = %.3f)\n", APP.z(), APP.b);
 		
 		/* Computing convolution */
-		gen_expot(&APP.app_field[0], APP.expotential, sim.nu, APP.b_half(), APP.p_B);
-		
+	//	gen_expot(&APP.app_field[0], APP.expotential, sim.nu, APP.b_half(), APP.p_B);
+		gen_expot(&APP.app_field[0], APP.expotential, sim.nu, APP.b, APP.p_B);
+		if (check_field(APP.app_field[0])) return 1;
+		if (check_field_pos(APP.app_field[0])) return 1;
+				
 		printf("Computing potential...\n");	
-		exp2pot(&APP.app_field[0], APP.expotential, sim.nu);
-		
+		exp2pot(&APP.app_field[0], APP.app_field[0], sim.nu);
+		if (check_field(APP.app_field[0])) return 1;
+				
 		printf("Computing velocity field via FFT...\n");
 		fftw_execute_dft_r2c(APP.p_F, APP.app_field[0]);
 		gen_displ_k(&APP.app_field, APP.app_field[0]);
@@ -139,6 +181,9 @@ static void exp2pot(Mesh* potential,  const Mesh& expotential, double nu)
 		for (int j = 0; j < expotential.N; j++)
 		{
 			(*potential)(i, j) = -2.*nu*log(expotential(i, j));
+			if (!isfinite((*potential)(i, j))) {printf(
+			"Error while chcecking for NAN or INF. expotential = %f, -2.*nu*log(U) = %f, potential = %f\n",
+						expotential(i, j),-2.*nu*log(expotential(i, j)), (*potential)(i, j)); }
 		}
 	}
 }
@@ -158,9 +203,10 @@ static void convolution_y1(Mesh* potential,  const Mesh& expotential_0, double n
 				for (int y1 = 0; y1 < potential->N; y1++){
 					exponent=expotential_0(y1, y2, y3)+pow(x1-y1, 2.)/(2.*b);
 					exponent = -exponent/(2.*nu);
-					sum +=exp(exponent);
-					if (isfinite(sum) == 0) {printf("Error while chcecking for NAN or INF. r = %i, potential = %f, b = %f, exponent = %f, +sum = %f\n",
-						abs(x1-y1), expotential_0(y1, y2, y3), b, exponent, exp(-exponent/(2.*nu))); }
+					if (exponent < 500) sum +=exp(exponent);
+					else printf("WARNING! Huge exponent = %f", exponent);
+					if (!isfinite(sum)) {printf("Error while chcecking for NAN or INF. r = %i, potential = %f, b = %f, exponent = %f, +sum = %f\n",
+						abs(x1-y1), expotential_0(y1, y2, y3), b, exponent, exp(exponent)); }
 				}
 				(*potential)(x1, y2, y3) = sum; // potential is now f1
 			}
@@ -183,15 +229,17 @@ static void convolution_y2(Mesh* potential, const vector<double>& gaussian){
 				sum = 0;
 				for (int y2 = 0; y2 < potential->N; y2++){
 					sum += (*potential)(x1, y2, y3)*gaussian[abs(x2-y2)];
-					if (isfinite(sum) == 0) {printf("Error while chcecking for NAN or INF. r = %i, potential = %f, gaussian = %f, +sum = %f\n",
+					if (!isfinite(sum)) {printf("Error while chcecking for NAN or INF. r = %i, potential = %f, gaussian = %f, +sum = %f\n",
 						abs(x2-y2), (*potential)(x1, y2, y3), gaussian[abs(x2-y2)], (*potential)(x1, y2, y3)*gaussian[abs(x2-y2)]); }
 				}
-				sum_aux[x2] = sum;
+				sum_aux.push_back(sum);
 			}
 
 			for (int x2 = 0; x2 < potential->N; x2++){
 				(*potential)(x1, x2, y3) = sum_aux[x2]; // potential is now f2
 			}
+			
+			sum_aux.clear();
 		}
 	}
 }
@@ -211,14 +259,17 @@ static void convolution_y3(Mesh* potential, const vector<double>& gaussian){
 				sum = 0;
 				for (int y3 = 0; y3 < potential->N; y3++){
 					sum += (*potential)(x1, x2, y3)*gaussian[abs(x3-y3)];
-					if (isfinite(sum) == 0) {printf("Error while chcecking for NAN or INF. r = %i, potential = %f, gaussian = %f, +sum = %f\n",
+					if (!isfinite(sum)) {printf("Error while chcecking for NAN or INF. r = %i, potential = %f, gaussian = %f, +sum = %f\n",
 						abs(x3-y3), (*potential)(x1, x2, y3), gaussian[abs(x3-y3)], (*potential)(x1, x2, y3)*gaussian[abs(x3-y3)]); }
 				}
-				sum_aux[x3] = sum;
+				sum_aux.push_back(sum);
 			}
 			for (int x3 = 0; x3 < potential->N; x3++){
 				(*potential)(x1, x2, x3) = sum_aux[x3]; // potential is now f3
+				if (sum_aux[x3] < 0) printf("WARNING! Negative value of convolution (%f)", sum_aux[x3]);
 			}
+			
+			sum_aux.clear();
 		}
 	}
 }
