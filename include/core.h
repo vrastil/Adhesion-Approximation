@@ -1,3 +1,8 @@
+/**
+ * @file:	core.h
+ * @brief:	class definitions
+ */
+
 #pragma once
 
 #include "stdafx.h"
@@ -43,16 +48,17 @@ template <typename T> Vec_3D<T> operator*(Vec_3D<T> lhs, T rhs);
 template <typename T> Vec_3D<T> operator/(Vec_3D<T> lhs, T rhs);
 
 /**
- * @class:	Mesh_base
+ * @class:	Mesh_base<T>
  * @brief:	class handling basic mesh functions, the most important are creating and destroing the underlying data structure
  *			creates a mesh of N1*N2*N3 cells
  */
 
+template <typename T>
 class Mesh_base
 {
 protected:
 	// VARIABLES
-	double* data;
+	T* data;
 	
 public:
 	// CONSTRUCTORS & DESTRUCTOR
@@ -64,38 +70,39 @@ public:
 	int N1, N2, N3, length; // acces dimensions and length of mesh
 	
 	// METHODS
-	inline double* real() const { return data;} // acces data
-	inline fftw_complex* complex() const { return reinterpret_cast<fftw_complex*>(data);}
+	inline T* real() const { return data;} // acces data
 	void set_all();
 	
 	// OPERATORS
-	inline double &operator[](int i){ return data[i]; }
-	inline const double &operator[](int i) const{ return data[i]; }
+	inline T &operator[](int i){ return data[i]; }
+	inline const T &operator[](int i) const{ return data[i]; }
 	
-	inline double& operator()(int i, int j, int k){ return data[i*N2*N3+j*N3+k]; }
-	inline const double& operator()(int i, int j, int k) const{ return data[i*N2*N3+j*N3+k]; }
+	inline T& operator()(int i, int j, int k){ return data[i*N2*N3+j*N3+k]; }
+	inline const T& operator()(int i, int j, int k) const{ return data[i*N2*N3+j*N3+k]; }
 	
-	inline double& operator()(int i, int j){ return data[i*N3+j]; }
-	inline const double& operator()(int i, int j) const{ return data[i*N3+j]; }
+	inline T& operator()(int i, int j){ return data[i*N3+j]; }
+	inline const T& operator()(int i, int j) const{ return data[i*N3+j]; }
 	
-	double& operator()(Vec_3D<int> pos);
-	const double& operator()(Vec_3D<int> pos) const;
+	T& operator()(Vec_3D<int> pos);
+	const T& operator()(Vec_3D<int> pos) const;
 	
-	Mesh_base& operator+=(const double& rhs);
-	Mesh_base& operator-=(const double& rhs){ return *this+=-rhs; }
-	Mesh_base& operator*=(const double& rhs);
-	Mesh_base& operator/=(const double& rhs);
+	Mesh_base& operator+=(const T& rhs);
+	Mesh_base& operator-=(const T& rhs){ return *this+=-rhs; }
+	Mesh_base& operator*=(const T& rhs);
+	Mesh_base& operator/=(const T& rhs);
 	
-	friend void swap(Mesh_base& first, Mesh_base& second);
+//	friend void swap(Mesh_base& first, Mesh_base& second);
 	Mesh_base& operator=(const Mesh_base& other);
 };
+
+template <typename T> void swap(Mesh_base<T>& first, Mesh_base<T>& second);
 
 /**
  * @class:	Mesh
  * @brief:	creates a mesh of N*N*(N+2) cells
  */
 
-class Mesh : public Mesh_base
+class Mesh : public Mesh_base<double>
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR
@@ -104,6 +111,9 @@ public:
 	
 	// VARIABLES
 	int N; // acces dimension of mesh
+	
+	// OPERATORS
+	inline fftw_complex* complex() const { return reinterpret_cast<fftw_complex*>(data);}
 	
 	// OPERATORS
 	Mesh& operator+=(const double& rhs);
@@ -333,131 +343,10 @@ public:
 	int par_num;
 	double Hc;
 	std::vector<int> LL;
-	Mesh_base HOC;
+	Mesh_base<int> HOC;
 	
 	// METHODS
 	void get_linked_list(Particle_v* particles);
 };
 
-
-/**
- * @class:	Vec_3D<T>
- * @brief:	class handling basic 3D-vector functions
- */
-
-template <typename T>
-void Vec_3D<T>::assign(T x_, T y_, T z_)
-{
-	x = x_;
-	y = y_;
-	z = z_;
-}
-
-template <typename T>
-T& Vec_3D<T>::operator[](int i)
-{
-	switch(i)
-	{
-		case 0 : return x;
-		case 1 : return y;
-		case 2 : return z;
-		default:
-		{
-			printf("Invalid acces in class Vec_3D. Invalid postion '%d'.\n", i);
-			if (i < 0) return x;
-			else return z;
-		}
-	}
-}
-
-template <typename T>
-const T& Vec_3D<T>::operator[](int i) const
-{
-	switch(i)
-	{
-		case 0 : return x;
-		case 1 : return y;
-		case 2 : return z;
-		default:
-		{
-			printf("Invalid acces in class Vec_3D. Invalid postion '%d'.\n", i);
-			if (i < 0) return x;
-			else return z;
-		}
-	}
-}
-
-template <typename T>
-Vec_3D<T>& Vec_3D<T>::operator+=(const Vec_3D<T>& rhs)
-{
-	x+=rhs.x;
-	y+=rhs.y;
-	z+=rhs.z;
-	return *this;
-}
-
-template <typename T>
-Vec_3D<T> operator+(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
-{
-	lhs += rhs;
-	return lhs;
-}
-
-template <typename T>
-Vec_3D<T>& Vec_3D<T>::operator-=(const Vec_3D<T>& rhs)
-{
-	x-=rhs.x;
-	y-=rhs.y;
-	z-=rhs.z;
-	return *this;
-}
-
-template <typename T>
-Vec_3D<T> operator-(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
-{
-	lhs -= rhs;
-	return lhs;
-}
-
-template <typename T>
-Vec_3D<T>& Vec_3D<T>::operator*=(T rhs)
-{
-	x*=rhs;
-	y*=rhs;
-	z*=rhs;
-	return *this;
-}
-
-template <typename T>
-Vec_3D<T> operator*(Vec_3D<T> lhs, T rhs)
-{
-	lhs *= rhs;
-	return lhs;
-}
-
-template <typename T>
-Vec_3D<T>& Vec_3D<T>::operator/=(T rhs)
-{
-	x/=rhs;
-	y/=rhs;
-	z/=rhs;
-	return *this;
-}
-
-template <typename T>
-Vec_3D<T> operator/(Vec_3D<T> lhs, T rhs)
-{
-	lhs /= rhs;
-	return lhs;
-}
-
-template <typename T>
-template<class U>
-Vec_3D<T>::operator Vec_3D<U>() const
-{
-	Vec_3D<U> lhs;
-	lhs.x = static_cast<U>(this->x);
-	lhs.y = static_cast<U>(this->y);
-	lhs.z = static_cast<U>(this->z);
-	return lhs;
-}
+#include "core.hpp"

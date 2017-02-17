@@ -1,9 +1,13 @@
-
+/**
+ * @file:	core.cpp
+ * @brief:	class definitions
+ */
+ 
 #include "stdafx.h"
 #include <fftw3.h>
 #include "core.h"
 #include "core_cmd.h"
-#include "core_mesh.h"
+// #include "core_mesh.h"
 
 using namespace std;
 const double PI = acos(-1.);
@@ -23,86 +27,6 @@ const char *humanSize(uint64_t bytes){
 	static char output[200];
 	sprintf(output, "%.02lf %s", dblBytes, suffix[i]);
 	return output;
-}
-
-/**
- * @class:	Mesh_base
- * @brief:	class handling basic mesh functions, the most important are creating and destroing the underlying data structure
- *			creates a mesh of N1*N2*N3 cells
- */
-
-Mesh_base::Mesh_base(int n1, int n2, int n3):N1(n1), N2(n2), N3(n3), length(n1*n2*n3)
-{
-	data = new double[length];
-//	printf("Normal base ctor %p\n", this); 
-}
-
-Mesh_base::Mesh_base(const Mesh_base& that): N1(that.N1), N2(that.N2), N3(that.N3), length(that.length)
-{
-	data = new double[length];
-	
-	#pragma omp parallel for
-	for (int i = 0; i < length; i++) data[i] = that.data[i];
-//	printf("Copy base ctor %p\n", this);
-}
-
-void swap(Mesh_base& first, Mesh_base& second)
-{
-	std::swap(first.length, second.length);
-	std::swap(first.N1, second.N1);
-	std::swap(first.N2, second.N2);
-	std::swap(first.N3, second.N3);
-	std::swap(first.data, second.data);
-}
-
-Mesh_base& Mesh_base::operator=(const Mesh_base& other)
-{
-//	printf("Copy base assignemnt %p\n", this);
-	Mesh_base temp(other);
-	swap(*this, temp);
-    return *this;
-}
-
-Mesh_base::~Mesh_base()
-{
-	delete[] data;
-	printf("dtor base %p\n", this);
-}
-
-double& Mesh_base::operator()(Vec_3D<int> pos)
-{
-	get_per(pos, Vec_3D<int>(N1, N2, N3));
-	return data[pos.x*N2*N3+pos.y*N2+pos.z]; 
-}
-
-const double& Mesh_base::operator()(Vec_3D<int> pos) const
-{
-	get_per(pos, Vec_3D<int>(N1, N2, N3));
-	return data[pos.x*N2*N3+pos.y*N2+pos.z];
-}
-
-Mesh_base& Mesh_base::operator+=(const double& rhs)
-{
-	#pragma omp parallel for
-		for (int i = 0; i < length; i++) this->data[i]+=rhs;
-		
-	return *this;
-}
-
-Mesh_base& Mesh_base::operator*=(const double& rhs)
-{
-	#pragma omp parallel for
-		for (int i = 0; i < length; i++) this->data[i]*=rhs;
-		
-	return *this;
-}
-
-Mesh_base& Mesh_base::operator/=(const double& rhs)
-{
-	#pragma omp parallel for
-		for (int i = 0; i < length; i++) this->data[i]/=rhs;
-		
-	return *this;
 }
 
 /**
@@ -147,7 +71,7 @@ void swap(Mesh& first, Mesh& second)
 
 Mesh& Mesh::operator=(const Mesh& other)
 {
-	printf("Copy assignemnt %p\n", this);
+//	printf("Copy assignemnt %p\n", this);
 	Mesh temp(other);
 	swap(*this, temp);
     return *this;
