@@ -28,19 +28,19 @@ int main(int argc, char* argv[]){
 	
 	try{
 		/* ZEL`DOVICH APPROXIMATION */
-	//	err = zel_app(sim);
+		err = zel_app(sim);
 		
 		/* FROZEN-FLOW APPROXIMATION */
-	//	err = frozen_flow(sim);
+		err = frozen_flow(sim);
 	
 		/* FROZEN-POTENTIAL APPROXIMATION */
-	//	err = frozen_potential(sim);
+		err = frozen_potential(sim);
 		
 		/* ADHESION APPROXIMATION */
-	//	err = adhesion_approximation(sim);
+		err = adhesion_approximation(sim);
 		
 		/* MODIFIED FROZEN-POTENTIAL APPROXIMATION */
-		err = mod_frozen_potential(sim);
+	//	err = mod_frozen_potential(sim);
 	}
 	catch(int error){
 		printf("ERROR %i!\n", error);

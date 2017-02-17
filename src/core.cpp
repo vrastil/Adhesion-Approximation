@@ -34,7 +34,7 @@ const char *humanSize(uint64_t bytes){
 Mesh_base::Mesh_base(int n1, int n2, int n3):N1(n1), N2(n2), N3(n3), length(n1*n2*n3)
 {
 	data = new double[length];
-	printf("Normal base ctor %p\n", this); 
+//	printf("Normal base ctor %p\n", this); 
 }
 
 Mesh_base::Mesh_base(const Mesh_base& that): N1(that.N1), N2(that.N2), N3(that.N3), length(that.length)
@@ -43,7 +43,7 @@ Mesh_base::Mesh_base(const Mesh_base& that): N1(that.N1), N2(that.N2), N3(that.N
 	
 	#pragma omp parallel for
 	for (int i = 0; i < length; i++) data[i] = that.data[i];
-	printf("Copy base ctor %p\n", this);
+//	printf("Copy base ctor %p\n", this);
 }
 
 void swap(Mesh_base& first, Mesh_base& second)
@@ -57,7 +57,7 @@ void swap(Mesh_base& first, Mesh_base& second)
 
 Mesh_base& Mesh_base::operator=(const Mesh_base& other)
 {
-	printf("Copy base assignemnt %p\n", this);
+//	printf("Copy base assignemnt %p\n", this);
 	Mesh_base temp(other);
 	swap(*this, temp);
     return *this;
@@ -368,4 +368,18 @@ App_Var_v::~App_Var_v()
 App_Var_AA::~App_Var_AA()
 {
 	delete[] particles;
+}
+
+/**
+ * @class LinkedList
+ * @brief class handling linked lists
+ */
+
+
+LinkedList::LinkedList(int par_num, int m, double hc):
+	par_num(par_num), Hc(hc), LL(par_num), HOC(m, m, m) {}
+	
+void LinkedList::get_linked_list(Particle_v* particles)
+{
+	
 }

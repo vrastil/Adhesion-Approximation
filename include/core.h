@@ -24,102 +24,23 @@ public:
 	
 	// METHODS
 	inline double norm(){ return sqrt(x*x+y*y+z*z); }
-	void assign(T x_, T y_, T z_)
-	{
-		x = x_;
-		y = y_;
-		z = z_;
-	}
+	void assign(T x_, T y_, T z_);
 		
 	// OPERATORS
-	T& operator[](int i)
-	{
-		switch(i)
-		{
-			case 0 : return x;
-			case 1 : return y;
-			case 2 : return z;
-			default:
-			{
-				printf("Invalid acces in class Vec_3D. Invalid postion '%d'.\n", i);
-				if (i < 0) return x;
-				else return z;
-			}
-		}
-	}
-	const T& operator[](int i) const
-	{
-		switch(i)
-		{
-			case 0 : return x;
-			case 1 : return y;
-			case 2 : return z;
-			default:
-			{
-				printf("Invalid acces in class Vec_3D. Invalid postion '%d'.\n", i);
-				if (i < 0) return x;
-				else return z;
-			}
-		}
-	}
-	Vec_3D<T>& operator+=(const Vec_3D<T>& rhs)
-	{
-		x+=rhs.x;
-		y+=rhs.y;
-		z+=rhs.z;
-		return *this;
-	}
-	friend Vec_3D<T> operator+(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
-	{
-		lhs += rhs;
-		return lhs;
-	}
-	Vec_3D<T>& operator-=(const Vec_3D<T>& rhs)
-	{
-		x-=rhs.x;
-		y-=rhs.y;
-		z-=rhs.z;
-		return *this;
-	}
-	friend Vec_3D<T> operator-(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
-	{
-		lhs -= rhs;
-		return lhs;
-	}
-	Vec_3D<T>& operator*=(T rhs)
-	{
-		x*=rhs;
-		y*=rhs;
-		z*=rhs;
-		return *this;
-	}
-	friend Vec_3D<T> operator*(Vec_3D<T> lhs, T rhs)
-	{
-		lhs *= rhs;
-		return lhs;
-	}
-	Vec_3D<T>& operator/=(T rhs)
-	{
-		x/=rhs;
-		y/=rhs;
-		z/=rhs;
-		return *this;
-	}
-	friend Vec_3D<T> operator/(Vec_3D<T> lhs, T rhs)
-	{
-		lhs /= rhs;
-		return lhs;
-	}
+	T& operator[](int i);
+	const T& operator[](int i) const;
+	Vec_3D<T>& operator+=(const Vec_3D<T>& rhs);
+	Vec_3D<T>& operator-=(const Vec_3D<T>& rhs);
+	Vec_3D<T>& operator*=(T rhs);
+	Vec_3D<T>& operator/=(T rhs);
 	template<class U>
-	explicit operator Vec_3D<U>() const
-	{
-		Vec_3D<U> lhs;
-		lhs.x = static_cast<U>(this->x);
-		lhs.y = static_cast<U>(this->y);
-		lhs.z = static_cast<U>(this->z);
-		return lhs;
-	}
+	explicit operator Vec_3D<U>() const;
 };
+
+template <typename T> Vec_3D<T> operator+(Vec_3D<T> lhs, const Vec_3D<T>& rhs);
+template <typename T> Vec_3D<T> operator-(Vec_3D<T> lhs, const Vec_3D<T>& rhs);
+template <typename T> Vec_3D<T> operator*(Vec_3D<T> lhs, T rhs);
+template <typename T> Vec_3D<T> operator/(Vec_3D<T> lhs, T rhs);
 
 /**
  * @class:	Mesh_base
@@ -145,6 +66,7 @@ public:
 	// METHODS
 	inline double* real() const { return data;} // acces data
 	inline fftw_complex* complex() const { return reinterpret_cast<fftw_complex*>(data);}
+	void set_all();
 	
 	// OPERATORS
 	inline double &operator[](int i){ return data[i]; }
@@ -395,3 +317,147 @@ public:
 	Particle_x* particles;
 	Mesh expotential;
 };
+
+/**
+ * @class LinkedList
+ * @brief class handling linked lists
+ */
+
+class LinkedList
+{
+public:
+	// CONSTRUCTORS & DESTRUCTOR
+	LinkedList(int par_num, int m, double hc);
+	
+	// VARIABLES
+	int par_num;
+	double Hc;
+	std::vector<int> LL;
+	Mesh_base HOC;
+	
+	// METHODS
+	void get_linked_list(Particle_v* particles);
+};
+
+
+/**
+ * @class:	Vec_3D<T>
+ * @brief:	class handling basic 3D-vector functions
+ */
+
+template <typename T>
+void Vec_3D<T>::assign(T x_, T y_, T z_)
+{
+	x = x_;
+	y = y_;
+	z = z_;
+}
+
+template <typename T>
+T& Vec_3D<T>::operator[](int i)
+{
+	switch(i)
+	{
+		case 0 : return x;
+		case 1 : return y;
+		case 2 : return z;
+		default:
+		{
+			printf("Invalid acces in class Vec_3D. Invalid postion '%d'.\n", i);
+			if (i < 0) return x;
+			else return z;
+		}
+	}
+}
+
+template <typename T>
+const T& Vec_3D<T>::operator[](int i) const
+{
+	switch(i)
+	{
+		case 0 : return x;
+		case 1 : return y;
+		case 2 : return z;
+		default:
+		{
+			printf("Invalid acces in class Vec_3D. Invalid postion '%d'.\n", i);
+			if (i < 0) return x;
+			else return z;
+		}
+	}
+}
+
+template <typename T>
+Vec_3D<T>& Vec_3D<T>::operator+=(const Vec_3D<T>& rhs)
+{
+	x+=rhs.x;
+	y+=rhs.y;
+	z+=rhs.z;
+	return *this;
+}
+
+template <typename T>
+Vec_3D<T> operator+(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
+{
+	lhs += rhs;
+	return lhs;
+}
+
+template <typename T>
+Vec_3D<T>& Vec_3D<T>::operator-=(const Vec_3D<T>& rhs)
+{
+	x-=rhs.x;
+	y-=rhs.y;
+	z-=rhs.z;
+	return *this;
+}
+
+template <typename T>
+Vec_3D<T> operator-(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
+{
+	lhs -= rhs;
+	return lhs;
+}
+
+template <typename T>
+Vec_3D<T>& Vec_3D<T>::operator*=(T rhs)
+{
+	x*=rhs;
+	y*=rhs;
+	z*=rhs;
+	return *this;
+}
+
+template <typename T>
+Vec_3D<T> operator*(Vec_3D<T> lhs, T rhs)
+{
+	lhs *= rhs;
+	return lhs;
+}
+
+template <typename T>
+Vec_3D<T>& Vec_3D<T>::operator/=(T rhs)
+{
+	x/=rhs;
+	y/=rhs;
+	z/=rhs;
+	return *this;
+}
+
+template <typename T>
+Vec_3D<T> operator/(Vec_3D<T> lhs, T rhs)
+{
+	lhs /= rhs;
+	return lhs;
+}
+
+template <typename T>
+template<class U>
+Vec_3D<T>::operator Vec_3D<U>() const
+{
+	Vec_3D<U> lhs;
+	lhs.x = static_cast<U>(this->x);
+	lhs.y = static_cast<U>(this->y);
+	lhs.z = static_cast<U>(this->z);
+	return lhs;
+}
