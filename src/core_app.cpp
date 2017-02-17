@@ -86,17 +86,31 @@ void upd_pos_first_order(const Sim_Param &sim, double db, Particle_x* particles,
 		get_per(particles[i].position, sim.mesh_num);
 	}
 }
-/*
-void upd_pos_first_order(const Sim_Param &sim, double db, Particle_v* particles, const vector< Mesh> &vel_field)
-{
-	Particle_x* particles_pos_only = static_cast<Particle_x>(particles);
-	upd_pos_first_order(sim, db, particles_pos_only, vel_field);
-}
-*/
 
 void upd_pos_second_order(const Sim_Param &sim, double db, double b, Particle_v* particles, const vector< Mesh> &force_field)
 {
 	// Leapfrog method for frozen-flow
+	
+	Vec_3D<double> f_half;
+	
+	#pragma omp parallel for private(f_half)
+	for (int i = 0; i < sim.par_num; i++)
+	{
+		particles[i].position += particles[i].velocity*(db/2.);
+		f_half.assign(0., 0., 0.);
+		assign_from(force_field, particles[i].position, &f_half, sim.order);
+		
+		f_half = (particles[i].velocity - f_half)*(-3/(2.*(b-db/2.))); // <- FROZEN-FLOW
+		
+		particles[i].velocity += f_half*db;
+		particles[i].position += particles[i].velocity*(db/2.);
+		get_per(particles[i].position, sim.mesh_num);
+	}
+}
+
+void upd_pos_second_order_w_short_force(const Sim_Param &sim, double db, double b, Particle_v* particles, const vector< Mesh> &force_field)
+{
+	// Leapfrog method for modified frozen-flow
 	
 	Vec_3D<double> f_half;
 	

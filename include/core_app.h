@@ -14,8 +14,8 @@ void set_unpert_pos_w_vel(const Sim_Param &sim, Particle_v* particles, const std
 void set_pert_pos(const Sim_Param &sim, double db, Particle_x* particles, const std::vector< Mesh> &vel_field);
 
 void upd_pos_first_order(const Sim_Param &sim, double db, Particle_x* particles, const std::vector< Mesh> &vel_field);
-// void upd_pos_first_order(const Sim_Param &sim, double db, Particle_v* particles, const std::vector< Mesh> &vel_field);
 void upd_pos_second_order(const Sim_Param &sim, double db, double b, Particle_v* particles, const std::vector< Mesh> &force_field);
+void upd_pos_second_order_w_short_force(const Sim_Param &sim, double db, double b, Particle_v* particles, const vector< Mesh> &force_field)
 
 void gen_rho_dist_k(const Sim_Param &sim, Mesh* rho, const fftw_plan &p_F);
 void gen_pot_k(Mesh* rho_k);
