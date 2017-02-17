@@ -26,58 +26,93 @@ const char *humanSize(uint64_t bytes){
 }
 
 /**
- * @class:	Mesh
+ * @class:	Mesh_base
  * @brief:	class handling basic mesh functions, the most important are creating and destroing the underlying data structure
- *			creates a mesh of N*N*(N+2) cells
+ *			creates a mesh of N1*N2*N3 cells
  */
 
-Mesh::Mesh(int n):N(n), length(n*n*(n+2))
+Mesh_base::Mesh_base(int n1, int n2, int n3):N1(n1), N2(n2), N3(n3), length(n1*n2*n3)
 {
 	data = new double[length];
-	printf("Normal ctor %p\n", this); 
+	printf("Normal base ctor %p\n", this); 
 }
 
-Mesh::Mesh(const Mesh& that): N(that.N), length(that.length)
+Mesh_base::Mesh_base(const Mesh_base& that): N1(that.N1), N2(that.N2), N3(that.N3), length(that.length)
 {
 	data = new double[length];
 	
 	#pragma omp parallel for
 	for (int i = 0; i < length; i++) data[i] = that.data[i];
-//	printf("Copy ctor %p\n", this);
+	printf("Copy base ctor %p\n", this);
 }
 
-void swap(Mesh& first, Mesh& second)
+void swap(Mesh_base& first, Mesh_base& second)
 {
 	std::swap(first.length, second.length);
-	std::swap(first.N, second.N);
+	std::swap(first.N1, second.N1);
+	std::swap(first.N2, second.N2);
+	std::swap(first.N3, second.N3);
 	std::swap(first.data, second.data);
 }
 
-Mesh& Mesh::operator=(const Mesh& other)
+Mesh_base& Mesh_base::operator=(const Mesh_base& other)
 {
-//	printf("Copy assignemnt %p\n", this);
-	Mesh temp(other);
+	printf("Copy base assignemnt %p\n", this);
+	Mesh_base temp(other);
 	swap(*this, temp);
     return *this;
 }
 
-Mesh::~Mesh()
+Mesh_base::~Mesh_base()
 {
 	delete[] data;
-//	printf("dtor %p\n", this);
+	printf("dtor base %p\n", this);
 }
 
-double& Mesh::operator()(Vec_3D<int> pos)
+double& Mesh_base::operator()(Vec_3D<int> pos)
 {
-	get_per(pos, N);
-	return data[pos.x*N*(N+2)+pos.y*(N+2)+pos.z]; 
+	get_per(pos, Vec_3D<int>(N1, N2, N3));
+	return data[pos.x*N2*N3+pos.y*N2+pos.z]; 
 }
 
-const double& Mesh::operator()(Vec_3D<int> pos) const
+const double& Mesh_base::operator()(Vec_3D<int> pos) const
 {
-	get_per(pos, N);
-	return data[pos.x*N*(N+2)+pos.y*(N+2)+pos.z];
+	get_per(pos, Vec_3D<int>(N1, N2, N3));
+	return data[pos.x*N2*N3+pos.y*N2+pos.z];
 }
+
+Mesh_base& Mesh_base::operator+=(const double& rhs)
+{
+	#pragma omp parallel for
+		for (int i = 0; i < length; i++) this->data[i]+=rhs;
+		
+	return *this;
+}
+
+Mesh_base& Mesh_base::operator*=(const double& rhs)
+{
+	#pragma omp parallel for
+		for (int i = 0; i < length; i++) this->data[i]*=rhs;
+		
+	return *this;
+}
+
+Mesh_base& Mesh_base::operator/=(const double& rhs)
+{
+	#pragma omp parallel for
+		for (int i = 0; i < length; i++) this->data[i]/=rhs;
+		
+	return *this;
+}
+
+/**
+ * @class:	Mesh
+ * @brief:	creates a mesh of N*N*(N+2) cells
+ */
+
+Mesh::Mesh(int n):N(n), Mesh_base(n, n, n+2) {}
+
+Mesh::Mesh(const Mesh& that): N(that.N), Mesh_base(that) {}
 
 Mesh& Mesh::operator+=(const double& rhs)
 {
@@ -101,6 +136,21 @@ Mesh& Mesh::operator/=(const double& rhs)
 		for (int i = 0; i < length; i++) this->data[i]/=rhs;
 		
 	return *this;
+}
+
+void swap(Mesh& first, Mesh& second)
+{
+	std::swap(first.length, second.length);
+	std::swap(first.N, second.N);
+	std::swap(first.data, second.data);
+}
+
+Mesh& Mesh::operator=(const Mesh& other)
+{
+	printf("Copy assignemnt %p\n", this);
+	Mesh temp(other);
+	swap(*this, temp);
+    return *this;
 }
 
 /**

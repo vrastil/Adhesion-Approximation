@@ -122,25 +122,25 @@ public:
 };
 
 /**
- * @class:	Mesh
+ * @class:	Mesh_base
  * @brief:	class handling basic mesh functions, the most important are creating and destroing the underlying data structure
- *			creates a mesh of N*N*(N+2) cells
+ *			creates a mesh of N1*N2*N3 cells
  */
 
-class Mesh
+class Mesh_base
 {
-private:
+protected:
 	// VARIABLES
 	double* data;
 	
 public:
 	// CONSTRUCTORS & DESTRUCTOR
-	Mesh(int n);
-	Mesh(const Mesh& that);
-	~Mesh();
+	Mesh_base(int n1, int n2, int n3);
+	Mesh_base(const Mesh_base& that);
+	~Mesh_base();
 	
 	// VARIABLES
-	int N, length; // acces dimensions and length of mesh
+	int N1, N2, N3, length; // acces dimensions and length of mesh
 	
 	// METHODS
 	inline double* real() const { return data;} // acces data
@@ -150,15 +150,40 @@ public:
 	inline double &operator[](int i){ return data[i]; }
 	inline const double &operator[](int i) const{ return data[i]; }
 	
-	inline double& operator()(int i, int j, int k){ return data[i*N*(N+2)+j*(N+2)+k]; }
-	inline const double& operator()(int i, int j, int k) const{ return data[i*N*(N+2)+j*(N+2)+k]; }
+	inline double& operator()(int i, int j, int k){ return data[i*N2*N3+j*N3+k]; }
+	inline const double& operator()(int i, int j, int k) const{ return data[i*N2*N3+j*N3+k]; }
 	
-	inline double& operator()(int i, int j){ return data[i*(N+2)+j]; }
-	inline const double& operator()(int i, int j) const{ return data[i*(N+2)+j]; }
+	inline double& operator()(int i, int j){ return data[i*N3+j]; }
+	inline const double& operator()(int i, int j) const{ return data[i*N3+j]; }
 	
 	double& operator()(Vec_3D<int> pos);
 	const double& operator()(Vec_3D<int> pos) const;
 	
+	Mesh_base& operator+=(const double& rhs);
+	Mesh_base& operator-=(const double& rhs){ return *this+=-rhs; }
+	Mesh_base& operator*=(const double& rhs);
+	Mesh_base& operator/=(const double& rhs);
+	
+	friend void swap(Mesh_base& first, Mesh_base& second);
+	Mesh_base& operator=(const Mesh_base& other);
+};
+
+/**
+ * @class:	Mesh
+ * @brief:	creates a mesh of N*N*(N+2) cells
+ */
+
+class Mesh : public Mesh_base
+{
+public:
+	// CONSTRUCTORS & DESTRUCTOR
+	Mesh(int n);
+	Mesh(const Mesh& that);
+	
+	// VARIABLES
+	int N; // acces dimension of mesh
+	
+	// OPERATORS
 	Mesh& operator+=(const double& rhs);
 	Mesh& operator-=(const double& rhs){ return *this+=-rhs; }
 	Mesh& operator*=(const double& rhs);

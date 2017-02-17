@@ -119,7 +119,10 @@ void upd_pos_second_order_w_short_force(const Sim_Param &sim, double db, double 
 	{
 		particles[i].position += particles[i].velocity*(db/2.);
 		f_half.assign(0., 0., 0.);
+		
+		// long-range force
 		assign_from(force_field, particles[i].position, &f_half, sim.order);
+		
 		
 		f_half = (particles[i].velocity - f_half)*(-3/(2.*(b-db/2.))); // <- FROZEN-FLOW
 		

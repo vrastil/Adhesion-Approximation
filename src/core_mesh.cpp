@@ -58,6 +58,15 @@ void get_per(Vec_3D<int> &position, int per)
 	}
 }
 
+void get_per(Vec_3D<int> &position, const Vec_3D<int> &per)
+{
+	for (int i = 0; i < 3; i++)
+	{
+		if (position[i] >= per[i]) position[i] = position[i] % per[i];
+		else if (position[i] < 0) position[i] = position[i] % per[i] + per[i];
+	}
+}
+
 double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num, const int order)
 {
 	// The weighting scheme used to assign values to the mesh points or vice versa
