@@ -108,11 +108,13 @@ void upd_pos_second_order(const Sim_Param &sim, double db, double b, Particle_v*
 	}
 }
 
-void upd_pos_second_order_w_short_force(const Sim_Param &sim, double db, double b, Particle_v* particles, const vector< Mesh> &force_field)
+void upd_pos_second_order_w_short_force(const Sim_Param &sim, LinkedList* linked_list, double db, double b, Particle_v* particles, const vector< Mesh> &force_field)
 {
 	// Leapfrog method for modified frozen-flow
-	
 	Vec_3D<double> f_half;
+	
+	printf("Creating linked list...\n");
+	linked_list->get_linked_list(particles);
 	
 	#pragma omp parallel for private(f_half)
 	for (int i = 0; i < sim.par_num; i++)

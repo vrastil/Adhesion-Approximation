@@ -19,9 +19,9 @@ int mod_frozen_potential(const Sim_Param &sim)
 	work_dir_over(out_dir_app);
 	
 	/** ALLOCATION OF MEMORY + FFTW PREPARATION **/
-	App_Var_v APP(sim, "_FP_mod_");
+	App_Var_FP_mod APP(sim, "_FP_mod_");
 	printf("Initialization completed...\n");
-	
+
 	/** STANDARD PREPARATION FOR INTEGRATIOM **/
 	
 	/* Generating the right density distribution in k-space */	
@@ -54,7 +54,7 @@ int mod_frozen_potential(const Sim_Param &sim)
 		
 		/* Updating positions of particles... */
 		printf("Updating positions of particles...\n");
-		upd_pos_second_order(sim, APP.db, APP.b, APP.particles, APP.app_field);
+		upd_pos_second_order_w_short_force(sim, &APP.linked_list, APP.db, APP.b, APP.particles, APP.app_field);
 		
 		if (APP.printing())
 		{

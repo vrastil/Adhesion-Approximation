@@ -137,7 +137,7 @@ template <typename T>
 Mesh_base<T>::Mesh_base(int n1, int n2, int n3):N1(n1), N2(n2), N3(n3), length(n1*n2*n3)
 {
 	data = new T[length];
-//	printf("Normal base ctor %p\n", this); 
+//	printf("Normal base ctor %p, N1 = %i, N2 = %i, N3 = %i\n", this, N1, N2, N3); 
 }
 
 template <typename T>
@@ -179,14 +179,14 @@ Mesh_base<T>::~Mesh_base<T>()
 template <typename T>
 T& Mesh_base<T>::operator()(Vec_3D<int> pos)
 {
-	get_per(pos, Vec_3D<int>(N1, N2, N3));
+	get_per(pos, N1, N2, N3);
 	return data[pos.x*N2*N3+pos.y*N2+pos.z]; 
 }
 
 template <typename T>
 const T& Mesh_base<T>::operator()(Vec_3D<int> pos) const
 {
-	get_per(pos, Vec_3D<int>(N1, N2, N3));
+	get_per(pos, N1, N2, N3);
 	return data[pos.x*N2*N3+pos.y*N2+pos.z];
 }
 
@@ -215,4 +215,11 @@ Mesh_base<T>& Mesh_base<T>::operator/=(const T& rhs)
 		for (int i = 0; i < length; i++) this->data[i]/=rhs;
 		
 	return *this;
+}
+
+template <typename T>
+void Mesh_base<T>::assign(T val)
+{
+	#pragma omp parallel for
+		for (int i = 0; i < length; i++) this->data[i]=val;
 }

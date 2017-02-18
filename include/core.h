@@ -71,7 +71,7 @@ public:
 	
 	// METHODS
 	inline T* real() const { return data;} // acces data
-	void set_all();
+	void assign(T val);
 	
 	// OPERATORS
 	inline T &operator[](int i){ return data[i]; }
@@ -226,8 +226,9 @@ public:
 	double b_in, b_out;
 	double nu;
 	int nt;
+	double rs = 2.7, Hc, a;
+	int M;
 	std::string out_dir;
-//	std::string out_dir_app;
 	Pow_Spec_Param power;
 	
 	// METHODS
@@ -347,6 +348,23 @@ public:
 	
 	// METHODS
 	void get_linked_list(Particle_v* particles);
+};
+
+/**
+ * @class:	App_Var_FP_mod
+ * @brief:	class containing variables for modified Frozen-potential approximation
+ */
+ 
+ class App_Var_FP_mod: public App_Var_base
+{
+public:
+	// CONSTRUCTORS & DESTRUCTOR
+	App_Var_FP_mod(const Sim_Param &sim, std::string app_str);
+	~App_Var_FP_mod();
+	
+	// VARIABLES
+	Particle_v* particles;
+	LinkedList linked_list;
 };
 
 #include "core.hpp"

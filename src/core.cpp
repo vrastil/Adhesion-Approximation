@@ -34,9 +34,9 @@ const char *humanSize(uint64_t bytes){
  * @brief:	creates a mesh of N*N*(N+2) cells
  */
 
-Mesh::Mesh(int n):N(n), Mesh_base(n, n, n+2) {}
+Mesh::Mesh(int n): Mesh_base(n, n, n+2), N(n) {}
 
-Mesh::Mesh(const Mesh& that): N(that.N), Mesh_base(that) {}
+Mesh::Mesh(const Mesh& that): Mesh_base(that), N(that.N) {}
 
 Mesh& Mesh::operator+=(const double& rhs)
 {
@@ -133,7 +133,7 @@ int Sim_Param::init(int ac, char* av[])
 	if (err) {is_init = 0; return err;}
 	else {
 		is_init = 1;
-		if(nt == 0) nt = omp_get_num_threads();
+		if(nt == 0) nt = omp_get_num_procs();
 		else omp_set_num_threads(nt);
 		par_num = pow(mesh_num / Ng, 3);
 		power.k2_G *= power.k2_G;
@@ -141,6 +141,12 @@ int Sim_Param::init(int ac, char* av[])
 		b_out = 1./(z_out + 1);
 		k_min = 2.*PI/box_size;
 		k_max = 2.*PI*mesh_num/box_size;
+		
+		a = rs / 0.735;
+		M = (int)(mesh_num / rs);
+		Hc = double(mesh_num) / M;
+		
+//		printf("mesh_num = %i, rs = %f, a = %f, M = %i, Hc = %f\n", mesh_num, rs, a, M, Hc);
 		return err;
 	}
 }
@@ -149,18 +155,20 @@ void Sim_Param::print_info()
 {
 	if (is_init) 
 	{
-		printf("\n");
-		printf("Num_par:\t%i\n", Ng);
+		printf("\n*********************\n");
+		printf("SIMULATION PARAMETERS\n");
+		printf("*********************\n");
+		printf("Ng:\t\t%i\n", Ng);
+		printf("Num_par:\t%G^3\n", pow(par_num, 1/3.));
 		printf("Num_mesh:\t%i^3\n", mesh_num);
 		printf("Box size:\t%i Mpc/h\n", box_size);
-		printf("Starting redshift:\t%G\n", z_in);
-		printf("The primordial power spectrum 'P(k)=A*k^ns' has amplitude A = %G and spectral index ns = %G.\n", power.A, power.ns);
-		if (power.k2_G == 0) printf("Smoothing length was not set.\n");
-		else printf("Smoothing wavenumber is %G h/Mpc.\n", sqrt(power.k2_G));
-		printf("'viscozity' for adhesion approximation is %G px^2.\n", nu);
-		printf("The program will try to use %i threads.\n", nt);
-		cout << "Output will be written to folder '"<< out_dir << "'\n";
-		printf("\n");
+		printf("Redshift:\t%G--->%G\n", z_in, z_out);
+		printf("Pk:\t\t[sigma_8 = %G, As = %G, ns = %G, k_smooth = %G, pwr_type = %i]\n", 
+			power.s8, power.A, power.ns, sqrt(power.k2_G), power.pwr_type);
+		printf("AA:\t\t[nu = %G px^2]\n", nu);
+		printf("LL:\t\t[rs = %G, a = %G, M = %i, Hc = %G\n", rs, a, M, Hc);
+		printf("num_thread:\t%i\n", nt);
+		cout << "Output:\t\t'"<< out_dir << "'\n";
 	}
 	else printf("WARNING! Simulation parameters are not initialized!\n");
 }
@@ -295,6 +303,28 @@ App_Var_AA::~App_Var_AA()
 }
 
 /**
+ * @class:	App_Var_FP_mod
+ * @brief:	class containing variables for modified Frozen-potential approximation
+ */
+ 
+ App_Var_FP_mod::App_Var_FP_mod(const Sim_Param &sim, string app_str):
+	App_Var_base(sim, app_str), linked_list (sim.par_num, sim.M, sim.Hc)
+{
+	particles = new Particle_v[sim.par_num];
+	printf("Allocated %s of memory.\n", humanSize
+	(
+		sizeof(Particle_v)*sim.par_num
+		+sizeof(double)*(app_field[0].length*3+power_aux.length)
+		+sizeof(int)*(linked_list.HOC.length+linked_list.par_num)
+	));
+}
+
+App_Var_FP_mod::~App_Var_FP_mod()
+{
+	delete[] particles;
+}
+
+/**
  * @class LinkedList
  * @brief class handling linked lists
  */
@@ -305,5 +335,10 @@ LinkedList::LinkedList(int par_num, int m, double hc):
 	
 void LinkedList::get_linked_list(Particle_v* particles)
 {
-	
+	HOC.assign(-1);
+	for (int i = 0; i < par_num; i++)
+	{
+		LL[i] = HOC(Vec_3D<int>(particles[i].position/Hc));
+		HOC(Vec_3D<int>(particles[i].position/Hc)) = i;
+	}
 }
