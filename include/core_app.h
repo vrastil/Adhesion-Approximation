@@ -21,6 +21,7 @@ void upd_pos_second_order_w_short_force(const Sim_Param &sim, LinkedList* linked
 void gen_rho_dist_k(const Sim_Param &sim, Mesh* rho, const fftw_plan &p_F);
 void gen_pot_k(Mesh* rho_k);
 void gen_displ_k(std::vector<Mesh>* vel_field, const Mesh& pot_k);
+void gen_displ_k_S2(std::vector<Mesh>* vel_field, const Mesh& pot_k, double a);
 
 void get_rho_from_par(Particle_x* particles, Mesh* rho, const Sim_Param &sim);
 void get_rho_from_par(Particle_v* particles, Mesh* rho, const Sim_Param &sim);

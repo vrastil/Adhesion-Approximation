@@ -22,7 +22,7 @@ int mod_frozen_potential(const Sim_Param &sim)
 	App_Var_FP_mod APP(sim, "_FP_mod_");
 	printf("Initialization completed...\n");
 
-	/** STANDARD PREPARATION FOR INTEGRATIOM **/
+	/** PREPARATION FOR INTEGRATIOM WITH S2 SHAPED PARTICLES **/
 	
 	/* Generating the right density distribution in k-space */	
 	gen_rho_dist_k(sim, &APP.app_field[0], APP.p_F);
@@ -35,8 +35,8 @@ int mod_frozen_potential(const Sim_Param &sim)
 	/* Computing initial potential in k-space */
 	gen_pot_k(&APP.app_field[0]);
 	
-	/* Computing displacement in k-space */
-	gen_displ_k(&APP.app_field, APP.app_field[0]);
+	/* Computing displacement in k-space with S2 shaped particles */
+	gen_displ_k_S2(&APP.app_field, APP.app_field[0], sim.a);
 	
 	/* Computing displacement in q-space */
 	printf("Computing displacement in q-space...\n");

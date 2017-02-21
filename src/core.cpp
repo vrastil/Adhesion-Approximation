@@ -146,7 +146,7 @@ int Sim_Param::init(int ac, char* av[])
 		M = (int)(mesh_num / rs);
 		Hc = double(mesh_num) / M;
 		
-//		printf("mesh_num = %i, rs = %f, a = %f, M = %i, Hc = %f\n", mesh_num, rs, a, M, Hc);
+		printf("mesh_num = %i, rs = %f, a = %f, M = %i, Hc = %f\n", mesh_num, rs, a, M, Hc);
 		return err;
 	}
 }
@@ -166,7 +166,7 @@ void Sim_Param::print_info()
 		printf("Pk:\t\t[sigma_8 = %G, As = %G, ns = %G, k_smooth = %G, pwr_type = %i]\n", 
 			power.s8, power.A, power.ns, sqrt(power.k2_G), power.pwr_type);
 		printf("AA:\t\t[nu = %G px^2]\n", nu);
-		printf("LL:\t\t[rs = %G, a = %G, M = %i, Hc = %G\n", rs, a, M, Hc);
+		printf("LL:\t\t[rs = %G, a = %G, M = %i, Hc = %G]\n", rs, a, M, Hc);
 		printf("num_thread:\t%i\n", nt);
 		cout << "Output:\t\t'"<< out_dir << "'\n";
 	}
@@ -218,7 +218,7 @@ void App_Var_base::upd_time()
 {
 	step++;
 	if ((b_out - b) < db) db = b_out - b;
-	else db = 0.01;
+	else db = 0.1;
 	b += db;
 }
 

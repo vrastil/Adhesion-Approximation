@@ -269,9 +269,17 @@ void gen_pot_k(Mesh* rho_k)
 	}
 }
 
-static double CIC_opt(int index, int N)
+static double S2_shape(double k2, double a)
 {
-	// optimalization for CIC
+	if (a == 0) return 1.;
+	
+	double t = sqrt(k2)*a / 2;
+	return 12 / pow(t, 4)*(2 - 2 * cos(t) - t*sin(t));
+}
+
+static double CIC_opt(int index, int N, double a)
+{
+	// optimalization for CIC and S2 shaped particle
 	int k_vec[3];
 	double k_n[3];
 	double U2, U_n, G_n, k2n;
@@ -301,7 +309,7 @@ static double CIC_opt(int index, int N)
 					for(int j=0; j<3; j++)
 					{										
 						G_n += 2 * PI / N*k_vec[j]* // D(k)
-						k_n[j]/k2n* // R(k_n)
+						k_n[j]/k2n*S2_shape(k2n, a)* // R(k_n)
 						pow(U_n, 2.); // W(k) for CIC
 					}
 				}
@@ -316,9 +324,10 @@ static double CIC_opt(int index, int N)
 	return G_n/U2;
 }
 
-void gen_displ_k(vector<Mesh>* vel_field, const Mesh& pot_k)
+void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, double a)
 {
-	printf("Computing displacement in k-space...\n");
+	if (a == 0) printf("Computing displacement in k-space...\n");
+	else printf("Computing displacement in k-space (S2 shaped particles)...\n");
 	double opt;
 	int k_vec[3];
 	double potential_tmp[2];
@@ -328,7 +337,7 @@ void gen_displ_k(vector<Mesh>* vel_field, const Mesh& pot_k)
 	{
 		potential_tmp[0] = pot_k[2*i]; // prevent overwriting if vel_field[0] == pot_k
 		potential_tmp[1] = pot_k[2*i+1]; // prevent overwriting if vel_field[0] == pot_k
-		opt = CIC_opt(i, pot_k.N);
+		opt = CIC_opt(i, pot_k.N, a);
 		get_k_vec(pot_k.N, i, k_vec);		
 		for(int j=0; j<3;j++)
 		{
@@ -337,6 +346,8 @@ void gen_displ_k(vector<Mesh>* vel_field, const Mesh& pot_k)
 		}
 	}
 }
+
+void gen_displ_k(vector<Mesh>* vel_field, const Mesh& pot_k) {gen_displ_k_S2(vel_field, pot_k, 0.);}
 
 void get_rho_from_par(Particle_x* particles, Mesh* rho, const Sim_Param &sim)
 {

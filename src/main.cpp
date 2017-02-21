@@ -34,7 +34,7 @@ int main(int argc, char* argv[]){
 	//	err = frozen_flow(sim);
 	
 		/* FROZEN-POTENTIAL APPROXIMATION */
-	//	err = frozen_potential(sim);
+		err = frozen_potential(sim);
 		
 		/* ADHESION APPROXIMATION */
 	//	err = adhesion_approximation(sim);
