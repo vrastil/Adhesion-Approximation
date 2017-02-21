@@ -252,22 +252,24 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, vector<dou
 	}
 }
 
-void gen_pot_k(Mesh* rho_k)
+void gen_pot_k(const Mesh& rho_k, Mesh* pot_k)
 {
 	printf("Computing potential in k-space...\n");
 	double k2;
 	#pragma omp parallel for private(k2)
-	for(int i=0; i < rho_k->length/2;i++){				
-		k2 = get_k_sq(rho_k->N, i);
+	for(int i=0; i < rho_k.length/2;i++){				
+		k2 = get_k_sq(rho_k.N, i);
 		if (k2 == 0){
-			(*rho_k)[2*i] = 0;
-			(*rho_k)[2*i+1] = 0;
+			(*pot_k)[2*i] = 0;
+			(*pot_k)[2*i+1] = 0;
 		} else{
-			(*rho_k)[2*i] /= -(k2*pow(2.*PI/rho_k->N, 2.));
-			(*rho_k)[2*i+1] /= -(k2*pow(2.*PI/rho_k->N, 2.));
+			(*pot_k)[2*i] = -rho_k[2*i]/(k2*pow(2.*PI/rho_k.N, 2.));
+			(*pot_k)[2*i+1] = -rho_k[2*i+1]/(k2*pow(2.*PI/rho_k.N, 2.));
 		}
 	}
 }
+
+void gen_pot_k(Mesh* rho_k){ gen_pot_k(*rho_k, rho_k); }
 
 static double S2_shape(double k2, double a)
 {
@@ -327,7 +329,7 @@ static double CIC_opt(int index, int N, double a)
 void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, double a)
 {
 	if (a == 0) printf("Computing displacement in k-space...\n");
-	else printf("Computing displacement in k-space (S2 shaped particles)...\n");
+	else printf("Computing force in k-space for S2 shaped particles...\n");
 	double opt;
 	int k_vec[3];
 	double potential_tmp[2];

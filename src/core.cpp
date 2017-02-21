@@ -154,6 +154,7 @@ int Sim_Param::init(int ac, char* av[])
 		k_min = 2.*PI/box_size;
 		k_max = 2.*PI*mesh_num/box_size;
 		
+		rs = 0.7;
 		a = rs / 0.735;
 		M = (int)(mesh_num / rs);
 		Hc = double(mesh_num) / M;

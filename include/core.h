@@ -230,7 +230,7 @@ public:
 	double b_in, b_out;
 	double nu;
 	int nt;
-	double rs = 2.7, Hc, a;
+	double rs, Hc, a;
 	int M;
 	std::string out_dir;
 	Pow_Spec_Param power;
