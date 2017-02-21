@@ -27,7 +27,7 @@ int main(int argc, char* argv[]){
 	
 	try{
 		/* ZEL`DOVICH APPROXIMATION */
-	//	err = zel_app(sim);
+		err = zel_app(sim);
 		
 		/* FROZEN-FLOW APPROXIMATION */
 	//	err = frozen_flow(sim);

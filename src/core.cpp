@@ -34,7 +34,7 @@ const char *humanSize(uint64_t bytes){
 Mesh::Mesh(int n):N(n), length(n*n*(n+2))
 {
 	data = new double[length];
-	printf("Normal ctor %p\n", this); 
+//	printf("Normal ctor %p\n", this); 
 }
 
 Mesh::Mesh(const Mesh& that): N(that.N), length(that.length)
