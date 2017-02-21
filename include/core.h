@@ -112,10 +112,14 @@ public:
 	// VARIABLES
 	int N; // acces dimension of mesh
 	
-	// OPERATORS
+	// METHODS
 	inline fftw_complex* complex() const { return reinterpret_cast<fftw_complex*>(data);}
 	
 	// OPERATORS
+	using Mesh_base<double>::operator ();
+	double& operator()(Vec_3D<int> pos);
+	const double& operator()(Vec_3D<int> pos) const;
+	
 	Mesh& operator+=(const double& rhs);
 	Mesh& operator-=(const double& rhs){ return *this+=-rhs; }
 	Mesh& operator*=(const double& rhs);

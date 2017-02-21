@@ -38,6 +38,18 @@ Mesh::Mesh(int n): Mesh_base(n, n, n+2), N(n) {}
 
 Mesh::Mesh(const Mesh& that): Mesh_base(that), N(that.N) {}
 
+double& Mesh::operator()(Vec_3D<int> pos)
+{
+	get_per(pos, N);
+	return data[pos.x*N2*N3+pos.y*N3+pos.z]; 
+}
+
+const double & Mesh::operator()(Vec_3D<int> pos) const
+{
+	get_per(pos, N);
+	return data[pos.x*N2*N3+pos.y*N3+pos.z];
+}
+
 Mesh& Mesh::operator+=(const double& rhs)
 {
 	#pragma omp parallel for
@@ -146,7 +158,6 @@ int Sim_Param::init(int ac, char* av[])
 		M = (int)(mesh_num / rs);
 		Hc = double(mesh_num) / M;
 		
-		printf("mesh_num = %i, rs = %f, a = %f, M = %i, Hc = %f\n", mesh_num, rs, a, M, Hc);
 		return err;
 	}
 }
@@ -218,7 +229,7 @@ void App_Var_base::upd_time()
 {
 	step++;
 	if ((b_out - b) < db) db = b_out - b;
-	else db = 0.1;
+	else db = 0.01;
 	b += db;
 }
 

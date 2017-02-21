@@ -180,14 +180,14 @@ template <typename T>
 T& Mesh_base<T>::operator()(Vec_3D<int> pos)
 {
 	get_per(pos, N1, N2, N3);
-	return data[pos.x*N2*N3+pos.y*N2+pos.z]; 
+	return data[pos.x*N2*N3+pos.y*N3+pos.z]; 
 }
 
 template <typename T>
 const T& Mesh_base<T>::operator()(Vec_3D<int> pos) const
 {
 	get_per(pos, N1, N2, N3);
-	return data[pos.x*N2*N3+pos.y*N2+pos.z];
+	return data[pos.x*N2*N3+pos.y*N3+pos.z];
 }
 
 template <typename T>
