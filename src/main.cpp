@@ -8,6 +8,8 @@
 #include "adhesion_approximation.h"
 #include "mod_frozen_potential.h"
 
+int example(Sim_Param &sim);
+
 using namespace std;
 
 int main(int argc, char* argv[]){
@@ -24,9 +26,9 @@ int main(int argc, char* argv[]){
 	norm_pwr(&sim.power); // compute power spectrum normalization
 	sim.print_info(); // print simulation parameters
 	
-	// #include "examples.cpp"
-	
 	try{
+	//	err = example(sim);
+		
 		/* ZEL`DOVICH APPROXIMATION */
 	//	err = zel_app(sim);
 		

@@ -43,7 +43,7 @@ int mod_frozen_potential(const Sim_Param &sim)
 	fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
 	
 	/* Setting initial positions of particles */
-    printf("Setting initial positions of particles...\n");
+    printf("Setting initial positions and velocitis of particles...\n");
 	set_unpert_pos_w_vel(sim, APP.particles, APP.app_field);
 	
 	/** PREPARATION FOR INTEGRATIOM WITH S2 SHAPED PARTICLES **/

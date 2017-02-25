@@ -29,3 +29,6 @@ void get_rho_from_par(Particle_v* particles, Mesh* rho, const Sim_Param &sim);
 void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux);
 void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, std::vector<double_2>* pwr_spec_binned);
 void gen_dens_binned(const Mesh& rho, std::vector<int> &dens_binned, const Sim_Param &sim);
+
+void force_short(const Sim_Param &sim, const LinkedList& linked_list, Particle_v *particles,
+				 const Vec_3D<double> &position, Vec_3D<double>* force);

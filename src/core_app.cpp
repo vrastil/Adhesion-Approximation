@@ -108,7 +108,54 @@ void upd_pos_second_order(const Sim_Param &sim, double db, double b, Particle_v*
 	}
 }
 
-void upd_pos_second_order_w_short_force(const Sim_Param &sim, LinkedList* linked_list, double db, double b, Particle_v* particles, const vector< Mesh> &force_field)
+static double force_ref(double r, double a){
+	// Reference force for an S_2-shaped particle
+	double z = 2 * r / a;
+	if (z > 2) return 1 / (r*r);
+	else if (z > 1) return (12 / (z*z) - 224 + 896 * z - 840 * z*z + 224 * pow(z, 3) + 70 * pow(z, 4) - 48 * pow(z, 5) + 7 * pow(z, 6)) / (35 * a*a);
+	else return (224 * z - 224 * pow(z, 3) + 70 * pow(z, 4) + 48 * pow(z, 5) - 21 * pow(z, 7)) / (35 * a*a);
+}
+
+static double force_tot(double r){
+	return 1 / (r*r);
+}
+
+void force_short(const Sim_Param &sim, const LinkedList& linked_list, Particle_v *particles,
+				 const Vec_3D<double> &position, Vec_3D<double>* force)
+{	// Calculate short range force in position, force is added
+	int p;
+	Vec_3D<int> y, z;
+	Vec_3D<double> dr_vec;
+	double dr;
+	double m = pow(sim.Ng, 3);
+
+	z = (Vec_3D<int>)(position / sim.Hc); // chain position of particle
+	
+	for (y[0] = z[0] -1; y[0] < z[0] + 2; y[0]++)
+	{
+		for (y[1] = z[1] - 1; y[1] < z[1] + 2; y[1]++){
+		
+			for (y[2] = z[2] - 1; y[2] < z[2] + 2; y[2]++)
+			{
+				p = linked_list.HOC(y);
+				while (p != -1){
+					dr_vec = get_sgn_distance(particles[p].position, position, sim.mesh_num);
+					dr = dr_vec.norm();
+			//		dr = get_distance(particles[p].position, position, sim.mesh_num);
+			//		if ((dr < sim.rs) && (dr !c= 0)) // Short range force is set 0 for separation larger than cutoff radius
+					if (dr != 0) // Short range force is set 0 for separation larger than cutoff radius
+					{ 
+						(*force) += (m*(force_tot(dr) - force_ref(dr, sim.a))/(dr*4*PI))*dr_vec;
+					}
+					p = linked_list.LL[p];
+				}
+			}
+		}
+	}
+}
+
+void upd_pos_second_order_w_short_force(const Sim_Param &sim, LinkedList* linked_list, double db,
+										double b, Particle_v* particles, const vector< Mesh> &force_field)
 {
 	// Leapfrog method for modified frozen-flow
 	Vec_3D<double> f_half;
@@ -125,6 +172,8 @@ void upd_pos_second_order_w_short_force(const Sim_Param &sim, LinkedList* linked
 		// long-range force
 		assign_from(force_field, particles[i].position, &f_half, sim.order);
 		
+		// short range force
+		force_short(sim, *linked_list, particles, particles[i].position, &f_half);
 		
 		f_half = (particles[i].velocity - f_half)*(-3/(2.*(b-db/2.))); // <- FROZEN-FLOW
 		
@@ -339,12 +388,14 @@ void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, double a)
 	{
 		potential_tmp[0] = pot_k[2*i]; // prevent overwriting if vel_field[0] == pot_k
 		potential_tmp[1] = pot_k[2*i+1]; // prevent overwriting if vel_field[0] == pot_k
+//		opt = 1;
 		opt = CIC_opt(i, pot_k.N, a);
 		get_k_vec(pot_k.N, i, k_vec);		
 		for(int j=0; j<3;j++)
 		{
-			(*vel_field)[j][2*i] = k_vec[j]*potential_tmp[1]*(2.*PI/pot_k.N)*opt; // 2*PI/N comes from derivative WITH RESPECT to the mesh coordinates
-			(*vel_field)[j][2*i+1] = -k_vec[j]*potential_tmp[0]*(2.*PI/pot_k.N)*opt; // 2*PI/N comes from derivative WITH RESPECT to the mesh coordinates
+			// 2*PI/N comes from derivative WITH RESPECT to the mesh coordinates
+			(*vel_field)[j][2*i] = k_vec[j]*potential_tmp[1]*(2.*PI/pot_k.N)*opt;
+			(*vel_field)[j][2*i+1] = -k_vec[j]*potential_tmp[0]*(2.*PI/pot_k.N)*opt;
 		}
 	}
 }

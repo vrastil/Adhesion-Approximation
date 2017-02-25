@@ -101,6 +101,13 @@ Vec_3D<T> operator*(Vec_3D<T> lhs, T rhs)
 }
 
 template <typename T>
+Vec_3D<T> operator*(T lhs, Vec_3D<T> rhs)
+{
+	rhs *= lhs;
+	return rhs;
+}
+
+template <typename T>
 Vec_3D<T>& Vec_3D<T>::operator/=(T rhs)
 {
 	x/=rhs;

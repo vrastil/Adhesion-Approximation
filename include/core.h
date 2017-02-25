@@ -14,6 +14,11 @@ typedef std::array<double, 2> double_2;
  * @class:	Vec_3D<T>
  * @brief:	class handling basic 3D-vector functions
  */
+ 
+template <typename T> int sgn(T val)
+{
+	return (T(0) < val) - (val < T(0));
+}
 
 template <typename T>
 class Vec_3D
@@ -45,6 +50,7 @@ public:
 template <typename T> Vec_3D<T> operator+(Vec_3D<T> lhs, const Vec_3D<T>& rhs);
 template <typename T> Vec_3D<T> operator-(Vec_3D<T> lhs, const Vec_3D<T>& rhs);
 template <typename T> Vec_3D<T> operator*(Vec_3D<T> lhs, T rhs);
+template <typename T> Vec_3D<T> operator*(T lhs, Vec_3D<T> rhs);
 template <typename T> Vec_3D<T> operator/(Vec_3D<T> lhs, T rhs);
 
 /**
@@ -166,9 +172,9 @@ public:
 	// CONSTRUCTORS
 	Particle_v(){};
 	Particle_v(double x, double y, double z, double vx, double vy, double vz):
-	Particle_x(x,y,z), velocity(vx,vy,vz) {};
+		Particle_x(x,y,z), velocity(vx,vy,vz) {};
 	Particle_v(Vec_3D<double> position, Vec_3D<double> velocity):
-	Particle_x(position), velocity(velocity.x, velocity.y, velocity.z) {};
+		Particle_x(position), velocity(velocity.x, velocity.y, velocity.z) {};
 	
 	// VARIABLES
 	Vec_3D<double> velocity;

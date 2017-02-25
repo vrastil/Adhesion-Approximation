@@ -6,7 +6,7 @@
 namespace fs = boost::filesystem;
 using namespace std;
 
-static void create_dir(string out_dir)
+void create_dir(string out_dir)
 {
 	fs::path dir(out_dir.c_str());
 	if(fs::create_directory(dir)){
@@ -163,7 +163,32 @@ void print_rho_map(const Mesh& delta, const Sim_Param &sim, string out_dir, stri
 	fprintf (pFile, "# x [Mpc/h]\tz [Mpc/h]\tdelta\n");
 	for (int i = 0; i < sim.mesh_num; i++){
 		for (int j = 0; j < sim.mesh_num; j++){
-			fprintf (pFile, "%f\t%f\t%f\n", j*sim.x_0(), i*sim.x_0(), delta(i, sim.mesh_num/2, j));
+			fprintf (pFile, "%f\t%f\t%f\n", i*sim.x_0(), j*sim.x_0(), delta(i, sim.mesh_num/2, j));
+		}
+		fprintf (pFile, "\n");
+	}
+
+	fclose (pFile);
+}
+
+void print_projected_rho(const Mesh& delta, const Sim_Param &sim, string out_dir, string suffix)
+{
+	out_dir += "rho_map/";
+	FILE* pFile;
+	pFile = fopen((out_dir + "rho_map_projected" + suffix + ".dat").c_str(), "w");
+	cout << "Writing density map into file " << out_dir + "rho_map" + suffix + ".dat\n";
+	fprintf (pFile, "# This file contains density map delta(x).\n");
+	fprintf (pFile, "# x [Mpc/h]\tz [Mpc/h]\tdelta\n");
+	double rho, rho_tmp;
+	for (int i = 0; i < sim.mesh_num; i++){
+		for (int j = 0; j < sim.mesh_num; j++){
+			rho = 0;
+			for (int k = 0; k < sim.mesh_num; k++){
+				rho_tmp = delta(i, k, j);
+				if (rho_tmp != -1) printf("Density in (%i, %i, %i) = %f\n", i, j, k, rho_tmp);
+				rho+=rho_tmp + 1;
+			}
+			fprintf (pFile, "%f\t%f\t%f\n", i*sim.x_0(), j*sim.x_0(), rho -1);
 		}
 		fprintf (pFile, "\n");
 	}

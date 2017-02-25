@@ -79,6 +79,41 @@ void get_per(Vec_3D<int> &position, int perx, int pery, int perz)
 	else if (position[2] < 0) position[2] = position[2] % perz + perz;
 }
 
+double get_distance_1D(double x_1, double x_2, int per)
+{	
+	double d = abs(x_2 - x_1);
+	if (d <= per / 2.) return d; // most probable, first condition
+	else if (d <= per) return per - d;
+	else d = fmod(d, per); // fmod unlikely to evaluate, speed up code
+	if (d <= per / 2.) return d;
+	else return per - d;
+}
+
+double get_sgn_distance_1D(double x_from, double x_to, int per)
+{	// return signed (oriented) distance, e.g. x_to - x_from (no periodicity)
+	// periodicity makes this a little bit trickier
+	double d = x_from - x_to;
+	if (abs(d) <= per / 2.) return d; // most probable, first condition
+	else if (abs(d) <= per) return d-sgn(d)*per;
+	else d = fmod(d, per); // fmod unlikely to evaluate, speed up code
+	if (abs(d) <= per / 2.) return d;
+	else return d-sgn(d)*per;
+}
+
+double get_distance(const Vec_3D<double> &x_1, const Vec_3D<double> &x_2, int per)
+{
+	double dst = 0;
+	for (int i = 0; i < 3; i++) dst+= pow(get_distance_1D(x_1[i], x_2[i], per), 2.);
+	return sqrt(dst);
+}
+
+Vec_3D<double> get_sgn_distance(const Vec_3D<double> &x_from, const Vec_3D<double> &x_to, int per)
+{
+	Vec_3D<double> dst;
+	for (int i = 0; i < 3; i++) dst[i] = get_sgn_distance_1D(x_from[i], x_to[i], per);
+	return dst;
+}
+
 double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num, const int order)
 {
 	// The weighting scheme used to assign values to the mesh points or vice versa
@@ -97,7 +132,8 @@ double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num, const int o
 	case 1: {	// CIC: Cloud in cells
 				for (int i = 0; i < 3; i++)
 				{
-					dx = fmin(fmin(abs(x[i] - y[i]), x[i] + mesh_num - y[i]), y[i] + mesh_num - x[i]);
+				//	dx = fmin(fmin(abs(x[i] - y[i]), x[i] + mesh_num - y[i]), y[i] + mesh_num - x[i]);
+					dx = get_distance_1D(x[i], y[i], mesh_num);
 					if (dx > 1) w *= 0;
 					else w *= 1 - dx;
 				}
@@ -106,7 +142,8 @@ double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num, const int o
 	case 2: {	// TSC: Triangular shaped clouds
 				for (int i = 0; i < 3; i++)
 				{
-					dx = fmin(fmin(abs(x[i] - y[i]), x[i] + mesh_num - y[i]), y[i] + mesh_num - x[i]);
+				//	dx = fmin(fmin(abs(x[i] - y[i]), x[i] + mesh_num - y[i]), y[i] + mesh_num - x[i]);
+					dx = get_distance_1D(x[i], y[i], mesh_num);
 					if (dx > 1.5) w *= 0;
 					else if (dx > 0.5) w *= (1.5 - dx)*(1.5 - dx) / 2.0;
 					else w *= 3 / 4.0 - dx*dx;
