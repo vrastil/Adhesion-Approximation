@@ -9,6 +9,8 @@
 #include "core.h"
 #include <fftw3.h>
 
+std::string currentDateTime();
+
 void create_dir(std::string out_dir);
 void work_dir_over(std::string out_dir);
 

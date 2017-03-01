@@ -6,16 +6,28 @@
 namespace fs = boost::filesystem;
 using namespace std;
 
+// Get current date/time, format is YYYY-MM-DD.HH:mm:ss
+string currentDateTime()
+{
+	time_t     now = time(0);
+	struct tm  tstruct;
+	char       buf[80];
+	tstruct = *localtime(&now);
+	strftime(buf, sizeof(buf), "%Y_%m_%d.%X", &tstruct);
+	
+	string returnval(buf);
+    return returnval;
+}
+
 void create_dir(string out_dir)
 {
 	fs::path dir(out_dir.c_str());
-	if(fs::create_directory(dir)){
+	if(fs::create_directories(dir)){
         cout << "Directory Created: "<< out_dir << endl;
     }
 }
 void work_dir_over(string out_dir)
 {
-	create_dir(out_dir);
 	create_dir(out_dir + "par_cut/");
 	create_dir(out_dir + "pwr_diff/");
 	create_dir(out_dir + "pwr_spec/");

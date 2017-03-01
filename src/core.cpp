@@ -7,6 +7,8 @@
 #include <fftw3.h>
 #include "core.h"
 #include "core_cmd.h"
+#include "core_out.h"
+#include "core_app.h"
 // #include "core_mesh.h"
 
 using namespace std;
@@ -154,7 +156,7 @@ int Sim_Param::init(int ac, char* av[])
 		k_min = 2.*PI/box_size;
 		k_max = 2.*PI*mesh_num/box_size;
 		
-		rs = 0.7;
+		rs = 2.5;
 		a = rs / 0.735;
 		M = (int)(mesh_num / rs);
 		Hc = double(mesh_num) / M;
@@ -191,7 +193,8 @@ void Sim_Param::print_info()
  */
  
 App_Var_base::App_Var_base(const Sim_Param &sim, string app_str):
-	b(sim.b_in), b_out(sim.b_out), db(sim.b_in), z_suffix_const(app_str),
+	err(0), step(0), print_every(4),
+	b(sim.b_in), b_out(sim.b_out), db(sim.db), z_suffix_const(app_str),
 	app_field(3, Mesh(sim.mesh_num)),
 	power_aux (sim.mesh_num),
 	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num),
@@ -226,11 +229,56 @@ string App_Var_base::z_suffix()
 	return z_suffix_const + "z" + z_suffix_num.str();
 }
 
+void App_Var_base::print_x(const Sim_Param &sim, string out_dir_app, Particle_x* particles)
+{
+	/* Printing positions */
+	print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
+	track.update_track_par(particles);
+	print_track_par(track, sim, out_dir_app, z_suffix());
+
+	/* Printing density */
+	get_rho_from_par(particles, &power_aux, sim);
+	gen_dens_binned(power_aux, dens_binned, sim);
+	print_rho_map(power_aux, sim, out_dir_app, z_suffix());
+	print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
+
+	/* Printing power spectrum */
+	fftw_execute_dft_r2c(p_F, power_aux);
+	pwr_spec_k(sim, power_aux, &power_aux);
+	gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
+	print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
+	print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b, out_dir_app, z_suffix());
+
+	upd_supp();
+}
+
+void App_Var_base::print_v(const Sim_Param &sim, string out_dir_app, Particle_v* particles)
+{
+	/* Printing positions */
+	print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
+	track.update_track_par(particles);
+	print_track_par(track, sim, out_dir_app, z_suffix());
+
+	/* Printing density */
+	get_rho_from_par(particles, &power_aux, sim);
+	gen_dens_binned(power_aux, dens_binned, sim);
+	print_rho_map(power_aux, sim, out_dir_app, z_suffix());
+	print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
+
+	/* Printing power spectrum */
+	fftw_execute_dft_r2c(p_F, power_aux);
+	pwr_spec_k(sim, power_aux, &power_aux);
+	gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
+	print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
+	print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b, out_dir_app, z_suffix());
+
+	upd_supp();
+}
+
 void App_Var_base::upd_time()
 {
 	step++;
 	if ((b_out - b) < db) db = b_out - b;
-	else db = 0.01;
 	b += db;
 }
 

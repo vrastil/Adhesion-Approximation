@@ -71,6 +71,25 @@ void set_pert_pos(const Sim_Param &sim, double db, Particle_x* particles, const 
 	}
 }
 
+void set_pert_pos_w_vel(const Sim_Param &sim, double db, Particle_v* particles, const vector< Mesh> &vel_field)
+{
+	Vec_3D<int> unpert_pos;
+	Vec_3D<double> velocity;
+	Vec_3D<double> pert_pos;
+	
+	const int par_per_dim = sim.mesh_num / sim.Ng;
+	
+	#pragma omp parallel for private(unpert_pos, velocity, pert_pos)
+	for(int i=0; i< sim.par_num; i++)
+	{
+		set_unpert_pos_one_par(unpert_pos, i, par_per_dim, sim.Ng);
+		set_velocity_one_par(unpert_pos, velocity, vel_field);
+		pert_pos = Vec_3D<double>(unpert_pos) + velocity*db;
+		get_per(pert_pos, sim.mesh_num);
+		particles[i] = Particle_v(pert_pos, velocity);		
+	}
+}
+
 void upd_pos_first_order(const Sim_Param &sim, double db, Particle_x* particles, const vector< Mesh> &vel_field)
 {
 	// Euler method
@@ -92,14 +111,13 @@ void upd_pos_second_order(const Sim_Param &sim, double db, double b, Particle_v*
 	// Leapfrog method for frozen-flow
 	
 	Vec_3D<double> f_half;
-	
 	#pragma omp parallel for private(f_half)
 	for (int i = 0; i < sim.par_num; i++)
 	{
 		particles[i].position += particles[i].velocity*(db/2.);
 		f_half.assign(0., 0., 0.);
 		assign_from(force_field, particles[i].position, &f_half, sim.order);
-		
+	//	if (i % (sim.par_num / 13) == 0) printf("particle num = %i, fl = (%f, %f, %f)\n", i, f_half.x, f_half.y, f_half.z);
 		f_half = (particles[i].velocity - f_half)*(-3/(2.*(b-db/2.))); // <- FROZEN-FLOW
 		
 		particles[i].velocity += f_half*db;
@@ -112,7 +130,8 @@ static double force_ref(double r, double a){
 	// Reference force for an S_2-shaped particle
 	double z = 2 * r / a;
 	if (z > 2) return 1 / (r*r);
-	else if (z > 1) return (12 / (z*z) - 224 + 896 * z - 840 * z*z + 224 * pow(z, 3) + 70 * pow(z, 4) - 48 * pow(z, 5) + 7 * pow(z, 6)) / (35 * a*a);
+	else if (z > 1) return (12 / (z*z) - 224 + 896 * z - 840 * z*z + 224 * pow(z, 3) +
+							70 * pow(z, 4) - 48 * pow(z, 5) + 7 * pow(z, 6)) / (35 * a*a);
 	else return (224 * z - 224 * pow(z, 3) + 70 * pow(z, 4) + 48 * pow(z, 5) - 21 * pow(z, 7)) / (35 * a*a);
 }
 
@@ -142,8 +161,8 @@ void force_short(const Sim_Param &sim, const LinkedList& linked_list, Particle_v
 					dr_vec = get_sgn_distance(particles[p].position, position, sim.mesh_num);
 					dr = dr_vec.norm();
 			//		dr = get_distance(particles[p].position, position, sim.mesh_num);
-			//		if ((dr < sim.rs) && (dr !c= 0)) // Short range force is set 0 for separation larger than cutoff radius
-					if (dr != 0) // Short range force is set 0 for separation larger than cutoff radius
+					if ((dr < sim.rs) && (dr != 0)) // Short range force is set 0 for separation larger than cutoff radius
+			//		if (dr != 0) // Short range force is set 0 for separation larger than cutoff radius
 					{ 
 						(*force) += (m*(force_tot(dr) - force_ref(dr, sim.a))/(dr*4*PI))*dr_vec;
 					}
@@ -159,25 +178,39 @@ void upd_pos_second_order_w_short_force(const Sim_Param &sim, LinkedList* linked
 {
 	// Leapfrog method for modified frozen-flow
 	Vec_3D<double> f_half;
-	
-	printf("Creating linked list...\n");
-	linked_list->get_linked_list(particles);
+
+	// three loops to compute distances and velocities at fixed positon
 	
 	#pragma omp parallel for private(f_half)
 	for (int i = 0; i < sim.par_num; i++)
 	{
 		particles[i].position += particles[i].velocity*(db/2.);
+	}
+	
+	printf("Creating linked list...\n");
+	linked_list->get_linked_list(particles);
+	double fs, fl;
+	#pragma omp parallel for private(f_half, fs, fl)
+	for (int i = 0; i < sim.par_num; i++)
+	{
 		f_half.assign(0., 0., 0.);
 		
 		// long-range force
 		assign_from(force_field, particles[i].position, &f_half, sim.order);
-		
+//		fl = f_half.norm();
+//		fs = fl;
 		// short range force
 		force_short(sim, *linked_list, particles, particles[i].position, &f_half);
-		
+//		fs -= f_half.norm();
+//		if (i % (sim.par_num / 13) == 0) printf("particle num = %i, fl = %f, fs = %f\n",i, fl, fs);
 		f_half = (particles[i].velocity - f_half)*(-3/(2.*(b-db/2.))); // <- FROZEN-FLOW
 		
 		particles[i].velocity += f_half*db;
+	}
+	
+	#pragma omp parallel for private(f_half)
+	for (int i = 0; i < sim.par_num; i++)
+	{
 		particles[i].position += particles[i].velocity*(db/2.);
 		get_per(particles[i].position, sim.mesh_num);
 	}
@@ -360,7 +393,7 @@ static double CIC_opt(int index, int N, double a)
 					for(int j=0; j<3; j++)
 					{										
 						G_n += 2 * PI / N*k_vec[j]* // D(k)
-						k_n[j]/k2n*S2_shape(k2n, a)* // R(k_n)
+						k_n[j]/k2n*pow(S2_shape(k2n, a), 2)* // R(k_n)
 						pow(U_n, 2.); // W(k) for CIC
 					}
 				}
@@ -377,8 +410,10 @@ static double CIC_opt(int index, int N, double a)
 
 void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, double a)
 {
-	if (a == 0) printf("Computing displacement in k-space...\n");
-	else printf("Computing force in k-space for S2 shaped particles...\n");
+	if (a == -1) printf("Computing displacement in k-space...\n");
+	else if (a == 0) printf("Computing displacement in k-space with CIC opt...\n");
+	else printf("Computing force in k-space for S2 shaped particles with CIC opt...\n");
+
 	double opt;
 	int k_vec[3];
 	double potential_tmp[2];
@@ -388,8 +423,8 @@ void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, double a)
 	{
 		potential_tmp[0] = pot_k[2*i]; // prevent overwriting if vel_field[0] == pot_k
 		potential_tmp[1] = pot_k[2*i+1]; // prevent overwriting if vel_field[0] == pot_k
-//		opt = 1;
-		opt = CIC_opt(i, pot_k.N, a);
+		if (a == -1) opt = 1.;
+		else opt = CIC_opt(i, pot_k.N, a);
 		get_k_vec(pot_k.N, i, k_vec);		
 		for(int j=0; j<3;j++)
 		{
@@ -400,7 +435,9 @@ void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, double a)
 	}
 }
 
-void gen_displ_k(vector<Mesh>* vel_field, const Mesh& pot_k) {gen_displ_k_S2(vel_field, pot_k, 0.);}
+void gen_displ_k(vector<Mesh>* vel_field, const Mesh& pot_k) {gen_displ_k_S2(vel_field, pot_k, -1);}
+
+void gen_displ_k_cic(vector<Mesh>* vel_field, const Mesh& pot_k) {gen_displ_k_S2(vel_field, pot_k, 0.);}
 
 void get_rho_from_par(Particle_x* particles, Mesh* rho, const Sim_Param &sim)
 {
@@ -465,7 +502,7 @@ void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param 
 				}
 				rho_avg /= pow(sim.Ng, 3);
 				bin = (int)((rho_avg+1)/0.2);
-				if (bin > 200) { printf("WARNING! Huge density (%.0f).\n", rho_avg); bin = 200; }
+				if (bin > 400) { printf("WARNING! Huge density (%.0f).\n", rho_avg); bin = 200; }
 				if (bin >= dens_binned.capacity()) dens_binned.resize(bin+1);
 				dens_binned[bin]++;
 			}

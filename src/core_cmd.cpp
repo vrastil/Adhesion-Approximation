@@ -24,9 +24,10 @@ int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
 		config.add_options()
 			("mesh_num,m", po::value<int>(&sim->mesh_num)->default_value(32), "number of mesh cells in the box per dimension")
 			("par_num,p", po::value<int>(&sim->Ng)->default_value(2), "ratio of mesh cells and number of particles per dimension")
-			("box_size,b", po::value<int>(&sim->box_size)->default_value(512), "box size in units of Mpc/h")
+			("box_size,L", po::value<int>(&sim->box_size)->default_value(512), "box size in units of Mpc/h")
 			("redshift,z", po::value<double>(&sim->z_in)->default_value(200.), "redshift at the start of the simulation")
 			("redshift_0,Z", po::value<double>(&sim->z_out)->default_value(10.), "redshift at the end of the simulation")
+			("time_step,b", po::value<double>(&sim->db)->default_value(0.1, "0.1"), "dimensionless time-step (scale factor)")
 			("pwr_type,P", po::value<int>(&int_pwr_type)->default_value(0), "power spectrum type")
 			("index,n", po::value<double>(&sim->power.ns)->default_value(1.), "spectral index of the scale-free power spectrum")
 			("sigma8,s", po::value<double>(&sim->power.s8)->default_value(1.), "normalization of the power spectrum at R = 8 Mpc/h")
@@ -46,7 +47,7 @@ int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
 		sim->power.pwr_type = static_cast<e_power_spec>(int_pwr_type);
 
 		if (vm.count("help")) {
-            cout << cmdline_options << "\n";
+            cout << setprecision(3) << cmdline_options << "\n";
             return 2;
         }
 		

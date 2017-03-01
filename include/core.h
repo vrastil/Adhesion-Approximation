@@ -233,7 +233,7 @@ public:
 	double k_min, k_max;
 	unsigned long seed = 12345678;
 	double z_in, z_out;
-	double b_in, b_out;
+	double b_in, b_out, db;
 	double nu;
 	int nt;
 	double rs, Hc, a;
@@ -265,7 +265,7 @@ public:
 	~App_Var_base();
 	
 	// VARIABLES
-	int err = 0, step = 0, print_every = 1;
+	int err, step, print_every;
 	double b, b_out, db;
 	const std::string z_suffix_const;
 	std::vector<Mesh> app_field;
@@ -281,6 +281,8 @@ public:
 	inline double b_half() {return b - db/2.; }
 	inline bool integrate(){return (b <= b_out) && (db > 0);}
 	inline bool printing(){ return ((step % print_every) == 0) or (b == b_out); }
+	void print_x(const Sim_Param &sim, std::string out_dir_app, Particle_x* particles);
+	void print_v(const Sim_Param &sim, std::string out_dir_app, Particle_v* particles);
 	void upd_time();
 	void upd_supp();
 	
@@ -304,6 +306,9 @@ public:
 	
 	// VARIABLES
 	Particle_x* particles;
+	
+	// METHODS
+	inline void print(const Sim_Param &sim, std::string out_dir_app) {print_x(sim, out_dir_app, particles);}
 };
 
 /**
@@ -320,6 +325,9 @@ public:
 	
 	// VARIABLES
 	Particle_v* particles;
+	
+	// METHODS
+	inline void print(const Sim_Param &sim, std::string out_dir_app) {print_v(sim, out_dir_app, particles);}
 };
 
 /**
@@ -337,6 +345,9 @@ public:
 	// VARIABLES
 	Particle_x* particles;
 	Mesh expotential;
+	
+	// METHODS
+	inline void print(const Sim_Param &sim, std::string out_dir_app) {print_x(sim, out_dir_app, particles);}
 };
 
 /**
@@ -375,6 +386,9 @@ public:
 	// VARIABLES
 	Particle_v* particles;
 	LinkedList linked_list;
+	
+	// METHODS
+	inline void print(const Sim_Param &sim, std::string out_dir_app) {print_v(sim, out_dir_app, particles);}
 };
 
 #include "core.hpp"

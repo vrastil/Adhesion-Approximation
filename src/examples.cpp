@@ -55,15 +55,15 @@ void print_force(Particle_v* particles, const std::vector<Mesh>& app_field, cons
 	Vec_3D<double> f_tmp, f_total;
 	Vec_3D<double> position (sim.mesh_num/2., sim.mesh_num/2., sim.mesh_num/2.);
 	Vec_3D<double> position_0(sim.mesh_num/2., sim.mesh_num/2., sim.mesh_num/2.);
-	double dr = 0.05;
+	double dr = 0.09;
 	double r, rper;
 	double fl, fs = 0, ft;
-	int i_max = 40;
+	int i_max = 90;
 	position.x+=dr;
 	fprintf(pFile, "# r\tfs\tfl\tfs+fl\tft\n");
 	for (int i = 1; i < i_max; i++)
 	{
-		position.x=position_0.x+pow(1+dr, i) - 1 + 0.1;
+		position.x=position_0.x+pow(1+dr, i) - 1 + 0.5;
 		r = position.x -position_0.x;
 		rper = get_distance(position_0, position, sim.mesh_num);
 	//	printf("\tCalculating force at distance r = %f / %f\n", r, rper);
@@ -73,18 +73,19 @@ void print_force(Particle_v* particles, const std::vector<Mesh>& app_field, cons
 		
 		assign_from(app_field, position, &f_tmp, sim.order);
 		fl = f_tmp.norm();
-		fl = abs(f_tmp.x);
+		printf("F_long = (%f, %f, %f)\t", f_tmp.x, f_tmp.y, f_tmp.z);
 		f_total+=f_tmp;
 		f_tmp.assign(0., 0., 0.);
 		
 		force_short(sim, linked_list, particles, position, &f_tmp);
+		printf("F_short = (%f, %f, %f)\n", f_tmp.x, f_tmp.y, f_tmp.z);
 		fs = f_tmp.norm();
 		f_total+=f_tmp;
 		ft = f_total.norm();
 		if (r > sim.mesh_num/2.) { printf("distance greater than N/2, dst = %f\n", r); break;}
 //		printf("# Position = (%f, %f, %f)\n", position.x, position.y, position.z);
 //		printf("# HOC (position) %i\n", APP.linked_list.HOC(z));
-		fprintf(pFile, "%f\t%f\t%f\t%f\t%f\n",rper , fs, fl, fs+fl, ft);
+		fprintf(pFile, "%f\t%f\t%f\t%f\t%f\t%f\n",rper , fs, fl, fs+fl, ft, r);
 	}
 	fclose (pFile);
 }

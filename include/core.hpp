@@ -228,5 +228,5 @@ template <typename T>
 void Mesh_base<T>::assign(T val)
 {
 	#pragma omp parallel for
-		for (int i = 0; i < length; i++) this->data[i]=val;
+	for (int i = 0; i < length; i++) this->data[i]=val;
 }

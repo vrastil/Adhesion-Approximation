@@ -15,7 +15,7 @@ int mod_frozen_potential(const Sim_Param &sim)
 	"MODIFIED FROZEN-POTENTIAL APPROXIMATION\n"
 	"***************************************\n";
 	
-	string out_dir_app = sim.out_dir + "FP_pp_run/";
+	string out_dir_app = sim.out_dir + "FP_pp_run/" + currentDateTime() + "/";
 	work_dir_over(out_dir_app);
 	
 	/** ALLOCATION OF MEMORY + FFTW PREPARATION **/
@@ -23,7 +23,6 @@ int mod_frozen_potential(const Sim_Param &sim)
 	printf("Initialization completed...\n");
 
 	/** STANDARD PREPARATION FOR INTEGRATIOM **/
-	
 	/* Generating the right density distribution in k-space */	
 	gen_rho_dist_k(sim, &APP.app_field[0], APP.p_F);
 	
@@ -42,10 +41,11 @@ int mod_frozen_potential(const Sim_Param &sim)
 	printf("Computing displacement in q-space...\n");
 	fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
 	
+	/** INITIAL CONDITIONS **/
 	/* Setting initial positions of particles */
     printf("Setting initial positions and velocitis of particles...\n");
-	set_unpert_pos_w_vel(sim, APP.particles, APP.app_field);
-	
+	set_pert_pos_w_vel(sim, sim.b_in, APP.particles, APP.app_field);
+
 	/** PREPARATION FOR INTEGRATIOM WITH S2 SHAPED PARTICLES **/
 	/* Computing displacement in k-space with S2 shaped particles */
 	gen_displ_k_S2(&APP.app_field, APP.power_aux, sim.a);
@@ -53,6 +53,9 @@ int mod_frozen_potential(const Sim_Param &sim)
 	/* Computing force in q-space */
 	printf("Computing force for S2 shaped particles in q-space...\n");
 	fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
+	
+	APP.print(sim, out_dir_app);
+	APP.upd_time();
 	
 	/** INTEGRATION **/
 	
@@ -64,28 +67,7 @@ int mod_frozen_potential(const Sim_Param &sim)
 		printf("Updating positions of particles...\n");
 		upd_pos_second_order_w_short_force(sim, &APP.linked_list, APP.db, APP.b, APP.particles, APP.app_field);
 		
-		if (APP.printing())
-		{
-			/* Printing positions */
-			print_par_pos_cut_small(APP.particles, sim, out_dir_app, APP.z_suffix());
-			APP.track.update_track_par(APP.particles);
-			print_track_par(APP.track, sim, out_dir_app, APP.z_suffix());
-
-			/* Printing density */
-			get_rho_from_par(APP.particles, &APP.power_aux, sim);
-			gen_dens_binned(APP.power_aux, APP.dens_binned, sim);
-			print_rho_map(APP.power_aux, sim, out_dir_app, APP.z_suffix());
-			print_dens_bin(APP.dens_binned, sim.mesh_num, out_dir_app, APP.z_suffix());
-			
-			/* Printing power spectrum */
-			fftw_execute_dft_r2c(APP.p_F, APP.power_aux);
-			pwr_spec_k(sim, APP.power_aux, &APP.power_aux);
-			gen_pow_spec_binned(sim, APP.power_aux, &APP.pwr_spec_binned);
-			print_pow_spec(APP.pwr_spec_binned, out_dir_app, APP.z_suffix());
-			print_pow_spec_diff(APP.pwr_spec_binned, APP.pwr_spec_binned_0, APP.b, out_dir_app, APP.z_suffix());
-			
-			APP.upd_supp();
-		}
+		if (APP.printing()) APP.print(sim, out_dir_app);
 		APP.upd_time();
 	}
 	print_suppression(APP.supp, sim, out_dir_app);
