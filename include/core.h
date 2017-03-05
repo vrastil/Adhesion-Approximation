@@ -240,6 +240,7 @@ public:
 	int M;
 	std::string out_dir;
 	Pow_Spec_Param power;
+	bool comp_ZA, comp_FF, comp_FP, comp_AA, comp_FP_pp;
 	
 	// METHODS
 	int init(int ac, char* av[]);

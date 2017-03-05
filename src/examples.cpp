@@ -24,7 +24,7 @@ void print_par_pos_cut(Particle_v* particles, const Sim_Param &sim, string out_d
 	
 	cout << "Writing particles into file " << out_dir + "par_cut" + suffix + ".dat\n";
 	fprintf (pFile, "# This file contains positions of particles in units [Mpc/h].\n");
-	double x, y, z, dx;
+	double x, y, z;
 	for(int i=0; i < sim.par_num; i++)
 	{
 		x = particles[i].position.x;

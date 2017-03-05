@@ -20,25 +20,52 @@ int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
 			;
 			
 		// options both on command line	and in configuration file
-		po::options_description config("Configuration");
-		config.add_options()
+		po::options_description config_mesh("Mesh configuration");
+		config_mesh.add_options()
 			("mesh_num,m", po::value<int>(&sim->mesh_num)->default_value(32), "number of mesh cells in the box per dimension")
 			("par_num,p", po::value<int>(&sim->Ng)->default_value(2), "ratio of mesh cells and number of particles per dimension")
 			("box_size,L", po::value<int>(&sim->box_size)->default_value(512), "box size in units of Mpc/h")
+			;
+			
+		po::options_description config_integ("Integration options");
+		config_integ.add_options()
 			("redshift,z", po::value<double>(&sim->z_in)->default_value(200.), "redshift at the start of the simulation")
 			("redshift_0,Z", po::value<double>(&sim->z_out)->default_value(10.), "redshift at the end of the simulation")
 			("time_step,b", po::value<double>(&sim->db)->default_value(0.1, "0.1"), "dimensionless time-step (scale factor)")
+			;
+		
+		po::options_description config_app("Approximations");
+		config_app.add_options()
+			("comp_ZA", po::value<bool>(&sim->comp_ZA)->default_value(false), "compute Zeldovich approximation")
+			("comp_FF", po::value<bool>(&sim->comp_FF)->default_value(false), "compute Frozen-flow approximation")
+			("comp_FP", po::value<bool>(&sim->comp_FP)->default_value(false), "compute Frozen-potential approximation")
+			("comp_AA", po::value<bool>(&sim->comp_AA)->default_value(false), "compute Adhesion approximation")
+			("comp_FP_pp", po::value<bool>(&sim->comp_FP_pp)->default_value(false),
+								"compute Frozen-potential approximation (particle-particle interaction)")
+			;
+			
+		po::options_description config_power("Power spectrum options");
+		config_power.add_options()
 			("pwr_type,P", po::value<int>(&int_pwr_type)->default_value(0), "power spectrum type")
 			("index,n", po::value<double>(&sim->power.ns)->default_value(1.), "spectral index of the scale-free power spectrum")
 			("sigma8,s", po::value<double>(&sim->power.s8)->default_value(1.), "normalization of the power spectrum at R = 8 Mpc/h")
-			("smoothing_k,k", po::value<double>(&sim->power.k2_G)->default_value(0.), "smoothing wavenumber of TZA in units of h/Mpc, set 0 for ZA")
-			("viscosity,v", po::value<double>(&sim->nu)->default_value(1.), "'viscozity' for adhesion approximation in units of pixel^2")
+			("smoothing_k,k", po::value<double>(&sim->power.k2_G)->default_value(0.),
+								"smoothing wavenumber of TZA in units of h/Mpc, set 0 for ZA")
+			;
+		
+		po::options_description config_run("Run options");
+		config_run.add_options()
 			("out_dir,o", po::value<string>(&sim->out_dir)->default_value("output/"), "output folder name")
 			("num_thread,t", po::value<int>(&sim->nt)->default_value(0), "number of threads the program will use, set 0 for max. available")
 			;
+		
+		po::options_description config_other("Other options");
+		config_other.add_options()
+			("viscosity,v", po::value<double>(&sim->nu)->default_value(1.), "'viscozity' for adhesion approximation in units of pixel^2")
+			;
 			
 		po::options_description cmdline_options("\nCOSMOLOGICAL APPROXIMATION");
-        cmdline_options.add(generic).add(config);
+        cmdline_options.add(generic).add(config_mesh).add(config_power).add(config_integ).add(config_app).add(config_run).add(config_other);
 		
 		po::variables_map vm;
 		store(po::command_line_parser(ac, av).options(cmdline_options).run(), vm);		
