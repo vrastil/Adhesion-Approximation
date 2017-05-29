@@ -156,7 +156,7 @@ int Sim_Param::init(int ac, char* av[])
 		k_min = 2.*PI/box_size;
 		k_max = 2.*PI*mesh_num/box_size;
 		
-		rs = 2.5;
+//		rs = 1.0;
 		a = rs / 0.735;
 		M = (int)(mesh_num / rs);
 		Hc = double(mesh_num) / M;
@@ -193,7 +193,7 @@ void Sim_Param::print_info()
  */
  
 App_Var_base::App_Var_base(const Sim_Param &sim, string app_str):
-	err(0), step(0), print_every(4),
+	err(0), step(0), print_every(1),
 	b(sim.b_in), b_out(sim.b_out), db(sim.db), z_suffix_const(app_str),
 	app_field(3, Mesh(sim.mesh_num)),
 	power_aux (sim.mesh_num),

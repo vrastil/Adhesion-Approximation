@@ -63,7 +63,7 @@ void print_force(Particle_v* particles, const std::vector<Mesh>& app_field, cons
 	fprintf(pFile, "# r\tfs\tfl\tfs+fl\tft\n");
 	for (int i = 1; i < i_max; i++)
 	{
-		position.x=position_0.x+pow(1+dr, i) - 1 + 0.5;
+		position.x=position_0.x+pow(1+dr, i) - 1 + 1E-4;
 		r = position.x -position_0.x;
 		rper = get_distance(position_0, position, sim.mesh_num);
 	//	printf("\tCalculating force at distance r = %f / %f\n", r, rper);
@@ -73,12 +73,12 @@ void print_force(Particle_v* particles, const std::vector<Mesh>& app_field, cons
 		
 		assign_from(app_field, position, &f_tmp, sim.order);
 		fl = f_tmp.norm();
-		printf("F_long = (%f, %f, %f)\t", f_tmp.x, f_tmp.y, f_tmp.z);
+	//	printf("F_long = (%f, %f, %f)\t", f_tmp.x, f_tmp.y, f_tmp.z);
 		f_total+=f_tmp;
 		f_tmp.assign(0., 0., 0.);
 		
 		force_short(sim, linked_list, particles, position, &f_tmp);
-		printf("F_short = (%f, %f, %f)\n", f_tmp.x, f_tmp.y, f_tmp.z);
+	//	printf("F_short = (%f, %f, %f)\n", f_tmp.x, f_tmp.y, f_tmp.z);
 		fs = f_tmp.norm();
 		f_total+=f_tmp;
 		ft = f_total.norm();
@@ -114,10 +114,11 @@ int example(Sim_Param &sim)
 	const Vec_3D<double> pos_0 (sim.mesh_num/2., sim.mesh_num/2., sim.mesh_num/2.);
 	Vec_3D<double> pos;
 	const Vec_3D<double> vel (0., 0., 0.);
+	const double R = 0.5;
 	
 	for(int i = 0; i < sim.par_num; i++)
 	{
-		for(int j = 0; j < 3; j++) pos[j] = pos_0[j]+0.01*rand() / RAND_MAX -0.005;
+		for(int j = 0; j < 3; j++) pos[j] = pos_0[j]+2*R*rand() / RAND_MAX -R;
 		APP.particles[i] = Particle_v(pos, vel);
 	}
 	

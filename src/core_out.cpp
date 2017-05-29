@@ -197,7 +197,7 @@ void print_projected_rho(const Mesh& delta, const Sim_Param &sim, string out_dir
 			rho = 0;
 			for (int k = 0; k < sim.mesh_num; k++){
 				rho_tmp = delta(i, k, j);
-				if (rho_tmp != -1) printf("Density in (%i, %i, %i) = %f\n", i, j, k, rho_tmp);
+			//	if (rho_tmp != -1) printf("Density in (%i, %i, %i) = %f\n", i, j, k, rho_tmp);
 				rho+=rho_tmp + 1;
 			}
 			fprintf (pFile, "%f\t%f\t%f\n", i*sim.x_0(), j*sim.x_0(), rho -1);
