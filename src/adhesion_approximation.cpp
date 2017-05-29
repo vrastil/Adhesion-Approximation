@@ -62,7 +62,8 @@ int adhesion_approximation(const Sim_Param &sim)
 	
 	string out_dir_app = sim.out_dir + "AA_run/";
 	work_dir_over(out_dir_app);
-	
+	sim.print_info(out_dir_app);
+    
 	/** ALLOCATION OF MEMORY + FFTW PREPARATION **/
 	App_Var_AA APP(sim, "_AA_");
 	printf("Initialization completed...\n");

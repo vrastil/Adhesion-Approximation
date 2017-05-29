@@ -173,7 +173,7 @@ void Sim_Param::print_info(string out) const
     if (out == "") pFile = stdout;
     else
     {
-        file_name = out + "info.log";
+        file_name = out + "sim_param.log";
 	    pFile = fopen(file_name.c_str(), "w");
     }
     
