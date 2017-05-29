@@ -16,4 +16,6 @@ Adhesion_Approximation.project
 Adhesion_Approximation.workspace
 .codelite/
 .vscode/
-Makefile_copy
+*_golias*
+logs/
+qsub*
