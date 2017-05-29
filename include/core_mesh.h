@@ -12,8 +12,16 @@
 void get_k_vec(int N, int index, int* k_vec);
 void get_k_vec(int N, int index, Vec_3D<int> &k_vec);
 int get_k_sq(int N, int index);
+int get_per(int vec, int per);
 void get_per(Vec_3D<double> &position, int per);
 void get_per(Vec_3D<int> &position, int per);
+void get_per(Vec_3D<int> &position, const Vec_3D<int> &per);
+void get_per(Vec_3D<int> &position, int perx, int pery, int perz);
+
+double get_distance_1D(double x_1, double x_2, int per);
+double get_sgn_distance_1D(double x_from, double x_to, int per);
+double get_distance(const Vec_3D<double> &x_1, const Vec_3D<double> &x_2, int per);
+Vec_3D<double> get_sgn_distance(const Vec_3D<double> &x_from, const Vec_3D<double> &x_to, int per);
 
 void assign_to(Mesh* field, const Vec_3D<double> &position, const double value, int order);
 void assign_from(const Mesh &field, const Vec_3D<double> &position, double* value, int order);
