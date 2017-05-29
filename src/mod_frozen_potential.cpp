@@ -8,20 +8,20 @@
 using namespace std;
 const double PI = acos(-1.);
 
-int frozen_potential(const Sim_Param &sim)
+int mod_frozen_potential(const Sim_Param &sim)
 {
 	cout << "\n"
-	"******************************\n"
-	"FROZEN-POTENTIAL APPROXIMATION\n"
-	"******************************\n";
+	"***************************************\n"
+	"MODIFIED FROZEN-POTENTIAL APPROXIMATION\n"
+	"***************************************\n";
 	
-	string out_dir_app = sim.out_dir + "FP_run/";
+	string out_dir_app = sim.out_dir + "FP_pp_run/" + currentDateTime() + "/";
 	work_dir_over(out_dir_app);
 	
 	/** ALLOCATION OF MEMORY + FFTW PREPARATION **/
-	App_Var_v APP(sim, "_FP_");
+	App_Var_FP_mod APP(sim, "_FP_pp_");
 	printf("Initialization completed...\n");
-	
+
 	/** STANDARD PREPARATION FOR INTEGRATIOM **/
 	/* Generating the right density distribution in k-space */	
 	gen_rho_dist_k(sim, &APP.app_field[0], APP.p_F);
@@ -45,15 +45,15 @@ int frozen_potential(const Sim_Param &sim)
 	/* Setting initial positions of particles */
     printf("Setting initial positions and velocitis of particles...\n");
 	set_pert_pos_w_vel(sim, sim.b_in, APP.particles, APP.app_field);
-	
-	/** PREPARATION FOR INTEGRATIOM WITH CIC **/
-	/* Computing displacement in k-space with CIC opt */
-	gen_displ_k_cic(&APP.app_field, APP.power_aux);
+
+	/** PREPARATION FOR INTEGRATIOM WITH S2 SHAPED PARTICLES **/
+	/* Computing displacement in k-space with S2 shaped particles */
+	gen_displ_k_S2(&APP.app_field, APP.power_aux, sim.a);
 	
 	/* Computing force in q-space */
-	printf("Computing force in q-space...\n");
+	printf("Computing force for S2 shaped particles in q-space...\n");
 	fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
-
+	
 	APP.print(sim, out_dir_app);
 	APP.upd_time();
 	
@@ -65,7 +65,7 @@ int frozen_potential(const Sim_Param &sim)
 		
 		/* Updating positions of particles... */
 		printf("Updating positions of particles...\n");
-		upd_pos_second_order(sim, APP.db, APP.b, APP.particles, APP.app_field);
+		upd_pos_second_order_w_short_force(sim, &APP.linked_list, APP.db, APP.b, APP.particles, APP.app_field);
 		
 		if (APP.printing()) APP.print(sim, out_dir_app);
 		APP.upd_time();

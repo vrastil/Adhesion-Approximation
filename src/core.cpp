@@ -1,9 +1,15 @@
-
+/**
+ * @file:	core.cpp
+ * @brief:	class definitions
+ */
+ 
 #include "stdafx.h"
 #include <fftw3.h>
 #include "core.h"
 #include "core_cmd.h"
-#include "core_mesh.h"
+#include "core_out.h"
+#include "core_app.h"
+// #include "core_mesh.h"
 
 using namespace std;
 const double PI = acos(-1.);
@@ -27,56 +33,23 @@ const char *humanSize(uint64_t bytes){
 
 /**
  * @class:	Mesh
- * @brief:	class handling basic mesh functions, the most important are creating and destroing the underlying data structure
- *			creates a mesh of N*N*(N+2) cells
+ * @brief:	creates a mesh of N*N*(N+2) cells
  */
 
-Mesh::Mesh(int n):N(n), length(n*n*(n+2))
-{
-	data = new double[length];
-	printf("Normal ctor %p\n", this); 
-}
+Mesh::Mesh(int n): Mesh_base(n, n, n+2), N(n) {}
 
-Mesh::Mesh(const Mesh& that): N(that.N), length(that.length)
-{
-	data = new double[length];
-	
-	#pragma omp parallel for
-	for (int i = 0; i < length; i++) data[i] = that.data[i];
-//	printf("Copy ctor %p\n", this);
-}
-
-void swap(Mesh& first, Mesh& second)
-{
-	std::swap(first.length, second.length);
-	std::swap(first.N, second.N);
-	std::swap(first.data, second.data);
-}
-
-Mesh& Mesh::operator=(const Mesh& other)
-{
-//	printf("Copy assignemnt %p\n", this);
-	Mesh temp(other);
-	swap(*this, temp);
-    return *this;
-}
-
-Mesh::~Mesh()
-{
-	delete[] data;
-//	printf("dtor %p\n", this);
-}
+Mesh::Mesh(const Mesh& that): Mesh_base(that), N(that.N) {}
 
 double& Mesh::operator()(Vec_3D<int> pos)
 {
 	get_per(pos, N);
-	return data[pos.x*N*(N+2)+pos.y*(N+2)+pos.z]; 
+	return data[pos.x*N2*N3+pos.y*N3+pos.z]; 
 }
 
-const double& Mesh::operator()(Vec_3D<int> pos) const
+const double & Mesh::operator()(Vec_3D<int> pos) const
 {
 	get_per(pos, N);
-	return data[pos.x*N*(N+2)+pos.y*(N+2)+pos.z];
+	return data[pos.x*N2*N3+pos.y*N3+pos.z];
 }
 
 Mesh& Mesh::operator+=(const double& rhs)
@@ -101,6 +74,21 @@ Mesh& Mesh::operator/=(const double& rhs)
 		for (int i = 0; i < length; i++) this->data[i]/=rhs;
 		
 	return *this;
+}
+
+void swap(Mesh& first, Mesh& second)
+{
+	std::swap(first.length, second.length);
+	std::swap(first.N, second.N);
+	std::swap(first.data, second.data);
+}
+
+Mesh& Mesh::operator=(const Mesh& other)
+{
+//	printf("Copy assignemnt %p\n", this);
+	Mesh temp(other);
+	swap(*this, temp);
+    return *this;
 }
 
 /**
@@ -159,7 +147,7 @@ int Sim_Param::init(int ac, char* av[])
 	if (err) {is_init = 0; return err;}
 	else {
 		is_init = 1;
-		if(nt == 0) nt = omp_get_num_threads();
+		if(nt == 0) nt = omp_get_num_procs();
 		else omp_set_num_threads(nt);
 		par_num = pow(mesh_num / Ng, 3);
 		power.k2_G *= power.k2_G;
@@ -167,6 +155,12 @@ int Sim_Param::init(int ac, char* av[])
 		b_out = 1./(z_out + 1);
 		k_min = 2.*PI/box_size;
 		k_max = 2.*PI*mesh_num/box_size;
+		
+//		rs = 1.0;
+		a = rs / 0.735;
+		M = (int)(mesh_num / rs);
+		Hc = double(mesh_num) / M;
+		
 		return err;
 	}
 }
@@ -175,18 +169,20 @@ void Sim_Param::print_info()
 {
 	if (is_init) 
 	{
-		printf("\n");
-		printf("Num_par:\t%i\n", Ng);
+		printf("\n*********************\n");
+		printf("SIMULATION PARAMETERS\n");
+		printf("*********************\n");
+		printf("Ng:\t\t%i\n", Ng);
+		printf("Num_par:\t%G^3\n", pow(par_num, 1/3.));
 		printf("Num_mesh:\t%i^3\n", mesh_num);
 		printf("Box size:\t%i Mpc/h\n", box_size);
-		printf("Starting redshift:\t%G\n", z_in);
-		printf("The primordial power spectrum 'P(k)=A*k^ns' has amplitude A = %G and spectral index ns = %G.\n", power.A, power.ns);
-		if (power.k2_G == 0) printf("Smoothing length was not set.\n");
-		else printf("Smoothing wavenumber is %G h/Mpc.\n", sqrt(power.k2_G));
-		printf("'viscozity' for adhesion approximation is %G px^2.\n", nu);
-		printf("The program will try to use %i threads.\n", nt);
-		cout << "Output will be written to folder '"<< out_dir << "'\n";
-		printf("\n");
+		printf("Redshift:\t%G--->%G\n", z_in, z_out);
+		printf("Pk:\t\t[sigma_8 = %G, As = %G, ns = %G, k_smooth = %G, pwr_type = %i]\n", 
+			power.s8, power.A, power.ns, sqrt(power.k2_G), power.pwr_type);
+		printf("AA:\t\t[nu = %G px^2]\n", nu);
+		printf("LL:\t\t[rs = %G, a = %G, M = %i, Hc = %G]\n", rs, a, M, Hc);
+		printf("num_thread:\t%i\n", nt);
+		cout << "Output:\t\t'"<< out_dir << "'\n";
 	}
 	else printf("WARNING! Simulation parameters are not initialized!\n");
 }
@@ -197,7 +193,8 @@ void Sim_Param::print_info()
  */
  
 App_Var_base::App_Var_base(const Sim_Param &sim, string app_str):
-	b(sim.b_in), b_out(sim.b_out), db(sim.b_in), z_suffix_const(app_str),
+	err(0), step(0), print_every(1),
+	b(sim.b_in), b_out(sim.b_out), db(sim.db), z_suffix_const(app_str),
 	app_field(3, Mesh(sim.mesh_num)),
 	power_aux (sim.mesh_num),
 	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num),
@@ -232,11 +229,56 @@ string App_Var_base::z_suffix()
 	return z_suffix_const + "z" + z_suffix_num.str();
 }
 
+void App_Var_base::print_x(const Sim_Param &sim, string out_dir_app, Particle_x* particles)
+{
+	/* Printing positions */
+	print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
+	track.update_track_par(particles);
+	print_track_par(track, sim, out_dir_app, z_suffix());
+
+	/* Printing density */
+	get_rho_from_par(particles, &power_aux, sim);
+	gen_dens_binned(power_aux, dens_binned, sim);
+	print_rho_map(power_aux, sim, out_dir_app, z_suffix());
+	print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
+
+	/* Printing power spectrum */
+	fftw_execute_dft_r2c(p_F, power_aux);
+	pwr_spec_k(sim, power_aux, &power_aux);
+	gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
+	print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
+	print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b, out_dir_app, z_suffix());
+
+	upd_supp();
+}
+
+void App_Var_base::print_v(const Sim_Param &sim, string out_dir_app, Particle_v* particles)
+{
+	/* Printing positions */
+	print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
+	track.update_track_par(particles);
+	print_track_par(track, sim, out_dir_app, z_suffix());
+
+	/* Printing density */
+	get_rho_from_par(particles, &power_aux, sim);
+	gen_dens_binned(power_aux, dens_binned, sim);
+	print_rho_map(power_aux, sim, out_dir_app, z_suffix());
+	print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
+
+	/* Printing power spectrum */
+	fftw_execute_dft_r2c(p_F, power_aux);
+	pwr_spec_k(sim, power_aux, &power_aux);
+	gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
+	print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
+	print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b, out_dir_app, z_suffix());
+
+	upd_supp();
+}
+
 void App_Var_base::upd_time()
 {
 	step++;
 	if ((b_out - b) < db) db = b_out - b;
-	else db = 0.01;
 	b += db;
 }
 
@@ -318,4 +360,45 @@ App_Var_v::~App_Var_v()
 App_Var_AA::~App_Var_AA()
 {
 	delete[] particles;
+}
+
+/**
+ * @class:	App_Var_FP_mod
+ * @brief:	class containing variables for modified Frozen-potential approximation
+ */
+ 
+ App_Var_FP_mod::App_Var_FP_mod(const Sim_Param &sim, string app_str):
+	App_Var_base(sim, app_str), linked_list (sim.par_num, sim.M, sim.Hc)
+{
+	particles = new Particle_v[sim.par_num];
+	printf("Allocated %s of memory.\n", humanSize
+	(
+		sizeof(Particle_v)*sim.par_num
+		+sizeof(double)*(app_field[0].length*3+power_aux.length)
+		+sizeof(int)*(linked_list.HOC.length+linked_list.par_num)
+	));
+}
+
+App_Var_FP_mod::~App_Var_FP_mod()
+{
+	delete[] particles;
+}
+
+/**
+ * @class LinkedList
+ * @brief class handling linked lists
+ */
+
+
+LinkedList::LinkedList(int par_num, int m, double hc):
+	par_num(par_num), Hc(hc), LL(par_num), HOC(m, m, m) {}
+	
+void LinkedList::get_linked_list(Particle_v* particles)
+{
+	HOC.assign(-1);
+	for (int i = 0; i < par_num; i++)
+	{
+		LL[i] = HOC(Vec_3D<int>(particles[i].position/Hc));
+		HOC(Vec_3D<int>(particles[i].position/Hc)) = i;
+	}
 }

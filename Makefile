@@ -1,8 +1,8 @@
 
 CXX = g++
 
-#CXXFLAGS +=-g -std=c++11 -Wall
-CXXFLAGS +=-std=c++11 -O3
+CXXFLAGS +=-g -std=c++11 -Wall
+#CXXFLAGS +=-std=c++11 -O3
 CXXFLAGS +=-MMD
 CXXFLAGS +=-fopenmp
 CXXLIB_PATH +=-L/usr/local/lib/
