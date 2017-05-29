@@ -24,6 +24,7 @@ int main(int argc, char* argv[]){
 	int err = sim.init(argc, argv);
 	if (err) return err; // read command line options / config file
 	norm_pwr(&sim.power); // compute power spectrum normalization
+    printf("%s\n", sim.out_dir);
 	sim.print_info(); // print simulation parameters
 	
 	try{

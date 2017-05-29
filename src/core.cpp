@@ -165,26 +165,44 @@ int Sim_Param::init(int ac, char* av[])
 	}
 }
 
-void Sim_Param::print_info()
+void Sim_Param::print_info(string out) const
 {
+    string file_name;
+    FILE* pFile;
+
+    if (out == "") pFile = stdout;
+    else
+    {
+        file_name = out + "info.log";
+	    pFile = fopen(file_name.c_str(), "w");
+    }
+    
 	if (is_init) 
 	{
-		printf("\n*********************\n");
-		printf("SIMULATION PARAMETERS\n");
-		printf("*********************\n");
-		printf("Ng:\t\t%i\n", Ng);
-		printf("Num_par:\t%G^3\n", pow(par_num, 1/3.));
-		printf("Num_mesh:\t%i^3\n", mesh_num);
-		printf("Box size:\t%i Mpc/h\n", box_size);
-		printf("Redshift:\t%G--->%G\n", z_in, z_out);
-		printf("Pk:\t\t[sigma_8 = %G, As = %G, ns = %G, k_smooth = %G, pwr_type = %i]\n", 
+		fprintf(pFile, "\n*********************\n");
+		fprintf(pFile, "SIMULATION PARAMETERS\n");
+		fprintf(pFile, "*********************\n");
+		fprintf(pFile, "Ng:\t\t%i\n", Ng);
+		fprintf(pFile, "Num_par:\t%G^3\n", pow(par_num, 1/3.));
+		fprintf(pFile, "Num_mesh:\t%i^3\n", mesh_num);
+		fprintf(pFile, "Box size:\t%i Mpc/h\n", box_size);
+		fprintf(pFile, "Redshift:\t%G--->%G\n", z_in, z_out);
+		fprintf(pFile, "Pk:\t\t[sigma_8 = %G, As = %G, ns = %G, k_smooth = %G, pwr_type = %i]\n", 
 			power.s8, power.A, power.ns, sqrt(power.k2_G), power.pwr_type);
-		printf("AA:\t\t[nu = %G px^2]\n", nu);
-		printf("LL:\t\t[rs = %G, a = %G, M = %i, Hc = %G]\n", rs, a, M, Hc);
-		printf("num_thread:\t%i\n", nt);
-		cout << "Output:\t\t'"<< out_dir << "'\n";
+		fprintf(pFile, "AA:\t\t[nu = %G px^2]\n", nu);
+		fprintf(pFile, "LL:\t\t[rs = %G, a = %G, M = %i, Hc = %G]\n", rs, a, M, Hc);
+		fprintf(pFile, "num_thread:\t%i\n", nt);
+        fprintf(pFile,  "Output:\t\t'%s'\n", out_dir.c_str());
 	}
-	else printf("WARNING! Simulation parameters are not initialized!\n");
+	else fprintf(pFile, "WARNING! Simulation parameters are not initialized!\n");
+
+    if (out != "") fclose (pFile);
+}
+
+
+void Sim_Param::print_info() const
+{
+	Sim_Param::print_info("");
 }
 
 /**
