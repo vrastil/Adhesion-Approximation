@@ -60,7 +60,7 @@ int adhesion_approximation(const Sim_Param &sim)
 	"ADHESION APPROXIMATION\n"
 	"**********************\n";
 	
-	string out_dir_app = sim.out_dir + "AA_run/";
+	string out_dir_app = sim.out_dir + "AA_run/" + currentDateTime() + "/";
 	work_dir_over(out_dir_app);
 	sim.print_info(out_dir_app);
     
