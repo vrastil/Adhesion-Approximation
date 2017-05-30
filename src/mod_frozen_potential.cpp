@@ -73,6 +73,6 @@ int mod_frozen_potential(const Sim_Param &sim)
 	}
 	print_suppression(APP.supp, sim, out_dir_app);
 		
-	printf("Frozen-potential approximation ended successfully.\n");
+	printf("Modified Frozen-potential approximation ended successfully.\n");
 	return APP.err;
 }
