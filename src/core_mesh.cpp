@@ -35,8 +35,12 @@ int get_k_sq(int N, int index)
 
 int get_per(int vec, int per)
 {
-	if (vec > per) vec = vec % per;
-	else if (vec < 0) vec = vec % per + per;
+	if (vec > per) vec %= per;
+	else if (vec < 0)
+    {
+        vec %= per;
+        if (vec != 0) vec += per;
+    }
 	return vec;
 }
 
@@ -45,7 +49,11 @@ void get_per(Vec_3D<double> &position, int per)
 	for (int i = 0; i < 3; i++)
 	{
 		if (position[i] >= per) position[i] = fmod(position[i], per);
-		else if (position[i] < 0) position[i] = fmod(position[i], per) + per;
+		else if (position[i] < 0)
+        {
+            position[i] = fmod(position[i], per);
+            if (position[i] != 0) position[i] += per;
+        }
 	}
 }
 
@@ -53,8 +61,12 @@ void get_per(Vec_3D<int> &position, int per)
 {
 	for (int i = 0; i < 3; i++)
 	{
-		if (position[i] >= per) position[i] = position[i] % per;
-		else if (position[i] < 0) position[i] = position[i] % per + per;
+		if (position[i] >= per) position[i] %= per;
+		else if (position[i] < 0)
+        {
+            position[i] %= per;
+            if (position[i] != 0) position[i] += per;
+        }
 	}
 }
 
@@ -62,21 +74,37 @@ void get_per(Vec_3D<int> &position, const Vec_3D<int> &per)
 {
 	for (int i = 0; i < 3; i++)
 	{
-		if (position[i] >= per[i]) position[i] = position[i] % per[i];
-		else if (position[i] < 0) position[i] = position[i] % per[i] + per[i];
+		if (position[i] >= per[i]) position[i] %= per[i];
+		else if (position[i] < 0) 
+        {
+            position[i] %= per[i];
+            if (position[i] != 0) position[i] += per[i];
+        }
 	}
 }
 
 void get_per(Vec_3D<int> &position, int perx, int pery, int perz)
 {
-	if (position[0] >= perx) position[0] = position[0] % perx;
-	else if (position[0] < 0) position[0] = position[0] % perx + perx;
+	if (position[0] >= perx) position[0] %= perx;
+	else if (position[0] < 0)
+    {
+        position[0] %= perx;
+        if (position[0] != 0) position[0] += perx;
+    } 
 	
-	if (position[1] >= pery) position[1] = position[1] % pery;
-	else if (position[1] < 0) position[1] = position[1] % pery + pery;
+	if (position[1] >= pery) position[1] %= pery;
+	else if (position[1] < 0)
+    {
+        position[1] %= pery;
+        if (position[1] != 0) position[1] += pery;
+    } 
 	
-	if (position[2] >= perz) position[2] = position[2] % perz;
-	else if (position[2] < 0) position[2] = position[2] % perz + perz;
+	if (position[2] >= perz) position[2] %= perz;
+	else if (position[2] < 0)
+    {
+        position[2] %= perz;
+        if (position[2] != 0) position[2] += perz;
+    }
 }
 
 double get_distance_1D(double x_1, double x_2, int per)
