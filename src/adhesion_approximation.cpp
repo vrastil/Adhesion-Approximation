@@ -16,42 +16,9 @@ static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu, 
 static void pot2exp(const Mesh& potential,  Mesh* expotential, double nu);
 static void exp2pot(Mesh* potential,  const Mesh& expotential, double nu);
 static void gen_expot(Mesh* potential,  const Mesh& expotential, double nu, double b, const fftw_plan &p_B);
-
-static int check_field(const Mesh& field){
-	// check field of length max_i*max_i*(max_i+2); ignore last 2 element in last dim
-	double check;
-	for (int i = 0; i < field.N; i++){
-		for (int j = 0; j < field.N; j++){
-			for (int k = 0; k < field.N; k++){
-				check = field(i, j, k);
-				if (isfinite(check) == 0){
-					printf("Error while performing check for NAN or INF! field posititon = (%i, %i, %i), value = %f\n", 
-					i, j, k, check);
-					return 1;
-				}
-			}
-		}
-	}
-	return 0;
-}
-
-static int check_field_pos(const Mesh& field){
-	// check field of length max_i*max_i*(max_i+2); ignore last 2 element in last dim
-	double check;
-	for (int i = 0; i < field.N; i++){
-		for (int j = 0; j < field.N; j++){
-			for (int k = 0; k < field.N; k++){
-				check = field(i, j, k);
-				if (check < 0){
-					printf("Error while performing check for negative values! field posititon = (%i, %i, %i), value = %f\n", 
-					i, j, k, check);
-					return 1;
-				}
-			}
-		}
-	}
-	return 0;
-}
+static void aa_convolution(App_Var_AA* APP, const Sim_Param &sim);
+static int check_field(const Mesh& field);
+static int check_field_pos(const Mesh& field);
 
 int adhesion_approximation(const Sim_Param &sim)
 {
@@ -85,32 +52,23 @@ int adhesion_approximation(const Sim_Param &sim)
 	fftw_execute_dft_c2r(APP.p_B, APP.app_field[0]);
 		
 	gen_init_expot(APP.app_field[0], &APP.expotential, sim.nu, APP.p_F);
-	if (check_field(APP.app_field[0])) return 1;
+//	if (check_field(APP.app_field[0])) return 1;
 
 	/* Setting initial positions of particles */
     printf("Setting initial positions of particles...\n");
 	set_unpert_pos(sim, APP.particles);
-	
+	aa_convolution(&APP, sim);
+    upd_pos_first_order(sim, sim.b_in, APP.particles, APP.app_field);
+    APP.print(sim, out_dir_app);
+	APP.upd_time();
+
 	/** INTEGRATION **/
 	
 	while(APP.integrate())
 	{
 		printf("\nStarting computing step with z = %.2f (b = %.3f)\n", APP.z(), APP.b);
-		
 		/* Computing convolution */
-	//	gen_expot(&APP.app_field[0], APP.expotential, sim.nu, APP.b_half(), APP.p_B);
-		gen_expot(&APP.app_field[0], APP.expotential, sim.nu, APP.b, APP.p_B);
-		if (check_field(APP.app_field[0])) return 1;
-		if (check_field_pos(APP.app_field[0])) return 1;
-				
-		printf("Computing potential...\n");	
-		exp2pot(&APP.app_field[0], APP.app_field[0], sim.nu);
-		if (check_field(APP.app_field[0])) return 1;
-				
-		printf("Computing velocity field via FFT...\n");
-		fftw_execute_dft_r2c(APP.p_F, APP.app_field[0]);
-		gen_displ_k(&APP.app_field, APP.app_field[0]);
-		fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
+        aa_convolution(&APP, sim);
 		
 		/* Updating positions of particles... */
 		printf("Updating positions of particles...\n");
@@ -123,6 +81,23 @@ int adhesion_approximation(const Sim_Param &sim)
 		
 	printf("Adhesion approximation ended successfully.\n");
 	return APP.err;
+}
+
+static void aa_convolution(App_Var_AA* APP, const Sim_Param &sim)
+{
+    //	gen_expot(&APP->app_field[0], APP->expotential, sim.nu, APP->b_half(), APP->p_B);
+	gen_expot(&APP->app_field[0], APP->expotential, sim.nu, APP->b, APP->p_B);
+//	if (check_field(APP->app_field[0])) return 1;
+//	if (check_field_pos(APP->app_field[0])) return 1;
+				
+	printf("Computing potential...\n");	
+	exp2pot(&APP->app_field[0], APP->app_field[0], sim.nu);
+//	if (check_field(APP->app_field[0])) return 1;
+				
+	printf("Computing velocity field via FFT...\n");
+	fftw_execute_dft_r2c(APP->p_F, APP->app_field[0]);
+	gen_displ_k(&APP->app_field, APP->app_field[0]);
+	fftw_execute_dft_c2r_triple(APP->p_B, APP->app_field);
 }
 
 static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu, const fftw_plan &p_F)
@@ -292,4 +267,40 @@ static void gen_expot(Mesh* potential,  const Mesh& expotential, double nu, doub
 		convolution_y3(potential, gaussian);
 		break;
 	}
+}
+
+static int check_field(const Mesh& field){
+	// check field of length max_i*max_i*(max_i+2); ignore last 2 element in last dim
+	double check;
+	for (int i = 0; i < field.N; i++){
+		for (int j = 0; j < field.N; j++){
+			for (int k = 0; k < field.N; k++){
+				check = field(i, j, k);
+				if (isfinite(check) == 0){
+					printf("Error while performing check for NAN or INF! field posititon = (%i, %i, %i), value = %f\n", 
+					i, j, k, check);
+					return 1;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+static int check_field_pos(const Mesh& field){
+	// check field of length max_i*max_i*(max_i+2); ignore last 2 element in last dim
+	double check;
+	for (int i = 0; i < field.N; i++){
+		for (int j = 0; j < field.N; j++){
+			for (int k = 0; k < field.N; k++){
+				check = field(i, j, k);
+				if (check < 0){
+					printf("Error while performing check for negative values! field posititon = (%i, %i, %i), value = %f\n", 
+					i, j, k, check);
+					return 1;
+				}
+			}
+		}
+	}
+	return 0;
 }
