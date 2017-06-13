@@ -1,5 +1,6 @@
 gnuplot_scripts/
 output/
+test/
 results/
 adh_app
 *.o

@@ -45,8 +45,11 @@ int frozen_flow(const Sim_Param &sim)
 	
 	/* Setting initial positions of particles */
     printf("Setting initial positions of particles...\n");
-	set_unpert_pos(sim, APP.particles);
-	
+	set_pert_pos(sim, sim.b_in,  APP.particles, APP.app_field);
+
+	APP.print(sim, out_dir_app);
+	APP.upd_time();
+
 	/** INTEGRATION **/
 	
 	while(APP.integrate())
