@@ -10,6 +10,9 @@ adh_app
 *.exe
 *.stackdump
 *.plt
+*.ipynb
+*.pyc
+res_req
 TODO.md
 Adhesion_Approximation.batch_build
 Adhesion_Approximation.project
