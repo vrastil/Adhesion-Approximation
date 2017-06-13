@@ -37,8 +37,8 @@ class SimInfo(object):
         info += '$N_m = %i^3$\n' % self.num_m
         info += '$N_p = %i^3$\n' % self.num_p
         info += '$L = %i$ Mpc/h\n' % self.box
-        if self.app == 'AA': info += '$\nu = %.1f$\n' % self.nu
-        if self.app == 'FP_pp': info += '$r_s = %.1f$\n' % self.rs
+        if self.app == 'AA': info += r'$\nu = %.1f$' % self.nu
+        if self.app == 'FP_pp': info += r'$r_s = %.1f$' % self.rs
         return info
 
     def info_supp(self):
