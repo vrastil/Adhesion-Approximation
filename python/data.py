@@ -1,20 +1,7 @@
-import os, fnmatch
 from datetime import datetime
 
+from . import *
 from . import plot
-
-def get_files_in_traverse_dir(a_dir, a_file):
-    """ return list of all files in directory and its subdirectories \
-    which matches 'a_file' and its subdirectory path, support Unix \
-    filename pattern matching ('*', '?', [seq], [!seq]) """
-
-    ls_file = []
-    for root, dirs, files in os.walk(a_dir):
-        for name in files:
-            if fnmatch.fnmatch(name, a_file):
-                subdir = root.replace(a_dir, '')
-                ls_file.append((os.path.join(root, name), subdir))
-    return ls_file
 
 class SimInfo(object):
     def __init__(self, *args):
@@ -40,6 +27,10 @@ class SimInfo(object):
         if self.app == 'AA': info += r'$\nu = %.1f$' % self.nu
         if self.app == 'FP_pp': info += r'$r_s = %.1f$' % self.rs
         return info
+
+    def info_tr(self):
+        info = self.info()
+        return info.replace('\n', '  ')
 
     def info_supp(self):
         info = '%s: $res = %.2f$' % (self.app, float(self.num_m) / self.box)
@@ -69,33 +60,34 @@ class SimInfo(object):
         self.date = datetime.strptime(run_date.split('/')[1], '%Y_%m_%d.%H:%M:%S')
         self.dir = a_file.replace('sim_param.log', '')
 
-def sort_get_z(files, a_sim_info):
-    zs = []
-    for a_file in files:
-        if a_sim_info.app + '_z' in a_file:
-            z = float(a_file[a_file.index(a_sim_info.app + '_z') + len(a_sim_info.app+'_z'):-4])
-        elif a_sim_info.app + '_init' in a_file:
-            z = 'init'
-        else:
-            print "WARNING! Skipping file '%s', unknown format." % a_file
-        zs.append(z)
-    return zip(*sorted(zip(zs, files), reverse=True))
-
-def sort_get_fl_get_z(a_sim_info, subdir):
-    files = [x[0] for x in get_files_in_traverse_dir(a_sim_info.dir + subdir, '*.dat')]
-    return sort_get_z(files, a_sim_info)
-
 def analyze_run(a_sim_info):
+    out_dir = a_sim_info.dir + 'results/'
+    create_dir(out_dir)
+
     # Power spectrum
     zs, files = sort_get_fl_get_z(a_sim_info, 'pwr_spec/')
+    plot.plot_pwr_spec(files, zs, a_sim_info, out_dir)
 
-    plot.plot_pwr_spec(files, zs, a_sim_info)
     # Power spectrum difference
     zs, files = sort_get_fl_get_z(a_sim_info, 'pwr_diff/')
-    plot.plot_pwr_spec_diff(files, zs, a_sim_info)
+    plot.plot_pwr_spec_diff(files, zs, a_sim_info, out_dir)
 
     # Power spectrum suppresion
+    plot.plot_supp([a_sim_info], out_dir)
 
+    # Density distribution
+    zs, files = slice_zs_files(*sort_get_fl_get_z(a_sim_info, 'rho_bin/'))
+    plot.plot_dens_histo(files, zs, a_sim_info, out_dir)
+
+    # Particles evolution
+    zs, files = sort_get_fl_get_z(a_sim_info, 'par_cut/', a_file='par*.dat')
+    zs_t, files_t = sort_get_fl_get_z(a_sim_info, 'par_cut/', a_file='track*.dat')
+    if zs != zs_t: print "ERROR! 'par_cut' files differ from 'track_par_pos' files"
+    ani = plot.plot_par_evol(files, files_t, zs, a_sim_info, out_dir)
+
+    # Density evolution
+
+    return ani
 
 
 def analyze_all(out_dir='/home/vrastil/Documents/Adhesion-Approximation/output/'):
