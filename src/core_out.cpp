@@ -242,7 +242,7 @@ void print_dens_bin(const vector<int> &dens_binned, int mesh_num, string out_dir
 	double dens;
 	for (unsigned j = 0; j < dens_binned.size(); j++)
 	{
-		dens = j*0.2-1;
+		dens = j*0.2-0.9;
 		fprintf (pFile, "%f\t%f\n", dens, dens_binned[j] / pow(mesh_num, 3));
 
 	}
