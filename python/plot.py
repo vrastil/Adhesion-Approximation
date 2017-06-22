@@ -162,7 +162,7 @@ def plot_par_evol(files, files_t, zs, a_sim_info, out_dir):
     def animate(j):
         if j < num: i = j
         else: i = 2*num - j - 1
-        plt.title("Slice through simulation box, z = %.2f" % zs[i], y=1.09, size=20)
+        plt.title("Slice through simulation box (particles), z = %.2f" % zs[i], y=1.09, size=20)
         data = np.loadtxt(files[i])
         x, y = data[:, 0], data[:, 1]
         data = np.loadtxt(files_t[i])
@@ -182,4 +182,32 @@ def plot_par_evol(files, files_t, zs, a_sim_info, out_dir):
     plt.close(fig)
     return ani
 
-# def plot_dens_evol
+def plot_dens_evol(files, zs, a_sim_info, out_dir):
+    from matplotlib.colors import SymLogNorm
+    num = len(zs)
+
+    fig, ax = plt.subplots(figsize=(10, 10))
+    plt.figtext(0.5, 0.9, a_sim_info.info_tr(),
+                bbox={'facecolor':'white', 'alpha':0.2}, size=14, ha='center', va='top')
+    plt.xlabel(r"$x [$Mpc$/h]$", fontsize=13)
+    plt.ylabel(r"$z [$Mpc$/h]$", fontsize=13)
+    cbar_ax = fig.add_axes([0.85, 0.155, 0.05, 0.695])
+    fig.subplots_adjust(right=0.82)
+
+    def animate(j):
+        if j < num: i = j
+        else: i = 2*num - j - 1
+        rho = np.loadtxt(files[i])[:, 2]
+        L = int(np.sqrt(rho.shape[0]))
+        rho.shape = L, L
+        im = ax.imshow(rho, interpolation='bicubic', cmap='gnuplot', animated=True,
+                       norm=SymLogNorm(linthresh=1.0, linscale=1, vmin=-1, vmax=100),
+                       extent=[0, a_sim_info.box, 0, a_sim_info.box])
+        fig.suptitle("Slice through simulation box (overdensity), z = %.2f" % zs[i], y=0.95, size=20)
+        fig.colorbar(im, cax=cbar_ax)
+        return [im]
+
+    ani = animation.FuncAnimation(fig, animate, frames=2*num, interval=250, blit=True)
+    ani.save(out_dir + 'dens_evol.gif', writer='imagemagick')
+    plt.close(fig)
+    return ani
