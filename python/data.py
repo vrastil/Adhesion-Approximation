@@ -1,5 +1,7 @@
 from datetime import datetime
 import sys
+import gc
+import matplotlib.pyplot as plt
 
 from . import *
 from . import plot
@@ -102,20 +104,21 @@ def analyze_run(a_sim_info, rerun=False):
         zs, files = sort_get_fl_get_z(a_sim_info, 'par_cut/', a_file='par*.dat')
         zs_t, files_t = sort_get_fl_get_z(a_sim_info, 'par_cut/', a_file='track*.dat')
         if zs != zs_t: print "ERROR! 'par_cut' files differ from 'track_par_pos' files"
-        ani_par = plot.plot_par_evol(files, files_t, zs, a_sim_info, out_dir)
+        plot.plot_par_evol(files, files_t, zs, a_sim_info, out_dir)
 
         # Density evolution
         print 'Plotting density evolution...'
         zs, files = sort_get_fl_get_z(a_sim_info, 'rho_map/', a_file='*.dat')
-        ani_evol = plot.plot_dens_evol(files, zs, a_sim_info, out_dir)
+        plot.plot_dens_evol(files, zs, a_sim_info, out_dir)
+
+        plt.close("all")
 
         # Update sim_param.log
         print "Updating 'sim_param.log'..."
         a_sim_info.done()
+        gc.collect()
     else:
         print 'Run already analyzed!'
-
-    #return ani_par, ani_evol
 
 
 def analyze_all(out_dir='/home/vrastil/Documents/Adhesion-Approximation/output/'):

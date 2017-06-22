@@ -181,7 +181,6 @@ def plot_par_evol(files, files_t, zs, a_sim_info, out_dir):
     ani = animation.FuncAnimation(fig, animate, frames=2*num, interval=250, blit=True)
     ani.save(out_dir + 'par_evol.gif', writer='imagemagick')
     plt.close(fig)
-    return ani
 
 def plot_dens_evol(files, zs, a_sim_info, out_dir):
     from matplotlib.colors import SymLogNorm
@@ -211,4 +210,3 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir):
     ani = animation.FuncAnimation(fig, animate, frames=2*num, interval=250, blit=True)
     ani.save(out_dir + 'dens_evol.gif', writer='imagemagick')
     plt.close(fig)
-    return ani
