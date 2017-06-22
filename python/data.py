@@ -1,4 +1,5 @@
 from datetime import datetime
+import sys
 
 from . import *
 from . import plot
@@ -127,3 +128,6 @@ def analyze_all(out_dir='/home/vrastil/Documents/Adhesion-Approximation/output/'
         print 'Analyzing run %s' % a_sim_info.info_tr()
         analyze_run(a_sim_info)
 
+if __name__ == 'main':
+    out_dir = sys.argv[1]
+    analyze_all(out_dir)
