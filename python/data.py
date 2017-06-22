@@ -6,6 +6,7 @@ from . import plot
 
 class SimInfo(object):
     def __init__(self, *args):
+        self.results = False
         if len(args) == 2:
             self.load_file(*args)
         else:
@@ -18,7 +19,6 @@ class SimInfo(object):
             self.app = ''
             self.date = ''
             self.dir = ''
-            self.results = False
 
     def info(self):
         info = ''
