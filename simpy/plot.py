@@ -21,7 +21,7 @@ def pwr_spec(k, z=0, A=187826, n=1, Omega_0=1, h=0.67, q_log=2.34, q_1=3.89, q_2
     T_k = trans_fce(k, Omega_0=Omega_0, h=h, q_log=q_log, q_1=q_1, q_2=q_2, q_3=q_3, q_4=q_4)
     return P_prim*T_k**2 / (z+1)**2
 
-def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, out_dir):
+def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, out_dir, save=True, show=False):
     fig = plt.figure(figsize=(14, 8))
     plt.yscale('log')
     plt.xscale('log')
@@ -54,11 +54,11 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, out_dir):
     plt.figtext(x - 0.045, y - 0.01, a_sim_info.info(),
                 bbox={'facecolor':'white', 'alpha':0.2}, size=14, ha='left', va='top')
     plt.subplots_adjust(left=0.1, right=0.85, top=0.9, bottom=0.1)
-#    plt.show()
-    plt.savefig(out_dir + 'pwr_spec.png')
+    if show: plt.show()
+    if save: plt.savefig(out_dir + 'pwr_spec.png')
     plt.close(fig)
 
-def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir):
+def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir, save=True, show=False):
     fig = plt.figure(figsize=(14, 8))
     plt.xscale('log')
     a_ = 0
@@ -90,17 +90,21 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir):
     plt.figtext(x - 0.045, y - 0.01, a_sim_info.info(),
                 bbox={'facecolor':'white', 'alpha':0.2}, size=14, ha='left', va='top')
     plt.subplots_adjust(left=0.1, right=0.85, top=0.9, bottom=0.1)
-#    plt.show()
-    plt.savefig(out_dir + 'pwr_spec_diff.png')
+    if show: plt.show()
+    if save: plt.savefig(out_dir + 'pwr_spec_diff.png')
     plt.close(fig)
 
-def plot_supp(sim_infos, out_dir):
+def plot_supp(sim_infos, out_dir, save=True, show=False):
     fig = plt.figure(figsize=(14, 8))
     for a_sim_info in sim_infos:
-        supp_fl = get_files_in_traverse_dir(a_sim_info.dir + 'supp/', '*.dat')[0][0]
-        data = np.loadtxt(supp_fl)
-        a, supp = data[:, 0], data[:, 1]
-        plt.plot(a, supp, '-o', ms=3, label=a_sim_info.info_supp())
+        try:
+            supp_fl = get_files_in_traverse_dir(a_sim_info.dir + 'supp/', '*.dat')[0][0]
+        except ValueError:
+            print "WARNING! Missing data in '%s'. Skipping step." % (a_sim_info.dir + 'supp/')
+        else:
+            data = np.loadtxt(supp_fl)
+            a, supp = data[:, 0], data[:, 1]
+            plt.plot(a, supp, '-o', ms=3, label=a_sim_info.info_supp())
 
     #plt.ylim(ymin=-1, ymax=0)
     fig.suptitle("Power spectrum suppresion", y=0.95, size=20)
@@ -108,11 +112,11 @@ def plot_supp(sim_infos, out_dir):
     plt.ylabel(r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$", fontsize=25)
     plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
     plt.subplots_adjust(left=0.1, right=0.7, top=0.9, bottom=0.1)
-#    plt.show()
-    plt.savefig(out_dir + 'supp.png')
+    if show: plt.show()
+    if save: plt.savefig(out_dir + 'supp.png')
     plt.close(fig)
 
-def plot_dens_histo(dens_bin_files, zs, a_sim_info, out_dir, fix_N=8, fix_rho=0.1):
+def plot_dens_histo(dens_bin_files, zs, a_sim_info, out_dir, fix_N=1, fix_rho=0.0, save=True, show=False):
     num_sub_x = 3
     num_sub_y = (len(zs) + num_sub_x - 1) / num_sub_x
     fig = plt.figure(figsize=(num_sub_x*5, num_sub_y*6))
@@ -136,11 +140,11 @@ def plot_dens_histo(dens_bin_files, zs, a_sim_info, out_dir, fix_N=8, fix_rho=0.
     plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor':'white', 'alpha':0.2}, size=14, ha='center', va='top')
     plt.subplots_adjust(wspace=0.2, hspace=0.3)
-#    plt.show()
-    plt.savefig(out_dir + 'dens_histo.png')
+    if show: plt.show()
+    if save: plt.savefig(out_dir + 'dens_histo.png')
     plt.close(fig)
 
-def plot_par_evol(files, files_t, zs, a_sim_info, out_dir):
+def plot_par_evol(files, files_t, zs, a_sim_info, out_dir, save=True, show=False):
     data = np.loadtxt(files[0])
     x, y = data[:, 0], data[:, 1]
     data = np.loadtxt(files_t[0])
@@ -182,7 +186,7 @@ def plot_par_evol(files, files_t, zs, a_sim_info, out_dir):
     ani.save(out_dir + 'par_evol.gif', writer='imagemagick')
     plt.close(fig)
 
-def plot_dens_evol(files, zs, a_sim_info, out_dir):
+def plot_dens_evol(files, zs, a_sim_info, out_dir, save=True, show=False):
     from matplotlib.colors import SymLogNorm
     num = len(zs)
 

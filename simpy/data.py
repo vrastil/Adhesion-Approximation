@@ -75,51 +75,79 @@ class SimInfo(object):
             f.seek(0, 0)
             f.write('Results: Done\n' + content)
 
-def analyze_run(a_sim_info, rerun=False):
+def analyze_run(a_sim_info, rerun=False, skip_ani=False):
     if rerun or not a_sim_info.results:
         out_dir = a_sim_info.dir + 'results/'
         create_dir(out_dir)
-
+        all_good = True
         # Power spectrum
-        print 'Plotting power spectrum...'
-        zs, files = sort_get_fl_get_z(a_sim_info, 'pwr_spec/')
-        plot.plot_pwr_spec(files, zs, a_sim_info, out_dir)
+        try:
+            zs, files = sort_get_fl_get_z(a_sim_info, 'pwr_spec/')
+        except ValueError:
+            print "WARNING! Missing data in '%s'. Skipping step." % (a_sim_info.dir + 'pwr_spec/')
+            all_good = False
+        else:
+            print 'Plotting power spectrum...'
+            plot.plot_pwr_spec(files, zs, a_sim_info, out_dir)
 
         # Power spectrum difference
-        print 'Plotting power spectrum difference...'
-        zs, files = sort_get_fl_get_z(a_sim_info, 'pwr_diff/')
-        plot.plot_pwr_spec_diff(files, zs, a_sim_info, out_dir)
+        try:
+            zs, files = sort_get_fl_get_z(a_sim_info, 'pwr_diff/')
+        except ValueError:
+            print "WARNING! Missing data in '%s'. Skipping step." % (a_sim_info.dir + 'pwr_diff/')
+            all_good = False
+        else:
+            print 'Plotting power spectrum difference...'
+            plot.plot_pwr_spec_diff(files, zs, a_sim_info, out_dir)
 
         # Power spectrum suppresion
-        print 'Plotting power spectrum suppresion...'
-        plot.plot_supp([a_sim_info], out_dir)
+            print 'Plotting power spectrum suppresion...'
+            plot.plot_supp([a_sim_info], out_dir)
 
         # Density distribution
-        print 'Plotting density distribution...'
-        zs, files = slice_zs_files(*sort_get_fl_get_z(a_sim_info, 'rho_bin/'))
-        plot.plot_dens_histo(files, zs, a_sim_info, out_dir)
+        try:
+            zs, files = slice_zs_files(*sort_get_fl_get_z(a_sim_info, 'rho_bin/'))
+        except TypeError:
+            print "WARNING! Missing data in '%s'. Skipping step." % (a_sim_info.dir + 'rho_bin/')
+            all_good = False
+        else:
+            print 'Plotting density distribution...'
+            plot.plot_dens_histo(files, zs, a_sim_info, out_dir)
 
-        # Particles evolution
-        print 'Plotting particles evolution...'
-        zs, files = sort_get_fl_get_z(a_sim_info, 'par_cut/', a_file='par*.dat')
-        zs_t, files_t = sort_get_fl_get_z(a_sim_info, 'par_cut/', a_file='track*.dat')
-        if zs != zs_t: print "ERROR! 'par_cut' files differ from 'track_par_pos' files"
-        plot.plot_par_evol(files, files_t, zs, a_sim_info, out_dir)
+        if not skip_ani:
+            # Particles evolution
+            try:
+                zs, files = sort_get_fl_get_z(a_sim_info, 'par_cut/', a_file='par*.dat')
+                zs_t, files_t = sort_get_fl_get_z(a_sim_info, 'par_cut/', a_file='track*.dat')
+            except ValueError:
+                print "WARNING! Missing data in '%s'. Skipping step." % (a_sim_info.dir + 'par_cut/')
+                all_good = False
+            else:
+                if zs != zs_t: print "ERROR! 'par_cut' files differ from 'track_par_pos' files. Skipping step."
+                else:
+                    print 'Plotting particles evolution...'
+                    plot.plot_par_evol(files, files_t, zs, a_sim_info, out_dir)
 
-        # Density evolution
-        print 'Plotting density evolution...'
-        zs, files = sort_get_fl_get_z(a_sim_info, 'rho_map/', a_file='*.dat')
-        plot.plot_dens_evol(files, zs, a_sim_info, out_dir)
-
-        plt.close("all")
+            # Density evolution
+            try:
+                zs, files = sort_get_fl_get_z(a_sim_info, 'rho_map/', a_file='*.dat')
+            except ValueError:
+                print "WARNING! Missing data in '%s'. Skipping step." % (a_sim_info.dir + 'rho_map/')
+                all_good = False
+            else:
+                print 'Plotting density evolution...'
+                plot.plot_dens_evol(files, zs, a_sim_info, out_dir)
 
         # Update sim_param.log
-        print "Updating 'sim_param.log'..."
-        a_sim_info.done()
+        if all_good:
+            print "Updating 'sim_param.log'..."
+            a_sim_info.done()
+
+        # Clean
+        plt.close("all")
         gc.collect()
     else:
         print 'Run already analyzed!'
-
 
 def analyze_all(out_dir='/home/vrastil/Documents/Adhesion-Approximation/output/'):
     files = get_files_in_traverse_dir(out_dir, 'sim_param.log')
@@ -130,6 +158,7 @@ def analyze_all(out_dir='/home/vrastil/Documents/Adhesion-Approximation/output/'
     for a_sim_info in sim_infos:
         print 'Analyzing run %s' % a_sim_info.info_tr()
         analyze_run(a_sim_info)
+    print 'All runs analyzed!'
 
 if __name__ == 'main':
     out_dir = sys.argv[1]
