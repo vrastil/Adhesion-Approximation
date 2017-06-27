@@ -147,7 +147,8 @@ int Sim_Param::init(int ac, char* av[])
 	if (err) {is_init = 0; return err;}
 	else {
 		is_init = 1;
-		if(nt == 0) nt = omp_get_num_procs();
+		// if(nt == 0) nt = omp_get_num_procs();
+        if(nt == 0) nt = omp_get_max_threads();
 		else omp_set_num_threads(nt);
 		par_num = pow(mesh_num / Ng, 3);
 		power.k2_G *= power.k2_G;
