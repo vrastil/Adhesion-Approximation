@@ -5,20 +5,39 @@
 #include "core_app.h"
 #include "core_mesh.h"
 
-// #define CONV_MOD 0 // convolution using FFT
-#define CONV_MOD 1 // convolution using direct sum
-// #define CONV_MOD 2 // TODO: convolution using better FFT
-
 using namespace std;
 const double PI = acos(-1.);
 
-static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu, const fftw_plan &p_F);
+static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu);
 static void pot2exp(const Mesh& potential,  Mesh* expotential, double nu);
 static void exp2pot(Mesh* potential,  const Mesh& expotential, double nu);
-static void gen_expot(Mesh* potential,  const Mesh& expotential, double nu, double b, const fftw_plan &p_B);
+static void gen_expot(Mesh* potential,  const Mesh& expotential, double nu, double b);
 static void aa_convolution(App_Var_AA* APP, const Sim_Param &sim);
-static int check_field(const Mesh& field);
-static int check_field_pos(const Mesh& field);
+
+
+/**
+ * @class:	Exp_sum
+ * @brief:	class for handling summation of expoential with huge exponents
+ */
+
+class Exp_sum
+{
+public:
+	// CONSTRUCTORS
+	Exp_sum(): exponent(0), amplitude(1){};
+    Exp_sum(double exponent): exponent(exponent), amplitude(1){};
+	
+	// VARIABLES
+	double exponent, amplitude;
+	
+	// METHODS
+    inline void reset() { exponent = 0; amplitude = 1; }
+    inline double get_pure_exp(){ return exponent + log(amplitude); }
+
+	// OPERATORS
+	Exp_sum& operator+=(double exponent_rhs);
+    inline Exp_sum& operator*=(double exponent_rhs){ exponent+= exponent_rhs}
+};
 
 int adhesion_approximation(const Sim_Param &sim)
 {
@@ -50,9 +69,7 @@ int adhesion_approximation(const Sim_Param &sim)
 
 	/* Computing initial expotential */
 	fftw_execute_dft_c2r(APP.p_B, APP.app_field[0]);
-		
 	gen_init_expot(APP.app_field[0], &APP.expotential, sim.nu, APP.p_F);
-//	if (check_field(APP.app_field[0])) return 1;
 
 	/* Setting initial positions of particles */
     printf("Setting initial positions of particles...\n");
@@ -85,14 +102,11 @@ int adhesion_approximation(const Sim_Param &sim)
 
 static void aa_convolution(App_Var_AA* APP, const Sim_Param &sim)
 {
-    //	gen_expot(&APP->app_field[0], APP->expotential, sim.nu, APP->b_half(), APP->p_B);
-	gen_expot(&APP->app_field[0], APP->expotential, sim.nu, APP->b, APP->p_B);
-//	if (check_field(APP->app_field[0])) return 1;
-//	if (check_field_pos(APP->app_field[0])) return 1;
+    //	gen_expot(&APP->app_field[0], APP->expotential, sim.nu, APP->b_half());
+	gen_expot(&APP->app_field[0], APP->expotential, sim.nu, APP->b;
 				
 	printf("Computing potential...\n");	
 	exp2pot(&APP->app_field[0], APP->app_field[0], sim.nu);
-//	if (check_field(APP->app_field[0])) return 1;
 				
 	printf("Computing velocity field via FFT...\n");
 	fftw_execute_dft_r2c(APP->p_F, APP->app_field[0]);
@@ -100,49 +114,15 @@ static void aa_convolution(App_Var_AA* APP, const Sim_Param &sim)
 	fftw_execute_dft_c2r_triple(APP->p_B, APP->app_field);
 }
 
-static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu, const fftw_plan &p_F)
+static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu)
 {
-	switch(CONV_MOD){
-	case 0:
-		printf("Computing initial expotential in k-space...\n");
-		pot2exp(potential, expotential, nu);	
-		fftw_execute_dft_r2c(p_F, *expotential);
-		break;
-	case 1:
-		printf("Storing initial potenital in q-space...\n");
-		*expotential = potential;
-		break;
-	}
+	printf("Storing initial expotenital in q-space...\n");
+    // store exponent only
+	*expotential = potential;
+    *expotential /= -2*nu;
 }
 
-static void pot2exp(const Mesh& potential,  Mesh* expotential, double nu)
-{
-	#pragma omp parallel for
-	for (int i = 0; i < potential.N*potential.N; i++)
-	{
-		for (int j = 0; j < potential.N; j++)
-		{
-			(*expotential)(i, j) = exp(-potential(i, j)/(2.*nu));
-		}
-	}
-}
-
-static void exp2pot(Mesh* potential,  const Mesh& expotential, double nu)
-{
-	#pragma omp parallel for
-	for (int i = 0; i < expotential.N*expotential.N; i++)
-	{
-		for (int j = 0; j < expotential.N; j++)
-		{
-			(*potential)(i, j) = -2.*nu*log(expotential(i, j));
-			if (!isfinite((*potential)(i, j))) {printf(
-			"Error while chcecking for NAN or INF. expotential = %f, -2.*nu*log(U) = %f, potential = %f\n",
-						expotential(i, j),-2.*nu*log(expotential(i, j)), (*potential)(i, j)); }
-		}
-	}
-}
-
-static void convolution_y1(Mesh* potential,  const Mesh& expotential_0, double nu, double b){
+static void convolution_y1(Mesh* potential, const vector<double>& gaussian, const Mesh& expotential_0){
 	// multi-thread index is y3
 	// compute f1 (x1, y2, y3)
 	double exponent;
@@ -170,11 +150,10 @@ static void convolution_y1(Mesh* potential,  const Mesh& expotential_0, double n
 
 static void convolution_y2(Mesh* potential, const vector<double>& gaussian){
 	// multi-thread index is x1
-	// compute f1 (x1, y2, y3)
+	// compute f2 (x1, x2, y3)
 	double sum;
 	vector<double> sum_aux(potential->N);
 	
-	// compute f2 (x1, x2, y3)
 	#pragma omp parallel for private(sum_aux, sum)
 	for (int x1 = 0; x1 < potential->N; x1++){
 		for (int y3 = 0; y3 < potential->N; y3++){
@@ -200,11 +179,10 @@ static void convolution_y2(Mesh* potential, const vector<double>& gaussian){
 
 static void convolution_y3(Mesh* potential, const vector<double>& gaussian){
 	// multi-thread index is x1
-	// compute f1 (x1, y2, y3)
+	// compute f3 (x1, x2, x3) == expotential(x, b)
 	double sum;
 	vector<double> sum_aux(potential->N);
 
-	// compute f3 (x1, x2, x3) == expotential(x, b)
 	#pragma omp parallel for private(sum_aux, sum)
 	for (int x1 = 0; x1 < potential->N; x1++){
 		for (int x2 = 0; x2 < potential->N; x2++){
@@ -228,79 +206,39 @@ static void convolution_y3(Mesh* potential, const vector<double>& gaussian){
 	}
 }
 
-static void gen_expot(Mesh* potential,  const Mesh& expotential, double nu, double b, const fftw_plan &p_B)
+static void gen_expot(Mesh* potential,  const Mesh& expotential_0, double nu, double b)
 {
-	switch(CONV_MOD){
-	case 0:
-		/* Computing convolution using FFT */
-		printf("Computing expotential in k-space...\n");
-		double k2;
-		#pragma omp parallel for private(k2)
-		for(int i=0; i < expotential.length / 2;i++){
-			k2 = get_k_sq(expotential.N, i);
-			(*potential)[2*i] = expotential[2*i]*exp(-4.*PI*PI*b*nu*k2/(expotential.N*expotential.N)); // DEFINITION of nu_phys = (L/N)^2 * v_comp
-			(*potential)[2*i+1] = expotential[2*i+1]*exp(-4.*PI*PI*b*nu*k2/(expotential.N*expotential.N));
-		}
-		fftw_execute_dft_c2r(p_B, *potential);
-		break;
-	case 1:
-		/* Computing convolution using direct sum */
-		printf("Computing expotential in q-space...\n");
-		/*
-		f(x1, x2, x3) = \int dy^3 { g(y1, y2, y3) * h(x1 - y1) * h(x2 - y2) * h(x3 - y3)}
-		..
-		f1 (x1, y2, y3) = \int dy1 { g  (y1, y2, y3) * h(x1 - y1)}	:: N^3 sums of length N
-		f2 (x1, x2, y3) = \int dy2 { f1 (x1, y2, y3) * h(x2 - y2)}	:: N^3 sums of length N
-		f3 (x1, x2, x3) = \int dy3 { f2 (x1, x2, y3) * h(x3 - y3)}	:: N^3 sums of length N
-		*/
-		
-		// store values of exponential - every convolution uses the same exp(-r^2/4bv)
-		vector<double> gaussian(expotential.N);
-		
-		#pragma omp parallel for
-		for (int i = 0; i < expotential.N; i++){
-			gaussian[i]=exp(-i*i/(4.*b*nu));
-		}
+	/* Computing convolution using direct sum */
+	printf("Computing expotential in q-space...\n");
+	/*
+	f(x1, x2, x3) = \int dy^3 { g(y1, y2, y3) * h(x1 - y1) * h(x2 - y2) * h(x3 - y3)}
+	..
+	f1 (x1, y2, y3) = \int dy1 { g  (y1, y2, y3) * h(x1 - y1)}	:: N^3 sums of length N
+	f2 (x1, x2, y3) = \int dy2 { f1 (x1, y2, y3) * h(x2 - y2)}	:: N^3 sums of length N
+	f3 (x1, x2, x3) = \int dy3 { f2 (x1, x2, y3) * h(x3 - y3)}	:: N^3 sums of length N
+	*/
 
-		convolution_y1(potential, expotential, nu, b);
-		convolution_y2(potential, gaussian);
-		convolution_y3(potential, gaussian);
-		break;
+	// store values of exponential - every convolution uses the same exp(-r^2/4bv)
+	vector<double> gaussian(expotential.N);
+
+	#pragma omp parallel for
+	for (int i = 0; i < expotential_0.N; i++){
+		gaussian[i]=-i*i/(4.*b*nu);
 	}
+
+	convolution_y1(potential, gaussian, expotential_0);
+	convolution_y2(potential, gaussian);
+	convolution_y3(potential, gaussian);
 }
 
-static int check_field(const Mesh& field){
-	// check field of length max_i*max_i*(max_i+2); ignore last 2 element in last dim
-	double check;
-	for (int i = 0; i < field.N; i++){
-		for (int j = 0; j < field.N; j++){
-			for (int k = 0; k < field.N; k++){
-				check = field(i, j, k);
-				if (isfinite(check) == 0){
-					printf("Error while performing check for NAN or INF! field posititon = (%i, %i, %i), value = %f\n", 
-					i, j, k, check);
-					return 1;
-				}
-			}
-		}
-	}
-	return 0;
-}
-
-static int check_field_pos(const Mesh& field){
-	// check field of length max_i*max_i*(max_i+2); ignore last 2 element in last dim
-	double check;
-	for (int i = 0; i < field.N; i++){
-		for (int j = 0; j < field.N; j++){
-			for (int k = 0; k < field.N; k++){
-				check = field(i, j, k);
-				if (check < 0){
-					printf("Error while performing check for negative values! field posititon = (%i, %i, %i), value = %f\n", 
-					i, j, k, check);
-					return 1;
-				}
-			}
-		}
-	}
-	return 0;
+Exp_sum& Exp_sum::operator+=(double exponent_rhs)
+{
+    if (exponent >= exponent_rhs)
+    {
+        amplitude += exp(exponent_rhs - exponent);
+    } else {
+        amplitude = 1 + exp(exponent - exponent_rhs);
+        exponent = exponent_rhs
+    }
+	return *this;
 }
