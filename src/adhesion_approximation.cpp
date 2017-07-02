@@ -158,7 +158,7 @@ static void convolution_y1(Mesh* potential,  const Mesh& expotential_0, double n
 					exponent=expotential_0(y1, y2, y3)+pow(x1-y1, 2.)/(2.*b);
 					exponent = -exponent/(2.*nu);
 					if (exponent < 500) sum +=exp(exponent);
-					else printf("WARNING! Huge exponent = %f", exponent);
+					else printf("WARNING! Huge exponent = %f\n", exponent);
 					if (!isfinite(sum)) {printf("Error while chcecking for NAN or INF. r = %i, potential = %f, b = %f, exponent = %f, +sum = %f\n",
 						abs(x1-y1), expotential_0(y1, y2, y3), b, exponent, exp(exponent)); }
 				}

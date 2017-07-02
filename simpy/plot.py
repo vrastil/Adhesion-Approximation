@@ -94,7 +94,7 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir, save=True, 
     if save: plt.savefig(out_dir + 'pwr_spec_diff.png')
     plt.close(fig)
 
-def plot_supp(sim_infos, out_dir, save=True, show=False):
+def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False):
     fig = plt.figure(figsize=(14, 8))
     for a_sim_info in sim_infos:
         try:
@@ -107,7 +107,7 @@ def plot_supp(sim_infos, out_dir, save=True, show=False):
             plt.plot(a, supp, '-o', ms=3, label=a_sim_info.info_supp())
 
     #plt.ylim(ymin=-1, ymax=0)
-    fig.suptitle("Power spectrum suppresion", y=0.95, size=20)
+    fig.suptitle("Power spectrum suppression" + suptitle, y=0.95, size=20)
     plt.xlabel(r"$a(t)$", fontsize=15)
     plt.ylabel(r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$", fontsize=25)
     plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
@@ -214,3 +214,27 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir, save=True, show=False):
     ani = animation.FuncAnimation(fig, animate, frames=2*num, interval=250, blit=True)
     ani.save(out_dir + 'dens_evol.gif', writer='imagemagick')
     plt.close(fig)
+
+def plot_supp_lms(supp_lms, a, a_sim_info, out_dir, k_lms=None, suptitle='', save=True, show=False):
+    fig = plt.figure(figsize=(14, 8))
+    supp_l, supp_m, supp_s = supp_lms
+    k_l, k_m, k_s = k_lms
+    plt.plot(a, supp_l, '-o', ms=3, label=r'Large-scale: $\langle%.2f,%.2f\rangle$ h/Mpc' % (k_l[0], k_l[1]))
+    plt.plot(a, supp_m, '-o', ms=3, label=r'Medium-scale: $\langle%.2f,%.2f\rangle$ h/Mpc' % (k_m[0], k_m[1]))
+    plt.plot(a, supp_s, '-o', ms=3, label=r'Small-scale: $\langle%.2f,%.2f\rangle$ h/Mpc' % (k_s[0], k_s[1]))
+
+    fig.suptitle("Power spectrum suppresion", y=0.95, size=20)
+    plt.xlabel(r"$a(t)$", fontsize=15)
+    plt.ylabel(r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$", fontsize=25)
+    leg = plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
+    plt.subplots_adjust(left=0.1, right=0.7, top=0.9, bottom=0.1)
+    plt.draw()
+    box = leg.get_frame().get_bbox()
+    x = box.bounds[0]/fig.bbox.bounds[2]
+    y = box.bounds[1]/fig.bbox.bounds[3]
+    plt.figtext(x + 0.005, y - 0.01, a_sim_info.info(),
+                bbox={'facecolor':'white', 'alpha':0.2}, size=14, ha='left', va='top')
+    if show: plt.show()
+    if save: plt.savefig(out_dir + 'supp.png')
+    plt.close(fig)
+

@@ -2,6 +2,7 @@ from datetime import datetime
 import sys
 import gc
 import matplotlib.pyplot as plt
+import numpy as np
 
 from . import *
 from . import plot
@@ -75,73 +76,89 @@ class SimInfo(object):
             f.seek(0, 0)
             f.write('Results: Done\n' + content)
 
+def load_k_supp(files, k_l_lim=[0,10], k_m_lim=[20,27], k_s_lim=[35,40]):
+    """
+    k_min = 2*PI / L
+    k_max = 2*PI / L * N_m
+    log_bin : 100 values between k_min and k_max (logspace)
+
+    large scale :: k = k_min * (log_bin^[0:10])
+    medium scale :: k = k_min * (log_bin^[15:25])
+    small scale :: k = k_min * (log_bin^[30:40]) """
+
+    supp_large = []
+    supp_medium = []
+    supp_small = []
+
+    for a_file in files:
+        data = np.loadtxt(a_file)
+        P_diff = data[:, 1]
+        supp_large.append(np.mean(P_diff[k_l_lim]))
+        supp_medium.append(np.mean(P_diff[k_m_lim]))
+        supp_small.append(np.mean(P_diff[k_s_lim]))
+
+    k = data[:, 0]
+    k_l = [k[k_l_lim[0]], k[k_l_lim[1]]]
+    k_m = [k[k_m_lim[0]], k[k_m_lim[1]]]
+    k_s = [k[k_s_lim[0]], k[k_s_lim[1]]]
+    return (supp_large, supp_medium, supp_small), (k_l, k_m, k_s)
+
+def try_get_zs_files(a_sim_info, subdir, a_file='*.dat'):
+    try:
+        zs, files = sort_get_fl_get_z(a_sim_info, subdir, a_file=a_file)
+    except ValueError:
+        print "WARNING! Missing data in '%s'. Skipping step." % (a_sim_info.dir + subdir)
+        return None, None
+    else:
+        return zs, files
+
 def analyze_run(a_sim_info, rerun=False, skip_ani=False):
     if rerun or not a_sim_info.results:
         out_dir = a_sim_info.dir + 'results/'
         create_dir(out_dir)
-        all_good = True
         # Power spectrum
-        try:
-            zs, files = sort_get_fl_get_z(a_sim_info, 'pwr_spec/')
-        except ValueError:
-            print "WARNING! Missing data in '%s'. Skipping step." % (a_sim_info.dir + 'pwr_spec/')
-            all_good = False
-        else:
+        zs, files = try_get_zs_files(a_sim_info, 'pwr_spec/')
+        if zs is not None:
             print 'Plotting power spectrum...'
             plot.plot_pwr_spec(files, zs, a_sim_info, out_dir)
 
         # Power spectrum difference
-        try:
-            zs, files = sort_get_fl_get_z(a_sim_info, 'pwr_diff/')
-        except ValueError:
-            print "WARNING! Missing data in '%s'. Skipping step." % (a_sim_info.dir + 'pwr_diff/')
-            all_good = False
-        else:
+        zs, files = try_get_zs_files(a_sim_info, 'pwr_diff/')
+        if zs is not None:
             print 'Plotting power spectrum difference...'
             plot.plot_pwr_spec_diff(files, zs, a_sim_info, out_dir)
-
         # Power spectrum suppresion
             print 'Plotting power spectrum suppresion...'
-            plot.plot_supp([a_sim_info], out_dir)
+            a = [1./(z+1) for z in zs]
+            supp_lms, k_lms = load_k_supp(files)
+            plot.plot_supp_lms(supp_lms, a, a_sim_info, out_dir, k_lms=k_lms)
 
         # Density distribution
-        try:
-            zs, files = slice_zs_files(*sort_get_fl_get_z(a_sim_info, 'rho_bin/'))
-        except TypeError:
-            print "WARNING! Missing data in '%s'. Skipping step." % (a_sim_info.dir + 'rho_bin/')
-            all_good = False
-        else:
+        zs, files = try_get_zs_files(a_sim_info, 'rho_bin/')
+        if zs is not None:
             print 'Plotting density distribution...'
+            zs, files = slice_zs_files(zs, files)
             plot.plot_dens_histo(files, zs, a_sim_info, out_dir)
 
         if not skip_ani:
             # Particles evolution
-            try:
-                zs, files = sort_get_fl_get_z(a_sim_info, 'par_cut/', a_file='par*.dat')
-                zs_t, files_t = sort_get_fl_get_z(a_sim_info, 'par_cut/', a_file='track*.dat')
-            except ValueError:
-                print "WARNING! Missing data in '%s'. Skipping step." % (a_sim_info.dir + 'par_cut/')
-                all_good = False
-            else:
+            zs, files = try_get_zs_files(a_sim_info, 'par_cut/', a_file='par*.dat')
+            zs_t, files_t = try_get_zs_files(a_sim_info, 'par_cut/', a_file='track*.dat')
+            if zs is not None:
                 if zs != zs_t: print "ERROR! 'par_cut' files differ from 'track_par_pos' files. Skipping step."
                 else:
                     print 'Plotting particles evolution...'
                     plot.plot_par_evol(files, files_t, zs, a_sim_info, out_dir)
 
             # Density evolution
-            try:
-                zs, files = sort_get_fl_get_z(a_sim_info, 'rho_map/', a_file='*.dat')
-            except ValueError:
-                print "WARNING! Missing data in '%s'. Skipping step." % (a_sim_info.dir + 'rho_map/')
-                all_good = False
-            else:
+            zs, files = try_get_zs_files(a_sim_info, 'rho_map/', a_file='*.dat')
+            if zs is not None:
                 print 'Plotting density evolution...'
                 plot.plot_dens_evol(files, zs, a_sim_info, out_dir)
 
         # Update sim_param.log
-        if all_good:
-            print "Updating 'sim_param.log'..."
-            a_sim_info.done()
+        print "Updating 'sim_param.log'..."
+        a_sim_info.done()
 
         # Clean
         plt.close("all")
@@ -149,7 +166,8 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
     else:
         print 'Run already analyzed!'
 
-def analyze_all(out_dir='/home/vrastil/Documents/Adhesion-Approximation/output/'):
+def analyze_all(out_dir='/home/vrastil/Documents/Adhesion-Approximation/output/',
+                rerun=False, skip_ani=False):
     files = get_files_in_traverse_dir(out_dir, 'sim_param.log')
     sim_infos = []
     for args in files:
@@ -157,7 +175,7 @@ def analyze_all(out_dir='/home/vrastil/Documents/Adhesion-Approximation/output/'
 
     for a_sim_info in sim_infos:
         print 'Analyzing run %s' % a_sim_info.info_tr()
-        analyze_run(a_sim_info)
+        analyze_run(a_sim_info, rerun=rerun, skip_ani=skip_ani)
     print 'All runs analyzed!'
 
 if __name__ == 'main':
