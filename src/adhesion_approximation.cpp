@@ -112,10 +112,10 @@ static void convolution_y1(Mesh* potential, const vector<double>& gaussian, cons
 	// compute f1 (x1, y2, y3)
 
     vector<double> exp_aux(potential->N);
-	
+    
+	#pragma omp parallel for private(exp_aux)
 	for (int x1 = 0; x1 < potential->N; x1++){
 		for (int y2 = 0; y2 < potential->N; y2++){
-			#pragma omp parallel for private(exp_aux)
 			for (int y3 = 0; y3 < potential->N; y3++){
                 // fill in exponents
                 for (int y1 = 0; y1 < potential->N; y1++){
@@ -129,7 +129,6 @@ static void convolution_y1(Mesh* potential, const vector<double>& gaussian, cons
 }
 
 static void convolution_y2(Mesh* potential, const vector<double>& gaussian){
-	// multi-thread index is x1
 	// compute f2 (x1, x2, y3)
 	vector<double> sum_aux(potential->N);
 	vector<double> exp_aux(potential->N);
@@ -155,7 +154,6 @@ static void convolution_y2(Mesh* potential, const vector<double>& gaussian){
 }
 
 static void convolution_y3(Mesh* potential, const vector<double>& gaussian){
-	// multi-thread index is x1
 	// compute f3 (x1, x2, x3) == expotential(x, b)
 	vector<double> sum_aux(potential->N);
     vector<double> exp_aux(potential->N);
