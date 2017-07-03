@@ -8,31 +8,12 @@
 using namespace std;
 const double PI = acos(-1.);
 
+const double ACC = 1e-10;
+const double log_acc = log(ACC);
+
 static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu);
 static void gen_expot(Mesh* potential,  const Mesh& expotential, double nu, double b);
 static void aa_convolution(App_Var_AA* APP, const Sim_Param &sim);
-
-/**
- * @class:	Exp_sum
- * @brief:	class for handling summation of expoential with huge exponents
- */
-
-class Exp_sum
-{
-public:
-	// CONSTRUCTORS
-	Exp_sum(): exponent(0), amplitude(1){};
-    Exp_sum(double exponent): exponent(exponent), amplitude(1){};
-	
-	// VARIABLES
-	double exponent, amplitude;
-	
-	// METHODS
-    inline double get_pure_exp(){ return exponent + log(amplitude); }
-
-	// OPERATORS
-	Exp_sum& operator+=(double exponent_rhs);
-};
 
 int adhesion_approximation(const Sim_Param &sim)
 {
@@ -116,20 +97,32 @@ static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu)
     *expotential /= -2*nu;
 }
 
+static double get_summation(const vector<double>& exp_aux)
+{
+    double max_exp = *max_element(exp_aux.begin(), exp_aux.end());
+    double sum = 0;
+    for(auto const& a_exp: exp_aux) {
+        if ((a_exp - max_exp) > log_acc) sum+= exp(a_exp - max_exp);
+    }
+    return max_exp + log(sum);
+}
+
 static void convolution_y1(Mesh* potential, const vector<double>& gaussian, const Mesh& expotential_0){
 	// multi-thread index is y3
 	// compute f1 (x1, y2, y3)
+
+    vector<double> exp_aux(potential->N);
 	
 	for (int x1 = 0; x1 < potential->N; x1++){
 		for (int y2 = 0; y2 < potential->N; y2++){
-			#pragma omp parallel for
+			#pragma omp parallel for private(exp_aux)
 			for (int y3 = 0; y3 < potential->N; y3++){
-				// summation over y1
-				Exp_sum sum(expotential_0(0, y2, y3) + gaussian[x1]); // y1 = 0
-				for (int y1 = 1; y1 < potential->N; y1++){
-                    sum+=expotential_0(y1, y2, y3)+gaussian[abs(x1-y1)];
+                // fill in exponents
+                for (int y1 = 0; y1 < potential->N; y1++){
+                    exp_aux.push_back(expotential_0(y1, y2, y3)+gaussian[abs(x1-y1)]);
 				}
-				(*potential)(x1, y2, y3) = sum.get_pure_exp(); // potential is now f1
+				(*potential)(x1, y2, y3) = get_summation(exp_aux); // potential is now f1
+                exp_aux.clear();
 			}
 		}
 	}
@@ -139,17 +132,18 @@ static void convolution_y2(Mesh* potential, const vector<double>& gaussian){
 	// multi-thread index is x1
 	// compute f2 (x1, x2, y3)
 	vector<double> sum_aux(potential->N);
-	
-	#pragma omp parallel for private(sum_aux)
+	vector<double> exp_aux(potential->N);
+
+	#pragma omp parallel for private(sum_aux, exp_aux)
 	for (int x1 = 0; x1 < potential->N; x1++){
 		for (int y3 = 0; y3 < potential->N; y3++){
 			for (int x2 = 0; x2 < potential->N; x2++){
-				// summation over y2
-                Exp_sum sum((*potential)(x1, 0, y3) + gaussian[x2]); // y2 = 0
-				for (int y2 = 1; y2 < potential->N; y2++){
-					sum += (*potential)(x1, y2, y3) + gaussian[abs(x2-y2)];
+				// fill in exponents
+                for (int y2 = 0; y2 < potential->N; y2++){
+                    exp_aux.push_back((*potential)(x1, y2, y3) + gaussian[abs(x2-y2)]);
 				}
-				sum_aux.push_back(sum.get_pure_exp());
+				sum_aux.push_back(get_summation(exp_aux));
+                exp_aux.clear();
 			}
 
 			for (int x2 = 0; x2 < potential->N; x2++){
@@ -164,17 +158,18 @@ static void convolution_y3(Mesh* potential, const vector<double>& gaussian){
 	// multi-thread index is x1
 	// compute f3 (x1, x2, x3) == expotential(x, b)
 	vector<double> sum_aux(potential->N);
+    vector<double> exp_aux(potential->N);
 
-	#pragma omp parallel for private(sum_aux)
+	#pragma omp parallel for private(sum_aux, exp_aux)
 	for (int x1 = 0; x1 < potential->N; x1++){
 		for (int x2 = 0; x2 < potential->N; x2++){
 			for (int x3 = 0; x3 < potential->N; x3++){
-				// summation over y3
-                Exp_sum sum((*potential)(x1, x2, 0) + gaussian[x3]); // y3 = 0
-				for (int y3 = 1; y3 < potential->N; y3++){
-                    sum += (*potential)(x1, x2, y3) + gaussian[abs(x3-y3)];
+				// fill in exponents
+                for (int y3 = 0; y3 < potential->N; y3++){
+                    exp_aux.push_back((*potential)(x1, x2, y3) + gaussian[abs(x3-y3)]);
 				}
-				sum_aux.push_back(sum.get_pure_exp());
+				sum_aux.push_back(get_summation(exp_aux));
+                exp_aux.clear();
 			}
 			for (int x3 = 0; x3 < potential->N; x3++){
 				(*potential)(x1, x2, x3) = sum_aux[x3]; // potential is now f3
@@ -207,16 +202,4 @@ static void gen_expot(Mesh* potential,  const Mesh& expotential_0, double nu, do
 	convolution_y1(potential, gaussian, expotential_0);
 	convolution_y2(potential, gaussian);
 	convolution_y3(potential, gaussian);
-}
-
-Exp_sum& Exp_sum::operator+=(double exponent_rhs)
-{
-    if (exponent >= exponent_rhs)
-    {
-        amplitude += exp(exponent_rhs - exponent);
-    } else {
-        amplitude = 1 + exp(exponent - exponent_rhs);
-        exponent = exponent_rhs;
-    }
-	return *this;
 }
