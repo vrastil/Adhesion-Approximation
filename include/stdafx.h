@@ -8,6 +8,7 @@
  * HEADERS & LIBRARIES *
  ***********************/
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
