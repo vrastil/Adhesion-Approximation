@@ -26,7 +26,7 @@ class SimInfo(object):
     def info(self):
         info = ''
         info += '%s:\n' % self.app
-        info += '$N_m = %i^3$\n' % self.num_m
+        info += '$N_m = %i$\n' % self.num_m
         info += '$N_p = %i^3$\n' % self.num_p
         info += '$L = %i$ Mpc/h\n' % self.box
         if self.app == 'AA': info += r'$\nu = %.1f$' % self.nu
