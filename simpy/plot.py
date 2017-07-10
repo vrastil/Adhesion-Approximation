@@ -37,7 +37,12 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, out_dir, save=True, show=False
         data = np.loadtxt(pwr)
         k, P_k = data[:, 0], data[:, 1]
         plt.plot(k, P_k, 'o', ms=3, label=lab)
+        del k, P_k, data
+
+    data = np.loadtxt(pwr_spec_files[-1])
+    k = data[:, 0]
     k = np.logspace(np.log10(k[0]), np.log10(k[-1]), num=20)
+    del data
     P_0 = [pwr_spec(k_) for k_ in k]
     P_i = [pwr_spec(k_, z=200) for k_ in k]
     plt.plot(k, P_0, '-')
@@ -73,9 +78,13 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir, save=True, 
         data = np.loadtxt(pwr)
         k, P_k = data[:, 0], data[:, 1]
         plt.plot(k, P_k, 'o', ms=3, label=lab)
+        del k, P_k, data
 
+    data = np.loadtxt(pwr_spec_diff_files[-1])
+    P_k = data[:, 1]
     ymax = 0.2
     ymin = np.min(P_k)
+    del P_k, data
     for y in np.arange(ymax-0.2, ymin, -0.2):
         plt.axhline(y=y, color='black', lw=0.2)
     plt.ylim(ymin=ymin, ymax=ymax)
@@ -105,6 +114,7 @@ def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False):
             data = np.loadtxt(supp_fl)
             a, supp = data[:, 0], data[:, 1]
             plt.plot(a, supp, '-o', ms=3, label=a_sim_info.info_supp())
+            del a, supp, data
 
     #plt.ylim(ymin=-1, ymax=0)
     fig.suptitle("Power spectrum suppression" + suptitle, y=0.95, size=20)
@@ -134,6 +144,7 @@ def plot_dens_histo(dens_bin_files, zs, a_sim_info, out_dir, fix_N=1, fix_rho=0.
         plt.hist(rho, bins=20, weights=count, facecolor='green', edgecolor='black', linewidth=0.8)
         plt.yscale('log', nonposy='clip')
         plt.title(lab)
+        del rho, count, data
 
     fig.suptitle("Overdensity distribution", y=0.97, size=20)
 

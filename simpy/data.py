@@ -6,6 +6,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
+from pympler import tracker
+
 from . import *
 from . import plot
 
@@ -116,6 +118,7 @@ def try_get_zs_files(a_sim_info, subdir, a_file='*.dat'):
 
 def analyze_run(a_sim_info, rerun=False, skip_ani=False):
     if rerun or not a_sim_info.results:
+        plt.rcParams['legend.numpoints'] = 1
         out_dir = a_sim_info.dir + 'results/'
         create_dir(out_dir)
         # Power spectrum
@@ -123,6 +126,7 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
         if zs is not None:
             print 'Plotting power spectrum...'
             plot.plot_pwr_spec(files, zs, a_sim_info, out_dir)
+        del zs, files
 
         # Power spectrum difference
         zs, files = try_get_zs_files(a_sim_info, 'pwr_diff/')
@@ -134,6 +138,7 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
             a = [1./(z+1) for z in zs]
             supp_lms, k_lms = load_k_supp(files)
             plot.plot_supp_lms(supp_lms, a, a_sim_info, out_dir, k_lms=k_lms)
+        del zs, files
 
         # Density distribution
         zs, files = try_get_zs_files(a_sim_info, 'rho_bin/')
@@ -141,7 +146,8 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
             print 'Plotting density distribution...'
             zs, files = slice_zs_files(zs, files)
             plot.plot_dens_histo(files, zs, a_sim_info, out_dir)
-        
+        del zs, files
+
         # Particles evolution
         zs, files = try_get_zs_files(a_sim_info, 'par_cut/', a_file='par*.dat')
         zs_t, files_t = try_get_zs_files(a_sim_info, 'par_cut/', a_file='track*.dat')
@@ -155,6 +161,7 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
                 if not skip_ani:
                     print 'Plotting particles evolution...'
                     plot.plot_par_evol(files, files_t, zs, a_sim_info, out_dir)
+        del zs, files, zs_t, files_t
 
         # Density evolution
         zs, files = try_get_zs_files(a_sim_info, 'rho_map/', a_file='*.dat')
@@ -166,6 +173,7 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
             if not skip_ani:
                 print 'Plotting density evolution...'
                 plot.plot_dens_evol(files, zs, a_sim_info, out_dir)
+        del zs, files
 
         # Update sim_param.log
         print "Updating 'sim_param.log'..."
@@ -184,9 +192,11 @@ def analyze_all(out_dir='/home/vrastil/Documents/Adhesion-Approximation/output/'
     for args in files:
         sim_infos.append(SimInfo(*args))
 
+    tr = tracker.SummaryTracker()
     for a_sim_info in sim_infos:
         print 'Analyzing run %s' % a_sim_info.info_tr()
         analyze_run(a_sim_info, rerun=rerun, skip_ani=skip_ani)
+        tr.print_diff()
     print 'All runs analyzed!'
 
 if __name__ == 'main':
