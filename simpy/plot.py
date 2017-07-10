@@ -191,6 +191,7 @@ def plot_par_evol(files, files_t, zs, a_sim_info, out_dir, save=True):
                 bbox={'facecolor':'white', 'alpha':0.2}, size=14, ha='center', va='top')
     plt.xlabel(r"$x [$Mpc$/h]$", fontsize=13)
     plt.ylabel(r"$z [$Mpc$/h]$", fontsize=13)
+    del x, y, data
 
     def animate(j):
         if j < num: i = j
@@ -208,11 +209,13 @@ def plot_par_evol(files, files_t, zs, a_sim_info, out_dir, save=True):
         for i, line_t in enumerate(lines_t):
             line_t.set_data(x_t[i], y_t[i])
             line_t.set_markevery((num_steps-1, num_steps))
+        del x, y, x_t, y_t, data
         return [line] + lines_t
 
     ani = animation.FuncAnimation(fig, animate, frames=2*num, interval=250, blit=True)
     if save: ani.save(out_dir + 'par_evol.gif', writer='imagemagick')
     plt.close(fig)
+    del ani
 
 def plot_dens_one_slice(rho, z, out_dir, a_sim_info, save=True, show=False):
     from matplotlib.colors import SymLogNorm
@@ -264,11 +267,13 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir, save=True):
                        extent=[0, a_sim_info.box, 0, a_sim_info.box])
         fig.suptitle("Slice through simulation box (overdensity), z = %.2f" % zs[i], y=0.95, size=20)
         fig.colorbar(im, cax=cbar_ax)
+        del rho
         return [im]
 
     ani = animation.FuncAnimation(fig, animate, frames=2*num, interval=250, blit=True)
     if save: ani.save(out_dir + 'dens_evol.gif', writer='imagemagick')
     plt.close(fig)
+    del ani
 
 def plot_supp_lms(supp_lms, a, a_sim_info, out_dir, k_lms=None, suptitle='', save=True, show=False):
     fig = plt.figure(figsize=(14, 8))
