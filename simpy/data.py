@@ -1,6 +1,8 @@
 from datetime import datetime
 import sys
 import gc
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -127,8 +129,8 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
         if zs is not None:
             print 'Plotting power spectrum difference...'
             plot.plot_pwr_spec_diff(files, zs, a_sim_info, out_dir)
-        # Power spectrum suppresion
-            print 'Plotting power spectrum suppresion...'
+        # Power spectrum suppression
+            print 'Plotting power spectrum suppression...'
             a = [1./(z+1) for z in zs]
             supp_lms, k_lms = load_k_supp(files)
             plot.plot_supp_lms(supp_lms, a, a_sim_info, out_dir, k_lms=k_lms)
@@ -139,20 +141,29 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
             print 'Plotting density distribution...'
             zs, files = slice_zs_files(zs, files)
             plot.plot_dens_histo(files, zs, a_sim_info, out_dir)
-
-        if not skip_ani:
-            # Particles evolution
-            zs, files = try_get_zs_files(a_sim_info, 'par_cut/', a_file='par*.dat')
-            zs_t, files_t = try_get_zs_files(a_sim_info, 'par_cut/', a_file='track*.dat')
-            if zs is not None:
-                if zs != zs_t: print "ERROR! 'par_cut' files differ from 'track_par_pos' files. Skipping step."
-                else:
+        
+        # Particles evolution
+        zs, files = try_get_zs_files(a_sim_info, 'par_cut/', a_file='par*.dat')
+        zs_t, files_t = try_get_zs_files(a_sim_info, 'par_cut/', a_file='track*.dat')
+        if zs is not None:
+            if zs != zs_t: print "ERROR! 'par_cut' files differ from 'track_par_pos' files. Skipping step."
+            else:
+                # last slice
+                print 'Plotting slice through simulation box (particles)...'
+                plot.plot_par_last_slice(files, files_t, zs, a_sim_info, out_dir)
+                # animation
+                if not skip_ani:
                     print 'Plotting particles evolution...'
                     plot.plot_par_evol(files, files_t, zs, a_sim_info, out_dir)
 
-            # Density evolution
-            zs, files = try_get_zs_files(a_sim_info, 'rho_map/', a_file='*.dat')
-            if zs is not None:
+        # Density evolution
+        zs, files = try_get_zs_files(a_sim_info, 'rho_map/', a_file='*.dat')
+        if zs is not None:
+            # two slices
+            print 'Plotting two slices through simulation box (overdensity)...'
+            plot.plot_dens_two_slices(files, zs, a_sim_info, out_dir)
+            # animation
+            if not skip_ani:
                 print 'Plotting density evolution...'
                 plot.plot_dens_evol(files, zs, a_sim_info, out_dir)
 

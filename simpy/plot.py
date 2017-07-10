@@ -144,7 +144,35 @@ def plot_dens_histo(dens_bin_files, zs, a_sim_info, out_dir, fix_N=1, fix_rho=0.
     if save: plt.savefig(out_dir + 'dens_histo.png')
     plt.close(fig)
 
-def plot_par_evol(files, files_t, zs, a_sim_info, out_dir, save=True, show=False):
+def plot_par_last_slice(files, files_t, zs, a_sim_info, out_dir, save=True, show=False):
+    fig = plt.figure(figsize=(10, 10))
+    data = np.loadtxt(files[0])
+    x, y = data[:, 0], data[:, 1]
+    ax = plt.axes(xlim=(0, np.max(x)), ylim=(0, np.max(y)))
+    data = np.loadtxt(files[-1])
+    x, y = data[:, 0], data[:, 1]
+
+    num_track = len(np.loadtxt(files_t[0]))
+    data = np.loadtxt(files_t[-1])
+    x_t, y_t = data[:, 0], data[:, 1]
+    num_steps = len(x_t) / num_track
+    x_t = [x_t[i:i + num_steps] for i in xrange(0, len(x_t), num_steps)]
+    y_t = [y_t[i:i + num_steps] for i in xrange(0, len(y_t), num_steps)]
+    
+    ax.plot(x, y, 'ob', ms=1)
+    for i in xrange(num_track):
+        ax.plot(x_t[i], y_t[i], '--or', ms=4, lw=1.5, markevery=(num_steps-1, num_steps))
+
+    plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
+                bbox={'facecolor':'white', 'alpha':0.2}, size=14, ha='center', va='top')
+    plt.xlabel(r"$x [$Mpc$/h]$", fontsize=13)
+    plt.ylabel(r"$z [$Mpc$/h]$", fontsize=13)
+    plt.title("Slice through simulation box (particles), z = %.2f" % zs[-1], y=1.09, size=20)
+    if show: plt.show()
+    if save: plt.savefig(out_dir + 'par_evol_last.png')
+    plt.close(fig)
+
+def plot_par_evol(files, files_t, zs, a_sim_info, out_dir, save=True):
     data = np.loadtxt(files[0])
     x, y = data[:, 0], data[:, 1]
     data = np.loadtxt(files_t[0])
@@ -183,10 +211,37 @@ def plot_par_evol(files, files_t, zs, a_sim_info, out_dir, save=True, show=False
         return [line] + lines_t
 
     ani = animation.FuncAnimation(fig, animate, frames=2*num, interval=250, blit=True)
-    ani.save(out_dir + 'par_evol.gif', writer='imagemagick')
+    if save: ani.save(out_dir + 'par_evol.gif', writer='imagemagick')
     plt.close(fig)
 
-def plot_dens_evol(files, zs, a_sim_info, out_dir, save=True, show=False):
+def plot_dens_one_slice(rho, z, out_dir, a_sim_info, save=True, show=False):
+    from matplotlib.colors import SymLogNorm
+    fig, ax = plt.subplots(figsize=(10, 10))
+    plt.figtext(0.5, 0.9, a_sim_info.info_tr(),
+                bbox={'facecolor':'white', 'alpha':0.2}, size=14, ha='center', va='top')
+    plt.xlabel(r"$x [$Mpc$/h]$", fontsize=13)
+    plt.ylabel(r"$z [$Mpc$/h]$", fontsize=13)
+    cbar_ax = fig.add_axes([0.85, 0.155, 0.05, 0.695])
+    fig.subplots_adjust(right=0.82)
+    L = int(np.sqrt(rho.shape[0]))
+    rho.shape = L, L
+    im = ax.imshow(rho, interpolation='bicubic', cmap='gnuplot',
+                   norm=SymLogNorm(linthresh=1.0, linscale=1, vmin=-1, vmax=100),
+                   extent=[0, a_sim_info.box, 0, a_sim_info.box])
+    fig.suptitle("Slice through simulation box (overdensity), z = %.2f" % z, y=0.95, size=20)
+    fig.colorbar(im, cax=cbar_ax)
+    if show: plt.show()
+    if save: plt.savefig(out_dir + 'dens_z%.2f.png' % z)
+    plt.close(fig)
+
+def plot_dens_two_slices(files, zs, a_sim_info, out_dir, save=True, show=False):
+    half = len(files) / 2
+    rho, z = np.loadtxt(files[half])[:, 2], zs[half]
+    plot_dens_one_slice(rho, z, out_dir, a_sim_info, save=save, show=show)
+    rho, z = np.loadtxt(files[-1])[:, 2], zs[-1]
+    plot_dens_one_slice(rho, z, out_dir, a_sim_info, save=save, show=show)
+
+def plot_dens_evol(files, zs, a_sim_info, out_dir, save=True):
     from matplotlib.colors import SymLogNorm
     num = len(zs)
 
@@ -212,7 +267,7 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir, save=True, show=False):
         return [im]
 
     ani = animation.FuncAnimation(fig, animate, frames=2*num, interval=250, blit=True)
-    ani.save(out_dir + 'dens_evol.gif', writer='imagemagick')
+    if save: ani.save(out_dir + 'dens_evol.gif', writer='imagemagick')
     plt.close(fig)
 
 def plot_supp_lms(supp_lms, a, a_sim_info, out_dir, k_lms=None, suptitle='', save=True, show=False):
@@ -223,7 +278,7 @@ def plot_supp_lms(supp_lms, a, a_sim_info, out_dir, k_lms=None, suptitle='', sav
     plt.plot(a, supp_m, '-o', ms=3, label=r'Medium-scale: $\langle%.2f,%.2f\rangle$ h/Mpc' % (k_m[0], k_m[1]))
     plt.plot(a, supp_s, '-o', ms=3, label=r'Small-scale: $\langle%.2f,%.2f\rangle$ h/Mpc' % (k_s[0], k_s[1]))
 
-    fig.suptitle("Power spectrum suppresion", y=0.95, size=20)
+    fig.suptitle("Power spectrum suppression", y=0.95, size=20)
     plt.xlabel(r"$a(t)$", fontsize=15)
     plt.ylabel(r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$", fontsize=25)
     leg = plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
