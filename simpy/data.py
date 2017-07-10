@@ -6,8 +6,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pympler import tracker
-
 from . import *
 from . import plot
 
@@ -192,11 +190,9 @@ def analyze_all(out_dir='/home/vrastil/Documents/Adhesion-Approximation/output/'
     for args in files:
         sim_infos.append(SimInfo(*args))
 
-    tr = tracker.SummaryTracker()
     for a_sim_info in sim_infos:
         print 'Analyzing run %s' % a_sim_info.info_tr()
         analyze_run(a_sim_info, rerun=rerun, skip_ani=skip_ani)
-        tr.print_diff()
     print 'All runs analyzed!'
 
 if __name__ == 'main':
