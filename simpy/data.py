@@ -98,21 +98,14 @@ def load_k_supp(files, k_l_lim=[0,10], k_m_lim=[20,27], k_s_lim=[35,40]):
         supp_large.append(np.mean(P_diff[k_l_lim]))
         supp_medium.append(np.mean(P_diff[k_m_lim]))
         supp_small.append(np.mean(P_diff[k_s_lim]))
+        del data, P_diff
 
+    data = np.loadtxt(files[-1])
     k = data[:, 0]
     k_l = [k[k_l_lim[0]], k[k_l_lim[1]]]
     k_m = [k[k_m_lim[0]], k[k_m_lim[1]]]
     k_s = [k[k_s_lim[0]], k[k_s_lim[1]]]
     return (supp_large, supp_medium, supp_small), (k_l, k_m, k_s)
-
-def try_get_zs_files(a_sim_info, subdir, a_file='*.dat'):
-    try:
-        zs, files = sort_get_fl_get_z(a_sim_info, subdir, a_file=a_file)
-    except ValueError:
-        print "WARNING! Missing data in '%s'. Skipping step." % (a_sim_info.dir + subdir)
-        return None, None
-    else:
-        return zs, files
 
 def analyze_run(a_sim_info, rerun=False, skip_ani=False):
     if rerun or not a_sim_info.results:

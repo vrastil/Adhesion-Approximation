@@ -103,18 +103,32 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir, save=True, 
     if save: plt.savefig(out_dir + 'pwr_spec_diff.png')
     plt.close(fig)
 
-def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False):
+def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, scale='', show_k_lms=False):
     fig = plt.figure(figsize=(14, 8))
-    for a_sim_info in sim_infos:
-        try:
-            supp_fl = get_files_in_traverse_dir(a_sim_info.dir + 'supp/', '*.dat')[0][0]
-        except ValueError:
-            print "WARNING! Missing data in '%s'. Skipping step." % (a_sim_info.dir + 'supp/')
+    cmap = plt.get_cmap('gist_ncar')
+    colors = [cmap(i) for i in np.linspace(0, 1, len(sim_infos) + 1)]
+    for i, a_sim_info in enumerate(sim_infos):
+        a = a_sim_info.a
+        if scale == 'large':
+            supp = a_sim_info.supp[0][0]
+        elif scale == 'medium':
+            supp = a_sim_info.supp[0][1]
+        elif scale == 'small':
+            supp = a_sim_info.supp[0][2]
         else:
-            data = np.loadtxt(supp_fl)
-            a, supp = data[:, 0], data[:, 1]
-            plt.plot(a, supp, '-o', ms=3, label=a_sim_info.info_supp())
-            del a, supp, data
+            print "WARNING! Unknown scale ='%s'. Skipping." % scale
+            return None
+        plt.plot(a, supp, '-o', ms=3, color=colors[i], label=a_sim_info.info_supp())
+        del a, supp
+    
+    if show_k_lms:
+        if scale == 'large':
+             suptitle += '<%.2f, %.2f> h/Mpc' % (a_sim_info.supp[1][0][0], a_sim_info.supp[1][0][1])
+        elif scale == 'medium':
+            suptitle += '<%.2f, %.2f> h/Mpc' % (a_sim_info.supp[1][1][0], a_sim_info.supp[1][1][1])
+        elif scale == 'small':
+            suptitle += '<%.2f, %.2f> h/Mpc' % (a_sim_info.supp[1][2][0], a_sim_info.supp[1][2][1])
+    
 
     #plt.ylim(ymin=-1, ymax=0)
     fig.suptitle("Power spectrum suppression" + suptitle, y=0.95, size=20)
