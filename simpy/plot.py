@@ -2,6 +2,8 @@ import matplotlib
 matplotlib.use('Agg')
 from matplotlib import animation
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 
 from . import get_files_in_traverse_dir
@@ -30,7 +32,7 @@ def pwr_spec(k, z=0, A=187826, n=1, Omega_0=1, h=0.67, q_log=2.34, q_1=3.89, q_2
 def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, out_dir='auto', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
-    fig = plt.figure(figsize=(14, 8))
+    fig = plt.figure(figsize=(15, 11))
     plt.yscale('log')
     plt.xscale('log')
     a_ = 0
@@ -57,28 +59,26 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, out_dir='auto', save=True, sho
     plt.plot(k, P_0, '-')
     plt.plot(k, P_i, '-')
 
-    fig.suptitle("Power spectrum", y=0.95, size=20)
+    fig.suptitle("Power spectrum", y=0.99, size=20)
     plt.xlabel(r"$k [h/$Mpc$]$", fontsize=15)
     plt.ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=15)
-    leg = plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
+    plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
     plt.draw()
-    box = leg.get_frame().get_bbox()
-    x = box.bounds[0] / fig.bbox.bounds[2]
-    y = box.bounds[1] / fig.bbox.bounds[3]
-    plt.figtext(x - 0.045, y - 0.01, a_sim_info.info(),
-                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='left', va='top')
-    plt.subplots_adjust(left=0.1, right=0.84, top=0.9, bottom=0.1)
+    plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
+                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
+    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
     
     if save:
         plt.savefig(out_dir + 'pwr_spec.png')
     if show:
-        plt.show()plt.close(fig)
+        plt.show()
+        plt.close(fig)
 
 
 def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
-    fig = plt.figure(figsize=(14, 8))
+    fig = plt.figure(figsize=(15, 11))
     plt.xscale('log')
     a_ = 0
 
@@ -103,17 +103,14 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', save
     for y in np.arange(ymax - 0.2, ymin, -0.2):
         plt.axhline(y=y, color='black', lw=0.2)
     plt.ylim(ymin=ymin, ymax=ymax)
-    fig.suptitle("Power spectrum difference", y=0.95, size=20)
+    fig.suptitle("Power spectrum difference", y=0.99, size=20)
     plt.xlabel(r"$k [h/$Mpc$]$", fontsize=15)
     plt.ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$", fontsize=25)
-    leg = plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
+    plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
     plt.draw()
-    box = leg.get_frame().get_bbox()
-    x = box.bounds[0] / fig.bbox.bounds[2]
-    y = box.bounds[1] / fig.bbox.bounds[3]
-    plt.figtext(x - 0.045, y - 0.01, a_sim_info.info(),
-                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='left', va='top')
-    plt.subplots_adjust(left=0.1, right=0.84, top=0.9, bottom=0.1)
+    plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
+                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
+    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
     if save:
         plt.savefig(out_dir + 'pwr_spec_diff.png')
     if show:
@@ -122,7 +119,7 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', save
 
 
 def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, scale='', show_k_lms=False):
-    fig = plt.figure(figsize=(14, 8))
+    fig = plt.figure(figsize=(15, 11))
     cmap = plt.get_cmap('gist_ncar')
     colors = [cmap(i) for i in np.linspace(0, 1, len(sim_infos) + 1)]
     for i, a_sim_info in enumerate(sim_infos):
@@ -152,12 +149,12 @@ def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, scale='', 
                 a_sim_info.supp[1][2][0], a_sim_info.supp[1][2][1])
 
     #plt.ylim(ymin=-1, ymax=0)
-    fig.suptitle("Power spectrum suppression" + suptitle, y=0.95, size=20)
+    fig.suptitle("Power spectrum suppression" + suptitle, y=0.99, size=20)
     plt.xlabel(r"$a(t)$", fontsize=15)
     plt.ylabel(
         r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$", fontsize=25)
     plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
-    plt.subplots_adjust(left=0.1, right=0.7, top=0.9, bottom=0.1)
+    plt.subplots_adjust(left=0.1, right=0.7, bottom=0.1, top=0.89)
     if save:
         plt.savefig(out_dir + 'supp.png')
     if show:
@@ -170,7 +167,9 @@ def plot_dens_histo(dens_bin_files, zs, a_sim_info, out_dir='auto', fix_N=1, fix
         out_dir = a_sim_info.res_dir
     num_sub_x = 3
     num_sub_y = (len(zs) + num_sub_x - 1) / num_sub_x
-    fig = plt.figure(figsize=(num_sub_x * 5, num_sub_y * 6))
+    fig = plt.figure(figsize=(num_sub_x * 5, num_sub_y * 5.5))
+
+    gs = gridspec.GridSpec(num_sub_y, num_sub_x, wspace=0.2, hspace=0.3, left=0.1, right=0.84, bottom=0.1, top=0.89)
 
     for i, rho_fl in enumerate(dens_bin_files):
         lab = 'z = ' + str(zs[i])
@@ -180,19 +179,21 @@ def plot_dens_histo(dens_bin_files, zs, a_sim_info, out_dir='auto', fix_N=1, fix
         rho += fix_rho
         xmin = -1
         xmax = rho[np.nonzero(count)[0][-1]] + 1
-        plt.subplot(num_sub_y, num_sub_x, i + 1)
-        plt.xlim(xmin=xmin, xmax=xmax)
-        plt.hist(rho, bins=20, weights=count, facecolor='green',
+        ax = plt.subplot(gs[i])
+        # plt.subplot(num_sub_y, num_sub_x, i + 1)
+        ax.set_xlim(xmin=xmin, xmax=xmax)
+        ax.hist(rho, bins=20, weights=count, facecolor='green',
                  edgecolor='black', linewidth=0.8)
-        plt.yscale('log', nonposy='clip')
-        plt.title(lab)
+        ax.set_yscale('log', nonposy='clip')
+        ax.set_title(lab)
         del rho, count, data
 
-    fig.suptitle("Overdensity distribution", y=0.97, size=20)
+    fig.suptitle("Overdensity distribution", y=0.99, size=20)
 
-    plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
+    plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    plt.subplots_adjust(wspace=0.2, hspace=0.3)
+    # plt.subplots_adjust(wspace=0.2, hspace=0.3)
+    # plt.subplots_adjust(wspace=0.2, hspace=0.3, left=0.1, right=0.84, top=0.9)
     if save:
         plt.savefig(out_dir + 'dens_histo.png')
     if show:
@@ -204,9 +205,12 @@ def plot_par_last_slice(files, files_t, zs, a_sim_info, out_dir='auto', save=Tru
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     fig = plt.figure(figsize=(10, 10))
+    gs = gridspec.GridSpec(1, 1) #
+    ax = plt.subplot(gs[0]) #
     data = np.loadtxt(files[0])
     x, y = data[:, 0], data[:, 1]
-    ax = plt.axes(xlim=(0, np.max(x)), ylim=(0, np.max(y)))
+    ax.set_xlim(0, np.max(x))
+    ax.set_ylim(0, np.max(y))
     data = np.loadtxt(files[-1])
     x, y = data[:, 0], data[:, 1]
 
@@ -224,10 +228,10 @@ def plot_par_last_slice(files, files_t, zs, a_sim_info, out_dir='auto', save=Tru
 
     plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    plt.xlabel(r"$x [$Mpc$/h]$", fontsize=13)
-    plt.ylabel(r"$z [$Mpc$/h]$", fontsize=13)
-    plt.title("Slice through simulation box (particles), z = %.2f" %
-              zs[-1], y=1.09, size=20)
+    ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=13)
+    ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=13)
+    fig.suptitle("Slice through simulation box (particles), z = %.2f" %
+              zs[-1], y=0.99, size=20)
     if save:
         plt.savefig(out_dir + 'par_evol_last.png')
     if show:
@@ -238,15 +242,18 @@ def plot_par_last_slice(files, files_t, zs, a_sim_info, out_dir='auto', save=Tru
 def plot_par_evol(files, files_t, zs, a_sim_info, out_dir='auto', save=True):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
+    fig = plt.figure(figsize=(10, 10))
+    gs = gridspec.GridSpec(1, 1) #
+    ax = plt.subplot(gs[0]) #
     data = np.loadtxt(files[0])
     x, y = data[:, 0], data[:, 1]
     data = np.loadtxt(files_t[0])
+    ax.set_xlim(0, np.max(x))
+    ax.set_ylim(0, np.max(y))
 
     num = len(zs)
     num_track = len(data)
 
-    fig = plt.figure(figsize=(10, 10))
-    ax = plt.axes(xlim=(0, np.max(x)), ylim=(0, np.max(y)))
     line, = ax.plot([], [], 'ob', ms=1, animated=True)
     lines_t = []
     for i in xrange(num_track):
@@ -254,8 +261,8 @@ def plot_par_evol(files, files_t, zs, a_sim_info, out_dir='auto', save=True):
 
     plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    plt.xlabel(r"$x [$Mpc$/h]$", fontsize=13)
-    plt.ylabel(r"$z [$Mpc$/h]$", fontsize=13)
+    ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=13)
+    ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=13)
     del x, y, data
 
     def animate(j):
@@ -263,8 +270,8 @@ def plot_par_evol(files, files_t, zs, a_sim_info, out_dir='auto', save=True):
             i = j
         else:
             i = 2 * num - j - 1
-        plt.title("Slice through simulation box (particles), z = %.2f" %
-                  zs[i], y=1.09, size=20)
+        fig.suptitle("Slice through simulation box (particles), z = %.2f" %
+                  zs[i], y=0.99, size=20)
         data = np.loadtxt(files[i])
         x, y = data[:, 0], data[:, 1]
         data = np.loadtxt(files_t[i])
@@ -292,22 +299,32 @@ def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=Fals
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     from matplotlib.colors import SymLogNorm
-    fig, ax = plt.subplots(figsize=(10, 10))
-    plt.figtext(0.5, 0.9, a_sim_info.info_tr(),
+    fig = plt.figure(figsize=(10, 10))
+    # fig, ax = plt.subplots(figsize=(10, 10))
+    # gs = gridspec.GridSpec(1, 15, wspace=0.5)
+    # ax = plt.subplot(gs[0, : -1])
+    # cbar_ax = plt.subplot(gs[0, -1])
+    gs = gridspec.GridSpec(1, 1)
+    ax = plt.subplot(gs[0])
+    divider = make_axes_locatable(ax)
+    cbar_ax = divider.append_axes("right", size="5%", pad=0.1)
+
+    plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    plt.xlabel(r"$x [$Mpc$/h]$", fontsize=13)
-    plt.ylabel(r"$z [$Mpc$/h]$", fontsize=13)
-    cbar_ax = fig.add_axes([0.85, 0.155, 0.05, 0.695])
-    fig.subplots_adjust(right=0.82)
+    ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=13)
+    ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=13)
+    # cbar_ax = fig.add_axes([0.85, 0.155, 0.05, 0.695])
+    # fig.subplots_adjust(right=0.82)
     L = int(np.sqrt(rho.shape[0]))
     rho.shape = L, L
     im = ax.imshow(rho, interpolation='bicubic', cmap='gnuplot',
                    norm=SymLogNorm(linthresh=1.0, linscale=1,
-                                   vmin=-1, vmax=100),
+                                   vmin=-1, vmax=100), aspect='auto',
                    extent=[0, a_sim_info.box, 0, a_sim_info.box])
     fig.suptitle("Slice through simulation box (overdensity), z = %.2f" %
-                 z, y=0.95, size=20)
-    fig.colorbar(im, cax=cbar_ax)
+                 z, y=0.99, size=20)
+    cbar = fig.colorbar(im, cax=cbar_ax, ticks=[-1,0,1,10,100])
+    cbar.ax.set_yticklabels(['-1', '0', '1', '10', '> 100'])
     if save:
         plt.savefig(out_dir + 'dens_z%.2f.png' % z)
     if show:
@@ -329,13 +346,14 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir='auto', save=True):
 
     from matplotlib.colors import SymLogNorm
     num = len(zs)
-    fig, ax = plt.subplots(figsize=(10, 10))
-    plt.figtext(0.5, 0.9, a_sim_info.info_tr(),
+    fig = plt.figure(figsize=(10, 10))
+    gs = gridspec.GridSpec(1, 15, wspace=0.5)
+    ax = plt.subplot(gs[0, : -1]) #
+    cbar_ax = plt.subplot(gs[0, -1]) #
+    plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    plt.xlabel(r"$x [$Mpc$/h]$", fontsize=13)
-    plt.ylabel(r"$z [$Mpc$/h]$", fontsize=13)
-    cbar_ax = fig.add_axes([0.85, 0.155, 0.05, 0.695])
-    fig.subplots_adjust(right=0.82)
+    ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=13)
+    ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=13)
 
     def animate(j):
         if j < num:
@@ -347,11 +365,12 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir='auto', save=True):
         rho.shape = L, L
         im = ax.imshow(rho, interpolation='bicubic', cmap='gnuplot', animated=True,
                        norm=SymLogNorm(
-                           linthresh=1.0, linscale=1, vmin=-1, vmax=100),
+                           linthresh=1.0, linscale=1, vmin=-1, vmax=100), aspect='auto',
                        extent=[0, a_sim_info.box, 0, a_sim_info.box])
         fig.suptitle(
-            "Slice through simulation box (overdensity), z = %.2f" % zs[i], y=0.95, size=20)
-        fig.colorbar(im, cax=cbar_ax)
+            "Slice through simulation box (overdensity), z = %.2f" % zs[i], y=0.99, size=20)
+        cbar = fig.colorbar(im, cax=cbar_ax, ticks=[-1,0,1,10,100])
+        cbar.ax.set_yticklabels(['-1', '0', '1', '10', '> 100'])
         del rho
         return [im]
 
@@ -366,7 +385,7 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir='auto', save=True):
 def plot_supp_lms(supp_lms, a, a_sim_info, out_dir='auto', k_lms=None, suptitle='', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
-    fig = plt.figure(figsize=(14, 8))
+    fig = plt.figure(figsize=(15, 11))
     supp_l, supp_m, supp_s = supp_lms
     k_l, k_m, k_s = k_lms
     plt.plot(a, supp_l, '-o', ms=3,
@@ -379,19 +398,16 @@ def plot_supp_lms(supp_lms, a, a_sim_info, out_dir='auto', k_lms=None, suptitle=
     # plt.plot(a, supp_m, '-o', ms=3, label='Medium-scale:\n'r'$\langle%.2f,%.2f\rangle$ h/Mpc' % (k_m[0], k_m[1]))
     # plt.plot(a, supp_s, '-o', ms=3, label='Small-scale:\n'r'$\langle%.2f,%.2f\rangle$ h/Mpc' % (k_s[0], k_s[1]))
 
-    fig.suptitle("Power spectrum suppression", y=0.95, size=20)
+    fig.suptitle("Power spectrum suppression", y=0.99, size=20)
     plt.xlabel(r"$a(t)$", fontsize=15)
     plt.ylabel(
         r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$", fontsize=25)
-    leg = plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
+    plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
  #   plt.subplots_adjust(left=0.1, right=0.7, top=0.9, bottom=0.1)
-    plt.subplots_adjust(left=0.1, right=0.84, top=0.9, bottom=0.1)
+    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
     plt.draw()
-    box = leg.get_frame().get_bbox()
-    x = box.bounds[0] / fig.bbox.bounds[2]
-    y = box.bounds[1] / fig.bbox.bounds[3]
-    plt.figtext(x + 0.005, y - 0.01, a_sim_info.info(),
-                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='left', va='top')
+    plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
+                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     if save:
         plt.savefig(out_dir + 'supp.png')
     if show:
