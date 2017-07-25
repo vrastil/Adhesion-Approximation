@@ -24,6 +24,7 @@ class SimInfo(object):
             self.app = ''
             self.date = ''
             self.dir = ''
+            self.res_dir = ''
 
     def info(self):
         info = ''
@@ -69,6 +70,7 @@ class SimInfo(object):
         self.app = run_date.split('/')[0][:-4]
         self.date = datetime.strptime(run_date.split('/')[1], '%Y_%m_%d.%H:%M:%S')
         self.dir = a_file.replace('sim_param.log', '')
+        self.res_dir = self.dir + 'results/'
 
     def done(self):
         with open(self.dir + 'sim_param.log', 'r+') as f:
@@ -176,7 +178,7 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
     else:
         print 'Run already analyzed!'
 
-def analyze_all(out_dir='/home/vrastil/Documents/Adhesion-Approximation/output/',
+def analyze_all(out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/',
                 rerun=False, skip_ani=False):
     files = get_files_in_traverse_dir(out_dir, 'sim_param.log')
     sim_infos = []

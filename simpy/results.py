@@ -67,7 +67,7 @@ class Results(object):
                 a_sim_info.supp = load_k_supp(files)
                 a_sim_info.a = [1./(z+1) for z in zs]
 
-    def plot_supp_compare(self, out_dir='/home/vrastil/Documents/Adhesion-Approximation/output/supp_comparison/',
+    def plot_supp_compare(self, out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/supp_comparison/',
                           Nm=0, Np=0, L=0, nu=0, rs=0, app='', scale=['small', 'medium', 'large'], show_k_lms=False):
         subfiles = self.get_subfiles(Nm=Nm, Np=Np, L=L, nu=nu, rs=rs, app=app)
         for a_sim_info in subfiles:

@@ -67,7 +67,7 @@ int main(int argc, char* argv[]){
     if (REAL_int < 0) REAL_int = 0;
     if (REAL_dec < 0) REAL_dec = 0;
 
-	printf("\nProgram ran for %*.*fs and used %*.*fs of CPU time.\n\n", \
-           REAL_int, REAL_dec, REAL_time, CPU_int, CPU_dec, CPU_time);
+	printf("\nProgram ran for %.*fs and used %.*fs of CPU time.\n\n", \
+           REAL_dec, REAL_time, CPU_dec, CPU_time);
 	return err;
 }
