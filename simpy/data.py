@@ -71,6 +71,7 @@ class SimInfo(object):
         self.date = datetime.strptime(run_date.split('/')[1], '%Y_%m_%d.%H:%M:%S')
         self.dir = a_file.replace('sim_param.log', '')
         self.res_dir = self.dir + 'results/'
+        create_dir(self.res_dir)
 
     def done(self):
         with open(self.dir + 'sim_param.log', 'r+') as f:
@@ -112,25 +113,23 @@ def load_k_supp(files, k_l_lim=[0,10], k_m_lim=[20,27], k_s_lim=[35,40]):
 def analyze_run(a_sim_info, rerun=False, skip_ani=False):
     if rerun or not a_sim_info.results:
         plt.rcParams['legend.numpoints'] = 1
-        out_dir = a_sim_info.dir + 'results/'
-        create_dir(out_dir)
         # Power spectrum
         zs, files = try_get_zs_files(a_sim_info, 'pwr_spec/')
         if zs is not None:
             print 'Plotting power spectrum...'
-            plot.plot_pwr_spec(files, zs, a_sim_info, out_dir)
+            plot.plot_pwr_spec(files, zs, a_sim_info)
         del zs, files
 
         # Power spectrum difference
         zs, files = try_get_zs_files(a_sim_info, 'pwr_diff/')
         if zs is not None:
             print 'Plotting power spectrum difference...'
-            plot.plot_pwr_spec_diff(files, zs, a_sim_info, out_dir)
+            plot.plot_pwr_spec_diff(files, zs, a_sim_info)
         # Power spectrum suppression
             print 'Plotting power spectrum suppression...'
             a = [1./(z+1) for z in zs]
             supp_lms, k_lms = load_k_supp(files)
-            plot.plot_supp_lms(supp_lms, a, a_sim_info, out_dir, k_lms=k_lms)
+            plot.plot_supp_lms(supp_lms, a, a_sim_info, k_lms=k_lms)
         del zs, files
 
         # Density distribution
@@ -138,7 +137,7 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
         if zs is not None:
             print 'Plotting density distribution...'
             zs, files = slice_zs_files(zs, files)
-            plot.plot_dens_histo(files, zs, a_sim_info, out_dir)
+            plot.plot_dens_histo(files, zs, a_sim_info)
         del zs, files
 
         # Particles evolution
@@ -149,11 +148,11 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
             else:
                 # last slice
                 print 'Plotting slice through simulation box (particles)...'
-                plot.plot_par_last_slice(files, files_t, zs, a_sim_info, out_dir)
+                plot.plot_par_last_slice(files, files_t, zs, a_sim_info)
                 # animation
                 if not skip_ani:
                     print 'Plotting particles evolution...'
-                    plot.plot_par_evol(files, files_t, zs, a_sim_info, out_dir)
+                    plot.plot_par_evol(files, files_t, zs, a_sim_info)
         del zs, files, zs_t, files_t
 
         # Density evolution
@@ -161,11 +160,11 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
         if zs is not None:
             # two slices
             print 'Plotting two slices through simulation box (overdensity)...'
-            plot.plot_dens_two_slices(files, zs, a_sim_info, out_dir)
+            plot.plot_dens_two_slices(files, zs, a_sim_info)
             # animation
             if not skip_ani:
                 print 'Plotting density evolution...'
-                plot.plot_dens_evol(files, zs, a_sim_info, out_dir)
+                plot.plot_dens_evol(files, zs, a_sim_info)
         del zs, files
 
         # Update sim_param.log
