@@ -66,7 +66,7 @@ class SimInfo(object):
             elif line.startswith('Results: Done'):
                 self.results = True
 
-
+        self.file = a_file
         self.app = run_date.split('/')[0][:-4]
         self.date = datetime.strptime(run_date.split('/')[1], '%Y_%m_%d.%H:%M:%S')
         self.dir = a_file.replace('sim_param.log', '')
@@ -178,11 +178,14 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
         print 'Run already analyzed!'
 
 def analyze_all(out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/',
-                rerun=False, skip_ani=False):
+                rerun=False, skip_ani=False, only=None):
     files = get_files_in_traverse_dir(out_dir, 'sim_param.log')
     sim_infos = []
     for args in files:
         sim_infos.append(SimInfo(*args))
+
+    if only is not None:
+        sim_infos = sim_infos[only]
 
     for a_sim_info in sim_infos:
         print 'Analyzing run %s' % a_sim_info.info_tr()
