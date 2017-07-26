@@ -3,7 +3,7 @@ matplotlib.use('Agg')
 from matplotlib import animation
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+# from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 
 from . import get_files_in_traverse_dir
@@ -301,13 +301,13 @@ def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=Fals
     from matplotlib.colors import SymLogNorm
     fig = plt.figure(figsize=(10, 10))
     # fig, ax = plt.subplots(figsize=(10, 10))
-    # gs = gridspec.GridSpec(1, 15, wspace=0.5)
-    # ax = plt.subplot(gs[0, : -1])
-    # cbar_ax = plt.subplot(gs[0, -1])
+    gs = gridspec.GridSpec(1, 15, wspace=0.5)
+    ax = plt.subplot(gs[0, : -1])
+    cbar_ax = plt.subplot(gs[0, -1])
     gs = gridspec.GridSpec(1, 1)
-    ax = plt.subplot(gs[0])
-    divider = make_axes_locatable(ax)
-    cbar_ax = divider.append_axes("right", size="5%", pad=0.1)
+    # ax = plt.subplot(gs[0])
+    # divider = make_axes_locatable(ax)
+    # cbar_ax = divider.append_axes("right", size="5%", pad=0.1)
 
     plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
