@@ -118,7 +118,7 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', save
     plt.close(fig)
 
 
-def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, scale='', show_k_lms=False):
+def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, scale='', show_k_lms=False, res=None):
     fig = plt.figure(figsize=(15, 11))
     cmap = plt.get_cmap('gist_ncar')
     colors = [cmap(i) for i in np.linspace(0, 1, len(sim_infos) + 1)]
@@ -126,10 +126,16 @@ def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, scale='', 
         a = a_sim_info.a
         if scale == 'large':
             supp = a_sim_info.supp[0][0]
+            if res is not None:
+                supp -= np.array(res.supp[0][0])
         elif scale == 'medium':
             supp = a_sim_info.supp[0][1]
+            if res is not None:
+                supp -= np.array(res.supp[0][1])
         elif scale == 'small':
             supp = a_sim_info.supp[0][2]
+            if res is not None:
+                supp -= np.array(res.supp[0][2])
         else:
             print "WARNING! Unknown scale ='%s'. Skipping." % scale
             return None
@@ -151,8 +157,10 @@ def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, scale='', 
     #plt.ylim(ymin=-1, ymax=0)
     fig.suptitle("Power spectrum suppression" + suptitle, y=0.99, size=20)
     plt.xlabel(r"$a(t)$", fontsize=15)
-    plt.ylabel(
-        r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$", fontsize=25)
+    ylabel = r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$"
+    if res is not None:
+        ylabel += r', residual from $\nu=%.1f$' % res.nu
+    plt.ylabel(ylabel, fontsize=25)
     plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
     plt.subplots_adjust(left=0.1, right=0.7, bottom=0.1, top=0.89)
     if save:
@@ -413,3 +421,11 @@ def plot_supp_lms(supp_lms, a, a_sim_info, out_dir='auto', k_lms=None, suptitle=
     if show:
         plt.show()
     plt.close(fig)
+
+def plot_all_single_supp(res, out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/supp_comparison/',
+                          Nm=0, Np=0, L=0, nu=0, rs=0, app=''):
+        subfiles = res.get_subfiles(Nm=Nm, Np=Np, L=L, nu=nu, rs=rs, app=app)
+        for a_sim_info in subfiles:
+            res.load_k_supp(a_sim_info)
+            plot_supp_lms(a_sim_info.supp[0], a_sim_info.a, a_sim_info,
+                             k_lms=a_sim_info.supp[1], show=True, save=True)
