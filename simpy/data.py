@@ -5,6 +5,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
+import json
 
 from . import *
 from . import plot
@@ -22,7 +23,6 @@ class SimInfo(object):
             self.nu = 0
             self.rs = 0
             self.app = ''
-            self.date = ''
             self.dir = ''
             self.res_dir = ''
 
@@ -47,39 +47,35 @@ class SimInfo(object):
         return info
 
     def load_file(self, a_file, run_date):
-        with open(a_file, 'r') as f:
-            content = f.readlines()
+        with open(a_file) as data_file:
+            data = json.loads(data_file.read())
 
-        for line in content:
-            if line.startswith('Ng'):
-                self.num_g = int(line.replace('Ng:\t\t', '').rstrip())
-            elif line.startswith('Num_par'):
-                self.num_p = int(line.replace('Num_par:\t', '').rstrip()[:-2])
-            elif line.startswith('Num_mesh'):
-                self.num_m = int(line.replace('Num_mesh:\t', '').rstrip()[:-2])
-            elif line.startswith('Box size'):
-                self.box = int(line.replace('Box size:\t', '').rstrip()[:-6])
-            elif 'nu = ' in line:
-                self.nu = float(line[line.index('nu =') + 5:-6])
-            elif 'rs = ' in line:
-                self.rs = float(line[line.index('rs =') + 5:line.index(',')])
-            elif line.startswith('Results: Done'):
-                self.results = True
+        self.num_g = data["Ng"]
+        self.num_p = data["par_num"]**(1./3)
+        self.num_m = data["mesh_num"]
+        self.box = data["box_size"]
+        self.nu = data["viscosity"]
+        self.rs = data["cut_radius"]
+        self.app = data["app"]
+        self.results = data["results"]
+        if self.results is None:
+            self.results = {}
 
         self.file = a_file
-        self.app = run_date.split('/')[0][:-4]
-        self.date = datetime.strptime(run_date.split('/')[1], '%Y_%m_%d.%H:%M:%S')
-        self.dir = a_file.replace('sim_param.log', '')
+        self.dir = a_file.replace(a_file.split("/")[-1], '')
         self.res_dir = self.dir + 'results/'
         create_dir(self.res_dir)
 
-    def done(self):
-        with open(self.dir + 'sim_param.log', 'r+') as f:
-            content = f.read()
-            if content.startswith('Results: Done'):
-                return None
-            f.seek(0, 0)
-            f.write('Results: Done\n' + content)
+    def done(self, key):
+        with open(self.file) as data_file:
+            data = json.loads(data_file.read())
+        if data["results"] is None:
+            data["results"] = {}
+
+        data["results"][key] = True
+
+        with open(self.file, 'w') as outfile:
+            json.dump(data, outfile, indent=2)
 
 def load_k_supp(files, k_l_lim=[0,10], k_m_lim=[20,27], k_s_lim=[35,40]):
     """
@@ -113,11 +109,13 @@ def load_k_supp(files, k_l_lim=[0,10], k_m_lim=[20,27], k_s_lim=[35,40]):
 def analyze_run(a_sim_info, rerun=False, skip_ani=False):
     if rerun or not a_sim_info.results:
         plt.rcParams['legend.numpoints'] = 1
+
         # Power spectrum
         zs, files = try_get_zs_files(a_sim_info, 'pwr_spec/')
         if zs is not None:
             print 'Plotting power spectrum...'
             plot.plot_pwr_spec(files, zs, a_sim_info)
+            a_sim_info.done("pwr_spec")
         del zs, files
 
         # Power spectrum difference
@@ -125,11 +123,13 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
         if zs is not None:
             print 'Plotting power spectrum difference...'
             plot.plot_pwr_spec_diff(files, zs, a_sim_info)
+            a_sim_info.done("pwr_spec_diff")
         # Power spectrum suppression
             print 'Plotting power spectrum suppression...'
             a = [1./(z+1) for z in zs]
             supp_lms, k_lms = load_k_supp(files)
             plot.plot_supp_lms(supp_lms, a, a_sim_info, k_lms=k_lms)
+            a_sim_info.done("pwr_spec_supp")
         del zs, files
 
         # Density distribution
@@ -138,6 +138,7 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
             print 'Plotting density distribution...'
             zs, files = slice_zs_files(zs, files)
             plot.plot_dens_histo(files, zs, a_sim_info)
+            a_sim_info.done("dens_hist")
         del zs, files
 
         # Particles evolution
@@ -149,10 +150,12 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
                 # last slice
                 print 'Plotting slice through simulation box (particles)...'
                 plot.plot_par_last_slice(files, files_t, zs, a_sim_info)
+                a_sim_info.done("par_slice")
                 # animation
                 if not skip_ani:
                     print 'Plotting particles evolution...'
                     plot.plot_par_evol(files, files_t, zs, a_sim_info)
+                    a_sim_info.done("par_ani")
         del zs, files, zs_t, files_t
 
         # Density evolution
@@ -161,15 +164,13 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
             # two slices
             print 'Plotting two slices through simulation box (overdensity)...'
             plot.plot_dens_two_slices(files, zs, a_sim_info)
+            a_sim_info.done("dens_slice")
             # animation
             if not skip_ani:
                 print 'Plotting density evolution...'
                 plot.plot_dens_evol(files, zs, a_sim_info)
+                a_sim_info.done("dens_ani")
         del zs, files
-
-        # Update sim_param.log
-        print "Updating 'sim_param.log'..."
-        a_sim_info.done()
 
         # Clean
         plt.close("all")
@@ -179,7 +180,7 @@ def analyze_run(a_sim_info, rerun=False, skip_ani=False):
 
 def analyze_all(out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/',
                 rerun=False, skip_ani=False, only=None):
-    files = get_files_in_traverse_dir(out_dir, 'sim_param.log')
+    files = get_files_in_traverse_dir(out_dir, 'sim_param.json')
     sim_infos = []
     for args in files:
         sim_infos.append(SimInfo(*args))
