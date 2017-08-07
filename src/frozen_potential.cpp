@@ -17,7 +17,7 @@ int frozen_potential(const Sim_Param &sim)
 	
 	string out_dir_app = sim.out_dir + "FP_run/" + currentDateTime() + "/";
 	work_dir_over(out_dir_app);
-	sim.print_info(out_dir_app);
+	sim.print_info(out_dir_app, "FP");
     
 	/** ALLOCATION OF MEMORY + FFTW PREPARATION **/
 	App_Var_v APP(sim, "_FP_");
