@@ -15,7 +15,7 @@ int mod_frozen_potential(const Sim_Param &sim)
 	"MODIFIED FROZEN-POTENTIAL APPROXIMATION\n"
 	"***************************************\n";
 	
-	string out_dir_app = sim.out_dir + "FP_pp_run/" + currentDateTime() + "/";
+    string out_dir_app = std_out_dir("FP_pp_run/", sim);
 	work_dir_over(out_dir_app);
     sim.print_info(out_dir_app, "FP_pp");
 	
