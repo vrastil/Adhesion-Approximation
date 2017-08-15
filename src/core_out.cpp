@@ -38,7 +38,6 @@ void work_dir_over(string out_dir)
 	create_dir(out_dir + "pwr_diff/");
 	create_dir(out_dir + "pwr_spec/");
 	create_dir(out_dir + "rho_map/");
-	create_dir(out_dir + "supp/");
 	create_dir(out_dir + "rho_bin/");
 }
 
@@ -209,29 +208,6 @@ void print_projected_rho(const Mesh& delta, const Sim_Param &sim, string out_dir
 			fprintf (pFile, "%f\t%f\t%f\n", i*sim.x_0(), j*sim.x_0(), rho -1);
 		}
 		fprintf (pFile, "\n");
-	}
-
-	fclose (pFile);
-}
-
-void print_suppression(const vector<double_2> &supp, const Sim_Param &sim, string out_dir){
-	stringstream suffix_num;
-	string suffix;
-	
-	suffix_num << fixed << setprecision(2) << (double)sim.mesh_num / sim.box_size;
-	suffix = "_res" + suffix_num.str();
-	suffix_num.str("");
-	suffix_num << fixed << setprecision(0) << sim.Ng;
-	suffix = suffix + "_R" + suffix_num.str();
-	
-	FILE* pFile;
-	out_dir += "supp/";
-	pFile = fopen((out_dir + "supp" + suffix + ".dat").c_str(), "w");
-	cout << "\nWriting power spectrum suppresion into file " << out_dir + "suppresion" + ".dat\n";
-	fprintf (pFile, "# This file contains power spectrum suppresion, i.e. relative difference between power spectrum P(k) and lineary extrapolated power spectrum depending on time.\n");
-	
-	for (unsigned j = 0; j < supp.size(); j++){
-		fprintf (pFile, "%f\t%f\t%f\n", supp[j][0], supp[j][1], 1/supp[j][0]-1);
 	}
 
 	fclose (pFile);

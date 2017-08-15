@@ -291,8 +291,6 @@ void App_Var_base::print_x(const Sim_Param &sim, string out_dir_app, Particle_x*
 	gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
 	print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
 	print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b, out_dir_app, z_suffix());
-
-	upd_supp();
 }
 
 void App_Var_base::print_v(const Sim_Param &sim, string out_dir_app, Particle_v* particles)
@@ -314,8 +312,6 @@ void App_Var_base::print_v(const Sim_Param &sim, string out_dir_app, Particle_v*
 	gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
 	print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
 	print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b, out_dir_app, z_suffix());
-
-	upd_supp();
 }
 
 void App_Var_base::upd_time()
@@ -323,23 +319,6 @@ void App_Var_base::upd_time()
 	step++;
 	if ((b_out - b) < db) db = b_out - b;
 	b += db;
-}
-
-void App_Var_base::upd_supp()
-{
-	double P_k, P_ZA, supp_tmp = 0;
-	int i = 0, j = 0;
-	while (i < 10){
-		P_k = pwr_spec_binned[j][1];
-		P_ZA = pwr_spec_binned_0[j][1] * pow(b, 2.);
-		if((P_ZA) && (P_k))
-		{
-			supp_tmp += (P_k-P_ZA)/P_ZA;
-			i++;
-		}
-		j++;
-	}
-	supp.push_back(double_2{ {b, supp_tmp / i} });
 }
 
 /**

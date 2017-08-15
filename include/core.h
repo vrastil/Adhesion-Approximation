@@ -275,7 +275,6 @@ public:
 	std::vector<double_2> pwr_spec_binned, pwr_spec_binned_0;
 	fftw_plan p_F, p_B;
 	Tracking track;
-	std::vector<double_2> supp;
 	std::vector<int> dens_binned;
 	
 	// METHODS
@@ -286,7 +285,6 @@ public:
 	void print_x(const Sim_Param &sim, std::string out_dir_app, Particle_x* particles);
 	void print_v(const Sim_Param &sim, std::string out_dir_app, Particle_v* particles);
 	void upd_time();
-	void upd_supp();
 	
 	std::string z_suffix();
 	

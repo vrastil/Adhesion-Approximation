@@ -63,7 +63,6 @@ int frozen_flow(const Sim_Param &sim)
 		if (APP.printing()) APP.print(sim, out_dir_app);
 		APP.upd_time();
 	}
-	print_suppression(APP.supp, sim, out_dir_app);
 		
 	printf("Frozen-flow approximation ended successfully.\n");
 	return APP.err;
