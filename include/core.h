@@ -244,7 +244,7 @@ public:
 	
 	// METHODS
 	int init(int ac, char* av[]);
-    void print_info(std::string out) const;
+    void print_info(std::string out, std::string app) const;
 	void print_info() const;
 	inline const double x_0() const{return box_size/mesh_num;}
 	

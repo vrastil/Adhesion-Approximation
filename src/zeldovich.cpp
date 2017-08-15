@@ -19,9 +19,9 @@ int zel_app(const Sim_Param &sim)
 	"TRUNCATED ZEL`DOVICH APPROXIMATION\n"
 	"**********************************\n";
 	
-	string out_dir_app = sim.out_dir + "ZA_run/" + currentDateTime() + "/";
+    string out_dir_app = std_out_dir("ZA_run/", sim);
 	work_dir_over(out_dir_app);
-	sim.print_info(out_dir_app);
+	sim.print_info(out_dir_app, "ZA");
     
 	/** ALLOCATION OF MEMORY + FFTW PREPARATION **/
 	App_Var APP(sim, "_ZA_");

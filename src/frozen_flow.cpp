@@ -15,9 +15,9 @@ int frozen_flow(const Sim_Param &sim)
 	"FROZEN-FLOW APPROXIMATION\n"
 	"*************************\n";
 	
-	string out_dir_app = sim.out_dir + "FF_run/" + currentDateTime() + "/";
+    string out_dir_app = std_out_dir("FF_run/", sim);
 	work_dir_over(out_dir_app);
-	sim.print_info(out_dir_app);
+	sim.print_info(out_dir_app, "FF");
     
 	/** ALLOCATION OF MEMORY + FFTW PREPARATION **/
 	App_Var APP(sim, "_FF_");

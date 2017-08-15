@@ -21,10 +21,9 @@ int adhesion_approximation(const Sim_Param &sim)
 	"**********************\n"
 	"ADHESION APPROXIMATION\n"
 	"**********************\n";
-	
-	string out_dir_app = sim.out_dir + "AA_run/" + currentDateTime() + "/";
+	string out_dir_app = std_out_dir("AA_run/", sim);
 	work_dir_over(out_dir_app);
-	sim.print_info(out_dir_app);
+	sim.print_info(out_dir_app, "AA");
     
 	/** ALLOCATION OF MEMORY + FFTW PREPARATION **/
 	App_Var_AA APP(sim, "_AA_");

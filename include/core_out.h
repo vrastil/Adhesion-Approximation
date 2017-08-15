@@ -10,6 +10,7 @@
 #include <fftw3.h>
 
 std::string currentDateTime();
+std::string std_out_dir(std::string pre_subdir, const Sim_Param &sim);
 
 void create_dir(std::string out_dir);
 void work_dir_over(std::string out_dir);

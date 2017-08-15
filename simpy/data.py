@@ -5,9 +5,13 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
+import json
 
 from . import *
 from . import plot
+
+RESULTS_KEYS = ["pwr_spec", "pwr_spec_diff", "pwr_spec_supp", "dens_hist",
+                "par_slice", "par_ani", "dens_slice", "dens_ani"]
 
 class SimInfo(object):
     def __init__(self, *args):
@@ -22,7 +26,6 @@ class SimInfo(object):
             self.nu = 0
             self.rs = 0
             self.app = ''
-            self.date = ''
             self.dir = ''
             self.res_dir = ''
 
@@ -47,39 +50,47 @@ class SimInfo(object):
         return info
 
     def load_file(self, a_file, run_date):
-        with open(a_file, 'r') as f:
-            content = f.readlines()
+        with open(a_file) as data_file:
+            data = json.loads(data_file.read())
 
-        for line in content:
-            if line.startswith('Ng'):
-                self.num_g = int(line.replace('Ng:\t\t', '').rstrip())
-            elif line.startswith('Num_par'):
-                self.num_p = int(line.replace('Num_par:\t', '').rstrip()[:-2])
-            elif line.startswith('Num_mesh'):
-                self.num_m = int(line.replace('Num_mesh:\t', '').rstrip()[:-2])
-            elif line.startswith('Box size'):
-                self.box = int(line.replace('Box size:\t', '').rstrip()[:-6])
-            elif 'nu = ' in line:
-                self.nu = float(line[line.index('nu =') + 5:-6])
-            elif 'rs = ' in line:
-                self.rs = float(line[line.index('rs =') + 5:line.index(',')])
-            elif line.startswith('Results: Done'):
-                self.results = True
+        self.num_g = data["Ng"]
+        self.num_p = data["par_num"]**(1./3)
+        self.num_m = data["mesh_num"]
+        self.box = data["box_size"]
+        self.nu = data["viscosity"]
+        self.rs = data["cut_radius"]
+        self.app = data["app"]
+
+        self.results = data["results"]
+        if self.results is None:
+            self.results = {}
+        for key in RESULTS_KEYS:
+            if key not in self.results:
+                self.results[key] = False
 
         self.file = a_file
-        self.app = run_date.split('/')[0][:-4]
-        self.date = datetime.strptime(run_date.split('/')[1], '%Y_%m_%d.%H:%M:%S')
-        self.dir = a_file.replace('sim_param.log', '')
+        self.dir = a_file.replace(a_file.split("/")[-1], '')
         self.res_dir = self.dir + 'results/'
         create_dir(self.res_dir)
 
-    def done(self):
-        with open(self.dir + 'sim_param.log', 'r+') as f:
-            content = f.read()
-            if content.startswith('Results: Done'):
-                return None
-            f.seek(0, 0)
-            f.write('Results: Done\n' + content)
+    def rerun(self, rerun, key, skip, zs):
+        if zs is None or key in skip:
+            return False
+        elif rerun == "all":
+            return True
+        else:
+            return not self.results[key] or key in rerun
+
+    def done(self, key):
+        with open(self.file) as data_file:
+            data = json.loads(data_file.read())
+        if data["results"] is None:
+            data["results"] = {}
+
+        data["results"][key] = True
+
+        with open(self.file, 'w') as outfile:
+            json.dump(data, outfile, indent=2)
 
 def load_k_supp(files, k_l_lim=[0,10], k_m_lim=[20,27], k_s_lim=[35,40]):
     """
@@ -110,76 +121,95 @@ def load_k_supp(files, k_l_lim=[0,10], k_m_lim=[20,27], k_s_lim=[35,40]):
     k_s = [k[k_s_lim[0]], k[k_s_lim[1]]]
     return (supp_large, supp_medium, supp_small), (k_l, k_m, k_s)
 
-def analyze_run(a_sim_info, rerun=False, skip_ani=False):
-    if rerun or not a_sim_info.results:
-        plt.rcParams['legend.numpoints'] = 1
-        # Power spectrum
-        zs, files = try_get_zs_files(a_sim_info, 'pwr_spec/')
-        if zs is not None:
-            print 'Plotting power spectrum...'
-            plot.plot_pwr_spec(files, zs, a_sim_info)
-        del zs, files
+def analyze_run(a_sim_info, rerun=None, skip=None):
+    plt.rcParams['legend.numpoints'] = 1
 
-        # Power spectrum difference
-        zs, files = try_get_zs_files(a_sim_info, 'pwr_diff/')
-        if zs is not None:
-            print 'Plotting power spectrum difference...'
-            plot.plot_pwr_spec_diff(files, zs, a_sim_info)
-        # Power spectrum suppression
-            print 'Plotting power spectrum suppression...'
-            a = [1./(z+1) for z in zs]
-            supp_lms, k_lms = load_k_supp(files)
-            plot.plot_supp_lms(supp_lms, a, a_sim_info, k_lms=k_lms)
-        del zs, files
+    if skip is None:
+        skip = []
+    elif skip == "ani":
+        skip = ["par_ani", "dens_ani"]
 
-        # Density distribution
-        zs, files = try_get_zs_files(a_sim_info, 'rho_bin/')
-        if zs is not None:
-            print 'Plotting density distribution...'
-            zs, files = slice_zs_files(zs, files)
-            plot.plot_dens_histo(files, zs, a_sim_info)
-        del zs, files
+    if rerun is None:
+        rerun = []
 
-        # Particles evolution
-        zs, files = try_get_zs_files(a_sim_info, 'par_cut/', a_file='par*.dat')
-        zs_t, files_t = try_get_zs_files(a_sim_info, 'par_cut/', a_file='track*.dat')
-        if zs is not None:
-            if zs != zs_t: print "ERROR! 'par_cut' files differ from 'track_par_pos' files. Skipping step."
-            else:
-                # last slice
-                print 'Plotting slice through simulation box (particles)...'
-                plot.plot_par_last_slice(files, files_t, zs, a_sim_info)
-                # animation
-                if not skip_ani:
-                    print 'Plotting particles evolution...'
-                    plot.plot_par_evol(files, files_t, zs, a_sim_info)
-        del zs, files, zs_t, files_t
+    # Power spectrum
+    key = "pwr_spec"
+    zs, files = try_get_zs_files(a_sim_info, 'pwr_spec/')
+    if a_sim_info.rerun(rerun, key, skip, zs):
+        print 'Plotting power spectrum...'
+        plot.plot_pwr_spec(files, zs, a_sim_info)
+        a_sim_info.done(key)
+    del zs, files
 
-        # Density evolution
-        zs, files = try_get_zs_files(a_sim_info, 'rho_map/', a_file='*.dat')
-        if zs is not None:
-            # two slices
-            print 'Plotting two slices through simulation box (overdensity)...'
-            plot.plot_dens_two_slices(files, zs, a_sim_info)
-            # animation
-            if not skip_ani:
-                print 'Plotting density evolution...'
-                plot.plot_dens_evol(files, zs, a_sim_info)
-        del zs, files
+    # Power spectrum difference
+    key = "pwr_spec_supp"
+    zs, files = try_get_zs_files(a_sim_info, 'pwr_diff/')
+    if a_sim_info.rerun(rerun, key, skip, zs):
+        print 'Plotting power spectrum difference...'
+        plot.plot_pwr_spec_diff(files, zs, a_sim_info)
+        a_sim_info.done(key)
+    # Power spectrum suppression
+    key = "pwr_spec_supp"
+    if a_sim_info.rerun(rerun, key, skip, zs):
+        print 'Plotting power spectrum suppression...'
+        a = [1./(z+1) for z in zs]
+        supp_lms, k_lms = load_k_supp(files)
+        plot.plot_supp_lms(supp_lms, a, a_sim_info, k_lms=k_lms)
+        a_sim_info.done(key)
+    del zs, files
 
-        # Update sim_param.log
-        print "Updating 'sim_param.log'..."
-        a_sim_info.done()
+    # Density distribution
+    key = "dens_hist"
+    zs, files = try_get_zs_files(a_sim_info, 'rho_bin/')
+    if a_sim_info.rerun(rerun, key, skip, zs):
+        print 'Plotting density distribution...'
+        zs, files = slice_zs_files(zs, files)
+        plot.plot_dens_histo(files, zs, a_sim_info)
+        a_sim_info.done(key)
+    del zs, files
 
-        # Clean
-        plt.close("all")
-        gc.collect()
+    # Particles evolution
+    zs, files = try_get_zs_files(a_sim_info, 'par_cut/', a_file='par*.dat')
+    zs_t, files_t = try_get_zs_files(a_sim_info, 'par_cut/', a_file='track*.dat')
+    if zs != zs_t: print "ERROR! 'par_cut' files differ from 'track_par_pos' files. Skipping step."
     else:
-        print 'Run already analyzed!'
+        # last slice
+        key = "par_slice"
+        if a_sim_info.rerun(rerun, key, skip, zs):
+            print 'Plotting slice through simulation box (particles)...'
+            plot.plot_par_last_slice(files, files_t, zs, a_sim_info)
+            a_sim_info.done(key)
+        # animation
+        key = "par_ani"
+        if a_sim_info.rerun(rerun, key, skip, zs):
+            print 'Plotting particles evolution...'
+            plot.plot_par_evol(files, files_t, zs, a_sim_info)
+            a_sim_info.done(key)
+    del zs, files, zs_t, files_t
+
+    # Density evolution
+    zs, files = try_get_zs_files(a_sim_info, 'rho_map/', a_file='*.dat')
+    # two slices
+    key = "dens_slice"
+    if a_sim_info.rerun(rerun, key, skip, zs):
+        print 'Plotting two slices through simulation box (overdensity)...'
+        plot.plot_dens_two_slices(files, zs, a_sim_info)
+        a_sim_info.done(key)
+    # animation
+    key = "dens_ani"
+    if a_sim_info.rerun(rerun, key, skip, zs):
+        print 'Plotting density evolution...'
+        plot.plot_dens_evol(files, zs, a_sim_info)
+        a_sim_info.done(key)
+    del zs, files
+
+    # Clean
+    plt.close("all")
+    gc.collect()
 
 def analyze_all(out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/',
-                rerun=False, skip_ani=False, only=None):
-    files = get_files_in_traverse_dir(out_dir, 'sim_param.log')
+                rerun=None, skip=None, only=None):
+    files = get_files_in_traverse_dir(out_dir, 'sim_param.json')
     sim_infos = []
     for args in files:
         sim_infos.append(SimInfo(*args))
@@ -189,7 +219,7 @@ def analyze_all(out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/outp
 
     for a_sim_info in sim_infos:
         print 'Analyzing run %s' % a_sim_info.info_tr()
-        analyze_run(a_sim_info, rerun=rerun, skip_ani=skip_ani)
+        analyze_run(a_sim_info, rerun=rerun, skip=skip)
     print 'All runs analyzed!'
 
 if __name__ == 'main':

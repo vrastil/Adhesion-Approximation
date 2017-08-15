@@ -12,11 +12,17 @@ string currentDateTime()
 	time_t     now = time(0);
 	struct tm  tstruct;
 	char       buf[80];
-	tstruct = *localtime(&now);
-	strftime(buf, sizeof(buf), "%Y_%m_%d.%X", &tstruct);
+	tstruct = *gmtime(&now);
+	strftime(buf, sizeof(buf), "%y%m%d_%H%M%S", &tstruct);
 	
 	string returnval(buf);
     return returnval;
+}
+
+string std_out_dir(string pre_subdir, const Sim_Param &sim)
+{
+    return sim.out_dir + pre_subdir + currentDateTime() + "_" + to_string(sim.mesh_num) +"m_" +
+           to_string(sim.Ng) + "p_" + to_string(sim.box_size) + "b/";
 }
 
 void create_dir(string out_dir)
