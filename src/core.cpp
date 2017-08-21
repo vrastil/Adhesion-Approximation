@@ -180,6 +180,7 @@ void Sim_Param::print_info(string out, string app) const
             printf("Ng:\t\t%i\n", Ng);
             printf("Num_par:\t%G^3\n", pow(par_num, 1/3.));
             printf("Num_mesh:\t%i^3\n", mesh_num);
+            printf("Num_mesh_pwr:\t%i^3\n", mesh_num_pwr);
             printf("Box size:\t%i Mpc/h\n", box_size);
             printf("Redshift:\t%G--->%G\n", z_in, z_out);
             printf("Pk:\t\t[sigma_8 = %G, As = %G, ns = %G, k_smooth = %G, pwr_type = %i]\n", 
@@ -196,6 +197,7 @@ void Sim_Param::print_info(string out, string app) const
 
             json j = {
                 {"mesh_num", mesh_num},
+                {"mesh_num_pwr", mesh_num_pwr},
                 {"Ng", Ng},
                 {"par_num", par_num},
                 {"box_size", box_size},

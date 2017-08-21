@@ -228,7 +228,7 @@ class Sim_Param
 {
 public:
 	// VARIABLES
-	int par_num, mesh_num, Ng, box_size;
+	int par_num, mesh_num, mesh_num_pwr, Ng, box_size;
 	int order = 1, bin_num = 100;
 	double k_min, k_max;
 	unsigned long seed = 12345678;
