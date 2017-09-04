@@ -15,6 +15,7 @@ adh_app
 *.plt
 *.ipynb
 *.pyc
+*.gcda
 res_req
 TODO.md
 Adhesion_Approximation.batch_build
