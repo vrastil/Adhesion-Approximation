@@ -1,9 +1,10 @@
 
 CXX = g++
+#CXX = g++-7.2
 
 #CXXFLAGS +=-g -std=c++11 -Wall
 CXXFLAGS +=-std=c++11 -Ofast -march=native -fassociative-math -freciprocal-math -fno-signed-zeros -fno-trapping-math
-#CXXFLAGS +=-std=c++11 -O3
+#CXXFLAGS +=-std=c++11 -Ofast
 CXXFLAGS +=-MMD
 CXXFLAGS +=-fopenmp
 CXXLIB_PATH +=-L/usr/local/lib/
