@@ -238,8 +238,8 @@ void Sim_Param::print_info() const
  */
  
 App_Var_base::App_Var_base(const Sim_Param &sim, string app_str):
-	err(0), step(0), print_every(1),
-	b(sim.b_in), b_out(sim.b_out), db(sim.db), z_suffix_const(app_str),
+	err(0), step(0), print_every(1), is_init_pwr_spec_0(false),
+	b(sim.b_in), b_init(1.), b_out(sim.b_out), db(sim.db), z_suffix_const(app_str),
 	app_field(3, Mesh(sim.mesh_num)),
 	power_aux (sim.mesh_num),
 	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num),
@@ -291,8 +291,13 @@ void App_Var_base::print_x(const Sim_Param &sim, string out_dir_app, Particle_x*
 	fftw_execute_dft_r2c(p_F, power_aux);
 	pwr_spec_k(sim, power_aux, &power_aux);
 	gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
-	print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
-	print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b, out_dir_app, z_suffix());
+    print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
+    if (!is_init_pwr_spec_0){
+        pwr_spec_binned_0 = pwr_spec_binned;
+        b_init = b;
+        is_init_pwr_spec_0 = true;
+    }
+	print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init, out_dir_app, z_suffix());
 }
 
 void App_Var_base::print_v(const Sim_Param &sim, string out_dir_app, Particle_v* particles)
@@ -312,8 +317,13 @@ void App_Var_base::print_v(const Sim_Param &sim, string out_dir_app, Particle_v*
 	fftw_execute_dft_r2c(p_F, power_aux);
 	pwr_spec_k(sim, power_aux, &power_aux);
 	gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
-	print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
-	print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b, out_dir_app, z_suffix());
+    print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
+    if (!is_init_pwr_spec_0){
+        pwr_spec_binned_0 = pwr_spec_binned;
+        b_init = b;
+        is_init_pwr_spec_0 = true;
+    }
+	print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init, out_dir_app, z_suffix());
 }
 
 void App_Var_base::upd_time()

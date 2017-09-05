@@ -1,12 +1,12 @@
 
 #CXX = g++
-CXX = g++-7.2
+CXX = g++-6.4
+#CXX = g++-7.2
 
 CXXFLAGS =-std=c++11 -pipe
 
-#CXXFLAGS +=-Og -g -Wall
-CXXFLAGS +=-Ofast -march=native
-#CXXFLAGS +=-Ofast
+CXXFLAGS +=-Og -g -Wall
+#CXXFLAGS +=-Ofast -march=native
 CXXFLAGS +=-MMD
 CXXFLAGS +=-fopenmp
 

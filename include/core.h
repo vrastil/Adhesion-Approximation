@@ -268,7 +268,7 @@ public:
 	
 	// VARIABLES
 	int err, step, print_every;
-	double b, b_out, db;
+	double b, b_init, b_out, db;
 	const std::string z_suffix_const;
 	std::vector<Mesh> app_field;
 	Mesh power_aux;
@@ -289,7 +289,8 @@ public:
 	std::string z_suffix();
 	
 protected:	
-	std::stringstream z_suffix_num;
+    std::stringstream z_suffix_num;
+    bool is_init_pwr_spec_0;
 };
 
 /**
