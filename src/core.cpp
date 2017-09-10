@@ -461,3 +461,7 @@ void LinkedList::get_linked_list(Particle_v* particles)
 		HOC(Vec_3D<int>(particles[i].position/Hc)) = i;
 	}
 }
+
+#ifdef TEST
+    #include "test_core.cpp"
+#endif
