@@ -297,7 +297,7 @@ void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux)
 	{
 		w_k = 1.;
 		get_k_vec(rho_k.N, i, k_vec);
-		for (int j = 0; j < 3; j++) if (k_vec[j] != 0) w_k *= pow(sin(PI*k_vec[j]/sim.mesh_num)/(PI*k_vec[j]/sim.mesh_num), sim.order + 1);
+		for (int j = 0; j < 3; j++) if (k_vec[j] != 0) w_k *= pow(sin(PI*k_vec[j]/sim.mesh_num_pwr)/(PI*k_vec[j]/sim.mesh_num_pwr), sim.order + 1);
 		(*power_aux)[2*i+1] = (rho_k[2*i]*rho_k[2*i] + rho_k[2*i+1]*rho_k[2*i+1])/(w_k*w_k);
 		(*power_aux)[2*i] = 2.*PI/sim.box_size*k_vec.norm(); // physical k
 	}
@@ -315,12 +315,15 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, vector<dou
 		(*pwr_spec_binned)[j][0] = 0.;
 		(*pwr_spec_binned)[j][1] = 0.;
 	}
-	
+    
+    #pragma omp parallel for private(k, bin)
 	for (int i = 0; i < power_aux.length / 2; i++){
 		k = power_aux[2*i];
 		if ((k <=sim.k_max) && (k>=sim.k_min)){
-			bin = (int)(log(k/sim.k_min)/log(log_bin));
-			(*pwr_spec_binned)[bin][1] += power_aux[2*i+1]; // P(k)
+            bin = (int)(log(k/sim.k_min)/log(log_bin));
+            #pragma omp atomic
+            (*pwr_spec_binned)[bin][1] += power_aux[2*i+1]; // P(k)
+            #pragma omp atomic
 			(*pwr_spec_binned)[bin][0]++;
 		}
 	}
@@ -442,8 +445,12 @@ void gen_displ_k_cic(vector<Mesh>* vel_field, const Mesh& pot_k) {gen_displ_k_S2
 void get_rho_from_par(Particle_x* particles, Mesh* rho, const Sim_Param &sim)
 {
 	printf("Computing the density field from particle positions...\n");
-	double m = pow(sim.Ng, 3);
-	
+ //   double m = pow(sim.Ng_pwr, 3);
+    double m = pow(sim.Ng_pwr, 3./2)*pow(sim.Ng, 3./2);
+
+    double mesh_mod = (double)sim.mesh_num_pwr/sim.mesh_num;
+    printf("\nUsing mod_position = %f\n and m = %f\nOverall mass = %f\n\n", mesh_mod, m, sim.par_num*m/pow(rho->N, 3));
+
 	#pragma omp parallel for
 	for (int i = 0; i < rho->length; i++)
 	{
@@ -453,15 +460,16 @@ void get_rho_from_par(Particle_x* particles, Mesh* rho, const Sim_Param &sim)
 	#pragma omp parallel for
 	for (int i = 0; i < sim.par_num; i++)
 	{
-		assign_to(rho, particles[i].position, m, sim.order);
+		assign_to(rho, particles[i].position*mesh_mod, m, sim.order);
 	}
 }
 
 void get_rho_from_par(Particle_v* particles, Mesh* rho, const Sim_Param &sim)
 {
 	printf("Computing the density field from particle positions...\n");
-	double m = pow(sim.Ng, 3);
-	
+	double m = pow(sim.Ng_pwr, 3);
+    double mesh_mod = (double)sim.mesh_num_pwr/sim.mesh_num;
+    
 	#pragma omp parallel for
 	for (int i = 0; i < rho->length; i++)
 	{
@@ -471,7 +479,7 @@ void get_rho_from_par(Particle_v* particles, Mesh* rho, const Sim_Param &sim)
 	#pragma omp parallel for
 	for (int i = 0; i < sim.par_num; i++)
 	{
-		assign_to(rho, particles[i].position, m, sim.order);
+		assign_to(rho, particles[i].position*mesh_mod, m, sim.order);
 	}
 }
 
@@ -481,30 +489,33 @@ void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param 
 	unsigned bin;
 	double rho_avg;
 	dens_binned.assign(dens_binned.size(), 0);
-	
-	for (int i = 0; i < sim.mesh_num; i+=sim.Ng)
+    
+    #pragma omp parallel for private(bin, rho_avg)
+	for (int i = 0; i < rho.N; i+=sim.Ng_pwr)
 	{
-		for (int j = 0; j < sim.mesh_num; j+=sim.Ng)
+		for (int j = 0; j < rho.N; j+=sim.Ng_pwr)
 		{
-			for (int k = 0; k < sim.mesh_num; k+=sim.Ng)
+			for (int k = 0; k < rho.N; k+=sim.Ng_pwr)
 			{
 				// Need to go through all mesh cells [i, i+Ng-1]*[j, j+Ng-1], [k, k+Ng, -1]
 				rho_avg = 0;
-				for (int ii = i; ii < i+sim.Ng; ii++)
+				for (int ii = i; ii < i+sim.Ng_pwr; ii++)
 				{
-					for (int jj = j; jj  < j+sim.Ng; jj++)
+					for (int jj = j; jj  < j+sim.Ng_pwr; jj++)
 					{
-						for (int kk = k; kk < k+sim.Ng; kk++)
+						for (int kk = k; kk < k+sim.Ng_pwr; kk++)
 						{
 							rho_avg+=rho(ii, jj, kk);
 						}
 					}
 				}
-				rho_avg /= pow(sim.Ng, 3);
-				bin = (int)((rho_avg+1)/0.2);
-//				if (bin > 400) { printf("WARNING! Huge density (%.0f).\n", rho_avg); bin = 200; }
-				if (bin >= dens_binned.capacity()) dens_binned.resize(bin+1);
-				dens_binned[bin] += pow(sim.Ng, 3);
+				rho_avg /= pow(sim.Ng_pwr, 3);
+                bin = (int)((rho_avg+1)/0.2);
+                if (bin >= dens_binned.size()) bin = dens_binned.size() - 1;
+                // if (bin >= dens_binned.capacity()) dens_binned.resize(bin+1);
+                #pragma omp atomic
+                dens_binned[bin]++;
+                //dens_binned[bin] += pow(sim.Ng_pwr, 3);
 			}
 		}
 	}

@@ -151,13 +151,14 @@ int Sim_Param::init(int ac, char* av[])
 		is_init = 1;
 		// if(nt == 0) nt = omp_get_num_procs();
         if(nt == 0) nt = omp_get_max_threads();
-		else omp_set_num_threads(nt);
+        else omp_set_num_threads(nt);
+        Ng_pwr = Ng*mesh_num_pwr/mesh_num;
 		par_num = pow(mesh_num / Ng, 3);
 		power.k2_G *= power.k2_G;
 		b_in = 1./(z_in + 1);
 		b_out = 1./(z_out + 1);
 		k_min = 2.*PI/box_size;
-		k_max = 2.*PI*mesh_num/box_size;
+		k_max = 2.*PI*mesh_num_pwr/box_size;
 		
 //		rs = 1.0;
 		a = rs / 0.735;
@@ -238,13 +239,13 @@ void Sim_Param::print_info() const
  */
  
 App_Var_base::App_Var_base(const Sim_Param &sim, string app_str):
-	err(0), step(0), print_every(1), is_init_pwr_spec_0(false),
+	err(0), step(0), print_every(sim.print_every),
 	b(sim.b_in), b_init(1.), b_out(sim.b_out), db(sim.db), z_suffix_const(app_str),
 	app_field(3, Mesh(sim.mesh_num)),
-	power_aux (sim.mesh_num),
+	power_aux (sim.mesh_num_pwr),
 	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num),
 	track(4, sim.mesh_num/sim.Ng),
-	dens_binned(20)
+	dens_binned(500), is_init_pwr_spec_0(false)
 {
 	// FFTW PREPARATION
 	err = !fftw_init_threads();
@@ -253,9 +254,13 @@ App_Var_base::App_Var_base(const Sim_Param &sim, string app_str):
 		throw err;
 	}
 	fftw_plan_with_nthreads(sim.nt);
-	p_F = fftw_plan_dft_r2c_3d(sim.mesh_num, sim.mesh_num, sim.mesh_num, power_aux.real(),
+	p_F = fftw_plan_dft_r2c_3d(sim.mesh_num, sim.mesh_num, sim.mesh_num, app_field[0].real(),
+        app_field[0].complex(), FFTW_ESTIMATE);
+	p_B = fftw_plan_dft_c2r_3d(sim.mesh_num, sim.mesh_num, sim.mesh_num, app_field[0].complex(),
+        app_field[0].real(), FFTW_ESTIMATE);
+    p_F_pwr = fftw_plan_dft_r2c_3d(sim.mesh_num_pwr, sim.mesh_num_pwr, sim.mesh_num_pwr, power_aux.real(),
 		power_aux.complex(), FFTW_ESTIMATE);
-	p_B = fftw_plan_dft_c2r_3d(sim.mesh_num, sim.mesh_num, sim.mesh_num, power_aux.complex(),
+	p_B_pwr = fftw_plan_dft_c2r_3d(sim.mesh_num_pwr, sim.mesh_num_pwr, sim.mesh_num_pwr, power_aux.complex(),
 		power_aux.real(), FFTW_ESTIMATE);
 }
 
@@ -263,7 +268,9 @@ App_Var_base::~App_Var_base()
 {
 	// FFTW CLEANUP
 	fftw_destroy_plan(p_F);
-	fftw_destroy_plan(p_B);
+    fftw_destroy_plan(p_B);
+    fftw_destroy_plan(p_F_pwr);
+	fftw_destroy_plan(p_B_pwr);
 	fftw_cleanup_threads();
 }
 
@@ -282,13 +289,31 @@ void App_Var_base::print_x(const Sim_Param &sim, string out_dir_app, Particle_x*
 	print_track_par(track, sim, out_dir_app, z_suffix());
 
 	/* Printing density */
-	get_rho_from_par(particles, &power_aux, sim);
-	gen_dens_binned(power_aux, dens_binned, sim);
+    get_rho_from_par(particles, &power_aux, sim);
+    
+    // double t_mean = mean(power_aux.real(), power_aux.length);
+	// double t_std_dev = std_dev(power_aux.real(), power_aux.length, t_mean);
+	// printf("\t[mean = %.12f, stdDev = %.12f]\n", t_mean, t_std_dev);
+
+
+    gen_dens_binned(power_aux, dens_binned, sim);
+    
+    // double mean = 0;
+    // int all = 0;
+    // double dens;
+    // for (unsigned i = 0; i < dens_binned.size(); i++){
+    //     dens = i*0.2-0.9;
+    //     mean += dens_binned[i]*dens;
+    //     all += dens_binned[i];
+    // }
+    // printf("average dens = %f\n", mean/all);
+
+    
 	print_rho_map(power_aux, sim, out_dir_app, z_suffix());
 	print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
 
 	/* Printing power spectrum */
-	fftw_execute_dft_r2c(p_F, power_aux);
+	fftw_execute_dft_r2c(p_F_pwr, power_aux);
 	pwr_spec_k(sim, power_aux, &power_aux);
 	gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
     print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());

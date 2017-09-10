@@ -155,8 +155,8 @@ public:
 	Vec_3D<double> position;
 	
 	// OPERATORS
-	double &operator[](int i){ return position[i]; }
-	const double& operator[](int i) const{ return position[i]; }
+	inline double &operator[](int i){ return position[i]; }
+	inline const double& operator[](int i) const{ return position[i]; }
 };
 
 /**
@@ -228,8 +228,8 @@ class Sim_Param
 {
 public:
 	// VARIABLES
-	int par_num, mesh_num, mesh_num_pwr, Ng, box_size;
-	int order = 1, bin_num = 100;
+    int par_num, mesh_num, mesh_num_pwr, Ng, Ng_pwr, box_size, print_every;
+    int order = 1, bin_num = 100;
 	double k_min, k_max;
 	unsigned long seed = 12345678;
 	double z_in, z_out;
@@ -247,7 +247,8 @@ public:
     void print_info(std::string out, std::string app) const;
 	void print_info() const;
 	inline const double x_0() const{return box_size/mesh_num;}
-	
+    inline const double x_0_pwr() const{return box_size/mesh_num_pwr;}
+    
 protected:
 	bool is_init = 0;
 };
@@ -273,7 +274,7 @@ public:
 	std::vector<Mesh> app_field;
 	Mesh power_aux;
 	std::vector<double_2> pwr_spec_binned, pwr_spec_binned_0;
-	fftw_plan p_F, p_B;
+	fftw_plan p_F, p_B, p_F_pwr, p_B_pwr;
 	Tracking track;
 	std::vector<int> dens_binned;
 	

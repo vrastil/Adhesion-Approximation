@@ -131,6 +131,9 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
 
     if rerun is None:
         rerun = []
+    elif rerun == "all":
+        rerun = ["pwr_spec", "pwr_spec_supp", "pwr_spec_supp",
+                 "dens_hist", "par_slice", "par_ani", "dens_slice", "dens_ani"]
 
     # Power spectrum
     key = "pwr_spec"

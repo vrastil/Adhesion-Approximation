@@ -22,7 +22,7 @@ string currentDateTime()
 string std_out_dir(string pre_subdir, const Sim_Param &sim)
 {
     return sim.out_dir + pre_subdir + currentDateTime() + "_" + to_string(sim.mesh_num) +"m_" +
-           to_string(sim.Ng) + "p_" + to_string(sim.box_size) + "b/";
+           to_string(sim.Ng) + "p_" + to_string(sim.mesh_num_pwr) +"M_" + to_string(sim.box_size) + "b/";
 }
 
 void create_dir(string out_dir)
@@ -71,7 +71,7 @@ void print_pow_spec_diff(const vector<double_2> &pwr_spec_binned, const vector<d
 	out_dir += "pwr_diff/";
 	FILE* pFile;
 	pFile = fopen((out_dir + "pwr_spec_diff" + suffix + ".dat").c_str(), "w");
-	cout << "Writing power spectrum into file " << out_dir + "pwr_spec_diff" + suffix + ".dat\n";
+	cout << "Writing power spectrum difference into file " << out_dir + "pwr_spec_diff" + suffix + ".dat\n";
 	fprintf (pFile, "# This file contains relative difference between power spectrum P(k) and lineary extrapolated power spectrum depending on wavenumber k in units [h/Mpc].\n");
 	fprintf (pFile, "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n");
 	
@@ -103,7 +103,8 @@ void print_par_pos_cut_small(Particle_x* particles, const Sim_Param &sim, string
 	
 	cout << "Writing small cut through the box of particles into file " << out_dir + "par_cut" + suffix + ".dat\n";
 	fprintf (pFile, "# This file contains positions of particles in units [Mpc/h].\n");
-	double x, y, z, dx;
+    double x, y, z, dx;
+    double x_0 = sim.x_0();
 	for(int i=0; i < sim.par_num; i++)
 	{
 		x = particles[i].position.x;
@@ -113,7 +114,7 @@ void print_par_pos_cut_small(Particle_x* particles, const Sim_Param &sim, string
 		if ((dx < 0.5) && (x < sim.mesh_num/4.) && (z < sim.mesh_num/4.))
 		{
 			// cut (L/4 x L/4 x 0.5)
-			fprintf (pFile, "%f\t%f\t%f\n", x*sim.x_0() , z*sim.x_0(), y*sim.x_0());
+			fprintf (pFile, "%f\t%f\t%f\n", x*x_0 , z*x_0, y*x_0);
 		}
 	}
 	fclose (pFile);
@@ -134,7 +135,8 @@ void print_par_pos_cut_small(Particle_v* particles, const Sim_Param &sim, string
 	
 	cout << "Writing small cut through the box of particles into file " << out_dir + "par_cut" + suffix + ".dat\n";
 	fprintf (pFile, "# This file contains positions of particles in units [Mpc/h].\n");
-	double x, y, z, dx;
+    double x, y, z, dx;
+    double x_0 = sim.x_0();
 	for(int i=0; i < sim.par_num; i++)
 	{
 		x = particles[i].position.x;
@@ -144,7 +146,7 @@ void print_par_pos_cut_small(Particle_v* particles, const Sim_Param &sim, string
 		if ((dx < 0.5) && (x < sim.mesh_num/4.) && (z < sim.mesh_num/4.))
 		{
 			// cut (L/4 x L/4 x 0.5)
-			fprintf (pFile, "%f\t%f\t%f\n", x*sim.x_0() , z*sim.x_0(), y*sim.x_0());
+			fprintf (pFile, "%f\t%f\t%f\n", x*x_0 , z*x_0, y*x_0);
 		}
 	}
 	fclose (pFile);
@@ -154,7 +156,8 @@ void print_track_par(const Tracking& track, const Sim_Param &sim, string out_dir
 {
 	out_dir += "par_cut/";
 	FILE* pFile = fopen((out_dir + "track_par_pos" + suffix + ".dat").c_str(), "w");
-	double x,y,z;
+    double x,y,z;
+    double x_0 = sim.x_0();
 	cout << "Writing positons of " << track.num_track_par << " tracked particles into file " << out_dir + "track_par_pos" + suffix + ".dat\n";
 	fprintf (pFile, "# This file contains positions of particles in units [Mpc/h].\n");
 	fprintf (pFile, "# x [Mpc/h]\tz [Mpc/h]\n");
@@ -163,7 +166,7 @@ void print_track_par(const Tracking& track, const Sim_Param &sim, string out_dir
 			x = track.par_pos[j][i].position.x;
 			y = track.par_pos[j][i].position.y;
 			z = track.par_pos[j][i].position.z;
-			fprintf (pFile, "%f\t%f\t%f\n", x*sim.x_0() , z*sim.x_0(), y*sim.x_0());
+			fprintf (pFile, "%f\t%f\t%f\n", x*x_0 , z*x_0, y*x_0);
 		}
 		fprintf (pFile, "\n\n");
 	}
@@ -172,15 +175,16 @@ void print_track_par(const Tracking& track, const Sim_Param &sim, string out_dir
 
 void print_rho_map(const Mesh& delta, const Sim_Param &sim, string out_dir, string suffix)
 {
-	out_dir += "rho_map/";
+    out_dir += "rho_map/";
+    double x_0 = sim.x_0_pwr();
 	FILE* pFile;
 	pFile = fopen((out_dir + "rho_map" + suffix + ".dat").c_str(), "w");
 	cout << "Writing density map into file " << out_dir + "rho_map" + suffix + ".dat\n";
 	fprintf (pFile, "# This file contains density map delta(x).\n");
 	fprintf (pFile, "# x [Mpc/h]\tz [Mpc/h]\tdelta\n");
-	for (int i = 0; i < sim.mesh_num; i++){
-		for (int j = 0; j < sim.mesh_num; j++){
-			fprintf (pFile, "%f\t%f\t%f\n", i*sim.x_0(), j*sim.x_0(), delta(i, sim.mesh_num/2, j));
+	for (int i = 0; i < sim.mesh_num_pwr; i++){
+		for (int j = 0; j < sim.mesh_num_pwr; j++){
+			fprintf (pFile, "%f\t%f\t%f\n", i*x_0, j*x_0, delta(i, sim.mesh_num_pwr/2, j));
 		}
 		fprintf (pFile, "\n");
 	}
@@ -190,22 +194,23 @@ void print_rho_map(const Mesh& delta, const Sim_Param &sim, string out_dir, stri
 
 void print_projected_rho(const Mesh& delta, const Sim_Param &sim, string out_dir, string suffix)
 {
-	out_dir += "rho_map/";
+    out_dir += "rho_map/";
+    double x_0 = sim.x_0_pwr();
 	FILE* pFile;
 	pFile = fopen((out_dir + "rho_map_projected" + suffix + ".dat").c_str(), "w");
 	cout << "Writing density map into file " << out_dir + "rho_map" + suffix + ".dat\n";
 	fprintf (pFile, "# This file contains density map delta(x).\n");
 	fprintf (pFile, "# x [Mpc/h]\tz [Mpc/h]\tdelta\n");
 	double rho, rho_tmp;
-	for (int i = 0; i < sim.mesh_num; i++){
-		for (int j = 0; j < sim.mesh_num; j++){
+	for (int i = 0; i < sim.mesh_num_pwr; i++){
+		for (int j = 0; j < sim.mesh_num_pwr; j++){
 			rho = 0;
-			for (int k = 0; k < sim.mesh_num; k++){
+			for (int k = 0; k < sim.mesh_num_pwr; k++){
 				rho_tmp = delta(i, k, j);
 			//	if (rho_tmp != -1) printf("Density in (%i, %i, %i) = %f\n", i, j, k, rho_tmp);
 				rho+=rho_tmp + 1;
 			}
-			fprintf (pFile, "%f\t%f\t%f\n", i*sim.x_0(), j*sim.x_0(), rho -1);
+			fprintf (pFile, "%f\t%f\t%f\n", i*x_0, j*x_0, rho -1);
 		}
 		fprintf (pFile, "\n");
 	}
@@ -217,7 +222,7 @@ void print_dens_bin(const vector<int> &dens_binned, int mesh_num, string out_dir
 	out_dir += "rho_bin/";
 	FILE* pFile;
 	pFile = fopen((out_dir + "rho_bin" + suffix + ".dat").c_str(), "w");
-	cout << "Writing power spectrum into file " << out_dir + "rho_bin" + suffix + ".dat\n";
+	cout << "Writing binned density into file " << out_dir + "rho_bin" + suffix + ".dat\n";
 	fprintf (pFile, "# This file contains binned density field.\n");
 	fprintf (pFile, "# dens\tbin_num\n");
 	
@@ -225,8 +230,8 @@ void print_dens_bin(const vector<int> &dens_binned, int mesh_num, string out_dir
 	for (unsigned j = 0; j < dens_binned.size(); j++)
 	{
 		dens = j*0.2-0.9;
-		fprintf (pFile, "%f\t%f\n", dens, dens_binned[j] / pow(mesh_num, 3));
-
+		fprintf (pFile, "%f\t%i\n", dens, dens_binned[j]);
+        //fprintf (pFile, "%f\t%f\n", dens, dens_binned[j] / pow(mesh_num, 3));        
 	}
 
 	fclose (pFile);
