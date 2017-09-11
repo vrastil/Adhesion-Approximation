@@ -80,9 +80,8 @@ Mesh& Mesh::operator/=(const double& rhs)
 
 void swap(Mesh& first, Mesh& second)
 {
-	std::swap(first.length, second.length);
-	std::swap(first.N, second.N);
-	std::swap(first.data, second.data);
+    std::swap(first.N, second.N);
+    swap<Mesh_base<double>>(first, second);
 }
 
 Mesh& Mesh::operator=(const Mesh& other)
