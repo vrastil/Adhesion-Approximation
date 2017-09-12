@@ -184,6 +184,10 @@ double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num, const int o
 
 void assign_to(Mesh* field, const Vec_3D<double> &position, const double value, int order)
 {
+
+    // int rnd = rand() % (128*128);
+    // if (rnd < 10) printf("Position = [%f, %f, %f]\n", position.x, position.y, position.z);
+
 	Vec_3D<int> y, z;
 	for (int i = 0; i < 3; i++) z[i] = (int)(position[i] - 0.5*(order - 1));
 	for (y[0] = z[0]; y[0] < z[0] + 1 + order; y[0]++)

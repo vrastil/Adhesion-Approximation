@@ -338,18 +338,24 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, vector<dou
 }
 
 void gen_pot_k(const Mesh& rho_k, Mesh* pot_k)
-{
+{   /*
+    pot_k can be Mesh of differen (bigger) size rho_k,
+    !!!> ALL physical FACTORS ARE therefore TAKEN FROM rho_k <!!!
+    */
 	printf("Computing potential in k-space...\n");
-	double k2;
+    double k2;
+    const int N = rho_k.N; // for case when pot_k is different mesh than vel_field
+    const int l_half = rho_k.length/2;
+
 	#pragma omp parallel for private(k2)
-	for(int i=0; i < rho_k.length/2;i++){				
-		k2 = get_k_sq(rho_k.N, i);
+	for(int i=0; i < l_half;i++){				
+		k2 = get_k_sq(N, i);
 		if (k2 == 0){
 			(*pot_k)[2*i] = 0;
 			(*pot_k)[2*i+1] = 0;
 		} else{
-			(*pot_k)[2*i] = -rho_k[2*i]/(k2*pow(2.*PI/rho_k.N, 2.));
-			(*pot_k)[2*i+1] = -rho_k[2*i+1]/(k2*pow(2.*PI/rho_k.N, 2.));
+			(*pot_k)[2*i] = -rho_k[2*i]/(k2*pow(2.*PI/N, 2.));
+			(*pot_k)[2*i+1] = -rho_k[2*i+1]/(k2*pow(2.*PI/N, 2.));
 		}
 	}
 }
@@ -412,28 +418,34 @@ static double CIC_opt(int index, int N, double a)
 }
 
 void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, double a)
-{
+{   /*
+    pot_k can be Mesh of differen (bigger) size than each vel_field,
+    !!!> ALL physical FACTORS ARE therefore TAKEN FROM vel_field[0] <!!!
+    */
 	if (a == -1) printf("Computing displacement in k-space...\n");
 	else if (a == 0) printf("Computing displacement in k-space with CIC opt...\n");
 	else printf("Computing force in k-space for S2 shaped particles with CIC opt...\n");
 
 	double opt;
 	int k_vec[3];
-	double potential_tmp[2];
+    double potential_tmp[2];
+    
+    const int N = (*vel_field)[0].N; // for case when pot_k is different mesh than vel_field
+    const int l_half = (*vel_field)[0].length/2;
 	
 	#pragma omp parallel for private(opt, k_vec, potential_tmp)
-	for(int i=0; i < pot_k.length/2;i++)
+	for(int i=0; i < l_half;i++)
 	{
 		potential_tmp[0] = pot_k[2*i]; // prevent overwriting if vel_field[0] == pot_k
 		potential_tmp[1] = pot_k[2*i+1]; // prevent overwriting if vel_field[0] == pot_k
 		if (a == -1) opt = 1.;
-		else opt = CIC_opt(i, pot_k.N, a);
-		get_k_vec(pot_k.N, i, k_vec);		
+		else opt = CIC_opt(i, N, a);
+		get_k_vec(N, i, k_vec);		
 		for(int j=0; j<3;j++)
 		{
 			// 2*PI/N comes from derivative WITH RESPECT to the mesh coordinates
-			(*vel_field)[j][2*i] = k_vec[j]*potential_tmp[1]*(2.*PI/pot_k.N)*opt;
-			(*vel_field)[j][2*i+1] = -k_vec[j]*potential_tmp[0]*(2.*PI/pot_k.N)*opt;
+			(*vel_field)[j][2*i] = k_vec[j]*potential_tmp[1]*(2.*PI/N)*opt;
+			(*vel_field)[j][2*i+1] = -k_vec[j]*potential_tmp[0]*(2.*PI/N)*opt;
 		}
 	}
 }
@@ -446,10 +458,8 @@ void get_rho_from_par(Particle_x* particles, Mesh* rho, const Sim_Param &sim)
 {
 	printf("Computing the density field from particle positions...\n");
  //   double m = pow(sim.Ng_pwr, 3);
-    double m = pow(sim.Ng_pwr, 3./2)*pow(sim.Ng, 3./2);
-
-    double mesh_mod = (double)sim.mesh_num_pwr/sim.mesh_num;
-    printf("\nUsing mod_position = %f\n and m = %f\nOverall mass = %f\n\n", mesh_mod, m, sim.par_num*m/pow(rho->N, 3));
+    const double m = pow(sim.Ng_pwr, 3./2)*pow(sim.Ng, 3./2);
+    const double mesh_mod = (double)sim.mesh_num_pwr/sim.mesh_num;
 
 	#pragma omp parallel for
 	for (int i = 0; i < rho->length; i++)
@@ -467,14 +477,20 @@ void get_rho_from_par(Particle_x* particles, Mesh* rho, const Sim_Param &sim)
 void get_rho_from_par(Particle_v* particles, Mesh* rho, const Sim_Param &sim)
 {
 	printf("Computing the density field from particle positions...\n");
-	double m = pow(sim.Ng_pwr, 3);
-    double mesh_mod = (double)sim.mesh_num_pwr/sim.mesh_num;
+//    double m = pow(sim.Ng_pwr, 3);
+    const double m = pow(sim.Ng_pwr, 3./2)*pow(sim.Ng, 3./2);
+    const double mesh_mod = (double)sim.mesh_num_pwr/sim.mesh_num;
     
 	#pragma omp parallel for
 	for (int i = 0; i < rho->length; i++)
 	{
 		(*rho)[i]=-1.;
-	}
+    }
+    
+    // double t_mean = mean(rho->real(), rho->length);
+	// double t_std_dev = std_dev(rho->real(), rho->length, t_mean);
+
+    // printf("Mesh mean (std) = %f (%f)\n", t_mean, t_std_dev);
 	
 	#pragma omp parallel for
 	for (int i = 0; i < sim.par_num; i++)

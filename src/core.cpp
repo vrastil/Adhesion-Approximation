@@ -290,25 +290,7 @@ void App_Var_base::print_x(const Sim_Param &sim, string out_dir_app, Particle_x*
 
 	/* Printing density */
     get_rho_from_par(particles, &power_aux, sim);
-    
-    // double t_mean = mean(power_aux.real(), power_aux.length);
-	// double t_std_dev = std_dev(power_aux.real(), power_aux.length, t_mean);
-	// printf("\t[mean = %.12f, stdDev = %.12f]\n", t_mean, t_std_dev);
-
-
-    gen_dens_binned(power_aux, dens_binned, sim);
-    
-    // double mean = 0;
-    // int all = 0;
-    // double dens;
-    // for (unsigned i = 0; i < dens_binned.size(); i++){
-    //     dens = i*0.2-0.9;
-    //     mean += dens_binned[i]*dens;
-    //     all += dens_binned[i];
-    // }
-    // printf("average dens = %f\n", mean/all);
-
-    
+    gen_dens_binned(power_aux, dens_binned, sim);    
 	print_rho_map(power_aux, sim, out_dir_app, z_suffix());
 	print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
 
@@ -332,14 +314,14 @@ void App_Var_base::print_v(const Sim_Param &sim, string out_dir_app, Particle_v*
 	track.update_track_par(particles);
 	print_track_par(track, sim, out_dir_app, z_suffix());
 
-	/* Printing density */
+    /* Printing density */
 	get_rho_from_par(particles, &power_aux, sim);
 	gen_dens_binned(power_aux, dens_binned, sim);
 	print_rho_map(power_aux, sim, out_dir_app, z_suffix());
 	print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
 
 	/* Printing power spectrum */
-	fftw_execute_dft_r2c(p_F, power_aux);
+	fftw_execute_dft_r2c(p_F_pwr, power_aux);
 	pwr_spec_k(sim, power_aux, &power_aux);
 	gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
     print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
