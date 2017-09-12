@@ -230,3 +230,37 @@ void Mesh_base<T>::assign(T val)
 	#pragma omp parallel for
 	for (int i = 0; i < length; i++) this->data[i]=val;
 }
+
+/**
+ * @class:	App_Var_base
+ * @brief:	class containing variables for approximations
+ */
+ #include "core_out.h"
+ #include "core_app.h"
+
+template <typename T> 
+void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T particles)
+{
+	/* Printing positions */
+	print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
+	track.update_track_par(particles);
+	print_track_par(track, sim, out_dir_app, z_suffix());
+
+	/* Printing density */
+    get_rho_from_par(particles, &power_aux, sim);
+    gen_dens_binned(power_aux, dens_binned, sim);    
+	print_rho_map(power_aux, sim, out_dir_app, z_suffix());
+	print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
+
+	/* Printing power spectrum */
+	fftw_execute_dft_r2c(p_F_pwr, power_aux);
+	pwr_spec_k(sim, power_aux, &power_aux);
+	gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
+    print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
+    if (!is_init_pwr_spec_0){
+        pwr_spec_binned_0 = pwr_spec_binned;
+        b_init = b;
+        is_init_pwr_spec_0 = true;
+    }
+	print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init, out_dir_app, z_suffix());
+}
