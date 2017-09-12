@@ -215,8 +215,7 @@ public:
 	
 	// METHODS
 	inline const int num_step() const{return par_pos.size();};
-	void update_track_par(Particle_x* particles);
-	void update_track_par(Particle_v* particles);
+	template <class T>  void update_track_par(T* particles);
 };
 
 /**
@@ -283,7 +282,7 @@ public:
 	inline double b_half() {return b - db/2.; }
 	inline bool integrate(){return (b <= b_out) && (db > 0);}
 	inline bool printing(){ return ((step % print_every) == 0) or (b == b_out); }
-    template <typename T> void print(const Sim_Param &sim, std::string out_dir_app, T particles);
+    template <class T> void print(const Sim_Param &sim, std::string out_dir_app, T* particles);
 	void upd_time();
 	
 	std::string z_suffix();

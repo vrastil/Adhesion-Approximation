@@ -4,6 +4,8 @@
  */
  
 #include "core_mesh.h"
+#include "core_out.h"
+#include "core_app.h"
 
 /**
  * @class:	Vec_3D<T>
@@ -231,15 +233,30 @@ void Mesh_base<T>::assign(T val)
 	for (int i = 0; i < length; i++) this->data[i]=val;
 }
 
+
+/**
+ * @class:	Tracking
+ * @brief:	class storing info about tracked particles
+ */
+
+template <class T>
+void Tracking::update_track_par(T* particles)
+{
+	std::vector<Particle_x> par_pos_step;
+	par_pos_step.reserve(num_track_par);
+	for (int i=0; i<num_track_par; i++){
+		par_pos_step.push_back(particles[par_ids[i]]);
+	}
+	par_pos.push_back(par_pos_step);
+}
+
 /**
  * @class:	App_Var_base
  * @brief:	class containing variables for approximations
  */
- #include "core_out.h"
- #include "core_app.h"
 
-template <typename T> 
-void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T particles)
+template <class T> 
+void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* particles)
 {
 	/* Printing positions */
 	print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
