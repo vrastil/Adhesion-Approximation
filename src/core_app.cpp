@@ -454,51 +454,6 @@ void gen_displ_k(vector<Mesh>* vel_field, const Mesh& pot_k) {gen_displ_k_S2(vel
 
 void gen_displ_k_cic(vector<Mesh>* vel_field, const Mesh& pot_k) {gen_displ_k_S2(vel_field, pot_k, 0.);}
 
-void get_rho_from_par(Particle_x* particles, Mesh* rho, const Sim_Param &sim)
-{
-	printf("Computing the density field from particle positions...\n");
- //   double m = pow(sim.Ng_pwr, 3);
-    const double m = pow(sim.Ng_pwr, 3./2)*pow(sim.Ng, 3./2);
-    const double mesh_mod = (double)sim.mesh_num_pwr/sim.mesh_num;
-
-	#pragma omp parallel for
-	for (int i = 0; i < rho->length; i++)
-	{
-		(*rho)[i]=-1.;
-	}
-	
-	#pragma omp parallel for
-	for (int i = 0; i < sim.par_num; i++)
-	{
-		assign_to(rho, particles[i].position*mesh_mod, m, sim.order);
-	}
-}
-
-void get_rho_from_par(Particle_v* particles, Mesh* rho, const Sim_Param &sim)
-{
-	printf("Computing the density field from particle positions...\n");
-//    double m = pow(sim.Ng_pwr, 3);
-    const double m = pow(sim.Ng_pwr, 3./2)*pow(sim.Ng, 3./2);
-    const double mesh_mod = (double)sim.mesh_num_pwr/sim.mesh_num;
-    
-	#pragma omp parallel for
-	for (int i = 0; i < rho->length; i++)
-	{
-		(*rho)[i]=-1.;
-    }
-    
-    // double t_mean = mean(rho->real(), rho->length);
-	// double t_std_dev = std_dev(rho->real(), rho->length, t_mean);
-
-    // printf("Mesh mean (std) = %f (%f)\n", t_mean, t_std_dev);
-	
-	#pragma omp parallel for
-	for (int i = 0; i < sim.par_num; i++)
-	{
-		assign_to(rho, particles[i].position*mesh_mod, m, sim.order);
-	}
-}
-
 void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param &sim)
 {
 	printf("Computing binned density field...\n");
