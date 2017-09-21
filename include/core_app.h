@@ -44,8 +44,14 @@ template <class T>
 void get_rho_from_par(T* particles, Mesh* rho, const Sim_Param &sim)
 {
     printf("Computing the density field from particle positions...\n");
+
 //   double m = pow(sim.Ng_pwr, 3);
+    #ifdef FFTW_SYM
     const double m = pow(sim.Ng_pwr, 3./2)*pow(sim.Ng, 3./2);
+    #else
+    const double m = pow(sim.Ng_pwr, 3.);
+    #endif
+    
     const double mesh_mod = (double)sim.mesh_num_pwr/sim.mesh_num;
 
     #pragma omp parallel for

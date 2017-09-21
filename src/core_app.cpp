@@ -278,7 +278,11 @@ void gen_rho_dist_k(const Sim_Param &sim, Mesh* rho, const fftw_plan &p_F)
 	gen_gauss_white_noise(sim, rho);
 	
 	printf("Generating gaussian white noise in k-sapce...\n");
-	fftw_execute_dft_r2c(p_F, *rho);
+    fftw_execute_dft_r2c(p_F, *rho);
+    
+    double t_mean = mean(rho->real(), rho->length);
+	double t_std_dev = std_dev(rho->real(), rho->length, t_mean);
+	printf("\t[mean = %.12f, stdDev = %.12f]\n", t_mean, t_std_dev);
 	
 	printf("Generating density distributions with given power spectrum...\n");
 	gen_rho_w_pow_k(sim, rho);
@@ -298,7 +302,10 @@ void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux)
 		w_k = 1.;
 		get_k_vec(rho_k.N, i, k_vec);
 		for (int j = 0; j < 3; j++) if (k_vec[j] != 0) w_k *= pow(sin(PI*k_vec[j]/sim.mesh_num_pwr)/(PI*k_vec[j]/sim.mesh_num_pwr), sim.order + 1);
-		(*power_aux)[2*i+1] = (rho_k[2*i]*rho_k[2*i] + rho_k[2*i+1]*rho_k[2*i+1])/(w_k*w_k);
+        (*power_aux)[2*i+1] = (rho_k[2*i]*rho_k[2*i] + rho_k[2*i+1]*rho_k[2*i+1])/(w_k*w_k);
+        #ifndef FFTW_SYM
+        (*power_aux)[2*i+1] *= pow(sim.mesh_num, 3.);
+        #endif
 		(*power_aux)[2*i] = 2.*PI/sim.box_size*k_vec.norm(); // physical k
 	}
 }

@@ -227,12 +227,18 @@ void assign_from(const vector< Mesh> &field, const Vec_3D<double> &position, Vec
 
 static inline void normalize_FFT_FORWARD(Mesh& rho)
 {
-	rho /= pow(rho.N, 1.5);
+#ifdef FFTW_SYM
+    rho /= pow(rho.N, 1.5);
+#else
+    rho /= pow(rho.N, 3.);
+#endif
 }
 
 static inline void normalize_FFT_BACKWARD(Mesh& rho)
 {
-	rho /= pow(rho.N, 1.5);
+#ifdef FFTW_SYM
+    rho /= pow(rho.N, 1.5);
+#endif
 }
 
 void fftw_execute_dft_r2c(const fftw_plan &p_F, Mesh& rho)
