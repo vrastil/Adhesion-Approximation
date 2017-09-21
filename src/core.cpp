@@ -118,26 +118,6 @@ Tracking::Tracking(int sqr_num_track_par, int par_num_per_dim):
 	}
 }
 
-void Tracking::update_track_par(Particle_x* particles)
-{
-	vector<Particle_x> par_pos_step;
-	par_pos_step.reserve(num_track_par);
-	for (int i=0; i<num_track_par; i++){
-		par_pos_step.push_back(particles[par_ids[i]]);
-	}
-	par_pos.push_back(par_pos_step);
-}
-
-void Tracking::update_track_par(Particle_v* particles)
-{
-	vector<Particle_x> par_pos_step;
-	par_pos_step.reserve(num_track_par);
-	for (int i=0; i<num_track_par; i++){
-		par_pos_step.push_back(particles[par_ids[i]]);
-	}
-	par_pos.push_back(par_pos_step);
-}
-
 /**
  * @class:	Sim_Param
  * @brief:	class storing simulation parameters
@@ -151,13 +131,14 @@ int Sim_Param::init(int ac, char* av[])
 		is_init = 1;
 		// if(nt == 0) nt = omp_get_num_procs();
         if(nt == 0) nt = omp_get_max_threads();
-		else omp_set_num_threads(nt);
+        else omp_set_num_threads(nt);
+        Ng_pwr = Ng*mesh_num_pwr/mesh_num;
 		par_num = pow(mesh_num / Ng, 3);
 		power.k2_G *= power.k2_G;
 		b_in = 1./(z_in + 1);
 		b_out = 1./(z_out + 1);
 		k_min = 2.*PI/box_size;
-		k_max = 2.*PI*mesh_num/box_size;
+		k_max = 2.*PI*mesh_num_pwr/box_size;
 		
 //		rs = 1.0;
 		a = rs / 0.735;
@@ -180,6 +161,7 @@ void Sim_Param::print_info(string out, string app) const
             printf("Ng:\t\t%i\n", Ng);
             printf("Num_par:\t%G^3\n", pow(par_num, 1/3.));
             printf("Num_mesh:\t%i^3\n", mesh_num);
+            printf("Num_mesh_pwr:\t%i^3\n", mesh_num_pwr);
             printf("Box size:\t%i Mpc/h\n", box_size);
             printf("Redshift:\t%G--->%G\n", z_in, z_out);
             printf("Pk:\t\t[sigma_8 = %G, As = %G, ns = %G, k_smooth = %G, pwr_type = %i]\n", 
@@ -196,6 +178,7 @@ void Sim_Param::print_info(string out, string app) const
 
             json j = {
                 {"mesh_num", mesh_num},
+                {"mesh_num_pwr", mesh_num_pwr},
                 {"Ng", Ng},
                 {"par_num", par_num},
                 {"box_size", box_size},
@@ -236,13 +219,13 @@ void Sim_Param::print_info() const
  */
  
 App_Var_base::App_Var_base(const Sim_Param &sim, string app_str):
-	err(0), step(0), print_every(1),
-	b(sim.b_in), b_out(sim.b_out), db(sim.db), z_suffix_const(app_str),
+	err(0), step(0), print_every(sim.print_every),
+	b(sim.b_in), b_init(1.), b_out(sim.b_out), db(sim.db), z_suffix_const(app_str),
 	app_field(3, Mesh(sim.mesh_num)),
-	power_aux (sim.mesh_num),
+	power_aux (sim.mesh_num_pwr),
 	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num),
 	track(4, sim.mesh_num/sim.Ng),
-	dens_binned(20)
+	dens_binned(500), is_init_pwr_spec_0(false)
 {
 	// FFTW PREPARATION
 	err = !fftw_init_threads();
@@ -251,9 +234,13 @@ App_Var_base::App_Var_base(const Sim_Param &sim, string app_str):
 		throw err;
 	}
 	fftw_plan_with_nthreads(sim.nt);
-	p_F = fftw_plan_dft_r2c_3d(sim.mesh_num, sim.mesh_num, sim.mesh_num, power_aux.real(),
+	p_F = fftw_plan_dft_r2c_3d(sim.mesh_num, sim.mesh_num, sim.mesh_num, app_field[0].real(),
+        app_field[0].complex(), FFTW_ESTIMATE);
+	p_B = fftw_plan_dft_c2r_3d(sim.mesh_num, sim.mesh_num, sim.mesh_num, app_field[0].complex(),
+        app_field[0].real(), FFTW_ESTIMATE);
+    p_F_pwr = fftw_plan_dft_r2c_3d(sim.mesh_num_pwr, sim.mesh_num_pwr, sim.mesh_num_pwr, power_aux.real(),
 		power_aux.complex(), FFTW_ESTIMATE);
-	p_B = fftw_plan_dft_c2r_3d(sim.mesh_num, sim.mesh_num, sim.mesh_num, power_aux.complex(),
+	p_B_pwr = fftw_plan_dft_c2r_3d(sim.mesh_num_pwr, sim.mesh_num_pwr, sim.mesh_num_pwr, power_aux.complex(),
 		power_aux.real(), FFTW_ESTIMATE);
 }
 
@@ -261,7 +248,9 @@ App_Var_base::~App_Var_base()
 {
 	// FFTW CLEANUP
 	fftw_destroy_plan(p_F);
-	fftw_destroy_plan(p_B);
+    fftw_destroy_plan(p_B);
+    fftw_destroy_plan(p_F_pwr);
+	fftw_destroy_plan(p_B_pwr);
 	fftw_cleanup_threads();
 }
 
@@ -270,48 +259,6 @@ string App_Var_base::z_suffix()
 	z_suffix_num.str("");
 	z_suffix_num << fixed << setprecision(2) << z();
 	return z_suffix_const + "z" + z_suffix_num.str();
-}
-
-void App_Var_base::print_x(const Sim_Param &sim, string out_dir_app, Particle_x* particles)
-{
-	/* Printing positions */
-	print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
-	track.update_track_par(particles);
-	print_track_par(track, sim, out_dir_app, z_suffix());
-
-	/* Printing density */
-	get_rho_from_par(particles, &power_aux, sim);
-	gen_dens_binned(power_aux, dens_binned, sim);
-	print_rho_map(power_aux, sim, out_dir_app, z_suffix());
-	print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
-
-	/* Printing power spectrum */
-	fftw_execute_dft_r2c(p_F, power_aux);
-	pwr_spec_k(sim, power_aux, &power_aux);
-	gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
-	print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
-	print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b, out_dir_app, z_suffix());
-}
-
-void App_Var_base::print_v(const Sim_Param &sim, string out_dir_app, Particle_v* particles)
-{
-	/* Printing positions */
-	print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
-	track.update_track_par(particles);
-	print_track_par(track, sim, out_dir_app, z_suffix());
-
-	/* Printing density */
-	get_rho_from_par(particles, &power_aux, sim);
-	gen_dens_binned(power_aux, dens_binned, sim);
-	print_rho_map(power_aux, sim, out_dir_app, z_suffix());
-	print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
-
-	/* Printing power spectrum */
-	fftw_execute_dft_r2c(p_F, power_aux);
-	pwr_spec_k(sim, power_aux, &power_aux);
-	gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
-	print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
-	print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b, out_dir_app, z_suffix());
 }
 
 void App_Var_base::upd_time()

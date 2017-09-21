@@ -155,8 +155,8 @@ public:
 	Vec_3D<double> position;
 	
 	// OPERATORS
-	double &operator[](int i){ return position[i]; }
-	const double& operator[](int i) const{ return position[i]; }
+	inline double &operator[](int i){ return position[i]; }
+	inline const double& operator[](int i) const{ return position[i]; }
 };
 
 /**
@@ -215,8 +215,7 @@ public:
 	
 	// METHODS
 	inline const int num_step() const{return par_pos.size();};
-	void update_track_par(Particle_x* particles);
-	void update_track_par(Particle_v* particles);
+	template <class T>  void update_track_par(T* particles);
 };
 
 /**
@@ -228,8 +227,8 @@ class Sim_Param
 {
 public:
 	// VARIABLES
-	int par_num, mesh_num, Ng, box_size;
-	int order = 1, bin_num = 100;
+    int par_num, mesh_num, mesh_num_pwr, Ng, Ng_pwr, box_size, print_every;
+    int order = 1, bin_num = 100;
 	double k_min, k_max;
 	unsigned long seed = 12345678;
 	double z_in, z_out;
@@ -247,7 +246,8 @@ public:
     void print_info(std::string out, std::string app) const;
 	void print_info() const;
 	inline const double x_0() const{return box_size/mesh_num;}
-	
+    inline const double x_0_pwr() const{return box_size/mesh_num_pwr;}
+    
 protected:
 	bool is_init = 0;
 };
@@ -268,12 +268,12 @@ public:
 	
 	// VARIABLES
 	int err, step, print_every;
-	double b, b_out, db;
+	double b, b_init, b_out, db;
 	const std::string z_suffix_const;
 	std::vector<Mesh> app_field;
 	Mesh power_aux;
 	std::vector<double_2> pwr_spec_binned, pwr_spec_binned_0;
-	fftw_plan p_F, p_B;
+	fftw_plan p_F, p_B, p_F_pwr, p_B_pwr;
 	Tracking track;
 	std::vector<int> dens_binned;
 	
@@ -282,14 +282,14 @@ public:
 	inline double b_half() {return b - db/2.; }
 	inline bool integrate(){return (b <= b_out) && (db > 0);}
 	inline bool printing(){ return ((step % print_every) == 0) or (b == b_out); }
-	void print_x(const Sim_Param &sim, std::string out_dir_app, Particle_x* particles);
-	void print_v(const Sim_Param &sim, std::string out_dir_app, Particle_v* particles);
+    template <class T> void print(const Sim_Param &sim, std::string out_dir_app, T* particles);
 	void upd_time();
 	
 	std::string z_suffix();
 	
 protected:	
-	std::stringstream z_suffix_num;
+    std::stringstream z_suffix_num;
+    bool is_init_pwr_spec_0;
 };
 
 /**
@@ -308,7 +308,7 @@ public:
 	Particle_x* particles;
 	
 	// METHODS
-	inline void print(const Sim_Param &sim, std::string out_dir_app) {print_x(sim, out_dir_app, particles);}
+	inline void print(const Sim_Param &sim, std::string out_dir_app) {App_Var_base::print(sim, out_dir_app, particles);}
 };
 
 /**
@@ -327,7 +327,7 @@ public:
 	Particle_v* particles;
 	
 	// METHODS
-	inline void print(const Sim_Param &sim, std::string out_dir_app) {print_v(sim, out_dir_app, particles);}
+	inline void print(const Sim_Param &sim, std::string out_dir_app) {App_Var_base::print(sim, out_dir_app, particles);}
 };
 
 /**
@@ -347,7 +347,7 @@ public:
 	Mesh expotential;
 	
 	// METHODS
-	inline void print(const Sim_Param &sim, std::string out_dir_app) {print_x(sim, out_dir_app, particles);}
+	inline void print(const Sim_Param &sim, std::string out_dir_app) {App_Var_base::print(sim, out_dir_app, particles);}
 };
 
 /**
@@ -388,7 +388,7 @@ public:
 	LinkedList linked_list;
 	
 	// METHODS
-	inline void print(const Sim_Param &sim, std::string out_dir_app) {print_v(sim, out_dir_app, particles);}
+	inline void print(const Sim_Param &sim, std::string out_dir_app) {App_Var_base::print(sim, out_dir_app, particles);}
 };
 
 #include "core.hpp"

@@ -191,7 +191,7 @@ def plot_dens_histo(dens_bin_files, zs, a_sim_info, out_dir='auto', fix_N=1, fix
         # plt.subplot(num_sub_y, num_sub_x, i + 1)
         ax.set_xlim(xmin=xmin, xmax=xmax)
         ax.hist(rho, bins=20, weights=count, facecolor='green',
-                 edgecolor='black', linewidth=0.8)
+                 edgecolor='black', linewidth=0.8, normed=True)
         ax.set_yscale('log', nonposy='clip')
         ax.set_title(lab)
         del rho, count, data

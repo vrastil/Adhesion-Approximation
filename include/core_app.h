@@ -26,11 +26,43 @@ void gen_displ_k(std::vector<Mesh>* vel_field, const Mesh& pot_k);
 void gen_displ_k_cic(std::vector<Mesh>* vel_field, const Mesh& pot_k);
 void gen_displ_k_S2(std::vector<Mesh>* vel_field, const Mesh& pot_k, double a);
 
-void get_rho_from_par(Particle_x* particles, Mesh* rho, const Sim_Param &sim);
-void get_rho_from_par(Particle_v* particles, Mesh* rho, const Sim_Param &sim);
+template <class T>
+void get_rho_from_par(T* particles, Mesh* rho, const Sim_Param &sim);
 void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux);
 void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, std::vector<double_2>* pwr_spec_binned);
 void gen_dens_binned(const Mesh& rho, std::vector<int> &dens_binned, const Sim_Param &sim);
 
 void force_short(const Sim_Param &sim, const LinkedList& linked_list, Particle_v *particles,
 				 const Vec_3D<double> &position, Vec_3D<double>* force);
+
+
+/**
+ * @brief:	template class functions definitions
+ */
+
+template <class T>
+void get_rho_from_par(T* particles, Mesh* rho, const Sim_Param &sim)
+{
+    printf("Computing the density field from particle positions...\n");
+
+//   double m = pow(sim.Ng_pwr, 3);
+    #ifdef FFTW_SYM
+    const double m = pow(sim.Ng_pwr, 3./2)*pow(sim.Ng, 3./2);
+    #else
+    const double m = pow(sim.Ng_pwr, 3.);
+    #endif
+    
+    const double mesh_mod = (double)sim.mesh_num_pwr/sim.mesh_num;
+
+    #pragma omp parallel for
+    for (int i = 0; i < rho->length; i++)
+    {
+        (*rho)[i]=-1.;
+    }
+    
+    #pragma omp parallel for
+    for (int i = 0; i < sim.par_num; i++)
+    {
+        assign_to(rho, particles[i].position*mesh_mod, m, sim.order);
+    }
+}

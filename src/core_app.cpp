@@ -278,7 +278,11 @@ void gen_rho_dist_k(const Sim_Param &sim, Mesh* rho, const fftw_plan &p_F)
 	gen_gauss_white_noise(sim, rho);
 	
 	printf("Generating gaussian white noise in k-sapce...\n");
-	fftw_execute_dft_r2c(p_F, *rho);
+    fftw_execute_dft_r2c(p_F, *rho);
+    
+    double t_mean = mean(rho->real(), rho->length);
+	double t_std_dev = std_dev(rho->real(), rho->length, t_mean);
+	printf("\t[mean = %.12f, stdDev = %.12f]\n", t_mean, t_std_dev);
 	
 	printf("Generating density distributions with given power spectrum...\n");
 	gen_rho_w_pow_k(sim, rho);
@@ -297,8 +301,11 @@ void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux)
 	{
 		w_k = 1.;
 		get_k_vec(rho_k.N, i, k_vec);
-		for (int j = 0; j < 3; j++) if (k_vec[j] != 0) w_k *= pow(sin(PI*k_vec[j]/sim.mesh_num)/(PI*k_vec[j]/sim.mesh_num), sim.order + 1);
-		(*power_aux)[2*i+1] = (rho_k[2*i]*rho_k[2*i] + rho_k[2*i+1]*rho_k[2*i+1])/(w_k*w_k);
+		for (int j = 0; j < 3; j++) if (k_vec[j] != 0) w_k *= pow(sin(PI*k_vec[j]/sim.mesh_num_pwr)/(PI*k_vec[j]/sim.mesh_num_pwr), sim.order + 1);
+        (*power_aux)[2*i+1] = (rho_k[2*i]*rho_k[2*i] + rho_k[2*i+1]*rho_k[2*i+1])/(w_k*w_k);
+        #ifndef FFTW_SYM
+        (*power_aux)[2*i+1] *= pow(sim.mesh_num, 3.);
+        #endif
 		(*power_aux)[2*i] = 2.*PI/sim.box_size*k_vec.norm(); // physical k
 	}
 }
@@ -315,12 +322,15 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, vector<dou
 		(*pwr_spec_binned)[j][0] = 0.;
 		(*pwr_spec_binned)[j][1] = 0.;
 	}
-	
+    
+    #pragma omp parallel for private(k, bin)
 	for (int i = 0; i < power_aux.length / 2; i++){
 		k = power_aux[2*i];
 		if ((k <=sim.k_max) && (k>=sim.k_min)){
-			bin = (int)(log(k/sim.k_min)/log(log_bin));
-			(*pwr_spec_binned)[bin][1] += power_aux[2*i+1]; // P(k)
+            bin = (int)(log(k/sim.k_min)/log(log_bin));
+            #pragma omp atomic
+            (*pwr_spec_binned)[bin][1] += power_aux[2*i+1]; // P(k)
+            #pragma omp atomic
 			(*pwr_spec_binned)[bin][0]++;
 		}
 	}
@@ -335,18 +345,24 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, vector<dou
 }
 
 void gen_pot_k(const Mesh& rho_k, Mesh* pot_k)
-{
+{   /*
+    pot_k can be Mesh of differen (bigger) size rho_k,
+    !!!> ALL physical FACTORS ARE therefore TAKEN FROM rho_k <!!!
+    */
 	printf("Computing potential in k-space...\n");
-	double k2;
+    double k2;
+    const int N = rho_k.N; // for case when pot_k is different mesh than vel_field
+    const int l_half = rho_k.length/2;
+
 	#pragma omp parallel for private(k2)
-	for(int i=0; i < rho_k.length/2;i++){				
-		k2 = get_k_sq(rho_k.N, i);
+	for(int i=0; i < l_half;i++){				
+		k2 = get_k_sq(N, i);
 		if (k2 == 0){
 			(*pot_k)[2*i] = 0;
 			(*pot_k)[2*i+1] = 0;
 		} else{
-			(*pot_k)[2*i] = -rho_k[2*i]/(k2*pow(2.*PI/rho_k.N, 2.));
-			(*pot_k)[2*i+1] = -rho_k[2*i+1]/(k2*pow(2.*PI/rho_k.N, 2.));
+			(*pot_k)[2*i] = -rho_k[2*i]/(k2*pow(2.*PI/N, 2.));
+			(*pot_k)[2*i+1] = -rho_k[2*i+1]/(k2*pow(2.*PI/N, 2.));
 		}
 	}
 }
@@ -409,28 +425,34 @@ static double CIC_opt(int index, int N, double a)
 }
 
 void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, double a)
-{
+{   /*
+    pot_k can be Mesh of differen (bigger) size than each vel_field,
+    !!!> ALL physical FACTORS ARE therefore TAKEN FROM vel_field[0] <!!!
+    */
 	if (a == -1) printf("Computing displacement in k-space...\n");
 	else if (a == 0) printf("Computing displacement in k-space with CIC opt...\n");
 	else printf("Computing force in k-space for S2 shaped particles with CIC opt...\n");
 
 	double opt;
 	int k_vec[3];
-	double potential_tmp[2];
+    double potential_tmp[2];
+    
+    const int N = (*vel_field)[0].N; // for case when pot_k is different mesh than vel_field
+    const int l_half = (*vel_field)[0].length/2;
 	
 	#pragma omp parallel for private(opt, k_vec, potential_tmp)
-	for(int i=0; i < pot_k.length/2;i++)
+	for(int i=0; i < l_half;i++)
 	{
 		potential_tmp[0] = pot_k[2*i]; // prevent overwriting if vel_field[0] == pot_k
 		potential_tmp[1] = pot_k[2*i+1]; // prevent overwriting if vel_field[0] == pot_k
 		if (a == -1) opt = 1.;
-		else opt = CIC_opt(i, pot_k.N, a);
-		get_k_vec(pot_k.N, i, k_vec);		
+		else opt = CIC_opt(i, N, a);
+		get_k_vec(N, i, k_vec);		
 		for(int j=0; j<3;j++)
 		{
 			// 2*PI/N comes from derivative WITH RESPECT to the mesh coordinates
-			(*vel_field)[j][2*i] = k_vec[j]*potential_tmp[1]*(2.*PI/pot_k.N)*opt;
-			(*vel_field)[j][2*i+1] = -k_vec[j]*potential_tmp[0]*(2.*PI/pot_k.N)*opt;
+			(*vel_field)[j][2*i] = k_vec[j]*potential_tmp[1]*(2.*PI/N)*opt;
+			(*vel_field)[j][2*i+1] = -k_vec[j]*potential_tmp[0]*(2.*PI/N)*opt;
 		}
 	}
 }
@@ -439,72 +461,39 @@ void gen_displ_k(vector<Mesh>* vel_field, const Mesh& pot_k) {gen_displ_k_S2(vel
 
 void gen_displ_k_cic(vector<Mesh>* vel_field, const Mesh& pot_k) {gen_displ_k_S2(vel_field, pot_k, 0.);}
 
-void get_rho_from_par(Particle_x* particles, Mesh* rho, const Sim_Param &sim)
-{
-	printf("Computing the density field from particle positions...\n");
-	double m = pow(sim.Ng, 3);
-	
-	#pragma omp parallel for
-	for (int i = 0; i < rho->length; i++)
-	{
-		(*rho)[i]=-1.;
-	}
-	
-	#pragma omp parallel for
-	for (int i = 0; i < sim.par_num; i++)
-	{
-		assign_to(rho, particles[i].position, m, sim.order);
-	}
-}
-
-void get_rho_from_par(Particle_v* particles, Mesh* rho, const Sim_Param &sim)
-{
-	printf("Computing the density field from particle positions...\n");
-	double m = pow(sim.Ng, 3);
-	
-	#pragma omp parallel for
-	for (int i = 0; i < rho->length; i++)
-	{
-		(*rho)[i]=-1.;
-	}
-	
-	#pragma omp parallel for
-	for (int i = 0; i < sim.par_num; i++)
-	{
-		assign_to(rho, particles[i].position, m, sim.order);
-	}
-}
-
 void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param &sim)
 {
 	printf("Computing binned density field...\n");
 	unsigned bin;
 	double rho_avg;
 	dens_binned.assign(dens_binned.size(), 0);
-	
-	for (int i = 0; i < sim.mesh_num; i+=sim.Ng)
+    
+    #pragma omp parallel for private(bin, rho_avg)
+	for (int i = 0; i < rho.N; i+=sim.Ng_pwr)
 	{
-		for (int j = 0; j < sim.mesh_num; j+=sim.Ng)
+		for (int j = 0; j < rho.N; j+=sim.Ng_pwr)
 		{
-			for (int k = 0; k < sim.mesh_num; k+=sim.Ng)
+			for (int k = 0; k < rho.N; k+=sim.Ng_pwr)
 			{
 				// Need to go through all mesh cells [i, i+Ng-1]*[j, j+Ng-1], [k, k+Ng, -1]
 				rho_avg = 0;
-				for (int ii = i; ii < i+sim.Ng; ii++)
+				for (int ii = i; ii < i+sim.Ng_pwr; ii++)
 				{
-					for (int jj = j; jj  < j+sim.Ng; jj++)
+					for (int jj = j; jj  < j+sim.Ng_pwr; jj++)
 					{
-						for (int kk = k; kk < k+sim.Ng; kk++)
+						for (int kk = k; kk < k+sim.Ng_pwr; kk++)
 						{
 							rho_avg+=rho(ii, jj, kk);
 						}
 					}
 				}
-				rho_avg /= pow(sim.Ng, 3);
-				bin = (int)((rho_avg+1)/0.2);
-//				if (bin > 400) { printf("WARNING! Huge density (%.0f).\n", rho_avg); bin = 200; }
-				if (bin >= dens_binned.capacity()) dens_binned.resize(bin+1);
-				dens_binned[bin] += pow(sim.Ng, 3);
+				rho_avg /= pow(sim.Ng_pwr, 3);
+                bin = (int)((rho_avg+1)/0.2);
+                if (bin >= dens_binned.size()) bin = dens_binned.size() - 1;
+                // if (bin >= dens_binned.capacity()) dens_binned.resize(bin+1);
+                #pragma omp atomic
+                dens_binned[bin]++;
+                //dens_binned[bin] += pow(sim.Ng_pwr, 3);
 			}
 		}
 	}

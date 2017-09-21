@@ -22,7 +22,8 @@ int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
 		// options both on command line	and in configuration file
 		po::options_description config_mesh("Mesh configuration");
 		config_mesh.add_options()
-			("mesh_num,m", po::value<int>(&sim->mesh_num)->default_value(32), "number of mesh cells in the box per dimension")
+			("mesh_num,m", po::value<int>(&sim->mesh_num)->default_value(32), "number of mesh cells in the box per dimension (potential)")
+            ("mesh_num_pwr,M", po::value<int>(&sim->mesh_num_pwr)->default_value(1024), "number of mesh cells in the box per dimension (power spectrum)")
 			("par_num,p", po::value<int>(&sim->Ng)->default_value(2), "ratio of mesh cells and number of particles per dimension")
 			("box_size,L", po::value<int>(&sim->box_size)->default_value(512), "box size in units of Mpc/h")
 			;
@@ -31,7 +32,8 @@ int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
 		config_integ.add_options()
 			("redshift,z", po::value<double>(&sim->z_in)->default_value(200.), "redshift at the start of the simulation")
 			("redshift_0,Z", po::value<double>(&sim->z_out)->default_value(10.), "redshift at the end of the simulation")
-			("time_step,b", po::value<double>(&sim->db)->default_value(0.1, "0.1"), "dimensionless time-step (scale factor)")
+            ("time_step,b", po::value<double>(&sim->db)->default_value(0.1, "0.1"), "dimensionless time-step (scale factor)")
+            ("print_every", po::value<int>(&sim->print_every)->default_value(1, "1"), "save particle positions and power spectrum every n-th step")
 			;
 		
 		po::options_description config_app("Approximations");

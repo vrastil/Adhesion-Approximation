@@ -26,11 +26,12 @@ class Results(object):
             self.sim_infos.append(SimInfo(*args))
         self.sort()
 
-    def get_subfiles(self, Nm=0, Np=0, L=0, nu=0, rs=0, app=''):
+    def get_subfiles(self, Nm=0, NM=0, Np=0, L=0, nu=0, rs=0, app=''):
         subfiles = []
         for a_sim_info in self.sim_infos:
             if (
                     (Nm == 0 or a_sim_info.num_m == Nm) and
+                    (NM == 0 or a_sim_info.num_M == NM) and
                     (Np == 0 or a_sim_info.num_p == Np) and
                     (L == 0 or a_sim_info.box == L) and
                     (nu == 0 or a_sim_info.nu == nu) and

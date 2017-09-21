@@ -22,6 +22,7 @@ class SimInfo(object):
             self.num_g = 0
             self.num_p = 0
             self.num_m = 0
+            self.num_M = 0
             self.box = 0
             self.nu = 0
             self.rs = 0
@@ -33,6 +34,7 @@ class SimInfo(object):
         info = ''
         info += '%s:\n' % self.app
         info += '$N_m = %i$\n' % self.num_m
+        info += '$N_M = %i$\n' % self.num_M
         info += '$N_p = %i^3$\n' % self.num_p
         info += '$L = %i$ Mpc/h\n' % self.box
         if self.app == 'AA': info += r'$\nu = %.1f$' % self.nu
@@ -56,6 +58,7 @@ class SimInfo(object):
         self.num_g = data["Ng"]
         self.num_p = data["par_num"]**(1./3)
         self.num_m = data["mesh_num"]
+        self.num_M = data["mesh_num_pwr"]
         self.box = data["box_size"]
         self.nu = data["viscosity"]
         self.rs = data["cut_radius"]
@@ -131,6 +134,9 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
 
     if rerun is None:
         rerun = []
+    elif rerun == "all":
+        rerun = ["pwr_spec", "pwr_spec_supp", "pwr_spec_supp",
+                 "dens_hist", "par_slice", "par_ani", "dens_slice", "dens_ani"]
 
     # Power spectrum
     key = "pwr_spec"
