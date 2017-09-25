@@ -1,7 +1,7 @@
 #include <catch.hpp>
 
-TEST_CASE( "UNIT TEST: sign function {sgn<T>}", "[core]" ){
-
+TEST_CASE( "UNIT TEST: sign function {sgn<T>}", "[core]" )
+{
     CHECK( sgn<int>(0) == 0 );
     CHECK( sgn<int>(10) == 1 );
     CHECK( sgn<int>(-5) == -1 );
@@ -11,8 +11,8 @@ TEST_CASE( "UNIT TEST: sign function {sgn<T>}", "[core]" ){
 
 }
 
-TEST_CASE( "UNIT TEST: vector class {Vec_3D<T>}", "[core]" ){
-
+TEST_CASE( "UNIT TEST: vector class {Vec_3D<T>}", "[core]" )
+{
     Vec_3D<double> vec_d(sqrt(2.), -sqrt(2.), sqrt(5.));
     Vec_3D<int> vec_i(3,0,-4);
     CHECK( vec_d.norm() == Approx(3.) );
@@ -35,8 +35,8 @@ TEST_CASE( "UNIT TEST: vector class {Vec_3D<T>}", "[core]" ){
     CHECK( vec_d[7] == -13.45 );
 }
 
-TEST_CASE( "UNIT TEST: mesh class {Mesh_base<T>}", "[core]" ){
-
+TEST_CASE( "UNIT TEST: mesh class {Mesh_base<T>}", "[core]" )
+{
     // dimension
     Mesh_base<double> mesh(8, 16, 20);
     CHECK( mesh.N1 == 8 );
@@ -90,8 +90,8 @@ TEST_CASE( "UNIT TEST: mesh class {Mesh_base<T>}", "[core]" ){
     CHECK( mesh[5] == Approx(1.) );
 }
 
-TEST_CASE( "UNIT TEST: mesh class {Mesh}", "[core]" ){
-    
+TEST_CASE( "UNIT TEST: mesh class {Mesh}", "[core]" )
+{
     // dimension
     Mesh mesh_c(8);
     mesh_c.assign(0.);
@@ -141,8 +141,8 @@ TEST_CASE( "UNIT TEST: mesh class {Mesh}", "[core]" ){
     CHECK( mesh3_c[180] == Approx(0) );
 }
     
-TEST_CASE( "UNIT TEST: particle class {Particle_x}", "[core]" ){
-    
+TEST_CASE( "UNIT TEST: particle class {Particle_x}", "[core]" )
+{
     Particle_x par1(0., -3.14, 4E5);
     Vec_3D<double> position(0., -3.14, 4E5);
     Particle_x par2(position);
@@ -171,8 +171,8 @@ TEST_CASE( "UNIT TEST: particle class {Particle_x}", "[core]" ){
     CHECK( par2[2] == 4E5 );
 }
 
-TEST_CASE( "UNIT TEST: particle class {Particle_v}", "[core]" ){
-    
+TEST_CASE( "UNIT TEST: particle class {Particle_v}", "[core]" )
+{    
     Particle_v par1(0., -3.14, 4E5, 2.3E-6, -4.56E-7, 6.87903E-6);
     Vec_3D<double> position(0., -3.14, 4E5);
     Vec_3D<double> velocity(2.3E-6, -4.56E-7, 6.87903E-6);
@@ -213,4 +213,14 @@ TEST_CASE( "UNIT TEST: power spectrum class {e_power_spec}", "[core]" ){
     CHECK( ps1 == 1 );
     CHECK( ps2 == 2 );
     CHECK( ps3 == 3 );
+}
+
+TEST_CASE( "UNIT TEST: tracking class {Tracking}", "[core]" )
+{
+    // 2, 12, 2
+    Tracking track(2, 24);
+
+    CHECK( track.num_track_par == 4 );
+    CHECK( track.par_ids.size() == 4 );
+    CHECK( track.par_ids[0] == 1442 );
 }
