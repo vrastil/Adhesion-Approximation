@@ -29,6 +29,10 @@ TEST_CASE( "UNIT TEST: vector class {Vec_3D<T>}", "[core]" ){
 
     Vec_3D<double> vec_d2 = (Vec_3D<double>)vec_i + Vec_3D<double>(1., 1.5, -3.5)*2.;
     CHECK( (vec_d2[0] + vec_d2[1] + vec_d2[2]) == Approx(-1.) );
+
+    //Invalid acces
+    CHECK( vec_d[-6] == 3. );
+    CHECK( vec_d[7] == -13.45 );
 }
 
 TEST_CASE( "UNIT TEST: mesh class {Mesh_base<T>}", "[core]" ){
@@ -137,4 +141,76 @@ TEST_CASE( "UNIT TEST: mesh class {Mesh}", "[core]" ){
     CHECK( mesh3_c[180] == Approx(0) );
 }
     
+TEST_CASE( "UNIT TEST: particle class {Particle_x}", "[core]" ){
     
+    Particle_x par1(0., -3.14, 4E5);
+    Vec_3D<double> position(0., -3.14, 4E5);
+    Particle_x par2(position);
+
+    CHECK( par1.position.x == 0. );
+    REQUIRE( par1.position.y == -3.14 );
+    CHECK( par1.position.z == 4E5 );
+    CHECK( par1[1] == -3.14 );
+    CHECK( par1.position.x == par2[0] );
+    CHECK( par1.position.y == par2[1] );
+    CHECK( par1.position.z == par2[2] );
+
+    par1.position.x = par1.position.y*2+6.28;
+    CHECK( par1[0] == Approx(0) );
+    
+    // copy constructor
+    Particle_x par3(par1);
+    CHECK( par3[0] == Approx(0) );
+    CHECK( par3[1] == -3.14 );
+    CHECK( par3[2] == 4E5 );
+
+    // assign operator
+    par2 = par3;
+    CHECK( par2[0] == Approx(0) );
+    CHECK( par2[1] == -3.14 );
+    CHECK( par2[2] == 4E5 );
+}
+
+TEST_CASE( "UNIT TEST: particle class {Particle_v}", "[core]" ){
+    
+    Particle_v par1(0., -3.14, 4E5, 2.3E-6, -4.56E-7, 6.87903E-6);
+    Vec_3D<double> position(0., -3.14, 4E5);
+    Vec_3D<double> velocity(2.3E-6, -4.56E-7, 6.87903E-6);
+    Particle_v par2(position, velocity);
+
+    CHECK( par1[0] == 0. );
+    CHECK( par1[1] == -3.14 );
+    CHECK( par1[2] == 4E5 );
+    CHECK( par1(0) == 2.3E-6 );
+    CHECK( par1(1) == -4.56E-7 );
+    CHECK( par1(2) == 6.87903E-6 );
+
+    CHECK( par1.position.x == par2[0] );
+    CHECK( par1.position.y == par2[1] );
+    CHECK( par1.position.z == par2[2] );
+    CHECK( par1.velocity.x == par2(0) );
+    CHECK( par1.velocity.y == par2(1) );
+    CHECK( par1.velocity.z == par2(2) );
+    
+    // copy constructor
+    Particle_v par3(par1);
+    CHECK( par3[1] == -3.14 );
+    CHECK( par3(1) == -4.56E-7 );
+
+    // assign operator
+    par2 = par3;
+    CHECK( par2[1] == -3.14 );
+    CHECK( par2(1) == -4.56E-7 );
+}
+
+TEST_CASE( "UNIT TEST: power spectrum class {e_power_spec}", "[core]" ){
+    e_power_spec ps0 = power_law_T;
+    e_power_spec ps1 = power_law;
+    e_power_spec ps2 = flat;
+    e_power_spec ps3 = single;
+
+    CHECK( ps0 == 0 );
+    CHECK( ps1 == 1 );
+    CHECK( ps2 == 2 );
+    CHECK( ps3 == 3 );
+}
