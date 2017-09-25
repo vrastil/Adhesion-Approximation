@@ -10,6 +10,8 @@ CXXFLAGS +=-Og -g -Wall
 CXXFLAGS +=-MMD
 CXXFLAGS +=-fopenmp
 
+# CXXFLAGS +=-D FFTW_SYM
+
 CXXLIB_PATH +=-L/usr/local/lib/
 # -L/lib/
 

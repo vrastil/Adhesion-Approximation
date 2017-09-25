@@ -52,7 +52,7 @@ int zel_app(const Sim_Param &sim)
     *********************/
 
     printf("\nSetting initial positions of particles...\n");
-    set_pert_pos(sim, APP.b, APP.particles, APP.app_field);
+    set_pert_pos(sim, sim.b_in, APP.particles, APP.app_field);
 
     /* Setting initial (binned) power spectrum, WARNING: power_aux is modified */
     APP.print(sim, out_dir_app);

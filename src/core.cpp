@@ -117,26 +117,6 @@ Tracking::Tracking(int sqr_num_track_par, int par_num_per_dim):
 	}
 }
 
-void Tracking::update_track_par(Particle_x* particles)
-{
-	vector<Particle_x> par_pos_step;
-	par_pos_step.reserve(num_track_par);
-	for (int i=0; i<num_track_par; i++){
-		par_pos_step.push_back(particles[par_ids[i]]);
-	}
-	par_pos.push_back(par_pos_step);
-}
-
-void Tracking::update_track_par(Particle_v* particles)
-{
-	vector<Particle_x> par_pos_step;
-	par_pos_step.reserve(num_track_par);
-	for (int i=0; i<num_track_par; i++){
-		par_pos_step.push_back(particles[par_ids[i]]);
-	}
-	par_pos.push_back(par_pos_step);
-}
-
 /**
  * @class:	Sim_Param
  * @brief:	class storing simulation parameters
@@ -278,76 +258,6 @@ string App_Var_base::z_suffix()
 	z_suffix_num.str("");
 	z_suffix_num << fixed << setprecision(2) << z();
 	return z_suffix_const + "z" + z_suffix_num.str();
-}
-
-void App_Var_base::print_x(const Sim_Param &sim, string out_dir_app, Particle_x* particles)
-{
-	/* Printing positions */
-	print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
-	track.update_track_par(particles);
-	print_track_par(track, sim, out_dir_app, z_suffix());
-
-	/* Printing density */
-    get_rho_from_par(particles, &power_aux, sim);
-    
-    // double t_mean = mean(power_aux.real(), power_aux.length);
-	// double t_std_dev = std_dev(power_aux.real(), power_aux.length, t_mean);
-	// printf("\t[mean = %.12f, stdDev = %.12f]\n", t_mean, t_std_dev);
-
-
-    gen_dens_binned(power_aux, dens_binned, sim);
-    
-    // double mean = 0;
-    // int all = 0;
-    // double dens;
-    // for (unsigned i = 0; i < dens_binned.size(); i++){
-    //     dens = i*0.2-0.9;
-    //     mean += dens_binned[i]*dens;
-    //     all += dens_binned[i];
-    // }
-    // printf("average dens = %f\n", mean/all);
-
-    
-	print_rho_map(power_aux, sim, out_dir_app, z_suffix());
-	print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
-
-	/* Printing power spectrum */
-	fftw_execute_dft_r2c(p_F_pwr, power_aux);
-	pwr_spec_k(sim, power_aux, &power_aux);
-	gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
-    print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
-    if (!is_init_pwr_spec_0){
-        pwr_spec_binned_0 = pwr_spec_binned;
-        b_init = b;
-        is_init_pwr_spec_0 = true;
-    }
-	print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init, out_dir_app, z_suffix());
-}
-
-void App_Var_base::print_v(const Sim_Param &sim, string out_dir_app, Particle_v* particles)
-{
-	/* Printing positions */
-	print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
-	track.update_track_par(particles);
-	print_track_par(track, sim, out_dir_app, z_suffix());
-
-	/* Printing density */
-	get_rho_from_par(particles, &power_aux, sim);
-	gen_dens_binned(power_aux, dens_binned, sim);
-	print_rho_map(power_aux, sim, out_dir_app, z_suffix());
-	print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
-
-	/* Printing power spectrum */
-	fftw_execute_dft_r2c(p_F, power_aux);
-	pwr_spec_k(sim, power_aux, &power_aux);
-	gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
-    print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
-    if (!is_init_pwr_spec_0){
-        pwr_spec_binned_0 = pwr_spec_binned;
-        b_init = b;
-        is_init_pwr_spec_0 = true;
-    }
-	print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init, out_dir_app, z_suffix());
 }
 
 void App_Var_base::upd_time()
