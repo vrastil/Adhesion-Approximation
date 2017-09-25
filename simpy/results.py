@@ -20,8 +20,9 @@ class Results(object):
         self.sim_infos = sorted(self.sim_infos, key=lambda si: si.app)
 
     def load(self, out_dir):
-        files = get_files_in_traverse_dir(out_dir, 'sim_param.log')
         self.sim_infos = []
+        files = get_files_in_traverse_dir(out_dir, 'sim_param.json')
+        files += get_files_in_traverse_dir(out_dir, 'sim_param.log')
         for args in files:
             self.sim_infos.append(SimInfo(*args))
         self.sort()

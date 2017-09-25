@@ -16,8 +16,10 @@ RESULTS_KEYS = ["pwr_spec", "pwr_spec_diff", "pwr_spec_supp", "dens_hist",
 class SimInfo(object):
     def __init__(self, *args):
         self.results = False
-        if len(args) == 2:
+        if len(args) == 2 and args[0].endswith('.json'):
             self.load_file(*args)
+        elif len(args) == 2 and  args[0].endswith('.log'):
+            self.load_file_log(*args)
         else:
             self.num_g = 0
             self.num_p = 0
@@ -73,6 +75,34 @@ class SimInfo(object):
 
         self.file = a_file
         self.dir = a_file.replace(a_file.split("/")[-1], '')
+        self.res_dir = self.dir + 'results/'
+        create_dir(self.res_dir)
+
+    def load_file_log(self, a_file, run_date):
+        with open(a_file, 'r') as f:
+            content = f.readlines()
+
+        for line in content:
+            if line.startswith('Ng'):
+                self.num_g = int(line.replace('Ng:\t\t', '').rstrip())
+            elif line.startswith('Num_par'):
+                self.num_p = int(line.replace('Num_par:\t', '').rstrip()[:-2])
+            elif line.startswith('Num_mesh'):
+                self.num_m = int(line.replace('Num_mesh:\t', '').rstrip()[:-2])
+            elif line.startswith('Box size'):
+                self.box = int(line.replace('Box size:\t', '').rstrip()[:-6])
+            elif 'nu = ' in line:
+                self.nu = float(line[line.index('nu =') + 5:-6])
+            elif 'rs = ' in line:
+                self.rs = float(line[line.index('rs =') + 5:line.index(',')])
+            elif line.startswith('Results: Done'):
+                self.results = True
+
+        self.num_M = self.num_m
+        self.file = a_file
+        self.app = run_date.split('/')[0][:-4]
+        self.date = datetime.strptime(run_date.split('/')[1], '%Y_%m_%d.%H:%M:%S')
+        self.dir = a_file.replace('sim_param.log', '')
         self.res_dir = self.dir + 'results/'
         create_dir(self.res_dir)
 
