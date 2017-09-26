@@ -20,6 +20,7 @@ CXXLIB +=-lfftw3 -lfftw3_omp
 CXXLIB +=-lgsl -lgslcblas
 
 OBJ_FILES = $(patsubst %.cpp,%.o,$(wildcard src/*.cpp))
+TEST_OBJ_FILES = $(patsubst src/%,tests/%, $(filter-out src/main.o,$(OBJ_FILES))) tests/test_main.o
 
 COMPILE.cc = $(CXX) $(CXXFLAGS) -c -I./include
 COMPILE.fin = $(CXX) $(CXXFLAGS) $(CXXLIB_PATH)
@@ -34,6 +35,16 @@ precompiled: src/stdafx.h
 	$(COMPILE.cc) src/stdafx.h -o src/stdafx.h.gch
 
 clean:
-	rm -f src/*.o src/*~ src/*.d
+	rm -f src/*.o src/*~ src/*.d tests/*.o tests/*~ tests/*.d
+
+check : test
+
+test: $(TEST_OBJ_FILES)
+	$(COMPILE.fin) -o tests/test $^ $(CXXLIB)
+	./tests/test
+
+tests/%.o: src/%.cpp
+	$(COMPILE.cc) -I./tests -D TEST -o $@ $<
 
 -include $(OBJ_FILES:.o=.d)
+-include $(TEST_OBJ_FILES:.o=.d)

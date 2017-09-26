@@ -115,11 +115,11 @@ public:
 	Mesh_base& operator*=(const T& rhs);
 	Mesh_base& operator/=(const T& rhs);
 	
-//	friend void swap(Mesh_base& first, Mesh_base& second);
+	template <typename U> friend void swap(Mesh_base<U>& first, Mesh_base<U>& second);
 	Mesh_base& operator=(const Mesh_base& other);
 };
 
-template <typename T> void swap(Mesh_base<T>& first, Mesh_base<T>& second);
+// template <typename T> void swap(Mesh_base<T>& first, Mesh_base<T>& second);
 
 /**
  * @class:	Mesh

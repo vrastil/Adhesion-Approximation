@@ -1,9 +1,11 @@
+
 # output directory, internal documents
 output/
 report/
 
 # program, object files, depedency files, scripts
 adh_app
+tests/test
 *.o
 *.d
 *.sh
