@@ -18,21 +18,27 @@ TEST_CASE( "UNIT TEST: vector class {Vec_3D<T>}", "[core]" )
     CHECK( vec_d.norm() == Approx(3.) );
     CHECK( vec_i.norm() == Approx(5) );
 
-    vec_d.assign(3., 5.56, -1.345E1);
-    REQUIRE( vec_d.x == 3. );
+    vec_d.fill(-1.345E1);
+    REQUIRE( vec_d[0] == -1.345E1 );
     REQUIRE( vec_d[2] == -13.45 );
-    REQUIRE( Vec_3D<int>(vec_d).y == 5 );
+    REQUIRE( Vec_3D<int>(vec_d)[1] == -13 );
 
-    vec_i.assign(0, 0, 0);
+    vec_i.fill(0);
     vec_i+=Vec_3D<int>(2, 3, -4);
-    REQUIRE ( (vec_i.x + vec_i[1] + vec_i.z) == Approx(1) );
-
+    REQUIRE ( (vec_i[0] + vec_i[1] + vec_i[2]) == Approx(1) );
     Vec_3D<double> vec_d2 = (Vec_3D<double>)vec_i + Vec_3D<double>(1., 1.5, -3.5)*2.;
-    CHECK( (vec_d2[0] + vec_d2[1] + vec_d2[2]) == Approx(-1.) );
+    REQUIRE( vec_d2[0] == Approx(4.) );
+    REQUIRE( vec_d2[1] == Approx(6.) );
+    REQUIRE( vec_d2[2] == Approx(-11.) );
 
-    //Invalid acces
-    CHECK( vec_d[-6] == 3. );
-    CHECK( vec_d[7] == -13.45 );
+    double sumd = 0;
+    double sumi = 0;
+
+    for (double val : vec_d2) sumd += val;
+    for (int val : vec_i) sumi += val;
+
+    CHECK( sumd == Approx(-1.) );
+    CHECK( sumi == 1 );
 }
 
 TEST_CASE( "UNIT TEST: mesh class {Mesh_base<T>}", "[core]" )
@@ -147,15 +153,15 @@ TEST_CASE( "UNIT TEST: particle class {Particle_x}", "[core]" )
     Vec_3D<double> position(0., -3.14, 4E5);
     Particle_x par2(position);
 
-    CHECK( par1.position.x == 0. );
-    REQUIRE( par1.position.y == -3.14 );
-    CHECK( par1.position.z == 4E5 );
+    CHECK( par1.position[0] == 0. );
+    REQUIRE( par1.position[1] == -3.14 );
+    CHECK( par1.position[2] == 4E5 );
     CHECK( par1[1] == -3.14 );
-    CHECK( par1.position.x == par2[0] );
-    CHECK( par1.position.y == par2[1] );
-    CHECK( par1.position.z == par2[2] );
+    CHECK( par1.position[0] == par2[0] );
+    CHECK( par1.position[1] == par2[1] );
+    CHECK( par1.position[2] == par2[2] );
 
-    par1.position.x = par1.position.y*2+6.28;
+    par1.position[0] = par1.position[1]*2+6.28;
     CHECK( par1[0] == Approx(0) );
     
     // copy constructor
@@ -185,12 +191,12 @@ TEST_CASE( "UNIT TEST: particle class {Particle_v}", "[core]" )
     CHECK( par1(1) == -4.56E-7 );
     CHECK( par1(2) == 6.87903E-6 );
 
-    CHECK( par1.position.x == par2[0] );
-    CHECK( par1.position.y == par2[1] );
-    CHECK( par1.position.z == par2[2] );
-    CHECK( par1.velocity.x == par2(0) );
-    CHECK( par1.velocity.y == par2(1) );
-    CHECK( par1.velocity.z == par2(2) );
+    CHECK( par1.position[0] == par2[0] );
+    CHECK( par1.position[1] == par2[1] );
+    CHECK( par1.position[2] == par2[2] );
+    CHECK( par1.velocity[0] == par2(0) );
+    CHECK( par1.velocity[1] == par2(1) );
+    CHECK( par1.velocity[2] == par2(2) );
     
     // copy constructor
     Particle_v par3(par1);

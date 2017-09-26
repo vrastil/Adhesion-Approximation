@@ -16,7 +16,7 @@ template <typename T>
 double Vec_3D<T>::norm() const
 {
     T tmp(0);
-    for (T val : vec)
+    for (const T val : vec)
     {
         tmp += val*val;
     }
@@ -60,7 +60,7 @@ Vec_3D<T> operator-(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
 template <typename T>
 Vec_3D<T>& Vec_3D<T>::operator+=(T rhs)
 {
-    for(T val : vec)
+    for(T& val : vec)
     {
         val += rhs;
     }
@@ -70,7 +70,7 @@ Vec_3D<T>& Vec_3D<T>::operator+=(T rhs)
 template <typename T>
 Vec_3D<T>& Vec_3D<T>::operator-=(T rhs)
 {
-    for(T val : vec)
+    for(T& val : vec)
     {
         val -= rhs;
     }
@@ -80,7 +80,7 @@ Vec_3D<T>& Vec_3D<T>::operator-=(T rhs)
 template <typename T>
 Vec_3D<T>& Vec_3D<T>::operator*=(T rhs)
 {
-    for(T val : vec)
+    for(T& val : vec)
     {
         val *= rhs;
     }
@@ -132,7 +132,7 @@ Vec_3D<T> operator-(T lhs, Vec_3D<T> rhs)
 template <typename T>
 Vec_3D<T>& Vec_3D<T>::operator/=(T rhs)
 {
-    for(T val : vec)
+    for(T& val : vec)
     {
         val /= rhs;
     }

@@ -372,5 +372,5 @@ void LinkedList::get_linked_list(Particle_v* particles)
 }
 
 #ifdef TEST
-    #include "test_core.cpp"
+#include "test_core.cpp"
 #endif

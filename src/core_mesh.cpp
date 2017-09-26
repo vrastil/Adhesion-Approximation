@@ -40,7 +40,11 @@ inline double get_per(double vec, int per)
 
 inline int get_per(int vec, int per)
 {
-    return ((vec >= per) || (vec < 0) ) ? vec - per * ( vec / per ) : vec;
+    if ((vec >= per) || (vec < 0) ){
+        vec %= per;
+        return (vec < 0) ? vec + per : vec;
+    }
+    else return vec;
 }
 
 void get_per(Vec_3D<double> &position, int per)
@@ -260,3 +264,6 @@ double std_dev(double* p_data, int len, double t_mean)
 	return sqrt(tmp / len);
 }
 
+#ifdef TEST
+#include "test_core_mesh.cpp"
+#endif
