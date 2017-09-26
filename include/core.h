@@ -28,17 +28,25 @@ public:
 	Vec_3D(){};
 	Vec_3D(T x, T y, T z):
 	vec({x, y, z}) {};
-	
-    // VARIABLES
-    std::array<T, 3> vec;
-	
+    
+    // ELEMENT ACCESS
+    inline T& operator[](int i){ return vec[i]; }
+    inline const T& operator[](int i) const { return vec[i]; }
+
+    // ITERATORS
+    typedef typename std::array<T, 3>::iterator iterator;
+    typedef typename std::array<T, 3>::const_iterator const_iterator;
+
+    inline iterator begin() noexcept { return vec.begin(); }
+    inline const_iterator cbegin() const noexcept { return vec.cbegin(); }
+    inline iterator end() noexcept { return vec.end(); }
+    inline const_iterator cend() const noexcept { return vec.end(); }
+    
 	// METHODS
 	double norm() const;
 	inline void fill(const T& value){ vec.fill(value); }
 		
-	// OPERATORS
-	inline T& operator[](int i){ return vec[i]; }
-	inline const T& operator[](int i) const { return vec[i]; }
+	// OPERATORS	
 	Vec_3D<T>& operator+=(const Vec_3D<T>& rhs);
     Vec_3D<T>& operator-=(const Vec_3D<T>& rhs);
     Vec_3D<T>& operator+=(T rhs);
@@ -46,7 +54,11 @@ public:
 	Vec_3D<T>& operator*=(T rhs);
 	Vec_3D<T>& operator/=(T rhs);
 	template<class U>
-	explicit operator Vec_3D<U>() const;
+    explicit operator Vec_3D<U>() const;
+    
+private:
+    // VARIABLES
+    std::array<T, 3> vec;
 };
 
 template <typename T> Vec_3D<T> operator+(Vec_3D<T> lhs, const Vec_3D<T>& rhs);

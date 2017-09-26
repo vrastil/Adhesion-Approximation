@@ -12,7 +12,8 @@
 void get_k_vec(int N, int index, int* k_vec);
 void get_k_vec(int N, int index, Vec_3D<int> &k_vec);
 int get_k_sq(int N, int index);
-int get_per(int vec, int per);
+inline int get_per(int vec, int per);
+inline double get_per(double vec, int per);
 void get_per(Vec_3D<double> &position, int per);
 void get_per(Vec_3D<int> &position, int per);
 void get_per(Vec_3D<int> &position, const Vec_3D<int> &per);

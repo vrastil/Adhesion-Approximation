@@ -153,7 +153,7 @@ Vec_3D<T>::operator Vec_3D<U>() const
     Vec_3D<U> lhs;
     for(unsigned i = 0; i < 3; ++i)
     {
-        lhs.vec[i] = static_cast<U>((*this)[i]);
+        lhs[i] = static_cast<U>((*this)[i]);
     }
 	return lhs;
 }
