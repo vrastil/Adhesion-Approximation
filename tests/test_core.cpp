@@ -39,6 +39,12 @@ TEST_CASE( "UNIT TEST: vector class {Vec_3D<T>}", "[core]" )
 
     CHECK( sumd == Approx(-1.) );
     CHECK( sumi == 1 );
+
+    CHECK( Vec_3D<int>(4, -3, 8) ==  Vec_3D<int>(4, -3, 8) );
+    CHECK_FALSE( Vec_3D<int>(4, -3, 8) !=  Vec_3D<int>(4, -3, 8) );
+    CHECK( Vec_3D<int>(4, -3, 8) <=  Vec_3D<int>(6, 0, 8) );
+    CHECK_FALSE( Vec_3D<int>(4, -3, 8) <  Vec_3D<int>(2, 0, 10) );
+    CHECK_FALSE( Vec_3D<int>(4, -3, 8) >  Vec_3D<int>(4, 0, 8) );
 }
 
 TEST_CASE( "UNIT TEST: mesh class {Mesh_base<T>}", "[core]" )

@@ -29,6 +29,9 @@ public:
 	Vec_3D(T x, T y, T z):
 	vec({x, y, z}) {};
     
+    // VARIABLES
+    std::array<T, 3> vec;
+
     // ELEMENT ACCESS
     inline T& operator[](int i){ return vec[i]; }
     inline const T& operator[](int i) const { return vec[i]; }
@@ -55,12 +58,9 @@ public:
 	Vec_3D<T>& operator/=(T rhs);
 	template<class U>
     explicit operator Vec_3D<U>() const;
-    
-private:
-    // VARIABLES
-    std::array<T, 3> vec;
 };
 
+// NON-MEMBER FUNCTIONS
 template <typename T> Vec_3D<T> operator+(Vec_3D<T> lhs, const Vec_3D<T>& rhs);
 template <typename T> Vec_3D<T> operator-(Vec_3D<T> lhs, const Vec_3D<T>& rhs);
 template <typename T> Vec_3D<T> operator*(Vec_3D<T> lhs, T rhs);
@@ -70,6 +70,13 @@ template <typename T> Vec_3D<T> operator+(T lhs, Vec_3D<T> rhs);
 template <typename T> Vec_3D<T> operator-(Vec_3D<T> lhs, T rhs);
 template <typename T> Vec_3D<T> operator-(T lhs, Vec_3D<T> rhs);
 template <typename T> Vec_3D<T> operator/(Vec_3D<T> lhs, T rhs);
+
+template <typename T> inline bool operator==(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){return lhs.vec == rhs.vec; }
+template <typename T> inline bool operator!=(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec != rhs.vec; }
+template <typename T> inline bool operator<(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec < rhs.vec; }
+template <typename T> inline bool operator<=(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec <= rhs.vec; }
+template <typename T> inline bool operator>(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec > rhs.vec; }
+template <typename T> inline bool operator>=(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec >= rhs.vec; }
 
 /**
  * @class:	Mesh_base<T>
