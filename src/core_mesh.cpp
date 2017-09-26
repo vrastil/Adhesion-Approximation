@@ -294,7 +294,7 @@ double std_dev(double* p_data, int len, double t_mean)
 	double tmp = 0;
 	
 	#pragma omp parallel for reduction(+:tmp)
-	for (int i = 0; i < len; i++) tmp += pow(p_data[i]-t_mean, 2.);
+	for (int i = 0; i < len; i++) tmp += (p_data[i]-t_mean)*(p_data[i]-t_mean);
 	
 	return sqrt(tmp / len);
 }
