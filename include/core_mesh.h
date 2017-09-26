@@ -23,9 +23,9 @@ double get_sgn_distance_1D(double x_from, double x_to, int per);
 double get_distance(const Vec_3D<double> &x_1, const Vec_3D<double> &x_2, int per);
 Vec_3D<double> get_sgn_distance(const Vec_3D<double> &x_from, const Vec_3D<double> &x_to, int per);
 
-void assign_to(Mesh* field, const Vec_3D<double> &position, const double value, int order);
-void assign_from(const Mesh &field, const Vec_3D<double> &position, double* value, int order);
-void assign_from(const std::vector< Mesh> &field, const Vec_3D<double> &position, Vec_3D<double>* value, int order);
+void assign_to(Mesh* field, const Vec_3D<double> &position, const double value, const int order);
+void assign_from(const Mesh &field, const Vec_3D<double> &position, double* value, const int order);
+void assign_from(const std::vector< Mesh> &field, const Vec_3D<double> &position, Vec_3D<double>* value, const int order);
 
 void fftw_execute_dft_r2c(const fftw_plan &p_F, Mesh& rho);
 void fftw_execute_dft_c2r(const fftw_plan &p_B, Mesh& rho);

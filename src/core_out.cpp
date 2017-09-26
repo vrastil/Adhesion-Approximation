@@ -99,9 +99,9 @@ void print_track_par(const Tracking& track, const Sim_Param &sim, string out_dir
 	fprintf (pFile, "# x [Mpc/h]\tz [Mpc/h]\n");
 	for (int i=0; i<track.num_track_par; i++){
 		for (int j=0; j<track.num_step();j++){
-			x = track.par_pos[j][i].position.x;
-			y = track.par_pos[j][i].position.y;
-			z = track.par_pos[j][i].position.z;
+			x = track.par_pos[j][i].position[0];
+			y = track.par_pos[j][i].position[1];
+			z = track.par_pos[j][i].position[2];
 			fprintf (pFile, "%f\t%f\t%f\n", x*x_0 , z*x_0, y*x_0);
 		}
 		fprintf (pFile, "\n\n");

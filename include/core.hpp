@@ -13,53 +13,23 @@
  */
 
 template <typename T>
-void Vec_3D<T>::assign(T x_, T y_, T z_)
+double Vec_3D<T>::norm() const
 {
-	x = x_;
-	y = y_;
-	z = z_;
-}
-
-template <typename T>
-T& Vec_3D<T>::operator[](int i)
-{
-	switch(i)
-	{
-		case 0 : return x;
-		case 1 : return y;
-		case 2 : return z;
-		default:
-		{
-			printf("Invalid acces in class Vec_3D. Invalid postion '%d'.\n", i);
-			if (i < 0) return x;
-			else return z;
-		}
-	}
-}
-
-template <typename T>
-const T& Vec_3D<T>::operator[](int i) const
-{
-	switch(i)
-	{
-		case 0 : return x;
-		case 1 : return y;
-		case 2 : return z;
-		default:
-		{
-			printf("Invalid acces in class Vec_3D. Invalid postion '%d'.\n", i);
-			if (i < 0) return x;
-			else return z;
-		}
-	}
+    T tmp(0);
+    for (T val : vec)
+    {
+        tmp += val*val;
+    }
+    return sqrt(tmp);
 }
 
 template <typename T>
 Vec_3D<T>& Vec_3D<T>::operator+=(const Vec_3D<T>& rhs)
 {
-	x+=rhs.x;
-	y+=rhs.y;
-	z+=rhs.z;
+    for(unsigned i = 0; i < 3; ++i)
+    {
+        vec[i] += rhs[i];
+    }
 	return *this;
 }
 
@@ -73,9 +43,10 @@ Vec_3D<T> operator+(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
 template <typename T>
 Vec_3D<T>& Vec_3D<T>::operator-=(const Vec_3D<T>& rhs)
 {
-	x-=rhs.x;
-	y-=rhs.y;
-	z-=rhs.z;
+    for(unsigned i = 0; i < 3; ++i)
+    {
+        vec[i] -= rhs[i];
+    }
 	return *this;
 }
 
@@ -87,11 +58,32 @@ Vec_3D<T> operator-(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
 }
 
 template <typename T>
+Vec_3D<T>& Vec_3D<T>::operator+=(T rhs)
+{
+    for(T val : vec)
+    {
+        val += rhs;
+    }
+	return *this;
+}
+
+template <typename T>
+Vec_3D<T>& Vec_3D<T>::operator-=(T rhs)
+{
+    for(T val : vec)
+    {
+        val -= rhs;
+    }
+	return *this;
+}
+
+template <typename T>
 Vec_3D<T>& Vec_3D<T>::operator*=(T rhs)
 {
-	x*=rhs;
-	y*=rhs;
-	z*=rhs;
+    for(T val : vec)
+    {
+        val *= rhs;
+    }
 	return *this;
 }
 
@@ -110,11 +102,40 @@ Vec_3D<T> operator*(T lhs, Vec_3D<T> rhs)
 }
 
 template <typename T>
+Vec_3D<T> operator+(Vec_3D<T> lhs, T rhs)
+{
+	lhs += rhs;
+	return lhs;
+}
+
+template <typename T>
+Vec_3D<T> operator+(T lhs, Vec_3D<T> rhs)
+{
+	rhs += lhs;
+	return rhs;
+}
+
+template <typename T>
+Vec_3D<T> operator-(Vec_3D<T> lhs, T rhs)
+{
+	lhs -= rhs;
+	return lhs;
+}
+
+template <typename T>
+Vec_3D<T> operator-(T lhs, Vec_3D<T> rhs)
+{
+	rhs -= lhs;
+	return rhs;
+}
+
+template <typename T>
 Vec_3D<T>& Vec_3D<T>::operator/=(T rhs)
 {
-	x/=rhs;
-	y/=rhs;
-	z/=rhs;
+    for(T val : vec)
+    {
+        val /= rhs;
+    }
 	return *this;
 }
 
@@ -129,10 +150,11 @@ template <typename T>
 template<class U>
 Vec_3D<T>::operator Vec_3D<U>() const
 {
-	Vec_3D<U> lhs;
-	lhs.x = static_cast<U>(this->x);
-	lhs.y = static_cast<U>(this->y);
-	lhs.z = static_cast<U>(this->z);
+    Vec_3D<U> lhs;
+    for(unsigned i = 0; i < 3; ++i)
+    {
+        lhs.vec[i] = static_cast<U>((*this)[i]);
+    }
 	return lhs;
 }
 
@@ -189,14 +211,14 @@ template <typename T>
 T& Mesh_base<T>::operator()(Vec_3D<int> pos)
 {
 	get_per(pos, N1, N2, N3);
-	return data[pos.x*N2*N3+pos.y*N3+pos.z]; 
+	return data[pos[0]*N2*N3+pos[1]*N3+pos[2]]; 
 }
 
 template <typename T>
 const T& Mesh_base<T>::operator()(Vec_3D<int> pos) const
 {
 	get_per(pos, N1, N2, N3);
-	return data[pos.x*N2*N3+pos.y*N3+pos.z];
+	return data[pos[0]*N2*N3+pos[1]*N3+pos[2]];
 }
 
 template <typename T>

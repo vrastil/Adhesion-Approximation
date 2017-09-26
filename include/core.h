@@ -27,20 +27,22 @@ public:
 	// CONSTRUCTORS
 	Vec_3D(){};
 	Vec_3D(T x, T y, T z):
-	x(x), y(y), z(z) {};
+	vec({x, y, z}) {};
 	
-	// VARIABLES
-	T x, y, z;
+    // VARIABLES
+    std::array<T, 3> vec;
 	
 	// METHODS
-	inline double norm(){ return sqrt(x*x+y*y+z*z); }
-	void assign(T x_, T y_, T z_);
+	double norm() const;
+	inline void fill(const T& value){ vec.fill(value); }
 		
 	// OPERATORS
-	T& operator[](int i);
-	const T& operator[](int i) const;
+	inline T& operator[](int i){ return vec[i]; }
+	inline const T& operator[](int i) const { return vec[i]; }
 	Vec_3D<T>& operator+=(const Vec_3D<T>& rhs);
-	Vec_3D<T>& operator-=(const Vec_3D<T>& rhs);
+    Vec_3D<T>& operator-=(const Vec_3D<T>& rhs);
+    Vec_3D<T>& operator+=(T rhs);
+	Vec_3D<T>& operator-=(T rhs);
 	Vec_3D<T>& operator*=(T rhs);
 	Vec_3D<T>& operator/=(T rhs);
 	template<class U>
@@ -51,6 +53,10 @@ template <typename T> Vec_3D<T> operator+(Vec_3D<T> lhs, const Vec_3D<T>& rhs);
 template <typename T> Vec_3D<T> operator-(Vec_3D<T> lhs, const Vec_3D<T>& rhs);
 template <typename T> Vec_3D<T> operator*(Vec_3D<T> lhs, T rhs);
 template <typename T> Vec_3D<T> operator*(T lhs, Vec_3D<T> rhs);
+template <typename T> Vec_3D<T> operator+(Vec_3D<T> lhs, T rhs);
+template <typename T> Vec_3D<T> operator+(T lhs, Vec_3D<T> rhs);
+template <typename T> Vec_3D<T> operator-(Vec_3D<T> lhs, T rhs);
+template <typename T> Vec_3D<T> operator-(T lhs, Vec_3D<T> rhs);
 template <typename T> Vec_3D<T> operator/(Vec_3D<T> lhs, T rhs);
 
 /**
@@ -149,7 +155,7 @@ public:
 	Particle_x(double x, double y, double z):
 	position(x,y,z) {};
 	Particle_x(Vec_3D<double> position):
-	position(position.x,position.y,position.z) {};
+	position(position) {};
 	
 	// VARIABLES
 	Vec_3D<double> position;
@@ -174,7 +180,7 @@ public:
 	Particle_v(double x, double y, double z, double vx, double vy, double vz):
 		Particle_x(x,y,z), velocity(vx,vy,vz) {};
 	Particle_v(Vec_3D<double> position, Vec_3D<double> velocity):
-		Particle_x(position), velocity(velocity.x, velocity.y, velocity.z) {};
+		Particle_x(position), velocity(velocity) {};
 	
 	// VARIABLES
 	Vec_3D<double> velocity;

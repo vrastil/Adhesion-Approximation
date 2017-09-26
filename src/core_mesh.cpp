@@ -182,45 +182,61 @@ double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num, const int o
 	return 0;
 }
 
-void assign_to(Mesh* field, const Vec_3D<double> &position, const double value, int order)
+class IT
+{
+public:
+    // CONSTRUCTORS
+    IT(const Vec_3D<double> &pos, int order):
+    counter(0), order(order), max_counter(order*order*order){
+        for(unsigned i = 0; i < 3; i++){
+            vec[i] = (int)(pos[i] - 0.5*(order - 1));
+        }
+    }
+
+    // VARIABLES
+    int counter;
+    const int order, max_counter;
+    Vec_3D<int> vec;
+
+    // METHODS
+    bool iter() const{ return counter != max_counter;}
+        
+    // OPERATORS
+    void operator++(){
+        counter++;
+        vec[2]++;
+        if ((counter % order) == 0){
+            vec[2] -= order;
+            vec[1]++;
+        }
+        if ((counter % (order*order)) == 0){
+            vec[1] -= order;
+            vec[0]++;
+        }
+    }
+};
+
+void assign_to(Mesh* field, const Vec_3D<double> &position, const double value, const int order)
 {
 
     // int rnd = rand() % (128*128);
-    // if (rnd < 10) printf("Position = [%f, %f, %f]\n", position.x, position.y, position.z);
+    // if (rnd < 10) printf("Position = [%f, %f, %f]\n", position[0], position[1], position[2]);
 
-	Vec_3D<int> y, z;
-	for (int i = 0; i < 3; i++) z[i] = (int)(position[i] - 0.5*(order - 1));
-	for (y[0] = z[0]; y[0] < z[0] + 1 + order; y[0]++)
-	{
-		for (y[1] = z[1]; y[1] < z[1] + 1 + order; y[1]++){
-		
-			for (y[2] = z[2]; y[2] < z[2] + 1 + order; y[2]++)
-			{
-				#pragma omp atomic
-				(*field)(y) += value * wgh_sch(position, y, field->N, order);
-			}
-		}
-	}
+    for (IT it(position, order); it.iter(); ++it){
+        #pragma omp atomic
+        (*field)(it.vec) += value * wgh_sch(position, it.vec, field->N, order);
+    }
 }
 
-void assign_from(const Mesh &field, const Vec_3D<double> &position, double* value, int order)
+void assign_from(const Mesh &field, const Vec_3D<double> &position, double* value, const int order)
 {
-	Vec_3D<int> y, z;
-	for (int i = 0; i < 3; i++) z[i] = (int)(position[i] - 0.5*(order - 1));
-	for (y[0] = z[0]; y[0] < z[0] + 1 + order; y[0]++)
-	{
-		for (y[1] = z[1]; y[1] < z[1] + 1 + order; y[1]++){
-		
-			for (y[2] = z[2]; y[2] < z[2] + 1 + order; y[2]++)
-			{
-				#pragma omp atomic
-				*value += field(y) * wgh_sch(position, y, field.N, order);
-			}
-		}
+	for (IT it(position, order); it.iter(); ++it){
+        #pragma omp atomic
+        *value += field(it.vec) * wgh_sch(position, it.vec, field.N, order);
 	}
 }
 
-void assign_from(const vector< Mesh> &field, const Vec_3D<double> &position, Vec_3D<double>* value, int order)
+void assign_from(const vector< Mesh> &field, const Vec_3D<double> &position, Vec_3D<double>* value, const int order)
 {
 	for (int i = 0; i < 3; i++) assign_from(field[i], position, &((*value)[i]), order);
 }

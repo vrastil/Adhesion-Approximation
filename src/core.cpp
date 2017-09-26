@@ -45,13 +45,13 @@ Mesh::Mesh(const Mesh& that): Mesh_base(that), N(that.N) {}
 double& Mesh::operator()(Vec_3D<int> pos)
 {
 	get_per(pos, N);
-	return data[pos.x*N2*N3+pos.y*N3+pos.z]; 
+	return data[pos[0]*N2*N3+pos[1]*N3+pos[2]]; 
 }
 
 const double & Mesh::operator()(Vec_3D<int> pos) const
 {
 	get_per(pos, N);
-	return data[pos.x*N2*N3+pos.y*N3+pos.z];
+	return data[pos[0]*N2*N3+pos[1]*N3+pos[2]];
 }
 
 Mesh& Mesh::operator+=(const double& rhs)

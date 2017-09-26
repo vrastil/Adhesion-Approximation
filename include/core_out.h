@@ -51,9 +51,9 @@ void print_dens_bin(const std::vector<int> &dens_binned, int mesh_num, std::stri
     double x_0 = sim.x_0();
 	for(int i=0; i < sim.par_num; i++)
 	{
-		x = particles[i].position.x;
-		y = particles[i].position.y;
-		z = particles[i].position.z;			
+		x = particles[i].position[0];
+		y = particles[i].position[1];
+		z = particles[i].position[2];			
 		dx = abs(y - sim.mesh_num/2.);
 		if ((dx < 0.5) && (x < sim.mesh_num/4.) && (z < sim.mesh_num/4.))
 		{

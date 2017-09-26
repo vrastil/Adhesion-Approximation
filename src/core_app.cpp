@@ -14,9 +14,9 @@ const double PI = acos(-1.);
 
 static void set_unpert_pos_one_par(Vec_3D<int>& unpert_pos, const int par_index, const int par_per_dim, const int Ng)
 {
-	unpert_pos.x = (par_index / (par_per_dim * par_per_dim)) * Ng;
-	unpert_pos.y = ((par_index / par_per_dim) % par_per_dim) * Ng;
-	unpert_pos.z = (par_index % par_per_dim) * Ng;
+	unpert_pos[0] = (par_index / (par_per_dim * par_per_dim)) * Ng;
+	unpert_pos[1] = ((par_index / par_per_dim) % par_per_dim) * Ng;
+	unpert_pos[2] = (par_index % par_per_dim) * Ng;
 }
 
 static void set_velocity_one_par(const Vec_3D<int>& unpert_pos, Vec_3D<double>& displ_field, const vector<Mesh> &vel_field)
@@ -107,7 +107,7 @@ void upd_pos_first_order(const Sim_Param &sim, const double db, Particle_x* part
 	#pragma omp parallel for private(v)
 	for (int i = 0; i < sim.par_num; i++)
 	{
-		v.assign(0., 0., 0.);
+		v.fill(0.);
 		assign_from(vel_field, particles[i].position, &v, order);
 		particles[i].position += v*db;
 		get_per(particles[i].position, Nm);
@@ -126,9 +126,9 @@ void upd_pos_second_order(const Sim_Param &sim, const double db, const double b,
 	for (int i = 0; i < sim.par_num; i++)
 	{
 		particles[i].position += particles[i].velocity*(db/2.);
-		f_half.assign(0., 0., 0.);
+		f_half.fill(0.);
 		assign_from(force_field, particles[i].position, &f_half, order);
-	//	if (i % (sim.par_num / 13) == 0) printf("particle num = %i, fl = (%f, %f, %f)\n", i, f_half.x, f_half.y, f_half.z);
+	//	if (i % (sim.par_num / 13) == 0) printf("particle num = %i, fl = (%f, %f, %f)\n", i, f_half[0], f_half[1], f_half[2]);
 		f_half = (particles[i].velocity - f_half)*(-3/(2.*(b-db/2.))); // <- EOM
 		
 		particles[i].velocity += f_half*db;
@@ -207,7 +207,7 @@ void upd_pos_second_order_w_short_force(const Sim_Param &sim, LinkedList* linked
 	#pragma omp parallel for private(f_half)
 	for (int i = 0; i < sim.par_num; i++)
 	{
-		f_half.assign(0., 0., 0.);
+		f_half.fill(0.);
 		
 		// long-range force
 		assign_from(force_field, particles[i].position, &f_half, order);
