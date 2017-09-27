@@ -152,15 +152,15 @@ class IT
 public:
     // CONSTRUCTORS
     IT(const Vec_3D<double> &pos, int order):
-    counter(0), order(order), max_counter(order*order*order){
+    counter(0), points(order+1), max_counter(points*points*points){
         for(unsigned i = 0; i < 3; i++){
-            vec[i] = (int)(pos[i] - 0.5*(order - 1));
+            vec[i] = (int)(pos[i] - 0.5*(points - 2));
         }
     }
 
     // VARIABLES
     int counter;
-    const int order, max_counter;
+    const int points, max_counter;
     Vec_3D<int> vec;
 
     // METHODS
@@ -170,20 +170,50 @@ public:
     void operator++(){
         counter++;
         vec[2]++;
-        if ((counter % order) == 0){
-            vec[2] -= order;
+        if ((counter % points) == 0){
+            vec[2] -= points;
             vec[1]++;
-        }
-        if ((counter % (order*order)) == 0){
-            vec[1] -= order;
-            vec[0]++;
+            if ((counter % (points*points)) == 0){
+                vec[1] -= points;
+                vec[0]++;
+            }
         }
     }
 };
 
 void assign_to(Mesh* field, const Vec_3D<double> &position, const double value, const int order)
 {
+// 	Vec_3D<int> y, z;
+// 	for (int i = 0; i < 3; i++) z[i] = (int)(position[i] - 0.5*(order - 1));
+// 	for (y[0] = z[0]; y[0] < z[0] + 1 + order; y[0]++)
+// 	{
+// 		for (y[1] = z[1]; y[1] < z[1] + 1 + order; y[1]++){
+		
+// 			for (y[2] = z[2]; y[2] < z[2] + 1 + order; y[2]++)
+// 			{
+// 				#pragma omp atomic
+// 				(*field)(y) += value * wgh_sch(position, y, field->N, order);
+// 			}
+// 		}
+// 	}
+// }
 
+// void assign_from(const Mesh &field, const Vec_3D<double> &position, double* value, int order)
+// {
+// 	Vec_3D<int> y, z;
+// 	for (int i = 0; i < 3; i++) z[i] = (int)(position[i] - 0.5*(order - 1));
+// 	for (y[0] = z[0]; y[0] < z[0] + 1 + order; y[0]++)
+// 	{
+// 		for (y[1] = z[1]; y[1] < z[1] + 1 + order; y[1]++){
+		
+// 			for (y[2] = z[2]; y[2] < z[2] + 1 + order; y[2]++)
+// 			{
+// 				#pragma omp atomic
+// 				*value += field(y) * wgh_sch(position, y, field.N, order);
+// 			}
+// 		}
+// 	}
+// }
     // int rnd = rand() % (128*128);
     // if (rnd < 10) printf("Position = [%f, %f, %f]\n", position[0], position[1], position[2]);
 

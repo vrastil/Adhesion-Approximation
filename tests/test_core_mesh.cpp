@@ -47,3 +47,34 @@ TEST_CASE( "UNIT TEST: periodicity functions {get_per}", "[core_mesh]" )
     get_per(pos4i, 5, 10, 4);
     CHECK( pos4i == Vec_3D<int>(0, 0, 2) );
 }
+
+TEST_CASE( "UNIT TEST: assign functions iterator {IT}", "[core_mesh]" )
+{
+    IT it0(Vec_3D<double>(3.2, 7.8, 4.0), 0);
+    CHECK( it0.counter == 0);
+    CHECK( it0.points == 1);
+    CHECK( it0.max_counter == 1);
+    CHECK( it0.iter() );
+    REQUIRE( it0.vec == Vec_3D<int>(3, 8, 4) );
+    ++it0;
+    CHECK_FALSE( it0.iter() );
+
+    IT it1(Vec_3D<double>(3.2, 7.8, 4.0), 1);
+    CHECK( it1.counter == 0);
+    CHECK( it1.points == 2);
+    CHECK( it1.max_counter == 8);
+    CHECK( it1.iter() );
+    REQUIRE( it1.vec == Vec_3D<int>(3, 7, 4) );
+
+    ++it1;
+    CHECK( it1.iter() );
+    CHECK( it1.vec == Vec_3D<int>(3, 7, 5) );
+    ++it1;
+    CHECK( it1.vec == Vec_3D<int>(3, 8, 4) );
+    for(int i = 0; i < 5; i++) ++it1;
+
+    CHECK( it1.vec == Vec_3D<int>(4, 8, 5) );
+    CHECK( it1.vec[0] == 4 );
+    CHECK( it1.vec[1] == 8 );
+    CHECK( it1.vec[2] == 5 );
+}
