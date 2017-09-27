@@ -23,23 +23,20 @@ double transfer_function_2(double k, void* parameters)
 double power_spectrum_T(double k, double* parameters)
 {
 	if (k == 0) return 0;
-	double A = parameters[0];
-	double ns = parameters[1];
-	return A*pow(k, ns)*transfer_function_2(k, parameters);
+	const double ns = parameters[1];
+	return pow(k, ns)*transfer_function_2(k, parameters);
 }
 
 double power_spectrum_scale_free(double k, double* parameters)
 {
 	if (k == 0) return 0;
-	double A = parameters[0];
-	double ns = parameters[1];
-	return A*pow(k, ns);
+	const double ns = parameters[1];
+	return pow(k, ns);
 }
 
 double flat_power_spectrum(double k, double* parameters)
 {
-	double A = parameters[0];
-	return A;
+	return 1;
 }
 
 double single_power_spectrum_T(double k, double* parameters)
@@ -50,14 +47,15 @@ double single_power_spectrum_T(double k, double* parameters)
 
 double power_spectrum(double k, double* parameters)
 {
+    const double A = parameters[0];
 	e_power_spec pwr_type = static_cast<e_power_spec>(parameters[2]);
 	switch (pwr_type)
 	{
-		case power_law_T: return power_spectrum_T(k, parameters);
-		case power_law: return power_spectrum_scale_free(k, parameters);
-		case flat: return flat_power_spectrum(k, parameters);
-		case single: return single_power_spectrum_T(k, parameters);
-		default: return power_spectrum_T(k, parameters);
+		case power_law_T: return A*power_spectrum_T(k, parameters);
+		case power_law: return A*power_spectrum_scale_free(k, parameters);
+		case flat: return A*flat_power_spectrum(k, parameters);
+		case single: return A*single_power_spectrum_T(k, parameters);
+		default: return A*power_spectrum_T(k, parameters);
 	}
 }
 
@@ -76,7 +74,7 @@ void norm_pwr(Pow_Spec_Param* pwr_par)
 	gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
 	double result, error;
 	
-	double parameters[3] = {pwr_par->A, pwr_par->ns, static_cast<double>(pwr_par->pwr_type)};
+	double parameters[3] = {1., pwr_par->ns, static_cast<double>(pwr_par->pwr_type)};
 	gsl_function F;
 	F.function = &power_spectrum_s8;
 	F.params = parameters;
