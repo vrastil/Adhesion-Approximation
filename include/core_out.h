@@ -49,7 +49,7 @@ void print_dens_bin(const std::vector<int> &dens_binned, int mesh_num, std::stri
 	fprintf (pFile, "# This file contains positions of particles in units [Mpc/h].\n");
     double x, y, z, dx;
     double x_0 = sim.x_0();
-	for(int i=0; i < sim.par_num; i++)
+	for(unsigned i=0; i < sim.par_num; i++)
 	{
 		x = particles[i].position[0];
 		y = particles[i].position[1];

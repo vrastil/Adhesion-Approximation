@@ -165,7 +165,7 @@ Vec_3D<T>::operator Vec_3D<U>() const
  */
 
 template <typename T>
-Mesh_base<T>::Mesh_base(int n1, int n2, int n3):N1(n1), N2(n2), N3(n3), length(n1*n2*n3)
+Mesh_base<T>::Mesh_base(unsigned n1, unsigned n2, unsigned n3):N1(n1), N2(n2), N3(n3), length(n1*n2*n3)
 {
 	data = new T[length];
 //	printf("Normal base ctor %p, N1 = %i, N2 = %i, N3 = %i\n", this, N1, N2, N3); 
@@ -177,7 +177,7 @@ Mesh_base<T>::Mesh_base(const Mesh_base<T>& that): N1(that.N1), N2(that.N2), N3(
 	data = new T[length];
 	
 	#pragma omp parallel for
-	for (int i = 0; i < length; i++) data[i] = that.data[i];
+	for (unsigned i = 0; i < length; i++) data[i] = that.data[i];
 //	printf("Copy base ctor %p\n", this);
 }
 
@@ -225,7 +225,7 @@ template <typename T>
 Mesh_base<T>& Mesh_base<T>::operator+=(const T& rhs)
 {
 	#pragma omp parallel for
-		for (int i = 0; i < length; i++) this->data[i]+=rhs;
+		for (unsigned i = 0; i < length; i++) this->data[i]+=rhs;
 		
 	return *this;
 }
@@ -234,7 +234,7 @@ template <typename T>
 Mesh_base<T>& Mesh_base<T>::operator*=(const T& rhs)
 {
 	#pragma omp parallel for
-		for (int i = 0; i < length; i++) this->data[i]*=rhs;
+		for (unsigned i = 0; i < length; i++) this->data[i]*=rhs;
 		
 	return *this;
 }
@@ -243,7 +243,7 @@ template <typename T>
 Mesh_base<T>& Mesh_base<T>::operator/=(const T& rhs)
 {
 	#pragma omp parallel for
-		for (int i = 0; i < length; i++) this->data[i]/=rhs;
+		for (unsigned i = 0; i < length; i++) this->data[i]/=rhs;
 		
 	return *this;
 }
@@ -252,7 +252,7 @@ template <typename T>
 void Mesh_base<T>::assign(T val)
 {
 	#pragma omp parallel for
-	for (int i = 0; i < length; i++) this->data[i]=val;
+	for (unsigned i = 0; i < length; i++) this->data[i]=val;
 }
 
 
@@ -303,6 +303,7 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
     print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init, out_dir_app, z_suffix());
     
     /* Printing correlation function */
-    power_aux.reset_im(); // P(k) is a real function
-    fftw_execute_dft_c2r(p_B_pwr, power_aux);
+    // power_aux.reset_im(); // P(k) is a real function
+    // fftw_execute_dft_c2r(p_B_pwr, power_aux);
+    // gen_corr_func_binned(sim, power_aux, &corr_func_binned);
 }

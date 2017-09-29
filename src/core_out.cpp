@@ -98,7 +98,7 @@ void print_track_par(const Tracking& track, const Sim_Param &sim, string out_dir
 	fprintf (pFile, "# This file contains positions of particles in units [Mpc/h].\n");
 	fprintf (pFile, "# x [Mpc/h]\tz [Mpc/h]\n");
 	for (int i=0; i<track.num_track_par; i++){
-		for (int j=0; j<track.num_step();j++){
+		for (unsigned j=0; j<track.num_step();j++){
 			x = track.par_pos[j][i].position[0];
 			y = track.par_pos[j][i].position[1];
 			z = track.par_pos[j][i].position[2];
@@ -118,8 +118,8 @@ void print_rho_map(const Mesh& delta, const Sim_Param &sim, string out_dir, stri
 	cout << "Writing density map into file " << out_dir + "rho_map" + suffix + ".dat\n";
 	fprintf (pFile, "# This file contains density map delta(x).\n");
 	fprintf (pFile, "# x [Mpc/h]\tz [Mpc/h]\tdelta\n");
-	for (int i = 0; i < sim.mesh_num_pwr; i++){
-		for (int j = 0; j < sim.mesh_num_pwr; j++){
+	for (unsigned i = 0; i < sim.mesh_num_pwr; i++){
+		for (unsigned j = 0; j < sim.mesh_num_pwr; j++){
 			fprintf (pFile, "%f\t%f\t%f\n", i*x_0, j*x_0, delta(i, sim.mesh_num_pwr/2, j));
 		}
 		fprintf (pFile, "\n");
@@ -138,10 +138,10 @@ void print_projected_rho(const Mesh& delta, const Sim_Param &sim, string out_dir
 	fprintf (pFile, "# This file contains density map delta(x).\n");
 	fprintf (pFile, "# x [Mpc/h]\tz [Mpc/h]\tdelta\n");
 	double rho, rho_tmp;
-	for (int i = 0; i < sim.mesh_num_pwr; i++){
-		for (int j = 0; j < sim.mesh_num_pwr; j++){
+	for (unsigned i = 0; i < sim.mesh_num_pwr; i++){
+		for (unsigned j = 0; j < sim.mesh_num_pwr; j++){
 			rho = 0;
-			for (int k = 0; k < sim.mesh_num_pwr; k++){
+			for (unsigned k = 0; k < sim.mesh_num_pwr; k++){
 				rho_tmp = delta(i, k, j);
 			//	if (rho_tmp != -1) printf("Density in (%i, %i, %i) = %f\n", i, j, k, rho_tmp);
 				rho+=rho_tmp + 1;

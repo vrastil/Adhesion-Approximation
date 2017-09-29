@@ -93,12 +93,12 @@ protected:
 	
 public:
 	// CONSTRUCTORS & DESTRUCTOR
-	Mesh_base(int n1, int n2, int n3);
+	Mesh_base(unsigned n1, unsigned n2, unsigned n3);
 	Mesh_base(const Mesh_base& that);
 	~Mesh_base();
 	
 	// VARIABLES
-	int N1, N2, N3, length; // acces dimensions and length of mesh
+	unsigned N1, N2, N3, length; // acces dimensions and length of mesh
 	
 	// METHODS
 	inline T* real() const { return data;} // acces data
@@ -137,11 +137,11 @@ class Mesh : public Mesh_base<double>
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR
-	Mesh(int n);
+	Mesh(unsigned n);
 	Mesh(const Mesh& that);
 	
 	// VARIABLES
-	int N; // acces dimension of mesh
+	unsigned N; // acces dimension of mesh
 	
 	// METHODS
     inline fftw_complex* complex() const { return reinterpret_cast<fftw_complex*>(data);}
@@ -242,7 +242,7 @@ public:
 	std::vector<std::vector<Particle_x>> par_pos;
 	
 	// METHODS
-	inline const int num_step() const{return par_pos.size();};
+	inline const unsigned num_step() const{return par_pos.size();};
 	template <class T>  void update_track_par(T* particles);
 };
 
@@ -255,16 +255,16 @@ class Sim_Param
 {
 public:
 	// VARIABLES
-    int par_num, mesh_num, mesh_num_pwr, Ng, Ng_pwr, box_size, print_every;
-    int order = 1, bin_num = 100;
+    unsigned par_num, mesh_num, mesh_num_pwr, Ng, Ng_pwr, box_size, print_every;
+    unsigned order = 1, bin_num = 100;
 	double k_min, k_max;
 	unsigned long seed = 12345678;
 	double z_in, z_out;
 	double b_in, b_out, db;
 	double nu;
-	int nt;
+	unsigned nt;
 	double rs, Hc, a;
-	int M;
+	unsigned M;
 	std::string out_dir;
 	Pow_Spec_Param power;
 	bool comp_ZA, comp_FF, comp_FP, comp_AA, comp_FP_pp;

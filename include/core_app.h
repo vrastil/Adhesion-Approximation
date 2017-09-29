@@ -49,13 +49,13 @@ void get_rho_from_par(T* particles, Mesh* rho, const Sim_Param &sim)
     const double mesh_mod = (double)sim.mesh_num_pwr/sim.mesh_num;
 
     #pragma omp parallel for
-    for (int i = 0; i < rho->length; i++)
+    for (unsigned i = 0; i < rho->length; i++)
     {
         (*rho)[i]=-1.;
     }
     
     #pragma omp parallel for
-    for (int i = 0; i < sim.par_num; i++)
+    for (unsigned i = 0; i < sim.par_num; i++)
     {
         assign_to(rho, particles[i].position*mesh_mod, m, sim.order);
     }

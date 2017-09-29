@@ -38,7 +38,7 @@ const char *humanSize(uint64_t bytes){
  * @brief:	creates a mesh of N*N*(N+2) cells
  */
 
-Mesh::Mesh(int n): Mesh_base(n, n, n+2), N(n) {}
+Mesh::Mesh(unsigned n): Mesh_base(n, n, n+2), N(n) {}
 
 Mesh::Mesh(const Mesh& that): Mesh_base(that), N(that.N) {}
 
@@ -46,7 +46,7 @@ void Mesh::reset_part(bool part)
 {
     /* nullify real (part = 0) or complex (part = 1) part of a field */
     #pragma omp parallel for
-    for (int i = part; i < this->length / 2; i+=2){
+    for (unsigned i = part; i < this->length / 2; i+=2){
         (*this)[i] = 0;
     }
 }
@@ -66,7 +66,7 @@ const double & Mesh::operator()(Vec_3D<int> pos) const
 Mesh& Mesh::operator+=(const double& rhs)
 {
 	#pragma omp parallel for
-		for (int i = 0; i < length; i++) this->data[i]+=rhs;
+		for (unsigned i = 0; i < length; i++) this->data[i]+=rhs;
 		
 	return *this;
 }
@@ -74,7 +74,7 @@ Mesh& Mesh::operator+=(const double& rhs)
 Mesh& Mesh::operator*=(const double& rhs)
 {
 	#pragma omp parallel for
-		for (int i = 0; i < length; i++) this->data[i]*=rhs;
+		for (unsigned i = 0; i < length; i++) this->data[i]*=rhs;
 		
 	return *this;
 }
@@ -82,7 +82,7 @@ Mesh& Mesh::operator*=(const double& rhs)
 Mesh& Mesh::operator/=(const double& rhs)
 {
 	#pragma omp parallel for
-		for (int i = 0; i < length; i++) this->data[i]/=rhs;
+		for (unsigned i = 0; i < length; i++) this->data[i]/=rhs;
 		
 	return *this;
 }
