@@ -260,6 +260,16 @@ double std_dev(double* p_data, int len, double t_mean)
 	return sqrt(tmp / len);
 }
 
+double min(double* p_data, int len)
+{
+    return *std::min_element(p_data,p_data+len);
+}
+
+double max(double* p_data, int len)
+{
+    return *std::max_element(p_data,p_data+len);
+}
+
 #ifdef TEST
 #include "test_core_mesh.cpp"
 #endif

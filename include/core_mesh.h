@@ -35,3 +35,5 @@ void fftw_execute_dft_c2r_triple(const fftw_plan &p_B, std::vector<Mesh>& rho);
 
 double mean(double* p_data, int len);
 double std_dev(double* p_data, int len, double t_mean);
+double min(double* p_data, int len);
+double max(double* p_data, int len);

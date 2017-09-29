@@ -282,7 +282,6 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
 {
 	/* Printing positions */
 	print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
-	track.update_track_par(particles);
 	print_track_par(track, sim, out_dir_app, z_suffix());
 
 	/* Printing density */

@@ -4,13 +4,15 @@ CXX = g++-6.4
 #CXX = g++-7.2
 
 CXXFLAGS =-std=c++11 -pipe
-
-CXXFLAGS +=-Og -g -Wall
-#CXXFLAGS +=-Ofast -march=native
+#CXXFLAGS +=-Og -g -Wall
+CXXFLAGS +=-Ofast -march=native
 CXXFLAGS +=-MMD
 CXXFLAGS +=-fopenmp
 
-# CXXFLAGS +=-D FFTW_SYM
+CXXFLAGS +=-D CORR
+#CXXFLAGS +=-D REAL_NOISE
+#CXXFLAGS +=-D FFTW_SYM
+#CXXFLAGS +=-D OLD_NORM
 
 CXXLIB_PATH +=-L/usr/local/lib/
 # -L/lib/
