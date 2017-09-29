@@ -42,6 +42,15 @@ Mesh::Mesh(int n): Mesh_base(n, n, n+2), N(n) {}
 
 Mesh::Mesh(const Mesh& that): Mesh_base(that), N(that.N) {}
 
+void Mesh::reset_part(bool part)
+{
+    /* nullify real (part = 0) or complex (part = 1) part of a field */
+    #pragma omp parallel for
+    for (int i = part; i < this->length / 2; i+=2){
+        (*this)[i] = 0;
+    }
+}
+
 double& Mesh::operator()(Vec_3D<int> pos)
 {
 	get_per(pos, N);

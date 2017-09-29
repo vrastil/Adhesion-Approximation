@@ -118,16 +118,16 @@ double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num, const int o
 	case 0: {	// NGP: Nearest grid point
 				for (int i = 0; i < 3; i++)
 				{
-					if ((int)x[i] != y[i]) w *= 0;
+					if ((int)x[i] != y[i]) return 0;
 				}
-				return w;
+				return 1;
 	}
 	case 1: {	// CIC: Cloud in cells
 				for (int i = 0; i < 3; i++)
 				{
 				//	dx = fmin(fmin(abs(x[i] - y[i]), x[i] + mesh_num - y[i]), y[i] + mesh_num - x[i]);
 					dx = get_distance_1D(x[i], y[i], mesh_num);
-					if (dx > 1) w *= 0;
+					if (dx > 1) return 0;
 					else w *= 1 - dx;
 				}
 				return w;
@@ -137,7 +137,7 @@ double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num, const int o
 				{
 				//	dx = fmin(fmin(abs(x[i] - y[i]), x[i] + mesh_num - y[i]), y[i] + mesh_num - x[i]);
 					dx = get_distance_1D(x[i], y[i], mesh_num);
-					if (dx > 1.5) w *= 0;
+					if (dx > 1.5) return 0;
 					else if (dx > 0.5) w *= (1.5 - dx)*(1.5 - dx) / 2.0;
 					else w *= 3 / 4.0 - dx*dx;
 				}

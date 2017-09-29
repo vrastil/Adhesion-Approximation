@@ -144,8 +144,11 @@ public:
 	int N; // acces dimension of mesh
 	
 	// METHODS
-	inline fftw_complex* complex() const { return reinterpret_cast<fftw_complex*>(data);}
-	
+    inline fftw_complex* complex() const { return reinterpret_cast<fftw_complex*>(data);}
+    void reset_part(bool part);
+    inline void reset_re() { reset_part(0); }
+    inline void reset_im() { reset_part(1); }
+    
 	// OPERATORS
 	using Mesh_base<double>::operator ();
 	double& operator()(Vec_3D<int> pos);

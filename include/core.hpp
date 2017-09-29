@@ -300,5 +300,9 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
         b_init = b;
         is_init_pwr_spec_0 = true;
     }
-	print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init, out_dir_app, z_suffix());
+    print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init, out_dir_app, z_suffix());
+    
+    /* Printing correlation function */
+    power_aux.reset_im(); // P(k) is a real function
+    fftw_execute_dft_c2r(p_B_pwr, power_aux);
 }

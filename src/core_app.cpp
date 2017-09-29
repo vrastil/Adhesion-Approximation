@@ -333,13 +333,12 @@ void gen_rho_dist_k(const Sim_Param &sim, Mesh* rho, const fftw_plan &p_F)
 
 void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux)
 {
-	/* Computing the power spectrum P(k) */	
-	/* Preserve values in rho_k */
+	/* Computing the power spectrum P(k)/L^3 -- dimensionLESS!
+	 Preserve values in rho_k */
 	
 	double w_k;
     Vec_3D<int> k_vec;
     const int order = sim.order;
-    const int Nm = sim.mesh_num;
     const int NM = sim.mesh_num_pwr;
     const int L = sim.box_size;
     const double k0 = 2.*PI/L;
@@ -348,21 +347,18 @@ void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux)
 	for(int i=0; i < rho_k.length/2;i++)
 	{
 		w_k = 1.;
-		get_k_vec(rho_k.N, i, k_vec);
+		get_k_vec(NM, i, k_vec);
 		for (int j = 0; j < 3; j++) if (k_vec[j] != 0) w_k *= pow(sin(PI*k_vec[j]/NM)/(PI*k_vec[j]/NM), order + 1);
         (*power_aux)[2*i+1] = (rho_k[2*i]*rho_k[2*i] + rho_k[2*i+1]*rho_k[2*i+1])/(w_k*w_k);
-        #ifndef OLD_NORM
-        (*power_aux)[2*i+1] *= pow(L, 3.);
-        #endif
-
-		(*power_aux)[2*i] = k0*k_vec.norm(); // physical k
+		(*power_aux)[2*i] = k0*k_vec.norm(); // physical k - dimensionFULL!
 	}
 }
 
 void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, vector<double_2>* pwr_spec_binned)
 {
-	double log_bin = pow(sim.k_max / sim.k_min, 1./sim.bin_num);
-	double k;
+	const double log_bin = pow(sim.k_max / sim.k_min, 1./sim.bin_num);
+    double k;
+    const int L = sim.box_size;
 	int bin;
 	printf("Computing binned power spectrum P(k)...\n");
 		 
@@ -377,8 +373,14 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, vector<dou
 		k = power_aux[2*i];
 		if ((k <=sim.k_max) && (k>=sim.k_min)){
             bin = (int)(log(k/sim.k_min)/log(log_bin));
+
+            #ifndef OLD_NORM
+            (*pwr_spec_binned)[bin][1] += power_aux[2*i+1]*pow(L, 3.); // P(k) - dimensionFULL!
+            #else
             #pragma omp atomic
-            (*pwr_spec_binned)[bin][1] += power_aux[2*i+1]; // P(k)
+            (*pwr_spec_binned)[bin][1] += power_aux[2*i+1]; // P(k) 
+            #endif
+
             #pragma omp atomic
 			(*pwr_spec_binned)[bin][0]++;
 		}
