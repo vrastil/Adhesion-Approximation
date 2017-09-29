@@ -62,6 +62,7 @@ int frozen_potential(const Sim_Param &sim)
 	fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
 
     /* Setting initial (binned) power spectrum, WARNING: power_aux is modified */
+    APP.track.update_track_par(APP.particles);
 	APP.print(sim, out_dir_app);
 	APP.upd_time();
 	
@@ -76,7 +77,8 @@ int frozen_potential(const Sim_Param &sim)
 		/* Updating positions of particles... */
 		printf("Updating positions of particles...\n");
 		upd_pos_second_order(sim, APP.db, APP.b, APP.particles, APP.app_field);
-		
+        
+        APP.track.update_track_par(APP.particles);
 		if (APP.printing()) APP.print(sim, out_dir_app);
 		APP.upd_time();
 	}

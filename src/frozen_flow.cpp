@@ -51,6 +51,7 @@ int frozen_flow(const Sim_Param &sim)
     set_pert_pos(sim, sim.b_in,  APP.particles, APP.app_field);
 
     /* Setting initial (binned) power spectrum, WARNING: power_aux is modified */
+    APP.track.update_track_par(APP.particles);
 	APP.print(sim, out_dir_app);
 	APP.upd_time();
 
@@ -65,7 +66,8 @@ int frozen_flow(const Sim_Param &sim)
 		/* Updating positions of particles... */
 		printf("Updating positions of particles...\n");
 		upd_pos_first_order(sim, APP.db, APP.particles, APP.app_field);
-		
+        
+        APP.track.update_track_par(APP.particles);
 		if (APP.printing()) APP.print(sim, out_dir_app);
 		APP.upd_time();
 	}
