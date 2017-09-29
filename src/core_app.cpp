@@ -331,6 +331,27 @@ void gen_rho_dist_k(const Sim_Param &sim, Mesh* rho, const fftw_plan &p_F)
 	gen_rho_w_pow_k(sim, rho);
 }
 
+template <class T>
+void get_rho_from_par(T* particles, Mesh* rho, const Sim_Param &sim)
+{
+    printf("Computing the density field from particle positions...\n");
+    const double m = pow(sim.Ng_pwr, 3.);
+    
+    const double mesh_mod = (double)sim.mesh_num_pwr/sim.mesh_num;
+
+    #pragma omp parallel for
+    for (unsigned i = 0; i < rho->length; i++)
+    {
+        (*rho)[i]=-1.;
+    }
+    
+    #pragma omp parallel for
+    for (unsigned i = 0; i < sim.par_num; i++)
+    {
+        assign_to(rho, particles[i].position*mesh_mod, m, sim.order);
+    }
+}
+
 void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux)
 {
 	/* Computing the power spectrum P(k)/L^3 -- dimensionLESS!
@@ -557,3 +578,6 @@ void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param 
 		}
 	}
 }
+
+template void get_rho_from_par(Particle_x* particles, Mesh* rho, const Sim_Param &sim);
+template void get_rho_from_par(Particle_v* particles, Mesh* rho, const Sim_Param &sim);

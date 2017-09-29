@@ -41,6 +41,39 @@ void work_dir_over(string out_dir)
 	create_dir(out_dir + "rho_bin/");
 }
 
+template <class T>
+void print_par_pos_cut_small(T* particles, const Sim_Param &sim, std::string out_dir, std::string suffix)
+{
+   out_dir += "par_cut/";
+   std::string file_name = out_dir + "par_cut" + suffix + ".dat";
+   FILE* pFile;
+   pFile = fopen(file_name.c_str(), "w");
+   if (pFile == NULL)
+   {
+       printf("Error while opening %s\n", file_name.c_str());
+       perror("Error");
+       return;
+   }
+   
+   std::cout << "Writing small cut through the box of particles into file " << out_dir + "par_cut" + suffix + ".dat\n";
+   fprintf (pFile, "# This file contains positions of particles in units [Mpc/h].\n");
+   double x, y, z, dx;
+   double x_0 = sim.x_0();
+   for(unsigned i=0; i < sim.par_num; i++)
+   {
+       x = particles[i].position[0];
+       y = particles[i].position[1];
+       z = particles[i].position[2];			
+       dx = abs(y - sim.mesh_num/2.);
+       if ((dx < 0.5) && (x < sim.mesh_num/4.) && (z < sim.mesh_num/4.))
+       {
+           // cut (L/4 x L/4 x 0.5)
+           fprintf (pFile, "%f\t%f\t%f\n", x*x_0 , z*x_0, y*x_0);
+       }
+   }
+   fclose (pFile);
+}
+
 void print_pow_spec(const vector<double_2> &pwr_spec_binned, string out_dir, string suffix)
 {
 	out_dir += "pwr_spec/";
@@ -172,3 +205,6 @@ void print_dens_bin(const vector<int> &dens_binned, int mesh_num, string out_dir
 
 	fclose (pFile);
 }
+
+template void print_par_pos_cut_small(Particle_x* particles, const Sim_Param &sim, std::string out_dir, std::string suffix);
+template void print_par_pos_cut_small(Particle_v* particles, const Sim_Param &sim, std::string out_dir, std::string suffix);

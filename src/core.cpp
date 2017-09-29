@@ -9,6 +9,7 @@
 #include "core_cmd.h"
 #include "core_out.h"
 #include "core_app.h"
+#include "core_mesh.h"
 #include "json.hpp"
 
 using namespace std;
@@ -32,6 +33,254 @@ const char *humanSize(uint64_t bytes){
 	sprintf(output, "%.02lf %s", dblBytes, suffix[i]);
 	return output;
 }
+
+/**
+ * @class:	Vec_3D<T>
+ * @brief:	class handling basic 3D-vector functions
+ */
+
+ template <typename T>
+ double Vec_3D<T>::norm() const
+ {
+     T tmp(0);
+     for (const T val : vec)
+     {
+         tmp += val*val;
+     }
+     return sqrt(tmp);
+ }
+ 
+ template <typename T>
+ Vec_3D<T>& Vec_3D<T>::operator+=(const Vec_3D<T>& rhs)
+ {
+     for(unsigned i = 0; i < 3; ++i)
+     {
+         vec[i] += rhs[i];
+     }
+     return *this;
+ }
+ 
+ template <typename T>
+ Vec_3D<T> operator+(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
+ {
+     lhs += rhs;
+     return lhs;
+ }
+ 
+ template <typename T>
+ Vec_3D<T>& Vec_3D<T>::operator-=(const Vec_3D<T>& rhs)
+ {
+     for(unsigned i = 0; i < 3; ++i)
+     {
+         vec[i] -= rhs[i];
+     }
+     return *this;
+ }
+ 
+ template <typename T>
+ Vec_3D<T> operator-(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
+ {
+     lhs -= rhs;
+     return lhs;
+ }
+ 
+ template <typename T>
+ Vec_3D<T>& Vec_3D<T>::operator+=(T rhs)
+ {
+     for(T& val : vec)
+     {
+         val += rhs;
+     }
+     return *this;
+ }
+ 
+ template <typename T>
+ Vec_3D<T>& Vec_3D<T>::operator-=(T rhs)
+ {
+     for(T& val : vec)
+     {
+         val -= rhs;
+     }
+     return *this;
+ }
+ 
+ template <typename T>
+ Vec_3D<T>& Vec_3D<T>::operator*=(T rhs)
+ {
+     for(T& val : vec)
+     {
+         val *= rhs;
+     }
+     return *this;
+ }
+ 
+ template <typename T>
+ Vec_3D<T> operator*(Vec_3D<T> lhs, T rhs)
+ {
+     lhs *= rhs;
+     return lhs;
+ }
+ 
+ template <typename T>
+ Vec_3D<T> operator*(T lhs, Vec_3D<T> rhs)
+ {
+     rhs *= lhs;
+     return rhs;
+ }
+ 
+ template <typename T>
+ Vec_3D<T> operator+(Vec_3D<T> lhs, T rhs)
+ {
+     lhs += rhs;
+     return lhs;
+ }
+ 
+ template <typename T>
+ Vec_3D<T> operator+(T lhs, Vec_3D<T> rhs)
+ {
+     rhs += lhs;
+     return rhs;
+ }
+ 
+ template <typename T>
+ Vec_3D<T> operator-(Vec_3D<T> lhs, T rhs)
+ {
+     lhs -= rhs;
+     return lhs;
+ }
+ 
+ template <typename T>
+ Vec_3D<T> operator-(T lhs, Vec_3D<T> rhs)
+ {
+     rhs -= lhs;
+     return rhs;
+ }
+ 
+ template <typename T>
+ Vec_3D<T>& Vec_3D<T>::operator/=(T rhs)
+ {
+     for(T& val : vec)
+     {
+         val /= rhs;
+     }
+     return *this;
+ }
+ 
+ template <typename T>
+ Vec_3D<T> operator/(Vec_3D<T> lhs, T rhs)
+ {
+     lhs /= rhs;
+     return lhs;
+ }
+ 
+ template <typename T>
+ template<class U>
+ Vec_3D<T>::operator Vec_3D<U>() const
+ {
+     Vec_3D<U> lhs;
+     for(unsigned i = 0; i < 3; ++i)
+     {
+         lhs[i] = static_cast<U>((*this)[i]);
+     }
+     return lhs;
+ }
+ 
+ /**
+  * @class:	Mesh_base<T>
+  * @brief:	class handling basic mesh functions, the most important are creating and destroing the underlying data structure
+  *			creates a mesh of N1*N2*N3 cells
+  */
+ 
+ template <typename T>
+ Mesh_base<T>::Mesh_base(unsigned n1, unsigned n2, unsigned n3):N1(n1), N2(n2), N3(n3), length(n1*n2*n3)
+ {
+     data = new T[length];
+ //	printf("Normal base ctor %p, N1 = %i, N2 = %i, N3 = %i\n", this, N1, N2, N3); 
+ }
+ 
+ template <typename T>
+ Mesh_base<T>::Mesh_base(const Mesh_base<T>& that): N1(that.N1), N2(that.N2), N3(that.N3), length(that.length)
+ {
+     data = new T[length];
+     
+     #pragma omp parallel for
+     for (unsigned i = 0; i < length; i++) data[i] = that.data[i];
+ //	printf("Copy base ctor %p\n", this);
+ }
+ 
+ template <typename T>
+ void swap(Mesh_base<T>& first, Mesh_base<T>& second)
+ {
+     std::swap(first.length, second.length);
+     std::swap(first.N1, second.N1);
+     std::swap(first.N2, second.N2);
+     std::swap(first.N3, second.N3);
+     std::swap(first.data, second.data);
+ }
+ 
+ template <typename T>
+ Mesh_base<T>& Mesh_base<T>::operator=(const Mesh_base<T>& other)
+ {
+ //	printf("Copy base assignemnt %p\n", this);
+     Mesh_base<T> temp(other);
+     swap(*this, temp);
+     return *this;
+ }
+ 
+ template <typename T>
+ Mesh_base<T>::~Mesh_base<T>()
+ {
+     delete[] data;
+ //	printf("dtor base %p\n", this);
+ }
+ 
+ template <typename T>
+ T& Mesh_base<T>::operator()(Vec_3D<int> pos)
+ {
+     get_per(pos, N1, N2, N3);
+     return data[pos[0]*N2*N3+pos[1]*N3+pos[2]]; 
+ }
+ 
+ template <typename T>
+ const T& Mesh_base<T>::operator()(Vec_3D<int> pos) const
+ {
+     get_per(pos, N1, N2, N3);
+     return data[pos[0]*N2*N3+pos[1]*N3+pos[2]];
+ }
+ 
+ template <typename T>
+ Mesh_base<T>& Mesh_base<T>::operator+=(const T& rhs)
+ {
+     #pragma omp parallel for
+         for (unsigned i = 0; i < length; i++) this->data[i]+=rhs;
+         
+     return *this;
+ }
+ 
+ template <typename T>
+ Mesh_base<T>& Mesh_base<T>::operator*=(const T& rhs)
+ {
+     #pragma omp parallel for
+         for (unsigned i = 0; i < length; i++) this->data[i]*=rhs;
+         
+     return *this;
+ }
+ 
+ template <typename T>
+ Mesh_base<T>& Mesh_base<T>::operator/=(const T& rhs)
+ {
+     #pragma omp parallel for
+         for (unsigned i = 0; i < length; i++) this->data[i]/=rhs;
+         
+     return *this;
+ }
+ 
+ template <typename T>
+ void Mesh_base<T>::assign(T val)
+ {
+     #pragma omp parallel for
+     for (unsigned i = 0; i < length; i++) this->data[i]=val;
+ }
 
 /**
  * @class:	Mesh
@@ -125,6 +374,17 @@ Tracking::Tracking(int sqr_num_track_par, int par_num_per_dim):
 		}
 	}
 }
+
+ template <class T>
+ void Tracking::update_track_par(T* particles)
+ {
+     std::vector<Particle_x> par_pos_step;
+     par_pos_step.reserve(num_track_par);
+     for (int i=0; i<num_track_par; i++){
+         par_pos_step.push_back(particles[par_ids[i]]);
+     }
+     par_pos.push_back(par_pos_step);
+ }
 
 /**
  * @class:	Sim_Param
@@ -275,6 +535,37 @@ void App_Var_base::upd_time()
 	if ((b_out - b) < db) db = b_out - b;
 	b += db;
 }
+ 
+template <class T> 
+void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* particles)
+{
+    /* Printing positions */
+    print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
+    print_track_par(track, sim, out_dir_app, z_suffix());
+
+    /* Printing density */
+    get_rho_from_par(particles, &power_aux, sim);
+    gen_dens_binned(power_aux, dens_binned, sim);    
+    print_rho_map(power_aux, sim, out_dir_app, z_suffix());
+    print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
+
+    /* Printing power spectrum */
+    fftw_execute_dft_r2c(p_F_pwr, power_aux);
+    pwr_spec_k(sim, power_aux, &power_aux);
+    gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
+    print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
+    if (!is_init_pwr_spec_0){
+        pwr_spec_binned_0 = pwr_spec_binned;
+        b_init = b;
+        is_init_pwr_spec_0 = true;
+    }
+    print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init, out_dir_app, z_suffix());
+    
+    /* Printing correlation function */
+    // power_aux.reset_im(); // P(k) is a real function
+    // fftw_execute_dft_c2r(p_B_pwr, power_aux);
+    // gen_corr_func_binned(sim, power_aux, &corr_func_binned);
+}
 
 /**
  * @class:	App_Var
@@ -297,6 +588,8 @@ App_Var::~App_Var()
 	delete[] particles;
 }
 
+void App_Var::print(const Sim_Param &sim, std::string out_dir_app) {App_Var_base::print(sim, out_dir_app, particles);}
+
  /**
  * @class:	App_Var_v
  * @brief:	class containing variables for approximations with particle velocities
@@ -318,6 +611,8 @@ App_Var_v::~App_Var_v()
 	delete[] particles;
 }
 
+void App_Var_v::print(const Sim_Param &sim, std::string out_dir_app) {App_Var_base::print(sim, out_dir_app, particles);}
+
 /**
  * @class:	App_Var_AA
  * @brief:	class containing variables for adhesion approximation
@@ -338,6 +633,8 @@ App_Var_AA::~App_Var_AA()
 {
 	delete[] particles;
 }
+
+void App_Var_AA::print(const Sim_Param &sim, std::string out_dir_app) {App_Var_base::print(sim, out_dir_app, particles);}
 
 /**
  * @class:	App_Var_FP_mod
@@ -361,24 +658,41 @@ App_Var_FP_mod::~App_Var_FP_mod()
 	delete[] particles;
 }
 
+void App_Var_FP_mod::print(const Sim_Param &sim, std::string out_dir_app) {App_Var_base::print(sim, out_dir_app, particles);}
+
 /**
  * @class LinkedList
  * @brief class handling linked lists
  */
 
 
-LinkedList::LinkedList(int par_num, int m, double hc):
+LinkedList::LinkedList(unsigned par_num, int m, double hc):
 	par_num(par_num), Hc(hc), LL(par_num), HOC(m, m, m) {}
 	
 void LinkedList::get_linked_list(Particle_v* particles)
 {
 	HOC.assign(-1);
-	for (int i = 0; i < par_num; i++)
+	for (unsigned i = 0; i < par_num; i++)
 	{
 		LL[i] = HOC(Vec_3D<int>(particles[i].position/Hc));
 		HOC(Vec_3D<int>(particles[i].position/Hc)) = i;
 	}
 }
+
+template class Vec_3D<int>;
+template class Vec_3D<double>;
+template Vec_3D<double> operator+ (Vec_3D<double>, const Vec_3D<double>&);
+template Vec_3D<double> operator- (Vec_3D<double>, const Vec_3D<double>&);
+template Vec_3D<double> operator* (Vec_3D<double>, double);
+template Vec_3D<double> operator* (double, Vec_3D<double>);
+template Vec_3D<int>::operator Vec_3D<double>() const;
+template Vec_3D<double>::operator Vec_3D<int>() const;
+template class Mesh_base<int>;
+template class Mesh_base<double>;
+template void Tracking::update_track_par(Particle_x* particles);
+template void Tracking::update_track_par(Particle_v* particles);
+template void App_Var_base::print(const Sim_Param&, std::string, Particle_x*);
+template void App_Var_base::print(const Sim_Param&, std::string, Particle_v*);
 
 #ifdef TEST
 #include "test_core.cpp"

@@ -336,7 +336,7 @@ public:
 	Particle_x* particles;
 	
 	// METHODS
-	inline void print(const Sim_Param &sim, std::string out_dir_app) {App_Var_base::print(sim, out_dir_app, particles);}
+	void print(const Sim_Param &sim, std::string out_dir_app);
 };
 
 /**
@@ -355,7 +355,7 @@ public:
 	Particle_v* particles;
 	
 	// METHODS
-	inline void print(const Sim_Param &sim, std::string out_dir_app) {App_Var_base::print(sim, out_dir_app, particles);}
+	void print(const Sim_Param &sim, std::string out_dir_app);
 };
 
 /**
@@ -375,7 +375,7 @@ public:
 	Mesh expotential;
 	
 	// METHODS
-	inline void print(const Sim_Param &sim, std::string out_dir_app) {App_Var_base::print(sim, out_dir_app, particles);}
+	void print(const Sim_Param &sim, std::string out_dir_app);
 };
 
 /**
@@ -387,10 +387,10 @@ class LinkedList
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR
-	LinkedList(int par_num, int m, double hc);
+	LinkedList(unsigned par_num, int m, double hc);
 	
 	// VARIABLES
-	int par_num;
+	unsigned par_num;
 	double Hc;
 	std::vector<int> LL;
 	Mesh_base<int> HOC;
@@ -416,7 +416,5 @@ public:
 	LinkedList linked_list;
 	
 	// METHODS
-	inline void print(const Sim_Param &sim, std::string out_dir_app) {App_Var_base::print(sim, out_dir_app, particles);}
+	void print(const Sim_Param &sim, std::string out_dir_app);
 };
-
-#include "core.hpp"
