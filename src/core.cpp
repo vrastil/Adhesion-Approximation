@@ -295,8 +295,8 @@ void Mesh::reset_part(bool part)
 {
     /* nullify real (part = 0) or complex (part = 1) part of a field */
     #pragma omp parallel for
-    for (unsigned i = part; i < this->length / 2; i+=2){
-        (*this)[i] = 0;
+    for (unsigned i = part; i < this->length; i+=2){
+        data[i] = 0;
     }
 }
 
@@ -405,10 +405,6 @@ int Sim_Param::init(int ac, char* av[])
 		power.k2_G *= power.k2_G;
 		b_in = 1./(z_in + 1);
 		b_out = 1./(z_out + 1);
-		k_min = 2.*PI/box_size;
-		k_max = 2.*PI*mesh_num_pwr/box_size;
-		
-//		rs = 1.0;
 		a = rs / 0.735;
 		M = (int)(mesh_num / rs);
 		Hc = double(mesh_num) / M;
@@ -540,31 +536,35 @@ template <class T>
 void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* particles)
 {
     /* Printing positions */
-    print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
-    print_track_par(track, sim, out_dir_app, z_suffix());
+    // print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
+    // print_track_par(track, sim, out_dir_app, z_suffix());
 
-    /* Printing density */
-    get_rho_from_par(particles, &power_aux, sim);
-    gen_dens_binned(power_aux, dens_binned, sim);    
-    print_rho_map(power_aux, sim, out_dir_app, z_suffix());
-    print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
+    // /* Printing density */
+    // get_rho_from_par(particles, &power_aux, sim);
+    // gen_dens_binned(power_aux, dens_binned, sim);    
+    // print_rho_map(power_aux, sim, out_dir_app, z_suffix());
+    // print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
 
-    /* Printing power spectrum */
-    fftw_execute_dft_r2c(p_F_pwr, power_aux);
-    pwr_spec_k(sim, power_aux, &power_aux);
-    gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
-    print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
-    if (!is_init_pwr_spec_0){
-        pwr_spec_binned_0 = pwr_spec_binned;
-        b_init = b;
-        is_init_pwr_spec_0 = true;
-    }
-    print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init, out_dir_app, z_suffix());
+    // /* Printing power spectrum */
+    // fftw_execute_dft_r2c(p_F_pwr, power_aux);
+    // pwr_spec_k(sim, power_aux, &power_aux);
+    // gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
+    // print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
+    // if (!is_init_pwr_spec_0){
+    //     pwr_spec_binned_0 = pwr_spec_binned;
+    //     b_init = b;
+    //     is_init_pwr_spec_0 = true;
+    // }
+    // print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init, out_dir_app, z_suffix());
     
-    /* Printing correlation function */
+    // /* Printing correlation function */
     // power_aux.reset_im(); // P(k) is a real function
     // fftw_execute_dft_c2r(p_B_pwr, power_aux);
-    // gen_corr_func_binned(sim, power_aux, &corr_func_binned);
+    // gen_corr_func_binned(sim, power_aux, &pwr_spec_binned);
+    // print_corr_func(pwr_spec_binned, out_dir_app, z_suffix());
+
+    gen_corr_func_binned_pp(sim, particles, &pwr_spec_binned, 0, 200, sim.x_0());
+    print_corr_func(pwr_spec_binned, out_dir_app, "_pp" + z_suffix());
 }
 
 /**
@@ -685,6 +685,7 @@ template Vec_3D<double> operator+ (Vec_3D<double>, const Vec_3D<double>&);
 template Vec_3D<double> operator- (Vec_3D<double>, const Vec_3D<double>&);
 template Vec_3D<double> operator* (Vec_3D<double>, double);
 template Vec_3D<double> operator* (double, Vec_3D<double>);
+template Vec_3D<double> operator/ (Vec_3D<double>, double);
 template Vec_3D<int>::operator Vec_3D<double>() const;
 template Vec_3D<double>::operator Vec_3D<int>() const;
 template class Mesh_base<int>;

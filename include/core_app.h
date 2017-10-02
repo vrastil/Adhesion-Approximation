@@ -17,7 +17,7 @@ void set_pert_pos_w_vel(const Sim_Param &sim, const double db, Particle_v* parti
 void upd_pos_first_order(const Sim_Param &sim, const double db, Particle_x* particles, const std::vector< Mesh> &vel_field);
 void upd_pos_second_order(const Sim_Param &sim, const double db, const double b, Particle_v* particles, const std::vector< Mesh> &force_field);
 void upd_pos_second_order_w_short_force(const Sim_Param &sim, LinkedList* linked_list, const double db, const double b, 
-	Particle_v* particles, const std::vector< Mesh> &force_field);
+	                                    Particle_v* particles, const std::vector< Mesh> &force_field);
 
 void gen_rho_dist_k(const Sim_Param &sim, Mesh* rho, const fftw_plan &p_F);
 void gen_pot_k(const Mesh& rho_k, Mesh* pot_k);
@@ -30,6 +30,10 @@ template <class T>
 void get_rho_from_par(T* particles, Mesh* rho, const Sim_Param &sim);
 void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux);
 void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, std::vector<double_2>* pwr_spec_binned);
+void gen_corr_func_binned(const Sim_Param &sim, const Mesh &power_aux, std::vector<double_2>* corr_func_binned);
+template<class T>
+void gen_corr_func_binned_pp(const Sim_Param &sim, T* particles, std::vector<double_2>* corr_func_binned,
+                             const double x_min, const double x_max, const double x_0);
 void gen_dens_binned(const Mesh& rho, std::vector<int> &dens_binned, const Sim_Param &sim);
 
 void force_short(const Sim_Param &sim, const LinkedList& linked_list, Particle_v *particles,

@@ -38,7 +38,8 @@ void work_dir_over(string out_dir)
 	create_dir(out_dir + "pwr_diff/");
 	create_dir(out_dir + "pwr_spec/");
 	create_dir(out_dir + "rho_map/");
-	create_dir(out_dir + "rho_bin/");
+    create_dir(out_dir + "rho_bin/");
+    create_dir(out_dir + "corr_func/");
 }
 
 template <class T>
@@ -90,6 +91,30 @@ void print_pow_spec(const vector<double_2> &pwr_spec_binned, string out_dir, str
 	cout << "Writing power spectrum into file " << file_name << endl;
 	fprintf (pFile, "# This file contains power spectrum P(k) in units [(Mpc/h)^3] depending on wavenumber k in units [h/Mpc].\n");
 	fprintf (pFile, "# k [h/Mpc]\tP(k) [(Mpc/h)^3]\n");
+	
+	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
+		if (pwr_spec_binned[j][1]) fprintf (pFile, "%f\t%f\n",  pwr_spec_binned[j][0], pwr_spec_binned[j][1]);
+	}
+
+	fclose (pFile);
+}
+
+void print_corr_func(const vector<double_2> &pwr_spec_binned, string out_dir, string suffix)
+{
+	out_dir += "corr_func/";
+	string file_name = out_dir + "corr_func" + suffix + ".dat";
+	FILE* pFile;
+	pFile = fopen(file_name.c_str(), "w");
+	if (pFile == NULL)
+	{
+		printf("Error while opening %s\n", file_name.c_str());
+		perror("Error");
+		return;
+	}
+	
+	cout << "Writing correlation function into file " << file_name << endl;
+	fprintf (pFile, "# This file contains correlation function depending on distance r in units [Mpc/h].\n");
+	fprintf (pFile, "# x [Mpc/h]\txsi(r)\n");
 	
 	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
 		if (pwr_spec_binned[j][1]) fprintf (pFile, "%f\t%f\n",  pwr_spec_binned[j][0], pwr_spec_binned[j][1]);

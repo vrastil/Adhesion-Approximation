@@ -16,6 +16,7 @@ void create_dir(std::string out_dir);
 void work_dir_over(std::string out_dir);
 
 void print_pow_spec(const std::vector<double_2> &pwr_spec_binned, std::string out_dir, std::string suffix);
+void print_corr_func(const std::vector<double_2> &pwr_spec_binned, std::string out_dir, std::string suffix);
 void print_pow_spec_diff(const std::vector<double_2> &pwr_spec_binned, const std::vector<double_2> &pwr_spec_binned_0, 
     double b, std::string out_dir, std::string suffix);
 template <class T>

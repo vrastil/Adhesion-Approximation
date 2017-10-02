@@ -257,7 +257,6 @@ public:
 	// VARIABLES
     unsigned par_num, mesh_num, mesh_num_pwr, Ng, Ng_pwr, box_size, print_every;
     unsigned order = 1, bin_num = 100;
-	double k_min, k_max;
 	unsigned long seed = 12345678;
 	double z_in, z_out;
 	double b_in, b_out, db;
@@ -273,8 +272,8 @@ public:
 	int init(int ac, char* av[]);
     void print_info(std::string out, std::string app) const;
 	void print_info() const;
-	inline const double x_0() const{return box_size/mesh_num;}
-    inline const double x_0_pwr() const{return box_size/mesh_num_pwr;}
+	inline const double x_0() const{return (double)box_size/mesh_num;}
+    inline const double x_0_pwr() const{return (double)box_size/mesh_num_pwr;}
     
 protected:
 	bool is_init = 0;
