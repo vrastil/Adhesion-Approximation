@@ -410,13 +410,14 @@ void gen_cqty_binned(const double x_min, const double x_max,
 	}
 }
 
-void gen_rqty_binned(const double x_min, const double x_max,
-    const Mesh &qty_mesh, vector<double_2>& qty_binned, const double mod_q, const double mod_x)
+void gen_rqty_binned(const double x_min, const double x_max, const double x_0,
+    const Mesh &qty_mesh, vector<double_2>& qty_binned, const double mod_q)
 {
-/* bin some real quantity on mesh in linear bins, assuming:
+/* bin some real quantity on mesh in linear bins
+   x_min and x_max are in [Mpc/h], transformation from mesh distances to Mpc/h assumed to be x_0
    Q(x) = qty_mesh[i]
-   x = [i,j,k].norm()
-   [x] = [x_min] = [x_max]
+   x = ([i,j,k].norm())*x_0
+   
 */
     const double lin_bin = (x_max - x_min) / qty_binned.size();
 
@@ -431,7 +432,7 @@ void gen_rqty_binned(const double x_min, const double x_max,
         for (unsigned j = 0; i < qty_mesh.N; i++){
             for (unsigned k = 0; i < qty_mesh.N; i++){
 
-                x = sqrt(i*i+j*j+k*k);
+                x = x_0*sqrt(i*i+j*j+k*k);
                 if ((x <x_max) && (x>=x_min)){
                     bin = (int)((x-x_min)/lin_bin);
                     #pragma omp atomic
@@ -448,7 +449,7 @@ void gen_rqty_binned(const double x_min, const double x_max,
     for (unsigned j = 0; j < qty_binned.size(); j++){
         if (qty_binned[j][0]) qty_binned[j][1] *= mod_q / qty_binned[j][0];
         x = x_min_ + lin_bin*j;
-        qty_binned[j][0] = mod_x*x;
+        qty_binned[j][0] = x;
     }
 }
 
@@ -468,7 +469,7 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, vector<dou
 void gen_corr_func_binned(const Sim_Param &sim, const Mesh &power_aux, vector<double_2>* corr_func_binned)
 {
     printf("Computing binned correlation function...\n");
-	gen_rqty_binned(1, sim.mesh_num_pwr, power_aux, *corr_func_binned, 1, sim.x_0_pwr());
+	gen_rqty_binned(0, 200, sim.x_0_pwr(), power_aux, *corr_func_binned, 1);
 }
 
 template<class T>
@@ -479,7 +480,7 @@ void gen_corr_func_binned_pp(const Sim_Param &sim, T* particles, vector<double_2
 
     const double lin_bin = (x_max - x_min) / corr_func_binned->size(); // [lin_bin] = Mpc/h
     const unsigned Np = sim.par_num;
-    const unsigned Np_max = 1000;
+    const unsigned Np_max = Np;
     const unsigned N = sim.mesh_num;
     double x, dV;
     int bin;
