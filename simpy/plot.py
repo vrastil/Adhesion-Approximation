@@ -22,11 +22,14 @@ def pwr_spec_prim(k, A=187826, n=1):
     return A * k**n
 
 
-def pwr_spec(k, z=0, A=187826, n=1, Omega_0=1, h=0.67, q_log=2.34, q_1=3.89, q_2=16.1, q_3=5.4, q_4=6.71):
+def pwr_spec(k, pwr, z=0, Omega_0=1, h=0.67, q_log=2.34, q_1=3.89, q_2=16.1, q_3=5.4, q_4=6.71):
+    A = pwr["A"]
+    n = pwr["ns"]
+    supp = np.exp(-k*k/pwr["k2_G"]) if pwr["k2_G"] else 1
     P_prim = pwr_spec_prim(k, A=A, n=n)
     T_k = trans_fce(k, Omega_0=Omega_0, h=h, q_log=q_log,
                     q_1=q_1, q_2=q_2, q_3=q_3, q_4=q_4)
-    return P_prim * T_k**2 / (z + 1)**2
+    return supp*P_prim * T_k**2 / (z + 1)**2
 
 
 def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, out_dir='auto', save=True, show=False):
@@ -52,10 +55,10 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, out_dir='auto', save=True, sho
 
     data = np.loadtxt(pwr_spec_files[-1])
     k = data[:, 0]
-    k = np.logspace(np.log10(k[0]), np.log10(k[-1]), num=20)
+    k = np.logspace(np.log10(k[0]), np.log10(k[-15]), num=20)
     del data
-    P_0 = [pwr_spec(k_) for k_ in k]
-    P_i = [pwr_spec(k_, z=200) for k_ in k]
+    P_0 = [pwr_spec(k_, a_sim_info.pwr) for k_ in k]
+    P_i = [pwr_spec(k_, a_sim_info.pwr, z=200) for k_ in k]
     plt.plot(k, P_0, '-')
     plt.plot(k, P_i, '-')
 

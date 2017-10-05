@@ -31,6 +31,7 @@ class SimInfo(object):
             self.app = ''
             self.dir = ''
             self.res_dir = ''
+            self.pwr = {"A" : 187826, "ns" : 1, "k2_G" : 0}
 
     def info(self):
         info = ''
@@ -65,6 +66,10 @@ class SimInfo(object):
         self.nu = data["viscosity"]
         self.rs = data["cut_radius"]
         self.app = data["app"]
+        self.pwr = {}
+        self.pwr["A"] = data["A"]
+        self.pwr["ns"] = data["index"]
+        self.pwr["k2_G"] = data["smoothing_k"]
 
         self.results = data["results"]
         if self.results is None:

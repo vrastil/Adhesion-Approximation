@@ -48,14 +48,15 @@ double single_power_spectrum_T(double k, double* parameters)
 double power_spectrum(double k, double* parameters)
 {
     const double A = parameters[0];
+    const double supp = parameters[3] ? exp(-k*k/parameters[3]) : 1;
 	e_power_spec pwr_type = static_cast<e_power_spec>(parameters[2]);
 	switch (pwr_type)
 	{
-		case power_law_T: return A*power_spectrum_T(k, parameters);
-		case power_law: return A*power_spectrum_scale_free(k, parameters);
-		case flat: return A*flat_power_spectrum(k, parameters);
-		case single: return A*single_power_spectrum_T(k, parameters);
-		default: return A*power_spectrum_T(k, parameters);
+		case power_law_T: return supp*A*power_spectrum_T(k, parameters);
+		case power_law: return supp*A*power_spectrum_scale_free(k, parameters);
+		case flat: return supp*A*flat_power_spectrum(k, parameters);
+		case single: return supp*A*single_power_spectrum_T(k, parameters);
+		default: return supp*A*power_spectrum_T(k, parameters);
 	}
 }
 
@@ -74,7 +75,7 @@ void norm_pwr(Pow_Spec_Param* pwr_par)
 	gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
 	double result, error;
 	
-	double parameters[3] = {1., pwr_par->ns, static_cast<double>(pwr_par->pwr_type)};
+	double parameters[4] = {1., pwr_par->ns, static_cast<double>(pwr_par->pwr_type), pwr_par->k2_G};
 	gsl_function F;
 	F.function = &power_spectrum_s8;
 	F.params = parameters;
@@ -86,6 +87,6 @@ void norm_pwr(Pow_Spec_Param* pwr_par)
 
 double lin_pow_spec(Pow_Spec_Param pwr_par, double k)
 {
-	double parameters[3] = {pwr_par.A, pwr_par.ns, static_cast<double>(pwr_par.pwr_type)};
+	double parameters[4] = {pwr_par.A, pwr_par.ns, static_cast<double>(pwr_par.pwr_type), pwr_par.k2_G};
 	return power_spectrum(k, parameters);
 }

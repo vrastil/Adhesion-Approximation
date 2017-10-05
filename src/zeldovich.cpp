@@ -10,14 +10,10 @@ const double PI = acos(-1.);
 
 int zel_app(const Sim_Param &sim)
 {
-	if (sim.power.k2_G == 0) cout << "\n"
+	cout << "\n"
 	"************************\n"
 	"ZEL`DOVICH APPROXIMATION\n"
 	"************************\n";
-	else cout << "\n"
-	"**********************************\n"
-	"TRUNCATED ZEL`DOVICH APPROXIMATION\n"
-	"**********************************\n";
 	
     string out_dir_app = std_out_dir("ZA_run/", sim);
 	work_dir_over(out_dir_app);
