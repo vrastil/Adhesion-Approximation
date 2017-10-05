@@ -90,3 +90,4 @@ double lin_pow_spec(Pow_Spec_Param pwr_par, double k)
 	double parameters[4] = {pwr_par.A, pwr_par.ns, static_cast<double>(pwr_par.pwr_type), pwr_par.k2_G};
 	return power_spectrum(k, parameters);
 }
+

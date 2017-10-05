@@ -8,8 +8,6 @@
 #include "stdafx.h"
 #include <fftw3.h>
 
-typedef std::array<double, 2> double_2;
-
 /**
  * @class:	Vec_3D<T>
  * @brief:	class handling basic 3D-vector functions
@@ -280,6 +278,33 @@ protected:
 };
 
 /**
+ * @class:	Data_x_y
+ * @brief:	class containing data [x, y(x)]
+ */
+
+template <typename T>
+class Data_x_y
+{
+public:
+	// CONSTRUCTORS
+    Data_x_y(){};
+    Data_x_y(size_t size) : x(size), y(size) {;}
+    
+    // VARIABLES
+    std::vector<T> x;
+    std::vector<T> y;
+
+    // CAPACITY
+    size_t size() const noexcept{ return x.size(); }
+
+    // MODIFIERS
+    void fill(const T& val){
+        std::fill(x.begin(), x.end(), val);
+        std::fill(y.begin(), y.end(), val);
+    }
+};
+
+/**
  * @class:	App_Var_base
  * @brief:	class containing core variables for approximations
  */
@@ -299,7 +324,7 @@ public:
 	const std::string z_suffix_const;
 	std::vector<Mesh> app_field;
 	Mesh power_aux;
-	std::vector<double_2> pwr_spec_binned, pwr_spec_binned_0;
+	Data_x_y<double> pwr_spec_binned, pwr_spec_binned_0;
 	fftw_plan p_F, p_B, p_F_pwr, p_B_pwr;
 	Tracking track;
 	std::vector<int> dens_binned;

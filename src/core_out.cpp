@@ -75,7 +75,7 @@ void print_par_pos_cut_small(T* particles, const Sim_Param &sim, std::string out
    fclose (pFile);
 }
 
-void print_pow_spec(const vector<double_2> &pwr_spec_binned, string out_dir, string suffix)
+void print_pow_spec(const Data_x_y<double> &pwr_spec_binned, string out_dir, string suffix)
 {
 	out_dir += "pwr_spec/";
 	string file_name = out_dir + "pwr_spec" + suffix + ".dat";
@@ -93,13 +93,13 @@ void print_pow_spec(const vector<double_2> &pwr_spec_binned, string out_dir, str
 	fprintf (pFile, "# k [h/Mpc]\tP(k) [(Mpc/h)^3]\n");
 	
 	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
-		if (pwr_spec_binned[j][1]) fprintf (pFile, "%f\t%f\n",  pwr_spec_binned[j][0], pwr_spec_binned[j][1]);
+		if (pwr_spec_binned.y[j]) fprintf (pFile, "%f\t%f\n",  pwr_spec_binned.x[j], pwr_spec_binned.y[j]);
 	}
 
 	fclose (pFile);
 }
 
-void print_corr_func(const vector<double_2> &pwr_spec_binned, string out_dir, string suffix)
+void print_corr_func(const Data_x_y<double> &pwr_spec_binned, string out_dir, string suffix)
 {
 	out_dir += "corr_func/";
 	string file_name = out_dir + "corr_func" + suffix + ".dat";
@@ -117,13 +117,13 @@ void print_corr_func(const vector<double_2> &pwr_spec_binned, string out_dir, st
 	fprintf (pFile, "# x [Mpc/h]\txsi(r)\n");
 	
 	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
-		if (pwr_spec_binned[j][1]) fprintf (pFile, "%f\t%f\n",  pwr_spec_binned[j][0], pwr_spec_binned[j][1]);
+		if (pwr_spec_binned.y[j]) fprintf (pFile, "%f\t%f\n",  pwr_spec_binned.x[j], pwr_spec_binned.y[j]);
 	}
 
 	fclose (pFile);
 }
 
-void print_pow_spec_diff(const vector<double_2> &pwr_spec_binned, const vector<double_2> &pwr_spec_binned_0,
+void print_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data_x_y<double> &pwr_spec_binned_0,
 	double b, string out_dir, string suffix)
 {
 	out_dir += "pwr_diff/";
@@ -136,11 +136,11 @@ void print_pow_spec_diff(const vector<double_2> &pwr_spec_binned, const vector<d
 	double P_k, P_ZA;
 	
 	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
-		if (pwr_spec_binned[j][0] == pwr_spec_binned_0[j][0]){
-			P_k = pwr_spec_binned[j][1];
-			P_ZA = pwr_spec_binned_0[j][1] * pow(b, 2.);
-			if((P_ZA) && (P_k)) fprintf (pFile, "%f\t%f\n", pwr_spec_binned[j][0], (P_k-P_ZA)/P_ZA);
-		} else printf ("WARNING! Binned power spectra don`t match each other! k = %f, while k_lin = %f\n", pwr_spec_binned[j][0], pwr_spec_binned_0[j][0]);
+		if (pwr_spec_binned.x[j] == pwr_spec_binned_0.x[j]){
+			P_k = pwr_spec_binned.y[j];
+			P_ZA = pwr_spec_binned_0.y[j] * pow(b, 2.);
+			if((P_ZA) && (P_k)) fprintf (pFile, "%f\t%f\n", pwr_spec_binned.x[j], (P_k-P_ZA)/P_ZA);
+		} else printf ("WARNING! Binned power spectra don`t match each other! k = %f, while k_lin = %f\n", pwr_spec_binned.x[j], pwr_spec_binned_0.x[j]);
 	}
 
 	fclose (pFile);

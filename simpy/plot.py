@@ -42,9 +42,10 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, out_dir='auto', save=True, sho
 
     lab = 'init'
     for i, pwr in enumerate(pwr_spec_files):
+        a_end = 1 / (1 + zs[-1])
         if zs[i] != 'init':
             a = 1 / (1 + zs[i])
-            if (a < 2.4 * a_) and a != 1:
+            if (a < 2.4 * a_) and a != a_end:
                 continue
             a_ = a
             lab = 'z = ' + str(zs[i])
@@ -57,7 +58,7 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, out_dir='auto', save=True, sho
     k = data[:, 0]
     k = np.logspace(np.log10(k[0]), np.log10(k[-15]), num=20)
     del data
-    P_0 = [pwr_spec(k_, a_sim_info.pwr) for k_ in k]
+    P_0 = [pwr_spec(k_, a_sim_info.pwr, z=zs[-1]) for k_ in k]
     P_i = [pwr_spec(k_, a_sim_info.pwr, z=200) for k_ in k]
     plt.plot(k, P_0, '-')
     plt.plot(k, P_i, '-')

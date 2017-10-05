@@ -375,7 +375,7 @@ void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux)
 }
 
 void gen_cqty_binned(const double x_min, const double x_max,
-                    const Mesh &qty_mesh, vector<double_2>& qty_binned, const double mod_q, const double mod_x)
+                    const Mesh &qty_mesh, Data_x_y<double>& qty_binned, const double mod_q, const double mod_x)
 {
     /* bin some complex quantity on mesh in logarithmic bins, assuming:
        Q(x) = mod_q*qty_mesh[2*i]
@@ -384,10 +384,8 @@ void gen_cqty_binned(const double x_min, const double x_max,
     */
     const double log_bin = pow(x_max/x_min, 1./qty_binned.size());
 
-    #pragma omp parallel
-	for (unsigned j = 0; j < qty_binned.size(); j++){
-        qty_binned[j][0] = qty_binned[j][1] = 0.;
-    }
+    qty_binned.fill(0);
+
     double x;
     int bin;
     #pragma omp parallel for private(x, bin)
@@ -396,22 +394,22 @@ void gen_cqty_binned(const double x_min, const double x_max,
         if ((x <x_max) && (x>=x_min)){
             bin = (int)(log(x/x_min)/log(log_bin));
             #pragma omp atomic
-            qty_binned[bin][1] += qty_mesh[2*i];
+            qty_binned.y[bin] += qty_mesh[2*i];
             #pragma omp atomic
-            qty_binned[bin][0]++;
+            qty_binned.x[bin]++;
         }
     }
     const double x_min_ = mod_x*x_min*sqrt(log_bin);
 	#pragma omp parallel for private(x)
 	for (unsigned j = 0; j < qty_binned.size(); j++){
-		if (qty_binned[j][0]) qty_binned[j][1] *= mod_q / qty_binned[j][0];
+		if (qty_binned.x[j]) qty_binned.y[j] *= mod_q / qty_binned.x[j];
 		x = x_min_*pow(log_bin, j);
-		qty_binned[j][0] = x;
+		qty_binned.x[j] = x;
 	}
 }
 
 void gen_rqty_binned(const double x_min, const double x_max, const double x_0,
-    const Mesh &qty_mesh, vector<double_2>& qty_binned, const double mod_q)
+    const Mesh &qty_mesh, Data_x_y<double>& qty_binned, const double mod_q)
 {
 /* bin some real quantity on mesh in linear bins
    x_min and x_max are in [Mpc/h], transformation from mesh distances to Mpc/h assumed to be x_0
@@ -421,10 +419,8 @@ void gen_rqty_binned(const double x_min, const double x_max, const double x_0,
 */
     const double lin_bin = (x_max - x_min) / qty_binned.size();
 
-    #pragma omp parallel for
-    for (unsigned j = 0; j < qty_binned.size(); j++){
-    qty_binned[j][0] = qty_binned[j][1] = 0.;
-    }
+    qty_binned.fill(0);
+
     double x;
     int bin;
     #pragma omp parallel for private(x, bin)
@@ -436,9 +432,9 @@ void gen_rqty_binned(const double x_min, const double x_max, const double x_0,
                 if ((x <x_max) && (x>=x_min)){
                     bin = (int)((x-x_min)/lin_bin);
                     #pragma omp atomic
-                    qty_binned[bin][1] += qty_mesh(i,j,k);
+                    qty_binned.y[bin] += qty_mesh(i,j,k);
                     #pragma omp atomic
-                    qty_binned[bin][0]++;
+                    qty_binned.x[bin]++;
                 }
             }
         }
@@ -447,13 +443,13 @@ void gen_rqty_binned(const double x_min, const double x_max, const double x_0,
     const double x_min_ = x_min+lin_bin/2;
     #pragma omp parallel for private(x)
     for (unsigned j = 0; j < qty_binned.size(); j++){
-        if (qty_binned[j][0]) qty_binned[j][1] *= mod_q / qty_binned[j][0];
+        if (qty_binned.x[j]) qty_binned.y[j] *= mod_q / qty_binned.x[j];
         x = x_min_ + lin_bin*j;
-        qty_binned[j][0] = x;
+        qty_binned.x[j] = x;
     }
 }
 
-void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, vector<double_2>* pwr_spec_binned)
+void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<double>* pwr_spec_binned)
 {
     const int L = sim.box_size;
     #ifndef OLD_NORM
@@ -466,14 +462,19 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, vector<dou
 	gen_cqty_binned(1, sim.mesh_num_pwr, power_aux, *pwr_spec_binned, mod_pk, mod_k);
 }
 
-void gen_corr_func_binned(const Sim_Param &sim, const Mesh &power_aux, vector<double_2>* corr_func_binned)
+void gen_corr_func_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<double>* corr_func_binned)
 {
     printf("Computing binned correlation function...\n");
 	gen_rqty_binned(0, 200, sim.x_0_pwr(), power_aux, *corr_func_binned, 1);
 }
 
+void gen_corr_func_binned_brute(const Sim_Param &sim, const Data_x_y<double>& pwr_spec_binned, Data_x_y<double>* corr_func_binnedd)
+{
+
+}
+
 template<class T>
-void gen_corr_func_binned_pp(const Sim_Param &sim, T* particles, vector<double_2>* corr_func_binned,
+void gen_corr_func_binned_pp(const Sim_Param &sim, T* particles, Data_x_y<double>* corr_func_binned,
                              const double x_min, const double x_max, const double x_0)
 { /* x_min and x_max are in [Mpc/h], transformation from particles distances to Mpc/h assumed to be x_0 */
     printf("Computing binned correlation function via direct sum...\n");
@@ -488,14 +489,7 @@ void gen_corr_func_binned_pp(const Sim_Param &sim, T* particles, vector<double_2
     const int par_factor = (2*Np - Np_max - 1)*Np_max / 2; // number of particles over which the previus sum was done
     const double x_min_ = x_min+lin_bin/2;
 
-    // printf("\t[x_min = %f, x_max = %f, bin_num = %i, bin_size = %f]\n", x_min, x_max, corr_func_binned->size(), lin_bin);
-    // printf("\t[Np = %i, Np_max = %i, Np_fac = %i]\n", Np, Np_max, par_factor);
-    // printf("\t[V = %f]\n", V);
-
-    #pragma omp parallel for
-    for (unsigned j = 0; j < corr_func_binned->size(); j++){
-        (*corr_func_binned)[j][1] = 0.;
-    }
+    corr_func_binned->fill(0);
 
     #pragma omp parallel for private(x)
     for (unsigned i = 0; i < Np_max; i++){
@@ -505,7 +499,7 @@ void gen_corr_func_binned_pp(const Sim_Param &sim, T* particles, vector<double_2
             if ((x <x_max) && (x>=x_min)){
                 bin = (int)((x-x_min)/lin_bin);
                 #pragma omp atomic
-                (*corr_func_binned)[bin][1]++;
+                corr_func_binned->y[bin]++;
             }
         }
     }
@@ -513,10 +507,10 @@ void gen_corr_func_binned_pp(const Sim_Param &sim, T* particles, vector<double_2
     #pragma omp parallel for private(x, dV)
     for (unsigned j = 0; j < corr_func_binned->size(); j++){
         x = x_min_ + lin_bin*j;
-        (*corr_func_binned)[j][0] = x;
+        corr_func_binned->x[j] = x;
         dV = 4*PI*x*x*lin_bin + PI/3*pow(lin_bin, 3);
-        (*corr_func_binned)[j][1] /= par_factor*dV / V;
-    //    (*corr_func_binned)[j][1]--; // definition factor
+        corr_func_binned->y[j] /= par_factor*dV / V;
+    //    corr_func_binned->y[j]--; // definition factor
     }
 }
 
@@ -680,5 +674,5 @@ void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param 
 
 template void get_rho_from_par(Particle_x*, Mesh*, const Sim_Param&);
 template void get_rho_from_par(Particle_v*, Mesh*, const Sim_Param&);
-template void gen_corr_func_binned_pp(const Sim_Param&, Particle_x*, vector<double_2>*, const double, const double, const double);
-template void gen_corr_func_binned_pp(const Sim_Param&, Particle_v*, vector<double_2>*, const double, const double, const double);
+template void gen_corr_func_binned_pp(const Sim_Param&, Particle_x*, Data_x_y<double>*, const double, const double, const double);
+template void gen_corr_func_binned_pp(const Sim_Param&, Particle_v*, Data_x_y<double>*, const double, const double, const double);
