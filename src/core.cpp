@@ -554,7 +554,7 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
     print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init, out_dir_app, z_suffix());
     
     /* Printing correlation function */
-    gen_corr_func_binned_brute(sim, pwr_spec_binned, &pwr_spec_binned);
+    gen_corr_func_binned_gsl(sim, &pwr_spec_binned);
     print_corr_func(pwr_spec_binned, out_dir_app, "_brute" + z_suffix());
 
     // power_aux.reset_im(); // P(k) is a real function
@@ -562,7 +562,7 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
     // gen_corr_func_binned(sim, power_aux, &pwr_spec_binned);
     // print_corr_func(pwr_spec_binned, out_dir_app, z_suffix());
 
-    // gen_corr_func_binned_pp(sim, particles, &pwr_spec_binned, 0, 200, sim.x_0());
+    // gen_corr_func_binned_pp(sim, particles, &pwr_spec_binned, 1, 200, sim.x_0());
     // print_corr_func(pwr_spec_binned, out_dir_app, "_pp" + z_suffix());
 }
 

@@ -31,7 +31,7 @@ void get_rho_from_par(T* particles, Mesh* rho, const Sim_Param &sim);
 void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux);
 void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<double>* pwr_spec_binned);
 void gen_corr_func_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<double>* corr_func_binned);
-void gen_corr_func_binned_brute(const Sim_Param &sim, const Data_x_y<double>& pwr_spec_binned, Data_x_y<double>* corr_func_binnedd);
+void gen_corr_func_binned_gsl(const Sim_Param &sim, Data_x_y<double>* corr_func_binned);
 template<class T>
 void gen_corr_func_binned_pp(const Sim_Param &sim, T* particles, Data_x_y<double>* corr_func_binned,
                              const double x_min, const double x_max, const double x_0);

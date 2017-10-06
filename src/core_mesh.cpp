@@ -270,6 +270,16 @@ double max(double* p_data, int len)
     return *std::max_element(p_data,p_data+len);
 }
 
+double min(const vector<double>& data)
+{
+    return *std::min_element(data.begin(), data.end());
+}
+
+double max(const vector<double>& data)
+{
+    return *std::max_element(data.begin(), data.end());
+}
+
 #ifdef TEST
 #include "test_core_mesh.cpp"
 #endif

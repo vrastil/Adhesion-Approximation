@@ -37,3 +37,5 @@ double mean(double* p_data, int len);
 double std_dev(double* p_data, int len, double t_mean);
 double min(double* p_data, int len);
 double max(double* p_data, int len);
+double min(const std::vector<double>& data);
+double max(const std::vector<double>& data);

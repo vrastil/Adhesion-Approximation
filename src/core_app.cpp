@@ -465,12 +465,13 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<d
 void gen_corr_func_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<double>* corr_func_binned)
 {
     printf("Computing binned correlation function...\n");
-	gen_rqty_binned(0, 200, sim.x_0_pwr(), power_aux, *corr_func_binned, 1);
+	gen_rqty_binned(1, 200, sim.x_0_pwr(), power_aux, *corr_func_binned, 1);
 }
 
-void gen_corr_func_binned_brute(const Sim_Param &sim, const Data_x_y<double>& pwr_spec_binned, Data_x_y<double>* corr_func_binnedd)
+void gen_corr_func_binned_gsl(const Sim_Param &sim, Data_x_y<double>* corr_func_binned)
 {
-
+    gen_corr_func_binned_gsl(1, 200, corr_func_binned);
+    // integrate for every r in range(xmin, xmax, lin_bin)
 }
 
 template<class T>
