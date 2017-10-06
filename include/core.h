@@ -239,7 +239,6 @@ public:
 
         
     // CCL VARIABLES
-    int status = 0;
     ccl_configuration config;
     ccl_parameters params;
     ccl_cosmology* cosmo;

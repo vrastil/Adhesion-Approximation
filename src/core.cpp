@@ -364,6 +364,7 @@ void Pow_Spec_Param::init()
     config.transfer_function_method = ccl_eisenstein_hu;
     config.matter_power_spectrum_method = ccl_linear;
     config.mass_function_method = ccl_tinker;
+    int status;
     params = ccl_parameters_create_flat_lcdm(Omega_c, Omega_b, h, s8, ns, &status);
     cosmo = ccl_cosmology_create(params, config);
 }
