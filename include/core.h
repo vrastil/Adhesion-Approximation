@@ -336,7 +336,7 @@ public:
 	const std::string z_suffix_const;
 	std::vector<Mesh> app_field;
 	Mesh power_aux;
-	Data_x_y<double> pwr_spec_binned, pwr_spec_binned_0;
+	Data_x_y<double> pwr_spec_binned, pwr_spec_binned_0, corr_func_binned;
 	fftw_plan p_F, p_B, p_F_pwr, p_B_pwr;
 	Tracking track;
 	std::vector<int> dens_binned;

@@ -400,12 +400,6 @@ void gen_cqty_binned(const double x_min, const double x_max,
         }
     }
     const double x_min_ = mod_x*x_min*sqrt(log_bin);
-	// #pragma omp parallel for private(x)
-	// for (unsigned j = 0; j < qty_binned.size(); j++){
-	// 	if (qty_binned.x[j]) qty_binned.y[j] *= mod_q / qty_binned.x[j];
-	// 	x = x_min_*pow(log_bin, j);
-	// 	qty_binned.x[j] = x;
-    // }
     unsigned i = 0;
     for (unsigned j = 0; j < qty_binned.size(); ){
         if (qty_binned.x[j]){
@@ -451,13 +445,18 @@ void gen_rqty_binned(const double x_min, const double x_max, const double x_0,
             }
         }
     }
-
     const double x_min_ = x_min+lin_bin/2;
-    #pragma omp parallel for private(x)
-    for (unsigned j = 0; j < qty_binned.size(); j++){
-        if (qty_binned.x[j]) qty_binned.y[j] *= mod_q / qty_binned.x[j];
-        x = x_min_ + lin_bin*j;
-        qty_binned.x[j] = x;
+    unsigned i = 0;
+    for (unsigned j = 0; j < qty_binned.size(); ){
+        if (qty_binned.x[j]){
+            qty_binned.y[j] *= mod_q / qty_binned.x[j];
+            x = x_min_ + lin_bin*i;
+            qty_binned.x[j] = x;
+            j++;
+        }else{
+            qty_binned.erase(j);
+        }
+        i++;
     }
 }
 
@@ -480,10 +479,9 @@ void gen_corr_func_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<
 	gen_rqty_binned(1, 200, sim.x_0_pwr(), power_aux, *corr_func_binned, 1);
 }
 
-void gen_corr_func_binned_gsl(const Sim_Param &sim, Data_x_y<double>* corr_func_binned)
+void gen_corr_func_binned_gsl(const Sim_Param &sim, const Data_x_y<double>& pwr_spec_binned, Data_x_y<double>* corr_func_binned)
 {
-    gen_corr_func_binned_gsl(1, 200, corr_func_binned);
-    // integrate for every r in range(xmin, xmax, lin_bin)
+    gen_corr_func_binned_gsl(1, 200, pwr_spec_binned, corr_func_binned);
 }
 
 template<class T>

@@ -483,7 +483,7 @@ App_Var_base::App_Var_base(const Sim_Param &sim, string app_str):
 	b(sim.b_in), b_init(1.), b_out(sim.b_out), db(sim.db), z_suffix_const(app_str),
 	app_field(3, Mesh(sim.mesh_num)),
 	power_aux (sim.mesh_num_pwr),
-	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num),
+	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num), corr_func_binned(sim.bin_num),
 	track(4, sim.mesh_num/sim.Ng),
 	dens_binned(500), is_init_pwr_spec_0(false)
 {
@@ -554,17 +554,17 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
     print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init, out_dir_app, z_suffix());
     
     /* Printing correlation function */
-    gen_corr_func_binned_gsl(sim, &pwr_spec_binned);
-    print_pow_spec(pwr_spec_binned, out_dir_app, "_interp" + z_suffix());
-    // print_corr_func(pwr_spec_binned, out_dir_app, "_brute" + z_suffix());
+    gen_corr_func_binned_gsl(sim, pwr_spec_binned, &corr_func_binned);
+    //print_pow_spec(corr_func_binned, out_dir_app, "_interp" + z_suffix());
+    print_corr_func(corr_func_binned, out_dir_app, "_brute" + z_suffix());
 
     // power_aux.reset_im(); // P(k) is a real function
     // fftw_execute_dft_c2r(p_B_pwr, power_aux);
-    // gen_corr_func_binned(sim, power_aux, &pwr_spec_binned);
-    // print_corr_func(pwr_spec_binned, out_dir_app, z_suffix());
+    // gen_corr_func_binned(sim, power_aux, &corr_func_binned);
+    // print_corr_func(corr_func_binned, out_dir_app, z_suffix());
 
-    // gen_corr_func_binned_pp(sim, particles, &pwr_spec_binned, 1, 200, sim.x_0());
-    // print_corr_func(pwr_spec_binned, out_dir_app, "_pp" + z_suffix());
+    // gen_corr_func_binned_pp(sim, particles, &corr_func_binned, 1, 200, sim.x_0());
+    // print_corr_func(corr_func_binned, out_dir_app, "_pp" + z_suffix());
 }
 
 /**
