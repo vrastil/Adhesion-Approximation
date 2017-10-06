@@ -178,20 +178,36 @@ void gen_corr_func_binned_gsl(const double x_min, const double x_max, Data_x_y<d
     printf("Allocationg space for interpolation function P(k)\n");
     Interp_obj P_k(pwr_spec_binned);
 
-    printf("Allocationg space for integration via [QAWO adaptive integration for oscillatory functions]\n");
-    const double k_min = min(pwr_spec_binned.x);
-    const double k_max = max(pwr_spec_binned.x);
-    xi_integrand_param my_param;
-    my_param.P_k = &P_k;
-    Integr_obj_qawo<xi_integrand_param> xi_r(&xi_integrand, &my_param, k_min, k_max, 1000, 25);
+    // printf("Allocationg space for integration via [QAWO adaptive integration for oscillatory functions]\n");
+    // const double k_min = min(pwr_spec_binned.x);
+    // const double k_max = max(pwr_spec_binned.x);
+    // xi_integrand_param my_param;
+    // my_param.P_k = &P_k;
+    // Integr_obj_qawo<xi_integrand_param> xi_r(&xi_integrand, &my_param, k_min, k_max, 1000, 25);
 
-    printf("Computing correlation function via [QAWO adaptive integration for oscillatory functions]...\n");
-    const unsigned int N = corr_func_binned->size();
-    const double lin_bin = (x_max - x_min)/N;
-	double r;
-	for(unsigned i = 0; i < N; i++){
-        r = x_min + i*lin_bin;
-        corr_func_binned->x[i] = r;
-        corr_func_binned->y[i] = xi_r(r);
+    // printf("Computing correlation function via [QAWO adaptive integration for oscillatory functions]...\n");
+    // const unsigned int N = corr_func_binned->size();
+    // const double lin_bin = (x_max - x_min)/N;
+	// double r;
+	// for(unsigned i = 0; i < N; i++){
+    //     r = x_min + i*lin_bin;
+    //     corr_func_binned->x[i] = r;
+    //     corr_func_binned->y[i] = xi_r(r);
+    // }
+
+
+    /* TEST OF INTERPOLATION */
+    double k_min = min(pwr_spec_binned.x);
+    const double k_max = max(pwr_spec_binned.x);
+    corr_func_binned->resize(200);
+    const double log_bin = pow(k_max/k_min, 1./corr_func_binned->size());
+    double k;
+    k_min *=sqrt(log_bin);
+
+    #pragma omp parallel for private(k)
+	for (unsigned j = 0; j < corr_func_binned->size(); j++){
+		k = k_min*pow(log_bin, j);
+		corr_func_binned->x[j] = k;
+        corr_func_binned->y[j] = P_k.eval(k);
     }
 }

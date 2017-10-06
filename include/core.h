@@ -296,6 +296,18 @@ public:
 
     // CAPACITY
     size_t size() const noexcept{ return x.size(); }
+    void resize (size_t n){
+        x.resize(n);
+        y.resize(n);
+    }
+    void resize (size_t n, double val){
+        x.resize(n, val);
+        y.resize(n, val);
+    }
+    void erase(unsigned index){
+        x.erase(x.begin() + index);
+        y.erase(y.begin() + index);
+    }
 
     // MODIFIERS
     void fill(const T& val){

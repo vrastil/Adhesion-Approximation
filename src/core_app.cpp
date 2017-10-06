@@ -400,11 +400,23 @@ void gen_cqty_binned(const double x_min, const double x_max,
         }
     }
     const double x_min_ = mod_x*x_min*sqrt(log_bin);
-	#pragma omp parallel for private(x)
-	for (unsigned j = 0; j < qty_binned.size(); j++){
-		if (qty_binned.x[j]) qty_binned.y[j] *= mod_q / qty_binned.x[j];
-		x = x_min_*pow(log_bin, j);
-		qty_binned.x[j] = x;
+	// #pragma omp parallel for private(x)
+	// for (unsigned j = 0; j < qty_binned.size(); j++){
+	// 	if (qty_binned.x[j]) qty_binned.y[j] *= mod_q / qty_binned.x[j];
+	// 	x = x_min_*pow(log_bin, j);
+	// 	qty_binned.x[j] = x;
+    // }
+    unsigned i = 0;
+    for (unsigned j = 0; j < qty_binned.size(); ){
+        if (qty_binned.x[j]){
+            qty_binned.y[j] *= mod_q / qty_binned.x[j];
+            x = x_min_*pow(log_bin, i);
+            qty_binned.x[j] = x;
+            j++;
+        }else{
+            qty_binned.erase(j);
+        }
+        i++;
 	}
 }
 

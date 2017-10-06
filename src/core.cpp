@@ -555,7 +555,8 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
     
     /* Printing correlation function */
     gen_corr_func_binned_gsl(sim, &pwr_spec_binned);
-    print_corr_func(pwr_spec_binned, out_dir_app, "_brute" + z_suffix());
+    print_pow_spec(pwr_spec_binned, out_dir_app, "_interp" + z_suffix());
+    // print_corr_func(pwr_spec_binned, out_dir_app, "_brute" + z_suffix());
 
     // power_aux.reset_im(); // P(k) is a real function
     // fftw_execute_dft_c2r(p_B_pwr, power_aux);
