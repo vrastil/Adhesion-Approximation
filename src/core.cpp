@@ -11,7 +11,9 @@
 #include "core_app.h"
 #include "core_mesh.h"
 #include "json.hpp"
-
+extern "C"{
+#include <ccl.h>
+}
 using namespace std;
 using json = nlohmann::json;
 
@@ -407,10 +409,24 @@ int Sim_Param::init(int ac, char* av[])
 		b_out = 1./(z_out + 1);
 		a = rs / 0.735;
 		M = (int)(mesh_num / rs);
-		Hc = double(mesh_num) / M;
-		
+        Hc = double(mesh_num) / M;
+        
+        // CCL VARIABLES
+        config.transfer_function_method = ccl_eisenstein_hu;
+        config.matter_power_spectrum_method = ccl_linear;
+        config.mass_function_method = ccl_tinker;
+        params = ccl_parameters_create_flat_lcdm(power.Omega_c, power.Omega_b, power.h, power.s8, power.ns, &status);
+        cosmo = ccl_cosmology_create(params, config);
+        
 		return err;
 	}
+}
+
+Sim_Param::~Sim_Param()
+{
+    if(is_init){
+        ccl_cosmology_free(cosmo);
+    }
 }
 
 void Sim_Param::print_info(string out, string app) const
@@ -556,12 +572,12 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
     /* Printing correlation function */
     gen_corr_func_binned_gsl(sim, pwr_spec_binned, &corr_func_binned);
     //print_pow_spec(corr_func_binned, out_dir_app, "_interp" + z_suffix());
-    print_corr_func(corr_func_binned, out_dir_app, "_brute" + z_suffix());
+    print_corr_func(corr_func_binned, out_dir_app, "_gsl" + z_suffix());
 
-    // power_aux.reset_im(); // P(k) is a real function
-    // fftw_execute_dft_c2r(p_B_pwr, power_aux);
-    // gen_corr_func_binned(sim, power_aux, &corr_func_binned);
-    // print_corr_func(corr_func_binned, out_dir_app, z_suffix());
+    power_aux.reset_im(); // P(k) is a real function
+    fftw_execute_dft_c2r(p_B_pwr, power_aux);
+    gen_corr_func_binned(sim, power_aux, &corr_func_binned);
+    print_corr_func(corr_func_binned, out_dir_app, z_suffix());
 
     // gen_corr_func_binned_pp(sim, particles, &corr_func_binned, 1, 200, sim.x_0());
     // print_corr_func(corr_func_binned, out_dir_app, "_pp" + z_suffix());

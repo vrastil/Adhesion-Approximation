@@ -7,7 +7,9 @@
 
 #include "stdafx.h"
 #include <fftw3.h>
-
+extern "C"{
+#include <ccl.h>
+}
 /**
  * @class:	Vec_3D<T>
  * @brief:	class handling basic 3D-vector functions
@@ -215,12 +217,17 @@ public:
  * @brief:	class storing parameters for power spectrum
  */
 
-enum e_power_spec { power_law_T = 0, power_law = 1, flat = 2, single = 3};
+enum e_power_spec { power_law_T = 0, power_law = 1, flat = 2, single = 3, ccl_EH = 4};
 
 struct Pow_Spec_Param
 {
 	double A = 1, ns, k2_G, s8;
-	e_power_spec pwr_type;
+    e_power_spec pwr_type;
+
+    // CCL VARIABLES (flat LCDM)
+    double Omega_c = 0.25;
+    double Omega_b = 0.05;
+    double h = 0.7;
 };
 
 /**
@@ -252,6 +259,9 @@ public:
 class Sim_Param
 {
 public:
+    // DESTRUCTOR
+    ~Sim_Param();
+
 	// VARIABLES
     unsigned par_num, mesh_num, mesh_num_pwr, Ng, Ng_pwr, box_size, print_every;
     unsigned order = 1, bin_num = 100;
@@ -264,7 +274,13 @@ public:
 	unsigned M;
 	std::string out_dir;
 	Pow_Spec_Param power;
-	bool comp_ZA, comp_FF, comp_FP, comp_AA, comp_FP_pp;
+    bool comp_ZA, comp_FF, comp_FP, comp_AA, comp_FP_pp;
+    
+    // CCL VARIABLES
+    int status = 0;
+    ccl_configuration config;
+    ccl_parameters params;
+    ccl_cosmology* cosmo;
 	
 	// METHODS
 	int init(int ac, char* av[]);
