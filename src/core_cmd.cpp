@@ -10,7 +10,6 @@ using namespace std;
 int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
 	try {
 		string config_file;
-		int int_pwr_type;
 		// options ONLY on command line
 		po::options_description generic("Generic options");
 		generic.add_options()
@@ -48,7 +47,7 @@ int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
 			
 		po::options_description config_power("Power spectrum options");
 		config_power.add_options()
-			("pwr_type,P", po::value<int>(&int_pwr_type)->default_value(0), "power spectrum type")
+			("pwr_type,P", po::value<int>(&sim->power.pwr_type_i)->default_value(0), "power spectrum type")
 			("index,n", po::value<double>(&sim->power.ns)->default_value(1.), "spectral index of the scale-free power spectrum")
 			("sigma8,s", po::value<double>(&sim->power.s8)->default_value(1.), "normalization of the power spectrum at R = 8 Mpc/h")
 			("smoothing_k,k", po::value<double>(&sim->power.k2_G)->default_value(0.),
@@ -72,9 +71,7 @@ int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
 		
 		po::variables_map vm;
 		store(po::command_line_parser(ac, av).options(cmdline_options).run(), vm);		
-		po::notify(vm);
-
-		sim->power.pwr_type = static_cast<e_power_spec>(int_pwr_type);
+        po::notify(vm);
 
 		if (vm.count("help")) {
             cout << setprecision(3) << cmdline_options << "\n";

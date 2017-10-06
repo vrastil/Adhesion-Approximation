@@ -5,6 +5,9 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_spline.h>
+extern "C"{
+    #include <ccl.h>
+}
 
 using namespace std;
 const double PI = acos(-1.);
@@ -69,11 +72,10 @@ double power_spectrum_s8(double k, void* parameters)
 			power_spectrum(k, (double*)parameters)* // P(k)
 			pow(3.*gsl_sf_bessel_j1(k*8)/(k*8), 2.); // window function R = 8 Mpc/h
 }
-	
-void norm_pwr(Pow_Spec_Param* pwr_par)
+
+void norm_pwr_gsl(Pow_Spec_Param* pwr_par)
 {
 	/* Normalize the power spectrum */
-	printf("Computing normalization of the given power spectrum...\n");
 	gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
 	double result, error;
 	
@@ -87,9 +89,23 @@ void norm_pwr(Pow_Spec_Param* pwr_par)
 	pwr_par->A = pwr_par->s8*pwr_par->s8/result;
 }
 
-double lin_pow_spec(Pow_Spec_Param pwr_par, double k)
+void norm_pwr_ccl(Pow_Spec_Param* pwr_par)
 {
-	double parameters[4] = {pwr_par.A, pwr_par.ns, static_cast<double>(pwr_par.pwr_type), pwr_par.k2_G};
+    /* Normalize the power spectrum */
+    ccl_sigma8(pwr_par->cosmo, &pwr_par->status);
+    pwr_par->A = pwr_par->cosmo->params.A_s;
+}
+
+void norm_pwr(Pow_Spec_Param* pwr_par)
+{
+    printf("Initializing given power spectrum...\n");
+    if (pwr_par->pwr_type < 4) norm_pwr_gsl(pwr_par);
+    else norm_pwr_ccl(pwr_par);
+}
+
+double lin_pow_spec(const Pow_Spec_Param* pwr_par, double k)
+{
+	double parameters[4] = {pwr_par->A, pwr_par->ns, static_cast<double>(pwr_par->pwr_type), pwr_par->k2_G};
 	return power_spectrum(k, parameters);
 }
 

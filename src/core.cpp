@@ -353,6 +353,29 @@ Mesh& Mesh::operator=(const Mesh& other)
 }
 
 /**
+ * @class:	Pow_Spec_Param
+ * @brief:	class storing parameters for power spectrum
+ */
+
+void Pow_Spec_Param::init()
+{
+    is_init = true;
+    // CCL VARIABLES
+    config.transfer_function_method = ccl_eisenstein_hu;
+    config.matter_power_spectrum_method = ccl_linear;
+    config.mass_function_method = ccl_tinker;
+    params = ccl_parameters_create_flat_lcdm(Omega_c, Omega_b, h, s8, ns, &status);
+    cosmo = ccl_cosmology_create(params, config);
+}
+
+Pow_Spec_Param::~Pow_Spec_Param()
+{
+    if(is_init){
+        ccl_cosmology_free(cosmo);
+    }
+}
+
+/**
  * @class:	Tracking
  * @brief:	class storing info about tracked particles
  */
@@ -396,37 +419,24 @@ Tracking::Tracking(int sqr_num_track_par, int par_num_per_dim):
 int Sim_Param::init(int ac, char* av[])
 {
 	int err = handle_cmd_line(ac, av, this);
-	if (err) {is_init = 0; return err;}
+	if (err) is_init = 0;
 	else {
 		is_init = 1;
 		// if(nt == 0) nt = omp_get_num_procs();
         if(nt == 0) nt = omp_get_max_threads();
         else omp_set_num_threads(nt);
         Ng_pwr = Ng*mesh_num_pwr/mesh_num;
-		par_num = pow(mesh_num / Ng, 3);
-		power.k2_G *= power.k2_G;
+        par_num = pow(mesh_num / Ng, 3);
+        power.pwr_type = static_cast<e_power_spec>(power.pwr_type_i);
+        power.k2_G *= power.k2_G;
+        power.init();
 		b_in = 1./(z_in + 1);
 		b_out = 1./(z_out + 1);
 		a = rs / 0.735;
 		M = (int)(mesh_num / rs);
         Hc = double(mesh_num) / M;
-        
-        // CCL VARIABLES
-        config.transfer_function_method = ccl_eisenstein_hu;
-        config.matter_power_spectrum_method = ccl_linear;
-        config.mass_function_method = ccl_tinker;
-        params = ccl_parameters_create_flat_lcdm(power.Omega_c, power.Omega_b, power.h, power.s8, power.ns, &status);
-        cosmo = ccl_cosmology_create(params, config);
-        
-		return err;
-	}
-}
-
-Sim_Param::~Sim_Param()
-{
-    if(is_init){
-        ccl_cosmology_free(cosmo);
     }
+    return err;
 }
 
 void Sim_Param::print_info(string out, string app) const

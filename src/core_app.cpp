@@ -283,8 +283,8 @@ static void gen_rho_w_pow_k(const Sim_Param &sim, Mesh* rho)
 	for(unsigned i=0; i < rho->length / 2;i++)
 	{
         k = k0*sqrt(get_k_sq(N, i));
-        (*rho)[2*i] *= sqrt(lin_pow_spec(sim.power, k));
-        (*rho)[2*i+1] *= sqrt(lin_pow_spec(sim.power, k));
+        (*rho)[2*i] *= sqrt(lin_pow_spec(&sim.power, k));
+        (*rho)[2*i+1] *= sqrt(lin_pow_spec(&sim.power, k));
 
         #ifndef OLD_NORM
         (*rho)[2*i] /= pow(L, 3/2.);
