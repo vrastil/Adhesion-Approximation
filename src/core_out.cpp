@@ -134,13 +134,17 @@ void print_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data_x_y
 	fprintf (pFile, "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n");
 	
 	double P_k, P_ZA;
-	
-	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
-		if (pwr_spec_binned.x[j] == pwr_spec_binned_0.x[j]){
+    
+    int i = 0;
+	for (unsigned j = 0; j < pwr_spec_binned.size(); ){
+		if (pwr_spec_binned.x[j] == pwr_spec_binned_0.x[i]){
 			P_k = pwr_spec_binned.y[j];
-			P_ZA = pwr_spec_binned_0.y[j] * pow(b, 2.);
-			if((P_ZA) && (P_k)) fprintf (pFile, "%f\t%f\n", pwr_spec_binned.x[j], (P_k-P_ZA)/P_ZA);
-		} else printf ("WARNING! Binned power spectra don`t match each other! k = %f, while k_lin = %f\n", pwr_spec_binned.x[j], pwr_spec_binned_0.x[j]);
+			P_ZA = pwr_spec_binned_0.y[i] * pow(b, 2.);
+            if((P_ZA) && (P_k)) fprintf (pFile, "%f\t%f\n", pwr_spec_binned.x[j], (P_k-P_ZA)/P_ZA);
+            i++;
+            j++;
+        } else if (pwr_spec_binned.x[j] < pwr_spec_binned_0.x[i]) j++;
+        else i++;
 	}
 
 	fclose (pFile);
