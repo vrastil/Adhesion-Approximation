@@ -17,7 +17,7 @@ double transfer_function_2(double k, const Pow_Spec_Param* parameters)
 
 	const double q = k / (parameters->Omega_m()*parameters->h);
 	double T_k =	log(1+2.34*q)/(2.34*q)*
-					pow(1 + 3.89*q + pow(16.1*q, 2.) + pow(5.4*q, 3.) + pow(6.71*q, 4.)
+					pow(1 + 3.89*q + pow(16.2*q, 2.) + pow(5.47*q, 3.) + pow(6.71*q, 4.)
 					, -1./4.);
 	return pow(T_k, 2.);
 }
@@ -104,7 +104,7 @@ double lin_pow_spec(const Pow_Spec_Param* pwr_par, double k)
         return power_spectrum(k, pwr_par);
     } else {
         int status = 0;
-        return ccl_linear_matter_power(pwr_par->cosmo, k/pwr_par->h, 1, &status)/pow(pwr_par->h, 3);
+        return ccl_linear_matter_power(pwr_par->cosmo, k*pwr_par->h, 1, &status)*pow(pwr_par->h, 3);
     }
 }
 

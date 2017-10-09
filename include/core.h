@@ -239,7 +239,7 @@ public:
     double Omega_c = 1.0;
     double Omega_b = 0.0;
     inline double Omega_m() const { return Omega_c + Omega_b; }
-    double h = 0.67;
+    double h = 0.7;
 
         
     // CCL VARIABLES

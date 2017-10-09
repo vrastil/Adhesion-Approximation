@@ -361,8 +361,9 @@ void Pow_Spec_Param::init()
     // CCL VARIABLES
     switch (pwr_type)
     {
-        case ccl_EH: config.transfer_function_method = ccl_bbks; break;
+        case ccl_EH: config.transfer_function_method = ccl_eisenstein_hu; break;
         case ccl_BBKS: config.transfer_function_method = ccl_bbks; break;
+        default: config.transfer_function_method = ccl_bbks; break;
     }
     config.matter_power_spectrum_method = ccl_linear;
     config.mass_function_method = ccl_tinker;
