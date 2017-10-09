@@ -368,7 +368,7 @@ void Pow_Spec_Param::init()
     config.matter_power_spectrum_method = ccl_linear;
     config.mass_function_method = ccl_tinker;
     int status = 0;
-    params = ccl_parameters_create_flat_lcdm(Omega_c, Omega_b, h, s8, ns, &status);
+    params = ccl_parameters_create_flat_lcdm(Omega_c, Omega_b, h, sigma8, ns, &status);
     cosmo = ccl_cosmology_create(params, config);
 }
 
@@ -433,6 +433,7 @@ int Sim_Param::init(int ac, char* av[])
         par_num = pow(mesh_num / Ng, 3);
         power.pwr_type = static_cast<e_power_spec>(power.pwr_type_i);
         power.k2_G *= power.k2_G;
+        power.h = power.H0/100;
         power.init();
 		b_in = 1./(z_in + 1);
 		b_out = 1./(z_out + 1);
@@ -459,7 +460,7 @@ void Sim_Param::print_info(string out, string app) const
             printf("Box size:\t%i Mpc/h\n", box_size);
             printf("Redshift:\t%G--->%G\n", z_in, z_out);
             printf("Pk:\t\t[sigma_8 = %G, As = %G, ns = %G, k_smooth = %G, pwr_type = %i]\n", 
-                power.s8, power.A, power.ns, sqrt(power.k2_G), power.pwr_type);
+                power.sigma8, power.A, power.ns, sqrt(power.k2_G), power.pwr_type);
             printf("AA:\t\t[nu = %G px^2]\n", nu);
             printf("LL:\t\t[rs = %G, a = %G, M = %i, Hc = %G]\n", rs, a, M, Hc);
             printf("num_thread:\t%i\n", nt);
@@ -483,7 +484,7 @@ void Sim_Param::print_info(string out, string app) const
                 {"pwr_type", power.pwr_type},
                 {"A", power.A},
                 {"index", power.ns},
-                {"sigma8", power.s8},
+                {"sigma8", power.sigma8},
                 {"smoothing_k", power.k2_G},
                 {"Omega_c", power.Omega_c},
                 {"Omega_b", power.Omega_b},

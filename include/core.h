@@ -231,16 +231,13 @@ public:
     // DESTRUCTOR
     ~Pow_Spec_Param();
 
-	double A = 1, ns, k2_G, s8;
+	double A = 1, ns, k2_G, sigma8;
     e_power_spec pwr_type;
     int pwr_type_i;
 
     // COSMOLOGY (flat LCDM)
-    double Omega_c = 0.6;
-    double Omega_b = 0.2;
+    double Omega_c, Omega_b, H0, h;
     inline double Omega_m() const { return Omega_c + Omega_b; }
-    double h = 0.7;
-
         
     // CCL VARIABLES
     ccl_configuration config;

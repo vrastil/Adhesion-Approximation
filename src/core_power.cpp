@@ -81,7 +81,7 @@ void norm_pwr_gsl(Pow_Spec_Param* pwr_par)
 	gsl_integration_qagiu (&F, 0, 0, 1e-7, 1000, w, &result, &error); 
 	
 	gsl_integration_workspace_free (w);
-	pwr_par->A = pwr_par->s8*pwr_par->s8/result;
+	pwr_par->A = pwr_par->sigma8*pwr_par->sigma8/result;
 }
 
 void norm_pwr_ccl(Pow_Spec_Param* pwr_par)
