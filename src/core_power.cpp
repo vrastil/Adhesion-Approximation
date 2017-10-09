@@ -51,8 +51,7 @@ double power_spectrum(double k, const Pow_Spec_Param* parameters)
 {
     const double A = parameters->A;
     const double supp = parameters->k2_G ? exp(-k*k/parameters->k2_G) : 1;
-	e_power_spec pwr_type = parameters->pwr_type;
-	switch (pwr_type)
+	switch (parameters->pwr_type)
 	{
 		case power_law_T: return supp*A*power_spectrum_T(k, parameters);
 		case power_law: return supp*A*power_spectrum_scale_free(k, parameters);
@@ -105,7 +104,7 @@ double lin_pow_spec(const Pow_Spec_Param* pwr_par, double k)
         return power_spectrum(k, pwr_par);
     } else {
         int status = 0;
-        return ccl_linear_matter_power(pwr_par->cosmo, k*pwr_par->h, 1, &status)/pow(pwr_par->h, 3);
+        return ccl_linear_matter_power(pwr_par->cosmo, k/pwr_par->h, 1, &status)/pow(pwr_par->h, 3);
     }
 }
 

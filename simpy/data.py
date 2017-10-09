@@ -21,17 +21,18 @@ class SimInfo(object):
         elif len(args) == 2 and  args[0].endswith('.log'):
             self.load_file_log(*args)
         else:
-            self.num_g = 0
-            self.num_p = 0
-            self.num_m = 0
-            self.num_M = 0
-            self.box = 0
-            self.nu = 0
-            self.rs = 0
-            self.app = ''
-            self.dir = ''
-            self.res_dir = ''
-            self.pwr = {"A" : 187826, "ns" : 1, "k2_G" : 0}
+            print "WARNING! Invalid simulation parameters file '%s'." % args[0]
+
+        self.cosmo = None
+        if hasattr(self, 'pwr'):
+            if self.pwr["pwr_type"] >= 4:
+                import pyccl as ccl
+                self.cosmo = ccl.Cosmology(
+                    Omega_c=self.pwr["Omega_c"], Omega_b=self.pwr["Omega_b"], h=self.pwr["h"],
+                    sigma8=self.pwr["sigma8"], n_s=self.pwr["ns"],
+                    transfer_function=self.ccl["transfer_function_method"],
+                    matter_power_spectrum=self.ccl["matter_power_spectrum_method"],
+                    mass_function=self.ccl["mass_function_method"])
 
     def info(self):
         info = ''
@@ -70,14 +71,15 @@ class SimInfo(object):
         self.pwr["A"] = data["A"]
         self.pwr["ns"] = data["index"]
         self.pwr["k2_G"] = data["smoothing_k"]
-        self.pwr["s8"] = data["sigma8"]
+        self.pwr["sigma8"] = data["sigma8"]
         self.pwr["Omega_c"] = data["Omega_c"]
-        self.pwr["Omega_m"] = data["Omega_m"]
+        self.pwr["Omega_b"] = data["Omega_b"]
         self.pwr["h"] = data["h"]
+        self.pwr["pwr_type"] = data["pwr_type"]
         self.ccl = {}
-        self.ccl{"transfer_function_method"} = dta["transfer_function_method"]
-        self.ccl{"matter_power_spectrum_method"} = dta["matter_power_spectrum_method"]
-        self.ccl{"mass_function_method"} = dta["mass_function_method"]
+        self.ccl["transfer_function_method"] = data["transfer_function_method"]
+        self.ccl["matter_power_spectrum_method"] = data["matter_power_spectrum_method"]
+        self.ccl["mass_function_method"] = data["mass_function_method"]
 
         self.results = data["results"]
         if self.results is None:

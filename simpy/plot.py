@@ -9,10 +9,10 @@ import numpy as np
 from . import get_files_in_traverse_dir
 
 
-def trans_fce(k, Omega_0=1, h=0.67, q_log=2.34, q_1=3.89, q_2=16.1, q_3=5.4, q_4=6.71):
+def trans_fce(k, Omega_m=1, h=0.67, q_log=2.34, q_1=3.89, q_2=16.1, q_3=5.4, q_4=6.71):
     if k == 0:
         return 1
-    q = k / (Omega_0 * h)
+    q = k / (Omega_m * h)
     tmp_log = np.log(1 + q_log * q) / (q_log * q)
     tmp_pol = 1 + q_1 * q + (q_2 * q)**2 + (q_3 * q)**3 + (q_4 * q)**4
     return tmp_log * tmp_pol**(-1. / 4)
@@ -22,15 +22,19 @@ def pwr_spec_prim(k, A=187826, n=1):
     return A * k**n
 
 
-def pwr_spec(k, pwr, z=0, Omega_0=1, h=0.67, q_log=2.34, q_1=3.89, q_2=16.1, q_3=5.4, q_4=6.71):
-    A = pwr["A"]
-    n = pwr["ns"]
+def pwr_spec(k, pwr, cosmo=None, z=0, q_log=2.34, q_1=3.89, q_2=16.1, q_3=5.4, q_4=6.71):
     supp = np.exp(-k*k/pwr["k2_G"]) if pwr["k2_G"] else 1
-    P_prim = pwr_spec_prim(k, A=A, n=n)
-    T_k = trans_fce(k, Omega_0=Omega_0, h=h, q_log=q_log,
-                    q_1=q_1, q_2=q_2, q_3=q_3, q_4=q_4)
-    return supp*P_prim * T_k**2 / (z + 1)**2
-
+    if cosmo is None:
+        A = pwr["A"]
+        n = pwr["ns"]
+        Omega_m = pwr["Omega_b"] + pwr["Omega_c"]
+        h = pwr["h"]
+        P_prim = pwr_spec_prim(k, A=A, n=n)
+        T_k = trans_fce(k, Omega_m=Omega_m, h=h, q_log=q_log,
+                        q_1=q_1, q_2=q_2, q_3=q_3, q_4=q_4)
+        return supp*P_prim * T_k**2 / (z + 1.)**2
+    else:
+        return supp*ccl.linear_matter_power(cosmo, k/pwr["h"], 1/(z + 1.))/pwr["h"]**3
 
 def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, out_dir='auto', save=True, show=False):
     if out_dir == 'auto':

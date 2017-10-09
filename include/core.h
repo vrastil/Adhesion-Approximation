@@ -219,7 +219,8 @@ public:
  * @brief:	class storing parameters for power spectrum
  */
 
-enum e_power_spec { power_law_T = 0, power_law = 1, flat = 2, single = 3, ccl_EH = 4};
+enum e_power_spec { power_law_T = 0, power_law = 1, flat = 2, single = 3,
+                    ccl_EH = 4, ccl_BBKS = 5};
 
 class Pow_Spec_Param
 {

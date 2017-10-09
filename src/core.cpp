@@ -359,7 +359,11 @@ void Pow_Spec_Param::init()
 {
     is_init = true;
     // CCL VARIABLES
-    config.transfer_function_method = ccl_bbks;
+    switch (pwr_type)
+    {
+        case ccl_EH: config.transfer_function_method = ccl_bbks; break;
+        case ccl_BBKS: config.transfer_function_method = ccl_bbks; break;
+    }
     config.matter_power_spectrum_method = ccl_linear;
     config.mass_function_method = ccl_tinker;
     int status = 0;
@@ -481,17 +485,39 @@ void Sim_Param::print_info(string out, string app) const
                 {"sigma8", power.s8},
                 {"smoothing_k", power.k2_G},
                 {"Omega_c", power.Omega_c},
-                {"Omega_m", power.Omega_b},
+                {"Omega_b", power.Omega_b},
                 {"h", power.h},
-                {"transfer_function_method", power.config.transfer_function_method},
-                {"matter_power_spectrum_method", power.config.matter_power_spectrum_method},
-                {"mass_function_method", power.config.mass_function_method},
                 {"viscosity", nu},
                 {"cut_radius", rs},
                 {"num_thread", nt},
                 {"out_dir", out},
                 {"results", {}}
             };
+
+            switch (power.config.transfer_function_method)
+            { // convert to pyccl transfer_function_types keys
+                case ccl_emulator: j["transfer_function_method"] = "emulator"; break;
+                //case ccl_none: j["transfer_function_method"] = "none"; break;
+                //case ccl_fitting_function: j["transfer_function_method"] = "fitting_function"; break;
+                case ccl_eisenstein_hu: j["transfer_function_method"] = "eisenstein_hu"; break;
+                case ccl_bbks: j["transfer_function_method"] = "bbks"; break;
+                //case ccl_boltzmann: j["transfer_function_method"] = "boltzmann"; break;
+                case ccl_boltzmann_class: j["transfer_function_method"] = "boltzmann_class"; break;
+                case ccl_boltzmann_camb: j["transfer_function_method"] = "boltzmann_camb"; break;
+            }
+            switch (power.config.matter_power_spectrum_method)
+            { // convert to pyccl matter_power_spectrum_types keys
+                case ccl_linear: j["matter_power_spectrum_method"] = "linear"; break;
+                case ccl_halofit: j["matter_power_spectrum_method"] = "halofit"; break;
+                case ccl_halo_model: j["matter_power_spectrum_method"] = "halo_model"; break;
+            }
+            switch (power.config.mass_function_method)
+            { // convert to pyccl mass_function_types keys
+                case ccl_tinker: j["mass_function_method"] = "tinker"; break;
+                case ccl_tinker10: j["mass_function_method"] = "tinker10"; break;
+                case ccl_watson: j["mass_function_method"] = "watson"; break;
+                case ccl_angulo: j["mass_function_method"] = "angulo"; break;
+            }
 
             o << setw(2) << j << endl;
         }
