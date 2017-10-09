@@ -10,6 +10,8 @@
 extern "C"{
 #include <ccl.h>
 }
+
+constexpr double PI_ = M_PI;
 /**
  * @class:	Vec_3D<T>
  * @brief:	class handling basic 3D-vector functions
@@ -232,9 +234,10 @@ public:
     e_power_spec pwr_type;
     int pwr_type_i;
 
-    // CCL VARIABLES (flat LCDM)
+    // COSMOLOGY (flat LCDM)
     double Omega_c = 1.0;
     double Omega_b = 0.0;
+    inline double Omega_m() const { return Omega_c + Omega_b; }
     double h = 0.67;
 
         
