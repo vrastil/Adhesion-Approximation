@@ -70,6 +70,14 @@ class SimInfo(object):
         self.pwr["A"] = data["A"]
         self.pwr["ns"] = data["index"]
         self.pwr["k2_G"] = data["smoothing_k"]
+        self.pwr["s8"] = data["sigma8"]
+        self.pwr["Omega_c"] = data["Omega_c"]
+        self.pwr["Omega_m"] = data["Omega_m"]
+        self.pwr["h"] = data["h"]
+        self.ccl = {}
+        self.ccl{"transfer_function_method"} = dta["transfer_function_method"]
+        self.ccl{"matter_power_spectrum_method"} = dta["matter_power_spectrum_method"]
+        self.ccl{"mass_function_method"} = dta["mass_function_method"]
 
         self.results = data["results"]
         if self.results is None:
