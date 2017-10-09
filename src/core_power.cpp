@@ -10,7 +10,6 @@ extern "C"{
 }
 
 using namespace std;
-const double PI = acos(-1.);
 
 double transfer_function_2(double k, const Pow_Spec_Param* parameters)
 {

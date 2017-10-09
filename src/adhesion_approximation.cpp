@@ -6,7 +6,6 @@
 #include "core_mesh.h"
 
 using namespace std;
-const double PI = acos(-1.);
 
 const double ACC = 1e-10;
 const double log_acc = log(ACC);

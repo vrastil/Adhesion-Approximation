@@ -11,7 +11,7 @@ extern "C"{
 #include <ccl.h>
 }
 
-constexpr double PI_ = M_PI;
+constexpr double PI = M_PI;
 /**
  * @class:	Vec_3D<T>
  * @brief:	class handling basic 3D-vector functions

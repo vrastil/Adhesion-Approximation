@@ -6,7 +6,7 @@
 #include "core_mesh.h"
 
 using namespace std;
-const double PI = acos(-1.);
+
 
 int frozen_potential(const Sim_Param &sim)
 {

@@ -4,7 +4,6 @@
 #include <fftw3.h>
 
 using namespace std;
-const double PI = acos(-1.);
 
 void get_k_vec(int N, int index, int* k_vec)
 {

@@ -9,7 +9,6 @@
 #define N_MAX 1
 
 using namespace std;
-const double PI = acos(-1.);
 
 static void set_unpert_pos_one_par(Vec_3D<int>& unpert_pos, const int par_index, const int par_per_dim, const int Ng)
 {

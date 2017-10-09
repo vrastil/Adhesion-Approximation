@@ -17,8 +17,6 @@ extern "C"{
 using namespace std;
 using json = nlohmann::json;
 
-const double PI = acos(-1.);
-
 const char *humanSize(uint64_t bytes){
 	char const *suffix[] = {"B", "KB", "MB", "GB", "TB"};
 	char length = sizeof(suffix) / sizeof(suffix[0]);
