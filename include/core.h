@@ -233,9 +233,9 @@ public:
     int pwr_type_i;
 
     // CCL VARIABLES (flat LCDM)
-    double Omega_c = 0.25;
-    double Omega_b = 0.05;
-    double h = 0.7;
+    double Omega_c = 1.0;
+    double Omega_b = 0.0;
+    double h = 0.67;
 
         
     // CCL VARIABLES

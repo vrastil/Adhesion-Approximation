@@ -92,7 +92,7 @@ void norm_pwr_gsl(Pow_Spec_Param* pwr_par)
 void norm_pwr_ccl(Pow_Spec_Param* pwr_par)
 {
     /* Normalize the power spectrum */
-    int status;
+    int status = 0;
     ccl_sigma8(pwr_par->cosmo, &status);
 }
 
@@ -109,7 +109,7 @@ double lin_pow_spec(const Pow_Spec_Param* pwr_par, double k)
         double parameters[4] = {pwr_par->A, pwr_par->ns, static_cast<double>(pwr_par->pwr_type), pwr_par->k2_G};
         return power_spectrum(k, parameters);
     } else {
-        int status;
+        int status = 0;
         return ccl_linear_matter_power(pwr_par->cosmo, k*pwr_par->h, 1, &status)/pow(pwr_par->h, 3);
     }
 }

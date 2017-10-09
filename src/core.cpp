@@ -361,10 +361,10 @@ void Pow_Spec_Param::init()
 {
     is_init = true;
     // CCL VARIABLES
-    config.transfer_function_method = ccl_eisenstein_hu;
+    config.transfer_function_method = ccl_bbks;
     config.matter_power_spectrum_method = ccl_linear;
     config.mass_function_method = ccl_tinker;
-    int status;
+    int status = 0;
     params = ccl_parameters_create_flat_lcdm(Omega_c, Omega_b, h, s8, ns, &status);
     cosmo = ccl_cosmology_create(params, config);
 }
@@ -571,6 +571,7 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
     /* Printing power spectrum */
     fftw_execute_dft_r2c(p_F_pwr, power_aux);
     pwr_spec_k(sim, power_aux, &power_aux);
+    pwr_spec_binned.resize(sim.bin_num);
     gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
     print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
     if (!is_init_pwr_spec_0){

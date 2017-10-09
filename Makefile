@@ -20,6 +20,7 @@ CXXLIB_PATH +=-L/usr/local/lib/
 CXXLIB +=-lboost_program_options -lboost_filesystem -lboost_system
 CXXLIB +=-lfftw3 -lfftw3_omp
 CXXLIB +=-lgsl -lgslcblas
+CXXLIB +=-lccl
 
 OBJ_FILES = $(patsubst %.cpp,%.o,$(wildcard src/*.cpp))
 TEST_OBJ_FILES = $(patsubst src/%,tests/%, $(filter-out src/main.o,$(OBJ_FILES))) tests/test_main.o
