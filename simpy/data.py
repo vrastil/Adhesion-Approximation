@@ -11,7 +11,7 @@ from . import *
 from . import plot
 
 RESULTS_KEYS = ["pwr_spec", "pwr_spec_diff", "pwr_spec_supp", "dens_hist",
-                "par_slice", "par_ani", "dens_slice", "dens_ani"]
+                "par_slice", "par_ani", "dens_slice", "dens_ani", "corr_func"]
 
 class SimInfo(object):
     def __init__(self, *args):
@@ -179,9 +179,6 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
 
     if rerun is None:
         rerun = []
-    elif rerun == "all":
-        rerun = ["pwr_spec", "pwr_spec_supp", "pwr_spec_supp",
-                 "dens_hist", "par_slice", "par_ani", "dens_slice", "dens_ani"]
 
     # Power spectrum
     key = "pwr_spec"
@@ -206,6 +203,15 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         a = [1./(z+1) for z in zs]
         supp_lms, k_lms = load_k_supp(files)
         plot.plot_supp_lms(supp_lms, a, a_sim_info, k_lms=k_lms)
+        a_sim_info.done(key)
+    del zs, files
+
+    # Correlation function
+    key = "corr_func"
+    zs, files = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*fft*.dat')
+    if a_sim_info.rerun(rerun, key, skip, zs):
+        print 'Plotting correlation function...'
+        plot.plot_corr_func(files, zs, a_sim_info)
         a_sim_info.done(key)
     del zs, files
 
@@ -239,7 +245,7 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
     del zs, files, zs_t, files_t
 
     # Density evolution
-    zs, files = try_get_zs_files(a_sim_info, 'rho_map/', a_file='*.dat')
+    zs, files = try_get_zs_files(a_sim_info, 'rho_map/')
     # two slices
     key = "dens_slice"
     if a_sim_info.rerun(rerun, key, skip, zs):

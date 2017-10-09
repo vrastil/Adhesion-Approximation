@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 # from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
+from scipy import interpolate
 
 from . import get_files_in_traverse_dir
 
@@ -62,7 +63,7 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, out_dir='auto', save=True, sho
 
     data = np.loadtxt(pwr_spec_files[-1])
     k = data[:, 0]
-    k = np.logspace(np.log10(k[0]), np.log10(k[-15]), num=20)
+    k = np.logspace(np.log10(k[0]), np.log10(k[-15]), num=50)
     del data
     P_0 = [pwr_spec(k_, a_sim_info.pwr, cosmo=a_sim_info.cosmo, z=zs[-1]) for k_ in k]
     P_i = [pwr_spec(k_, a_sim_info.pwr, cosmo=a_sim_info.cosmo, z=zs[0]) for k_ in k]
@@ -82,7 +83,61 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, out_dir='auto', save=True, sho
         plt.savefig(out_dir + 'pwr_spec.png')
     if show:
         plt.show()
-        plt.close(fig)
+    plt.close(fig)
+
+
+def plot_corr_func(corr_func_files, zs, a_sim_info, out_dir='auto', save=True, show=False):
+    if out_dir == 'auto':
+        out_dir = a_sim_info.res_dir
+    fig = plt.figure(figsize=(15, 11))
+
+    lab = 'z = ' + str(zs[-1])
+    data = np.loadtxt(corr_func_files[-1])
+    r, xi = data[:, 0], data[:, 1]
+
+    inter = interpolate.interp1d(r, xi, 3)
+    xnew = np.linspace(np.min(r), np.max(r), num=5*len(r), endpoint=True)
+    ynew = inter(xnew)
+
+    plt.plot(r, xi, 'x', ms=3, label=lab)
+    plt.plot(xnew, ynew, '-')
+
+    fig.suptitle("Correlation function", y=0.99, size=20)
+    plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
+    plt.ylabel(r"$\xi(r)$", fontsize=15)
+    plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
+  #  plt.ylim(ymin=-0.02, ymax=0.05)
+    plt.draw()
+    plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
+                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
+    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
+
+    if save:
+        plt.savefig(out_dir + 'corr_func.png')
+    if show:
+        plt.show()
+    plt.close(fig)
+
+    fig = plt.figure(figsize=(15, 11))
+
+    plt.plot(r, r*r*xi, 'x', ms=3, label=lab)
+    plt.plot(xnew, xnew*xnew*ynew, '-')
+
+    fig.suptitle("Correlation function", y=0.99, size=20)
+    plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
+    plt.ylabel(r"$r^2\xi(r)$", fontsize=15)
+    plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
+    #plt.ylim(ymin=-0.02, ymax=0.05)
+    plt.draw()
+    plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
+                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
+    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
+    
+    if save:
+        plt.savefig(out_dir + 'corr_r2_func.png')
+    if show:
+        plt.show()
+    plt.close(fig)
 
 
 def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', save=True, show=False):

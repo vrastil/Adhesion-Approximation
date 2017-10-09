@@ -195,7 +195,7 @@ void gen_corr_func_binned_gsl(const double x_min, const double x_max, const Data
 
     printf("Allocationg space for integration via [QAWO adaptive integration for oscillatory functions]\n");
     const double k_min = min(pwr_spec_binned_cp.x);
-    const double k_max = max(pwr_spec_binned_cp.x);
+    const double k_max = max(pwr_spec_binned_cp.x) / 4;
     xi_integrand_param my_param;
     my_param.P_k = &P_k;
     Integr_obj_qawo<xi_integrand_param> xi_r(&xi_integrand, &my_param, k_min, k_max, 1000, 25);
