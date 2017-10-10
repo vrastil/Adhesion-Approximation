@@ -7,9 +7,7 @@
 
 #include "stdafx.h"
 #include <fftw3.h>
-extern "C"{
 #include <ccl.h>
-}
 
 constexpr double PI = M_PI;
 /**

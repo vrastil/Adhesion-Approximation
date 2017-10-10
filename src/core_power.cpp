@@ -5,9 +5,7 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_spline.h>
-extern "C"{
-    #include <ccl.h>
-}
+#include <ccl.h>
 
 using namespace std;
 
@@ -126,6 +124,29 @@ public:
     }
     // METHODS
     double eval(double x) const{ return gsl_spline_eval(spline, x, acc); }
+
+private:
+    // VARIABLES
+    gsl_spline* spline;
+    gsl_interp_accel* acc;
+};
+
+class Extrap_obj : Interp_obj
+{
+public:
+    // CONSTRUCTOR
+    Extrap_obj(const Data_x_y<double>& data):
+    Interp_obj(data)
+    {
+       
+    }
+    // DESTRUCTOR
+    ~Extrap_obj()
+    {
+
+    }
+    // METHODS
+    double eval(double x) const{ ; }
 
 private:
     // VARIABLES

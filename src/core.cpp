@@ -11,9 +11,8 @@
 #include "core_app.h"
 #include "core_mesh.h"
 #include "json.hpp"
-extern "C"{
 #include <ccl.h>
-}
+
 using namespace std;
 using json = nlohmann::json;
 

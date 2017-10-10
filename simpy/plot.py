@@ -95,8 +95,8 @@ def plot_corr_func(corr_func_files, zs, a_sim_info, out_dir='auto', save=True, s
     data = np.loadtxt(corr_func_files[-1])
     r, xi = data[:, 0], data[:, 1]
 
-    inter = interpolate.interp1d(r, xi, 3)
-    xnew = np.linspace(np.min(r), np.max(r), num=5*len(r), endpoint=True)
+    inter = interpolate.PchipInterpolator(r, xi)
+    xnew = np.linspace(np.min(r), np.max(r), num=10*len(r), endpoint=True)
     ynew = inter(xnew)
 
     plt.plot(r, xi, 'x', ms=3, label=lab)
