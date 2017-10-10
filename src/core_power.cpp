@@ -5,6 +5,8 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_spline.h>
+#include <gsl/gsl_multifit.h>
+#include <gsl/gsl_poly.h>
 #include <ccl.h>
 
 using namespace std;
@@ -106,8 +108,46 @@ double lin_pow_spec(const Pow_Spec_Param* pwr_par, double k)
     }
 }
 
+void polynomialfit(int obs, int degree, double *dx, double *dy, double *store) /* n, p */
+{ // SOURCE: http://rosettacode.org/wiki/Polynomial_regression#C
+    gsl_multifit_linear_workspace *ws;
+    gsl_matrix *cov, *X;
+    gsl_vector *y, *c;
+    double chisq;
+
+    int i, j;
+
+    X = gsl_matrix_alloc(obs, degree);
+    y = gsl_vector_alloc(obs);
+    c = gsl_vector_alloc(degree);
+    cov = gsl_matrix_alloc(degree, degree);
+
+    for(i=0; i < obs; i++){
+        for(j=0; j < degree; j++)
+        {
+            gsl_matrix_set(X, i, j, pow(dx[i], j));
+        }
+        gsl_vector_set(y, i, dy[i]);
+    }
+
+    ws = gsl_multifit_linear_alloc(obs, degree);
+    gsl_multifit_linear(X, y, c, cov, &chisq, ws);
+
+    /* store result ... */
+    for(i=0; i < degree; i++)
+    {
+        store[i] = gsl_vector_get(c, i);
+    }
+
+    gsl_multifit_linear_free(ws);
+    gsl_matrix_free(X);
+    gsl_matrix_free(cov);
+    gsl_vector_free(y);
+    gsl_vector_free(c);
+}
+
 class Interp_obj
-{
+{// linear interpolation of data [x, y]
 public:
     // CONSTRUCTOR
     Interp_obj(const Data_x_y<double>& data)
@@ -131,27 +171,73 @@ private:
     gsl_interp_accel* acc;
 };
 
-class Extrap_obj : Interp_obj
-{
+class Extrap_obj : public Interp_obj
+{ /*
+    linear interpolation of data [x, y] within range <x_inter0, x_inter1>
+    polynomial extrapolation of degree n_0 / n_1 outside this range
+    if n_0 or n_1 is negative, then [p(x, |n|)]^-1 is fitted
+    fitting is performed in data range <x_fit00, x_fit01> / <x_fot10, x_fit11>
+        using n_fit equidistant values in logspace 
+*/
 public:
     // CONSTRUCTOR
-    Extrap_obj(const Data_x_y<double>& data):
-    Interp_obj(data)
+    Extrap_obj(const Data_x_y<double>& data, double x_inter0, double x_inter1,
+               int n_0, double x_fit00, double x_fit01,
+               int n_1, double x_fit10, double x_fit11,
+               unsigned n_fit):
+    Interp_obj(data), x_inter0(x_inter0), x_inter1(x_inter1),
+    n_0(n_0), x_fit00(x_fit00), x_fit01(x_fit01), 
+    n_1(n_1), x_fit10(x_fit10), x_fit11(x_fit11),
+    coeff_0(abs(n_0)), coeff_1(abs(n_1))
     {
-       
+        unsigned i;
+        double x_, y_, logstep;
+        vector<double> x, y;
+    
+        // LOWER RANGE
+        for(i = 0, x_ = x_fit00, logstep = pow(x_fit01/x_fit00, 1./n_fit);
+            i < n_fit; i++, x_*= logstep)
+        {
+            x.push_back(x_);
+            y_ = (n_0 > 0) ? Interp_obj::eval(x_) : 1./Interp_obj::eval(x_);
+            y.push_back(y_);
+        }
+        polynomialfit(n_fit, abs(n_0), x.data(), y.data(), coeff_0.data());
+        // UPPER RANGE
+        x.clear();
+        y.clear();
+        for(i = 0, x_ = x_fit10, logstep = pow(x_fit11/x_fit10, 1./n_fit);
+        i < n_fit; i++, x_*= logstep)
+        {
+            x.push_back(x_);
+            y_ = (n_1 > 0) ? Interp_obj::eval(x_) : 1./Interp_obj::eval(x_);
+            y.push_back(y_);
+        }
+        polynomialfit(n_fit, abs(n_1), x.data(), y.data(), coeff_1.data());
     }
-    // DESTRUCTOR
-    ~Extrap_obj()
-    {
 
-    }
     // METHODS
-    double eval(double x) const{ ; }
+    double eval(double x) const
+    {
+        double val;
+        if (x < x_inter0)
+        {
+            val = gsl_poly_eval(coeff_0.data(), abs(n_0), x);
+            return (n_0 > 0) ? val : 1./val;
+        }
+        else if (x <= x_inter1) return Interp_obj::eval(x);
+        else
+        {
+            val = gsl_poly_eval(coeff_1.data(), abs(n_1), x);
+            return (n_1 > 0) ? val : 1./val;
+        }
+    }
 
 private:
     // VARIABLES
-    gsl_spline* spline;
-    gsl_interp_accel* acc;
+    const int n_0, n_1;
+    const double x_inter0, x_inter1, x_fit00, x_fit01, x_fit10, x_fit11;
+    vector<double> coeff_0, coeff_1;
 };
 
 template <class spec_params>
