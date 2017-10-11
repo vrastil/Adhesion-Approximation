@@ -590,14 +590,14 @@ template <class T>
 void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* particles)
 {
     /* Printing positions */
-    print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
-    print_track_par(track, sim, out_dir_app, z_suffix());
+    // print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
+    // print_track_par(track, sim, out_dir_app, z_suffix());
 
     /* Printing density */
     get_rho_from_par(particles, &power_aux, sim);
     gen_dens_binned(power_aux, dens_binned, sim);    
-    print_rho_map(power_aux, sim, out_dir_app, z_suffix());
-    print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
+    // print_rho_map(power_aux, sim, out_dir_app, z_suffix());
+    // print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
 
     /* Printing power spectrum */
     fftw_execute_dft_r2c(p_F_pwr, power_aux);
@@ -615,14 +615,14 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
     /* Printing correlation function */
     corr_func_binned.resize(sim.bin_num / 4);
     gen_corr_func_binned_gsl(sim, pwr_spec_binned, &corr_func_binned);
-    //print_pow_spec(corr_func_binned, out_dir_app, "_interp" + z_suffix());
-    print_corr_func(corr_func_binned, out_dir_app, "_gsl" + z_suffix());
+    print_pow_spec(corr_func_binned, out_dir_app, "_interp" + z_suffix());
+    // print_corr_func(corr_func_binned, out_dir_app, "_gsl" + z_suffix());
 
-    power_aux.reset_im(); // P(k) is a real function
-    fftw_execute_dft_c2r(p_B_pwr, power_aux);
-    corr_func_binned.resize(sim.bin_num / 4);
-    gen_corr_func_binned(sim, power_aux, &corr_func_binned);
-    print_corr_func(corr_func_binned, out_dir_app, "_fft" + z_suffix());
+    // power_aux.reset_im(); // P(k) is a real function
+    // fftw_execute_dft_c2r(p_B_pwr, power_aux);
+    // corr_func_binned.resize(sim.bin_num / 4);
+    // gen_corr_func_binned(sim, power_aux, &corr_func_binned);
+    // print_corr_func(corr_func_binned, out_dir_app, "_fft" + z_suffix());
 
     // gen_corr_func_binned_pp(sim, particles, &corr_func_binned, 1, 200, sim.x_0());
     // print_corr_func(corr_func_binned, out_dir_app, "_pp" + z_suffix());

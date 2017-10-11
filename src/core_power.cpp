@@ -184,11 +184,12 @@ public:
     Extrap_obj(const Data_x_y<double>& data, double x_inter0, double x_inter1,
                int n_0, double x_fit00, double x_fit01,
                int n_1, double x_fit10, double x_fit11,
-               unsigned n_fit):
+               unsigned n_fit, bool const_term_0, bool const_term_1):
     Interp_obj(data), x_inter0(x_inter0), x_inter1(x_inter1),
     n_0(n_0), x_fit00(x_fit00), x_fit01(x_fit01), 
     n_1(n_1), x_fit10(x_fit10), x_fit11(x_fit11),
-    coeff_0(abs(n_0)), coeff_1(abs(n_1))
+    coeff_0(abs(n_0)), coeff_1(abs(n_1)),
+    const_term_0(const_term_0), const_term_1(const_term_1)
     {
         unsigned i;
         double x_, y_, logstep;
@@ -200,9 +201,12 @@ public:
         {
             x.push_back(x_);
             y_ = (n_0 > 0) ? Interp_obj::eval(x_) : 1./Interp_obj::eval(x_);
+            if (!const_term_0) y_ /= x_;
             y.push_back(y_);
         }
-        polynomialfit(n_fit, abs(n_0), x.data(), y.data(), coeff_0.data());
+        if (const_term_0) polynomialfit(n_fit, abs(n_0), x.data(), y.data(), coeff_0.data());
+        else polynomialfit(n_fit, abs(n_0)-1, x.data(), y.data(), coeff_0.data());
+
         // UPPER RANGE
         x.clear();
         y.clear();
@@ -211,9 +215,11 @@ public:
         {
             x.push_back(x_);
             y_ = (n_1 > 0) ? Interp_obj::eval(x_) : 1./Interp_obj::eval(x_);
+            if (!const_term_1) y_ /= x_;
             y.push_back(y_);
         }
-        polynomialfit(n_fit, abs(n_1), x.data(), y.data(), coeff_1.data());
+        if (const_term_1) polynomialfit(n_fit, abs(n_1), x.data(), y.data(), coeff_1.data());
+        else polynomialfit(n_fit, abs(n_1)-1, x.data(), y.data(), coeff_1.data());
     }
 
     // METHODS
@@ -222,13 +228,15 @@ public:
         double val;
         if (x < x_inter0)
         {
-            val = gsl_poly_eval(coeff_0.data(), abs(n_0), x);
+            if (const_term_0) val = gsl_poly_eval(coeff_0.data(), abs(n_0), x);
+            else val = x*gsl_poly_eval(coeff_0.data(), abs(n_0)-1, x);
             return (n_0 > 0) ? val : 1./val;
         }
         else if (x <= x_inter1) return Interp_obj::eval(x);
         else
         {
-            val = gsl_poly_eval(coeff_1.data(), abs(n_1), x);
+            if (const_term_1) val = gsl_poly_eval(coeff_1.data(), abs(n_1), x);
+            else val = x*gsl_poly_eval(coeff_1.data(), abs(n_1)-1, x);
             return (n_1 > 0) ? val : 1./val;
         }
     }
@@ -238,6 +246,7 @@ private:
     const int n_0, n_1;
     const double x_inter0, x_inter1, x_fit00, x_fit01, x_fit10, x_fit11;
     vector<double> coeff_0, coeff_1;
+    const bool const_term_0, const_term_1;
 };
 
 template <class spec_params>
@@ -297,40 +306,43 @@ void gen_corr_func_binned_gsl(const double x_min, const double x_max, const Data
 {
     Data_x_y<double> pwr_spec_binned_cp = pwr_spec_binned; // prevent overwriting when 
 
-    printf("Allocationg space for interpolation function P(k)\n");
-    Interp_obj P_k(pwr_spec_binned_cp);
+    // printf("Allocationg space for interpolation function P(k)\n");
+    // Interp_obj P_k(pwr_spec_binned_cp);
 
-    printf("Allocationg space for integration via [QAWO adaptive integration for oscillatory functions]\n");
-    const double k_min = min(pwr_spec_binned_cp.x);
-    const double k_max = max(pwr_spec_binned_cp.x) / 4;
-    xi_integrand_param my_param;
-    my_param.P_k = &P_k;
-    Integr_obj_qawo<xi_integrand_param> xi_r(&xi_integrand, &my_param, k_min, k_max, 1000, 25);
+    // printf("Allocationg space for integration via [QAWO adaptive integration for oscillatory functions]\n");
+    // const double k_min = min(pwr_spec_binned_cp.x);
+    // const double k_max = max(pwr_spec_binned_cp.x) / 4;
+    // xi_integrand_param my_param;
+    // my_param.P_k = &P_k;
+    // Integr_obj_qawo<xi_integrand_param> xi_r(&xi_integrand, &my_param, k_min, k_max, 1000, 25);
 
-    printf("Computing correlation function via [QAWO adaptive integration for oscillatory functions]...\n");
-    const unsigned int N = corr_func_binned->size();
-    const double lin_bin = (x_max - x_min)/N;
-	double r;
-	for(unsigned i = 0; i < N; i++){
-        r = x_min + i*lin_bin;
-        corr_func_binned->x[i] = r;
-        corr_func_binned->y[i] = xi_r(r);
-    }
+    // printf("Computing correlation function via [QAWO adaptive integration for oscillatory functions]...\n");
+    // const unsigned int N = corr_func_binned->size();
+    // const double lin_bin = (x_max - x_min)/N;
+	// double r;
+	// for(unsigned i = 0; i < N; i++){
+    //     r = x_min + i*lin_bin;
+    //     corr_func_binned->x[i] = r;
+    //     corr_func_binned->y[i] = xi_r(r);
+    // }
 
 
     /* TEST OF INTERPOLATION */
-    // double k_min = min(pwr_spec_binned_cp.x);
-    // const double k_max = max(pwr_spec_binned_cp.x);
-    // corr_func_binned->resize(200);
-    // const double log_bin = pow(k_max/k_min, 1./corr_func_binned->size());
-    // double k;
-    // k_min *=sqrt(log_bin);
+    double k_min = min(pwr_spec_binned_cp.x);
+    const double k_max = max(pwr_spec_binned_cp.x);
+    Extrap_obj P_k(pwr_spec_binned_cp, k_min*5, k_max/5, 2, k_min, k_min*5, -3, k_max/20, k_max/10, 10, false, true);
 
-    // #pragma omp parallel for private(k)
-	// for (unsigned j = 0; j < corr_func_binned->size(); j++){
-	// 	k = k_min*pow(log_bin, j);
-	// 	corr_func_binned->x[j] = k;
-    //     corr_func_binned->y[j] = P_k.eval(k);
-    // }
+
+    corr_func_binned->resize(200);
+    const double log_bin = pow(1000*k_max/k_min, 1./corr_func_binned->size());
+    double k;
+    k_min *=sqrt(log_bin)/10;
+
+    #pragma omp parallel for private(k)
+	for (unsigned j = 0; j < corr_func_binned->size(); j++){
+		k = k_min*pow(log_bin, j);
+		corr_func_binned->x[j] = k;
+        corr_func_binned->y[j] = P_k.eval(k);
+    }
     /* END OF TEST*/
 }
