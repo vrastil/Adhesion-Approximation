@@ -480,7 +480,7 @@ void gen_corr_func_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<
 
 void gen_corr_func_binned_gsl(const Sim_Param &sim, const Data_x_y<double>& pwr_spec_binned, Data_x_y<double>* corr_func_binned)
 {
-    gen_corr_func_binned_gsl(1, 200, pwr_spec_binned, corr_func_binned);
+    gen_corr_func_binned_gsl(sim, 1, 200, pwr_spec_binned, corr_func_binned);
 }
 
 template<class T>

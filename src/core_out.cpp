@@ -22,7 +22,7 @@ string currentDateTime()
 string std_out_dir(string pre_subdir, const Sim_Param &sim)
 {
     return sim.out_dir + pre_subdir + currentDateTime() + "_" + to_string(sim.mesh_num) +"m_" +
-           to_string(sim.Ng) + "p_" + to_string(sim.mesh_num_pwr) +"M_" + to_string(sim.box_size) + "b/";
+           to_string(sim.Ng) + "p_" + to_string(sim.mesh_num_pwr) +"M_" + to_string((int)sim.box_size) + "b/";
 }
 
 void create_dir(string out_dir)

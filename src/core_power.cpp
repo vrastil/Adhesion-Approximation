@@ -5,8 +5,8 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_spline.h>
-#include <gsl/gsl_multifit.h>
-#include <gsl/gsl_poly.h>
+#include <gsl/gsl_fit.h>
+#include <gsl/gsl_linalg.h>
 #include <ccl.h>
 
 using namespace std;
@@ -108,42 +108,40 @@ double lin_pow_spec(const Pow_Spec_Param* pwr_par, double k)
     }
 }
 
-void polynomialfit(int obs, int degree, double *dx, double *dy, double *store) /* n, p */
-{ // SOURCE: http://rosettacode.org/wiki/Polynomial_regression#C
-    gsl_multifit_linear_workspace *ws;
-    gsl_matrix *cov, *X;
-    gsl_vector *y, *c;
-    double chisq;
-
-    int i, j;
-
-    X = gsl_matrix_alloc(obs, degree);
-    y = gsl_vector_alloc(obs);
-    c = gsl_vector_alloc(degree);
-    cov = gsl_matrix_alloc(degree, degree);
-
-    for(i=0; i < obs; i++){
-        for(j=0; j < degree; j++)
-        {
-            gsl_matrix_set(X, i, j, pow(dx[i], j));
-        }
-        gsl_vector_set(y, i, dy[i]);
+double pade_approx(double x, unsigned m, const double* a, unsigned n, const double* b)
+{
+    double numerator = 0;
+    double denominator = 1;
+    for(unsigned i = 0; i <= m; i++){
+        numerator += a[i]*pow(x, i);
     }
+    for(unsigned i = 0; i <= n; i++){
+        denominator += b[i]*pow(x, i+1); // note that b[0] = b1
+    }
+    return numerator/denominator;
+}
 
-    ws = gsl_multifit_linear_alloc(obs, degree);
-    gsl_multifit_linear(X, y, c, cov, &chisq, ws);
+double pade_approx(double x, const vector<double>& a, const vector<double>& b)
+{
+    return pade_approx(x, a.size(), a.data(), b.size(), b.data());
+}
 
-    /* store result ... */
-    for(i=0; i < degree; i++)
+int get_nearest(const double val, const vector<double>& vec)
+{
+    int pos = 0;
+    double dv = abs(vec[0] - val);
+    double dv_;
+
+    for(unsigned i = 1; i <vec.size(); i++)
     {
-        store[i] = gsl_vector_get(c, i);
+        dv_ = abs(vec[i] - val);
+        if (dv_ < dv)
+        {
+            dv = dv_;
+            pos = i;
+        }
     }
-
-    gsl_multifit_linear_free(ws);
-    gsl_matrix_free(X);
-    gsl_matrix_free(cov);
-    gsl_vector_free(y);
-    gsl_vector_free(c);
+    return pos;
 }
 
 class Interp_obj
@@ -171,82 +169,95 @@ private:
     gsl_interp_accel* acc;
 };
 
-class Extrap_obj : public Interp_obj
+class Extrap_Pk : public Interp_obj
 { /*
-    linear interpolation of data [x, y] within range <x_inter0, x_inter1>
-    polynomial extrapolation of degree n_0 / n_1 outside this range
-    if n_0 or n_1 is negative, then [p(x, |n|)]^-1 is fitted
-    fitting is performed in data range <x_fit00, x_fit01> / <x_fot10, x_fit11>
-        using n_fit equidistant values in logspace 
+    linear interpolation of data [k, P(k)] within 'useful' range
+    fit to primordial P_i(k) below the 'useful' range
+    fit to Padé approximant R [0/3] above the 'useful' range
 */
 public:
     // CONSTRUCTOR
-    Extrap_obj(const Data_x_y<double>& data, double x_inter0, double x_inter1,
-               int n_0, double x_fit00, double x_fit01,
-               int n_1, double x_fit10, double x_fit11,
-               unsigned n_fit, bool const_term_0, bool const_term_1):
-    Interp_obj(data), x_inter0(x_inter0), x_inter1(x_inter1),
-    n_0(n_0), x_fit00(x_fit00), x_fit01(x_fit01), 
-    n_1(n_1), x_fit10(x_fit10), x_fit11(x_fit11),
-    coeff_0(abs(n_0)), coeff_1(abs(n_1)),
-    const_term_0(const_term_0), const_term_1(const_term_1)
+    Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim):
+    Interp_obj(data), n_s(sim.power.ns)
     {
-        unsigned i;
-        double x_, y_, logstep;
-        vector<double> x, y;
-    
-        // LOWER RANGE
-        for(i = 0, x_ = x_fit00, logstep = pow(x_fit01/x_fit00, 1./n_fit);
-            i < n_fit; i++, x_*= logstep)
-        {
-            x.push_back(x_);
-            y_ = (n_0 > 0) ? Interp_obj::eval(x_) : 1./Interp_obj::eval(x_);
-            if (!const_term_0) y_ /= x_;
-            y.push_back(y_);
-        }
-        if (const_term_0) polynomialfit(n_fit, abs(n_0), x.data(), y.data(), coeff_0.data());
-        else polynomialfit(n_fit, abs(n_0)-1, x.data(), y.data(), coeff_0.data());
+        {   // LOWER RANGE -- fit Ak^ns to data[0:n]
+            printf("Fitting amplitude of P(k) in lower range.\n");
+            constexpr int n = 10;
+            k_min = data.x[n];
+            vector<double> k, Pk;
 
-        // UPPER RANGE
-        x.clear();
-        y.clear();
-        for(i = 0, x_ = x_fit10, logstep = pow(x_fit11/x_fit10, 1./n_fit);
-        i < n_fit; i++, x_*= logstep)
-        {
-            x.push_back(x_);
-            y_ = (n_1 > 0) ? Interp_obj::eval(x_) : 1./Interp_obj::eval(x_);
-            if (!const_term_1) y_ /= x_;
-            y.push_back(y_);
+            for(unsigned i = 0; i < n; i++){
+                k.push_back(pow(data.x[i], n_s));
+                Pk.push_back(data.y[i]);
+            }
+            double A_sigma2, sumsq;
+            gsl_fit_mul(k.data(), 1, Pk.data(), 1, n, &A, &A_sigma2, &sumsq);
+            printf("\t[fit A = %.12f, sigma = %.12f, sumsq = %.12f]\n", A, sqrt(A_sigma2), sumsq);
         }
-        if (const_term_1) polynomialfit(n_fit, abs(n_1), x.data(), y.data(), coeff_1.data());
-        else polynomialfit(n_fit, abs(n_1)-1, x.data(), y.data(), coeff_1.data());
+        {   // UPPER RANGE -- solve Ax=b to get Pade approximant
+            printf("Computing Padé approximant of P(k) in upper range.\n");
+            #define ORDER 3 // Pade approximant R [0/ORDER-1]
+
+            vector<double> R_0m(ORDER);
+            k_max = PI*pow(sim.par_num, 1/3.) / (1.5*sim.box_size); // Nyquist PI*Np/L, safety factor of 1.5
+            const int n = get_nearest(k_max, data.x);
+            printf("\t[k_max = %.5e, n = %i, k[n] = %.5e]\n", k_max, n, data.x[n]);
+
+            vector<double> A, b;
+            double k, Pk;
+
+            for(unsigned i = 0; i < ORDER; i++)
+            {
+                k = data.x[n-i*7];
+                Pk = data.y[n-i*7];
+                A.push_back(1.); // a0
+                for(unsigned j = 1; j < ORDER; j++)
+                {
+                    A.push_back(-pow(k, j)*Pk); // b_i
+                }
+                b.push_back(Pk); // P(k)
+            }
+            printf("\t[size(A) = %i, size(b) = %i, size(R_0m) = %i]\n", A.size(), b.size(), R_0m.size());
+
+            gsl_matrix_view A_ = gsl_matrix_view_array (A.data(), ORDER, ORDER);
+            gsl_vector_view b_ = gsl_vector_view_array (b.data(), ORDER);
+            gsl_vector_view x_ = gsl_vector_view_array (R_0m.data(), ORDER);
+            gsl_permutation * p = gsl_permutation_alloc (ORDER);
+            int s;
+        
+            gsl_linalg_LU_decomp (&A_.matrix, p, &s);
+            gsl_linalg_LU_solve (&A_.matrix, p, &b_.vector, &x_.vector);
+
+            a_m.push_back(R_0m[0]);
+            b_n = vector<double>(R_0m.begin() + 1, R_0m.end());
+            gsl_permutation_free (p);
+        }
+        printf("\t[size(a_m) = %i, size(b_n) = %i]\n", a_m.size(), b_n.size());
+        printf("\t[a0 = %f", a_m[0]);
+        for(unsigned j = 0; j < b_n.size(); j++) printf(", b%i = %f", j+1, b_n[j]);
+        printf("]\n"); 
     }
 
     // METHODS
-    double eval(double x) const
+    double eval(double k) const
     {
         double val;
-        if (x < x_inter0)
+        if (k < k_min)
         {
-            if (const_term_0) val = gsl_poly_eval(coeff_0.data(), abs(n_0), x);
-            else val = x*gsl_poly_eval(coeff_0.data(), abs(n_0)-1, x);
-            return (n_0 > 0) ? val : 1./val;
+            return A*pow(k, n_s);
         }
-        else if (x <= x_inter1) return Interp_obj::eval(x);
+        else if (k <= k_max) return Interp_obj::eval(k);
         else
         {
-            if (const_term_1) val = gsl_poly_eval(coeff_1.data(), abs(n_1), x);
-            else val = x*gsl_poly_eval(coeff_1.data(), abs(n_1)-1, x);
-            return (n_1 > 0) ? val : 1./val;
+            return pade_approx(k, a_m, b_n);
         }
     }
 
 private:
     // VARIABLES
-    const int n_0, n_1;
-    const double x_inter0, x_inter1, x_fit00, x_fit01, x_fit10, x_fit11;
-    vector<double> coeff_0, coeff_1;
-    const bool const_term_0, const_term_1;
+    double n_s, A; // lower range, priomordial
+    vector<double> a_m, b_n; // upper range, Pade approximant
+    double k_min, k_max; // interpolation range
 };
 
 template <class spec_params>
@@ -302,7 +313,7 @@ double xi_integrand(double k, void* params){
     return 1/(2*PI*PI)*k/r*P_k->eval(k);
 };
 
-void gen_corr_func_binned_gsl(const double x_min, const double x_max, const Data_x_y<double>& pwr_spec_binned, Data_x_y<double>* corr_func_binned)
+void gen_corr_func_binned_gsl(const Sim_Param &sim, const double x_min, const double x_max, const Data_x_y<double>& pwr_spec_binned, Data_x_y<double>* corr_func_binned)
 {
     Data_x_y<double> pwr_spec_binned_cp = pwr_spec_binned; // prevent overwriting when 
 
@@ -330,11 +341,11 @@ void gen_corr_func_binned_gsl(const double x_min, const double x_max, const Data
     /* TEST OF INTERPOLATION */
     double k_min = min(pwr_spec_binned_cp.x);
     const double k_max = max(pwr_spec_binned_cp.x);
-    Extrap_obj P_k(pwr_spec_binned_cp, k_min*5, k_max/5, 2, k_min, k_min*5, -3, k_max/20, k_max/10, 10, false, true);
+    Extrap_Pk P_k(pwr_spec_binned_cp, sim);
 
-
+    printf("\t[After extrapolatin.]\n");
     corr_func_binned->resize(200);
-    const double log_bin = pow(1000*k_max/k_min, 1./corr_func_binned->size());
+    const double log_bin = pow(100*k_max/k_min, 1./corr_func_binned->size());
     double k;
     k_min *=sqrt(log_bin)/10;
 
