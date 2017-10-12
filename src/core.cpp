@@ -611,12 +611,16 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
         is_init_pwr_spec_0 = true;
     }
     print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init, out_dir_app, z_suffix());
-    
+
+    /* Print extrapolated power spectrum */
+    Extrap_Pk P_k(pwr_spec_binned, sim);
+    gen_pow_spec_binned_from_extrap(sim, P_k, &pwr_spec_binned);
+    print_pow_spec(pwr_spec_binned, out_dir_app, "_extrap" + z_suffix());
+
     /* Printing correlation function */
-    corr_func_binned.resize(sim.bin_num / 4);
-    gen_corr_func_binned_gsl(sim, pwr_spec_binned, &corr_func_binned);
-    // print_pow_spec(corr_func_binned, out_dir_app, "_interp" + z_suffix());
-    print_corr_func(corr_func_binned, out_dir_app, "_gsl" + z_suffix());
+    // corr_func_binned.resize(sim.bin_num / 4);
+    // gen_corr_func_binned_gsl(sim, pwr_spec_binned, &corr_func_binned);
+    // print_corr_func(corr_func_binned, out_dir_app, "_gsl" + z_suffix());
 
     // power_aux.reset_im(); // P(k) is a real function
     // fftw_execute_dft_c2r(p_B_pwr, power_aux);

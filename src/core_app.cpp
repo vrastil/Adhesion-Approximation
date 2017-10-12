@@ -472,15 +472,25 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<d
 	gen_cqty_binned(1, sim.mesh_num_pwr, power_aux, *pwr_spec_binned, mod_pk, mod_k);
 }
 
+void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const Extrap_Pk &P_k, Data_x_y<double>* pwr_spec_binned)
+{
+    const double k_max = sim.k_par.k_print.upper;
+    const double k_min = sim.k_par.k_print.lower;
+    const double log_bin = pow(k_max/k_min, 1./pwr_spec_binned->size());
+    double k;
+
+    #pragma omp parallel for private(k)
+	for (unsigned j = 0; j < pwr_spec_binned->size(); j++){
+		k = k_min*pow(log_bin, j);
+		pwr_spec_binned->x[j] = k;
+        pwr_spec_binned->y[j] = P_k.eval(k);
+    }
+}
+
 void gen_corr_func_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<double>* corr_func_binned)
 {
     printf("Computing binned correlation function...\n");
 	gen_rqty_binned(1, 200, sim.x_0_pwr(), power_aux, *corr_func_binned, 1);
-}
-
-void gen_corr_func_binned_gsl(const Sim_Param &sim, const Data_x_y<double>& pwr_spec_binned, Data_x_y<double>* corr_func_binned)
-{
-    gen_corr_func_binned_gsl(sim, 1, 200, pwr_spec_binned, corr_func_binned);
 }
 
 template<class T>

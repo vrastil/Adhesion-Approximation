@@ -154,7 +154,7 @@ Interp_obj::Interp_obj(const Data_x_y<double>& data)
 {
     acc = gsl_interp_accel_alloc ();
     spline = gsl_spline_alloc (gsl_interp_linear, data.size());
-    gsl_spline_init (spline, data.x.data(), data.y.data(), data.size());        
+    gsl_spline_init (spline, data.x.data(), data.y.data(), data.size());
 }
 
 Interp_obj::~Interp_obj()
@@ -289,28 +289,18 @@ private:
 struct xi_integrand_param
 {
     double r;
-    Extrap_Pk* P_k;
+    const Extrap_Pk* P_k;
 };
 
 double xi_integrand(double k, void* params){
     xi_integrand_param* my_par = (xi_integrand_param*) params;
     const double r = my_par->r;
-    Extrap_Pk* P_k = my_par->P_k;
+    const Extrap_Pk* P_k = my_par->P_k;
     return 1/(2*PI*PI)*k/r*P_k->eval(k);
 };
 
-void gen_corr_func_binned_gsl(const Sim_Param &sim, const double x_min, const double x_max, const Data_x_y<double>& pwr_spec_binned, Data_x_y<double>* corr_func_binned)
+void gen_corr_func_binned_gsl(const Sim_Param &sim, const double x_min, const double x_max, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned)
 {
-    Data_x_y<double> pwr_spec_binned_cp = pwr_spec_binned; // prevent overwriting when 
-
-    // printf("Allocationg space for interpolation function P(k)\n");
-    // Interp_obj P_k(pwr_spec_binned_cp);
-    printf("Allocationg space for extrapolation function P(k)\n");
-    Extrap_Pk P_k(pwr_spec_binned_cp, sim);
-
-    printf("Allocationg space for integration via [QAWO adaptive integration for oscillatory functions]\n");
-    // const double k_min = min(pwr_spec_binned_cp.x);
-    // const double k_max = max(pwr_spec_binned_cp.x) / 4;
     const double k_min = 0;
     const double k_max = 1e6;
 
@@ -327,24 +317,4 @@ void gen_corr_func_binned_gsl(const Sim_Param &sim, const double x_min, const do
         corr_func_binned->x[i] = r;
         corr_func_binned->y[i] = xi_r(r);
     }
-
-
-    /* TEST OF INTERPOLATION */
-    // double k_min = min(pwr_spec_binned_cp.x);
-    // const double k_max = max(pwr_spec_binned_cp.x);
-    // Extrap_Pk P_k(pwr_spec_binned_cp, sim);
-
-    // printf("\t[After extrapolatin.]\n");
-    // corr_func_binned->resize(200);
-    // const double log_bin = pow(100*k_max/k_min, 1./corr_func_binned->size());
-    // double k;
-    // k_min *=sqrt(log_bin)/10;
-
-    // #pragma omp parallel for private(k)
-	// for (unsigned j = 0; j < corr_func_binned->size(); j++){
-	// 	k = k_min*pow(log_bin, j);
-	// 	corr_func_binned->x[j] = k;
-    //     corr_func_binned->y[j] = P_k.eval(k);
-    // }
-    /* END OF TEST*/
 }

@@ -246,6 +246,18 @@ protected:
 	bool is_init = 0;
 };
 
+struct Range
+{
+    double lower, upper;
+};
+
+struct Extrap_k_param
+{
+    // VARIABLES
+    Range k_interp;
+    Range k_print;
+};
+
 /**
  * @class:	Tracking
  * @brief:	class storing info about tracked particles
@@ -287,7 +299,8 @@ public:
 	double rs, Hc, a;
 	unsigned M;
 	std::string out_dir;
-	Pow_Spec_Param power;
+    Pow_Spec_Param power;
+    Extrap_k_param k_par;
     bool comp_ZA, comp_FF, comp_FP, comp_AA, comp_FP_pp;
 	
 	// METHODS
