@@ -22,7 +22,6 @@ int adhesion_approximation(const Sim_Param &sim)
 	"**********************\n";
 	string out_dir_app = std_out_dir("AA_run/", sim);
 	work_dir_over(out_dir_app);
-	sim.print_info(out_dir_app, "AA");
     
 	/******************************************
     * ALLOCATION OF MEMORY + FFTW PREPARATION *
@@ -77,7 +76,8 @@ int adhesion_approximation(const Sim_Param &sim)
 		if (APP.printing()) APP.print(sim, out_dir_app);
 		APP.upd_time();
 	}
-		
+    
+    sim.print_info(out_dir_app, "AA");
 	printf("Adhesion approximation ended successfully.\n");
 	return APP.err;
 }

@@ -16,7 +16,6 @@ int mod_frozen_potential(const Sim_Param &sim)
 	
     string out_dir_app = std_out_dir("FP_pp_run/", sim);
 	work_dir_over(out_dir_app);
-    sim.print_info(out_dir_app, "FP_pp");
 	
 	/******************************************
     * ALLOCATION OF MEMORY + FFTW PREPARATION *
@@ -81,7 +80,8 @@ int mod_frozen_potential(const Sim_Param &sim)
 		if (APP.printing()) APP.print(sim, out_dir_app);
 		APP.upd_time();
 	}
-		
+    
+    sim.print_info(out_dir_app, "FP_pp");
 	printf("Modified Frozen-potential approximation ended successfully.\n");
 	return APP.err;
 }

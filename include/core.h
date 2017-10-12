@@ -253,9 +253,17 @@ struct Range
 
 struct Extrap_k_param
 {
-    // VARIABLES
-    Range k_interp;
-    Range k_print;
+    // k-range where to use (linear) interpolation and k-range in which print 'pwr_spec_extrap_*'
+    Range k_interp, k_print;
+
+    // Nyquist frequencies of potential mesh, analyses mesh and particle separation
+    double k_nyquist_pot, k_nyquist_anl, k_nyquist_par;
+
+    // use Padé approximant R[m=0; n=pade_order-1], i.e. pade_order of DOF
+    unsigned pade_order = 3;
+
+    // store values of k where the Padé approximant was evaluated
+    mutable std::vector<double> k_pade;
 };
 
 /**

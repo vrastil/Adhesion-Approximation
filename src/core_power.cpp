@@ -191,9 +191,9 @@ Interp_obj(data), n_s(sim.power.ns)
     }
     {   // UPPER RANGE -- solve Ax=b to get Pade approximant
         printf("Computing Padé approximant of P(k) in upper range.\n");
-        #define ORDER 3 // Pade approximant R [0/ORDER-1]
+        unsigned order = sim.k_par.pade_order; // Pade approximant R [0/order-1]
 
-        vector<double> R_0m(ORDER);
+        vector<double> R_0m(order);
         k_max = sim.k_par.k_interp.upper;
         const int n = get_nearest(k_max, data.x);
         printf("\t[k_max = %.5e, n = %i, k[n] = %.5e]\n", k_max, n, data.x[n]);
@@ -201,22 +201,27 @@ Interp_obj(data), n_s(sim.power.ns)
         vector<double> A, b;
         double k, Pk;
 
-        for(unsigned i = 0; i < ORDER; i++)
+        // TEMPORARY!!!
+        sim.k_par.k_pade.clear();
+
+        for(unsigned i = 0; i < order; i++)
         {
-            k = data.x[n-i*7];
+            k = data.x[n-i*7]; // TEMPORARY!!! these two lines are to be other way around
+            sim.k_par.k_pade.push_back(k); // i.e. load k from simulation parameters
+
             Pk = data.y[n-i*7];
             A.push_back(1.); // a0
-            for(unsigned j = 1; j < ORDER; j++)
+            for(unsigned j = 1; j < order; j++)
             {
                 A.push_back(-pow(k, j)*Pk); // b_i
             }
             b.push_back(Pk); // P(k)
         }
 
-        gsl_matrix_view A_ = gsl_matrix_view_array (A.data(), ORDER, ORDER);
-        gsl_vector_view b_ = gsl_vector_view_array (b.data(), ORDER);
-        gsl_vector_view x_ = gsl_vector_view_array (R_0m.data(), ORDER);
-        gsl_permutation * p = gsl_permutation_alloc (ORDER);
+        gsl_matrix_view A_ = gsl_matrix_view_array (A.data(), order, order);
+        gsl_vector_view b_ = gsl_vector_view_array (b.data(), order);
+        gsl_vector_view x_ = gsl_vector_view_array (R_0m.data(), order);
+        gsl_permutation * p = gsl_permutation_alloc (order);
         int s;
     
         gsl_linalg_LU_decomp (&A_.matrix, p, &s);

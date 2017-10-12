@@ -59,6 +59,12 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, ou
         data = np.loadtxt(pwr)
         k, P_k = data[:, 0], data[:, 1]
         plt.plot(k, P_k, 'o', ms=3, label=lab)
+
+        if a_sim_info.k_pade is not None:
+            for k_pade in a_sim_info.k_pade:
+                Pk_pade = P_k[np.where(np.isclose(k, k_pade))[0][0]]
+                plt.plot(k_pade, Pk_pade, 'kx', ms=8)
+
         del k, P_k, data
 
         if pwr_spec_files_extrap is not None:

@@ -502,6 +502,7 @@ void Sim_Param::print_info(string out, string app) const
                 {"Omega_c", power.Omega_c},
                 {"Omega_b", power.Omega_b},
                 {"h", power.h},
+                {"k_pade", k_par.k_pade},
                 {"viscosity", nu},
                 {"cut_radius", rs},
                 {"num_thread", nt},
@@ -512,11 +513,8 @@ void Sim_Param::print_info(string out, string app) const
             switch (power.config.transfer_function_method)
             { // convert to pyccl transfer_function_types keys
                 case ccl_emulator: j["transfer_function_method"] = "emulator"; break;
-                //case ccl_none: j["transfer_function_method"] = "none"; break;
-                //case ccl_fitting_function: j["transfer_function_method"] = "fitting_function"; break;
                 case ccl_eisenstein_hu: j["transfer_function_method"] = "eisenstein_hu"; break;
                 case ccl_bbks: j["transfer_function_method"] = "bbks"; break;
-                //case ccl_boltzmann: j["transfer_function_method"] = "boltzmann"; break;
                 case ccl_boltzmann_class: j["transfer_function_method"] = "boltzmann_class"; break;
                 case ccl_boltzmann_camb: j["transfer_function_method"] = "boltzmann_camb"; break;
             }
