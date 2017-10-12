@@ -39,7 +39,7 @@ def pwr_spec(k, pwr, cosmo=None, z=0, q_log=2.34, q_1=3.89, q_2=16.2, q_3=5.47, 
         import pyccl as ccl
         return supp*ccl.linear_matter_power(cosmo, k*pwr["h"], 1.)*pwr["h"]**3
 
-def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, out_dir='auto', save=True, show=False):
+def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, out_dir='auto', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     fig = plt.figure(figsize=(15, 11))
@@ -61,9 +61,15 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, out_dir='auto', save=True, sho
         plt.plot(k, P_k, 'o', ms=3, label=lab)
         del k, P_k, data
 
+        if pwr_spec_files_extrap is not None:
+            data = np.loadtxt(pwr_spec_files_extrap[i])
+            k, P_k = data[:, 0], data[:, 1]
+            plt.plot(k, P_k, 'k--')
+            del k, P_k, data
+
     data = np.loadtxt(pwr_spec_files[-1])
     k = data[:, 0]
-    k = np.logspace(np.log10(k[0]), np.log10(k[-15]), num=50)
+    k = np.logspace(np.log10(k[0]), np.log10(k[-1]), num=50)
     del data
     P_0 = [pwr_spec(k_, a_sim_info.pwr, cosmo=a_sim_info.cosmo, z=zs[-1]) for k_ in k]
     P_i = [pwr_spec(k_, a_sim_info.pwr, cosmo=a_sim_info.cosmo, z=zs[0]) for k_ in k]

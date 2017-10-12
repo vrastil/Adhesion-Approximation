@@ -425,20 +425,34 @@ int Sim_Param::init(int ac, char* av[])
 	if (err) is_init = 0;
 	else {
 		is_init = 1;
-		// if(nt == 0) nt = omp_get_num_procs();
+		/* MULTITHREADING */
         if(nt == 0) nt = omp_get_max_threads();
         else omp_set_num_threads(nt);
+
+        /* SIMULATION BOX*/
         Ng_pwr = Ng*mesh_num_pwr/mesh_num;
         par_num = pow(mesh_num / Ng, 3);
+        a = rs / 0.735;
+        M = (int)(mesh_num / rs);
+        Hc = double(mesh_num) / M;
+
+        /* TIME */
+        b_in = 1./(z_in + 1);
+		b_out = 1./(z_out + 1);
+        
+        /* POWER SPECTRUM */
         power.pwr_type = static_cast<e_power_spec>(power.pwr_type_i);
         power.k2_G *= power.k2_G;
         power.h = power.H0/100;
         power.init();
-		b_in = 1./(z_in + 1);
-		b_out = 1./(z_out + 1);
-		a = rs / 0.735;
-		M = (int)(mesh_num / rs);
-        Hc = double(mesh_num) / M;
+
+        /* RANGE : k */
+        k_par.k_print.lower = 2*PI/box_size;
+        k_par.k_print.upper = 2*PI/box_size*mesh_num_pwr;
+        k_par.k_interp.upper = PI*pow(par_num, 1/3.) / box_size;
+
+        /* RANGE : x */
+		
     }
     return err;
 }
@@ -604,7 +618,7 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
     pwr_spec_k(sim, power_aux, &power_aux);
     pwr_spec_binned.resize(sim.bin_num);
     gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
-    print_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
+    print_pow_spec(pwr_spec_binned, out_dir_app, "_par" + z_suffix());
     if (!is_init_pwr_spec_0){
         pwr_spec_binned_0 = pwr_spec_binned;
         b_init = b;

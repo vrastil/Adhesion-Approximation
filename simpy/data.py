@@ -182,10 +182,11 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
 
     # Power spectrum
     key = "pwr_spec"
-    zs, files = try_get_zs_files(a_sim_info, 'pwr_spec/')
+    zs, files_extrap = try_get_zs_files(a_sim_info, 'pwr_spec/', a_file='*extrap*.dat')
+    zs, files = try_get_zs_files(a_sim_info, 'pwr_spec/', a_file='*par*.dat')
     if a_sim_info.rerun(rerun, key, skip, zs):
         print 'Plotting power spectrum...'
-        plot.plot_pwr_spec(files, zs, a_sim_info)
+        plot.plot_pwr_spec(files, zs, a_sim_info, pwr_spec_files_extrap=files_extrap)
         a_sim_info.done(key)
     del zs, files
 

@@ -194,7 +194,7 @@ Interp_obj(data), n_s(sim.power.ns)
         #define ORDER 3 // Pade approximant R [0/ORDER-1]
 
         vector<double> R_0m(ORDER);
-        k_max = PI*pow(sim.par_num, 1/3.) / (1.5*sim.box_size); // Nyquist PI*Np/L, safety factor of 1.5
+        k_max = sim.k_par.k_interp.upper;
         const int n = get_nearest(k_max, data.x);
         printf("\t[k_max = %.5e, n = %i, k[n] = %.5e]\n", k_max, n, data.x[n]);
 
