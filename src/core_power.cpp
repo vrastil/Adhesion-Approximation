@@ -2,6 +2,7 @@
 #include "stdafx.h"
 #include "core.h"
 #include "core_mesh.h"
+#include "core_power.h"
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_spline.h>
@@ -144,121 +145,106 @@ int get_nearest(const double val, const vector<double>& vec)
     return pos;
 }
 
-class Interp_obj
-{// linear interpolation of data [x, y]
-public:
-    // CONSTRUCTOR
-    Interp_obj(const Data_x_y<double>& data)
-    {
-        acc = gsl_interp_accel_alloc ();
-        spline = gsl_spline_alloc (gsl_interp_linear, data.size());
-        gsl_spline_init (spline, data.x.data(), data.y.data(), data.size());        
-    }
-    // DESTRUCTOR
-    ~Interp_obj()
-    {
-        gsl_spline_free(spline);
-        gsl_interp_accel_free (acc);
-    }
-    // METHODS
-    double eval(double x) const{ return gsl_spline_eval(spline, x, acc); }
+/**
+ * @class:	Interp_obj
+ * @brief:	linear interpolation of data [x, y]
+ */
 
-private:
-    // VARIABLES
-    gsl_spline* spline;
-    gsl_interp_accel* acc;
-};
+Interp_obj::Interp_obj(const Data_x_y<double>& data)
+{
+    acc = gsl_interp_accel_alloc ();
+    spline = gsl_spline_alloc (gsl_interp_linear, data.size());
+    gsl_spline_init (spline, data.x.data(), data.y.data(), data.size());        
+}
 
-class Extrap_Pk : public Interp_obj
-{ /*
-    linear interpolation of data [k, P(k)] within 'useful' range
-    fit to primordial P_i(k) below the 'useful' range
-    fit to Padé approximant R [0/3] above the 'useful' range
-*/
-public:
-    // CONSTRUCTOR
-    Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim):
-    Interp_obj(data), n_s(sim.power.ns)
-    {
-        {   // LOWER RANGE -- fit Ak^ns to data[0:n]
-            printf("Fitting amplitude of P(k) in lower range.\n");
-            constexpr int n = 10;
-            k_min = data.x[n];
-            vector<double> k, Pk;
+Interp_obj::~Interp_obj()
+{
+    gsl_spline_free(spline);
+    gsl_interp_accel_free (acc);
+}
 
-            for(unsigned i = 0; i < n; i++){
-                k.push_back(pow(data.x[i], n_s));
-                Pk.push_back(data.y[i]);
-            }
-            double A_sigma2, sumsq;
-            gsl_fit_mul(k.data(), 1, Pk.data(), 1, n, &A, &A_sigma2, &sumsq);
-            printf("\t[fit A = %.12f, sigma = %.12f, sumsq = %.12f]\n", A, sqrt(A_sigma2), sumsq);
+double Interp_obj::eval(double x) const{ return gsl_spline_eval(spline, x, acc); }
+
+/**
+ * @class:	Extrap_Pk
+ * @brief:	linear interpolation of data [k, P(k)] within 'useful' range
+            fit to primordial P_i(k) below the 'useful' range
+            fit to Padé approximant R [0/3] above the 'useful' range
+ */
+
+Extrap_Pk::Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim):
+Interp_obj(data), n_s(sim.power.ns)
+{
+    {   // LOWER RANGE -- fit Ak^ns to data[0:n]
+        printf("Fitting amplitude of P(k) in lower range.\n");
+        constexpr int n = 10;
+        k_min = data.x[n];
+        vector<double> k, Pk;
+
+        for(unsigned i = 0; i < n; i++){
+            k.push_back(pow(data.x[i], n_s));
+            Pk.push_back(data.y[i]);
         }
-        {   // UPPER RANGE -- solve Ax=b to get Pade approximant
-            printf("Computing Padé approximant of P(k) in upper range.\n");
-            #define ORDER 3 // Pade approximant R [0/ORDER-1]
+        double A_sigma2, sumsq;
+        gsl_fit_mul(k.data(), 1, Pk.data(), 1, n, &A, &A_sigma2, &sumsq);
+        printf("\t[fit A = %.12f, sigma = %.12f, sumsq = %.12f]\n", A, sqrt(A_sigma2), sumsq);
+    }
+    {   // UPPER RANGE -- solve Ax=b to get Pade approximant
+        printf("Computing Padé approximant of P(k) in upper range.\n");
+        #define ORDER 3 // Pade approximant R [0/ORDER-1]
 
-            vector<double> R_0m(ORDER);
-            k_max = PI*pow(sim.par_num, 1/3.) / (1.5*sim.box_size); // Nyquist PI*Np/L, safety factor of 1.5
-            const int n = get_nearest(k_max, data.x);
-            printf("\t[k_max = %.5e, n = %i, k[n] = %.5e]\n", k_max, n, data.x[n]);
+        vector<double> R_0m(ORDER);
+        k_max = PI*pow(sim.par_num, 1/3.) / (1.5*sim.box_size); // Nyquist PI*Np/L, safety factor of 1.5
+        const int n = get_nearest(k_max, data.x);
+        printf("\t[k_max = %.5e, n = %i, k[n] = %.5e]\n", k_max, n, data.x[n]);
 
-            vector<double> A, b;
-            double k, Pk;
+        vector<double> A, b;
+        double k, Pk;
 
-            for(unsigned i = 0; i < ORDER; i++)
+        for(unsigned i = 0; i < ORDER; i++)
+        {
+            k = data.x[n-i*7];
+            Pk = data.y[n-i*7];
+            A.push_back(1.); // a0
+            for(unsigned j = 1; j < ORDER; j++)
             {
-                k = data.x[n-i*7];
-                Pk = data.y[n-i*7];
-                A.push_back(1.); // a0
-                for(unsigned j = 1; j < ORDER; j++)
-                {
-                    A.push_back(-pow(k, j)*Pk); // b_i
-                }
-                b.push_back(Pk); // P(k)
+                A.push_back(-pow(k, j)*Pk); // b_i
             }
-            printf("\t[size(A) = %i, size(b) = %i, size(R_0m) = %i]\n", A.size(), b.size(), R_0m.size());
-
-            gsl_matrix_view A_ = gsl_matrix_view_array (A.data(), ORDER, ORDER);
-            gsl_vector_view b_ = gsl_vector_view_array (b.data(), ORDER);
-            gsl_vector_view x_ = gsl_vector_view_array (R_0m.data(), ORDER);
-            gsl_permutation * p = gsl_permutation_alloc (ORDER);
-            int s;
-        
-            gsl_linalg_LU_decomp (&A_.matrix, p, &s);
-            gsl_linalg_LU_solve (&A_.matrix, p, &b_.vector, &x_.vector);
-
-            a_m.push_back(R_0m[0]);
-            b_n = vector<double>(R_0m.begin() + 1, R_0m.end());
-            gsl_permutation_free (p);
+            b.push_back(Pk); // P(k)
         }
-        printf("\t[size(a_m) = %i, size(b_n) = %i]\n", a_m.size(), b_n.size());
-        printf("\t[a0 = %f", a_m[0]);
-        for(unsigned j = 0; j < b_n.size(); j++) printf(", b%i = %f", j+1, b_n[j]);
-        printf("]\n"); 
-    }
 
-    // METHODS
-    double eval(double k) const
+        gsl_matrix_view A_ = gsl_matrix_view_array (A.data(), ORDER, ORDER);
+        gsl_vector_view b_ = gsl_vector_view_array (b.data(), ORDER);
+        gsl_vector_view x_ = gsl_vector_view_array (R_0m.data(), ORDER);
+        gsl_permutation * p = gsl_permutation_alloc (ORDER);
+        int s;
+    
+        gsl_linalg_LU_decomp (&A_.matrix, p, &s);
+        gsl_linalg_LU_solve (&A_.matrix, p, &b_.vector, &x_.vector);
+
+        a_m.push_back(R_0m[0]);
+        b_n = vector<double>(R_0m.begin() + 1, R_0m.end());
+        gsl_permutation_free (p);
+    }
+    printf("\t[a0 = %f", a_m[0]);
+    for(unsigned j = 0; j < b_n.size(); j++) printf(", b%i = %f", j+1, b_n[j]);
+    printf("]\n"); 
+}
+
+
+double Extrap_Pk::eval(double k) const
+{
+    double val;
+    if (k < k_min)
     {
-        double val;
-        if (k < k_min)
-        {
-            return A*pow(k, n_s);
-        }
-        else if (k <= k_max) return Interp_obj::eval(k);
-        else
-        {
-            return pade_approx(k, a_m, b_n);
-        }
+        return A*pow(k, n_s);
     }
-
-private:
-    // VARIABLES
-    double n_s, A; // lower range, priomordial
-    vector<double> a_m, b_n; // upper range, Pade approximant
-    double k_min, k_max; // interpolation range
-};
+    else if (k <= k_max) return Interp_obj::eval(k);
+    else
+    {
+        return pade_approx(k, a_m, b_n);
+    }
+}
 
 template <class spec_params>
 // class [spec_params] has to have parameter r;
@@ -303,13 +289,13 @@ private:
 struct xi_integrand_param
 {
     double r;
-    Interp_obj* P_k;
+    Extrap_Pk* P_k;
 };
 
 double xi_integrand(double k, void* params){
     xi_integrand_param* my_par = (xi_integrand_param*) params;
     const double r = my_par->r;
-    Interp_obj* P_k = my_par->P_k;
+    Extrap_Pk* P_k = my_par->P_k;
     return 1/(2*PI*PI)*k/r*P_k->eval(k);
 };
 
@@ -319,41 +305,46 @@ void gen_corr_func_binned_gsl(const Sim_Param &sim, const double x_min, const do
 
     // printf("Allocationg space for interpolation function P(k)\n");
     // Interp_obj P_k(pwr_spec_binned_cp);
+    printf("Allocationg space for extrapolation function P(k)\n");
+    Extrap_Pk P_k(pwr_spec_binned_cp, sim);
 
-    // printf("Allocationg space for integration via [QAWO adaptive integration for oscillatory functions]\n");
+    printf("Allocationg space for integration via [QAWO adaptive integration for oscillatory functions]\n");
     // const double k_min = min(pwr_spec_binned_cp.x);
     // const double k_max = max(pwr_spec_binned_cp.x) / 4;
-    // xi_integrand_param my_param;
-    // my_param.P_k = &P_k;
-    // Integr_obj_qawo<xi_integrand_param> xi_r(&xi_integrand, &my_param, k_min, k_max, 1000, 25);
+    const double k_min = 0;
+    const double k_max = 1e6;
 
-    // printf("Computing correlation function via [QAWO adaptive integration for oscillatory functions]...\n");
-    // const unsigned int N = corr_func_binned->size();
-    // const double lin_bin = (x_max - x_min)/N;
-	// double r;
-	// for(unsigned i = 0; i < N; i++){
-    //     r = x_min + i*lin_bin;
-    //     corr_func_binned->x[i] = r;
-    //     corr_func_binned->y[i] = xi_r(r);
-    // }
+    xi_integrand_param my_param;
+    my_param.P_k = &P_k;
+    Integr_obj_qawo<xi_integrand_param> xi_r(&xi_integrand, &my_param, k_min, k_max, 1000, 25);
+
+    printf("Computing correlation function via [QAWO adaptive integration for oscillatory functions]...\n");
+    const unsigned int N = corr_func_binned->size();
+    const double lin_bin = (x_max - x_min)/N;
+	double r;
+	for(unsigned i = 0; i < N; i++){
+        r = x_min + i*lin_bin;
+        corr_func_binned->x[i] = r;
+        corr_func_binned->y[i] = xi_r(r);
+    }
 
 
     /* TEST OF INTERPOLATION */
-    double k_min = min(pwr_spec_binned_cp.x);
-    const double k_max = max(pwr_spec_binned_cp.x);
-    Extrap_Pk P_k(pwr_spec_binned_cp, sim);
+    // double k_min = min(pwr_spec_binned_cp.x);
+    // const double k_max = max(pwr_spec_binned_cp.x);
+    // Extrap_Pk P_k(pwr_spec_binned_cp, sim);
 
-    printf("\t[After extrapolatin.]\n");
-    corr_func_binned->resize(200);
-    const double log_bin = pow(100*k_max/k_min, 1./corr_func_binned->size());
-    double k;
-    k_min *=sqrt(log_bin)/10;
+    // printf("\t[After extrapolatin.]\n");
+    // corr_func_binned->resize(200);
+    // const double log_bin = pow(100*k_max/k_min, 1./corr_func_binned->size());
+    // double k;
+    // k_min *=sqrt(log_bin)/10;
 
-    #pragma omp parallel for private(k)
-	for (unsigned j = 0; j < corr_func_binned->size(); j++){
-		k = k_min*pow(log_bin, j);
-		corr_func_binned->x[j] = k;
-        corr_func_binned->y[j] = P_k.eval(k);
-    }
+    // #pragma omp parallel for private(k)
+	// for (unsigned j = 0; j < corr_func_binned->size(); j++){
+	// 	k = k_min*pow(log_bin, j);
+	// 	corr_func_binned->x[j] = k;
+    //     corr_func_binned->y[j] = P_k.eval(k);
+    // }
     /* END OF TEST*/
 }

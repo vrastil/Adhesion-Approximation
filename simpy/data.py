@@ -208,7 +208,7 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
 
     # Correlation function
     key = "corr_func"
-    zs, files = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*fft*.dat')
+    zs, files = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*.dat')
     if a_sim_info.rerun(rerun, key, skip, zs):
         print 'Plotting correlation function...'
         plot.plot_corr_func(files, zs, a_sim_info)

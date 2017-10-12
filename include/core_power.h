@@ -5,7 +5,49 @@
  
 #include "stdafx.h"
 #include "core.h"
+#include <gsl/gsl_spline.h>
 
 void norm_pwr(Pow_Spec_Param* pwr_par);
 double lin_pow_spec(const Pow_Spec_Param* pwr_par, double k);
-void gen_corr_func_binned_gsl(const Sim_Param &sim, const double x_min, const double x_max, const Data_x_y<double>& pwr_spec_binned, Data_x_y<double>* corr_func_binned);
+void gen_corr_func_binned_gsl(const Sim_Param &sim, const double x_min, const double x_max,
+                              const Data_x_y<double>& pwr_spec_binned, Data_x_y<double>* corr_func_binned);
+
+/**
+ * @class:	Interp_obj
+ * @brief:	linear interpolation of data [x, y]
+ */
+
+class Interp_obj
+{// linear interpolation of data [x, y]
+public:
+    Interp_obj(const Data_x_y<double>& data);
+    ~Interp_obj();
+    double eval(double x) const;
+
+private:
+    gsl_spline* spline;
+    gsl_interp_accel* acc;
+};
+
+/**
+ * @class:	Extrap_Pk
+ * @brief:	linear interpolation of data [k, P(k)] within 'useful' range
+            fit to primordial P_i(k) below the 'useful' range
+            fit to Padé approximant R [0/3] above the 'useful' range
+ */
+
+class Extrap_Pk : public Interp_obj
+{ /*
+    linear interpolation of data [k, P(k)] within 'useful' range
+    fit to primordial P_i(k) below the 'useful' range
+    fit to Padé approximant R [0/3] above the 'useful' range
+*/
+public:
+    Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim);
+    double eval(double k) const;
+
+private:
+    double n_s, A; // lower range, priomordial
+    std::vector<double> a_m, b_n; // upper range, Pade approximant
+    double k_min, k_max; // interpolation range
+};

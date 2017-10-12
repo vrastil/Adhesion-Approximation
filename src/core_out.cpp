@@ -93,7 +93,7 @@ void print_pow_spec(const Data_x_y<double> &pwr_spec_binned, string out_dir, str
 	fprintf (pFile, "# k [h/Mpc]\tP(k) [(Mpc/h)^3]\n");
 	
 	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
-		if (pwr_spec_binned.y[j]) fprintf (pFile, "%f\t%f\n",  pwr_spec_binned.x[j], pwr_spec_binned.y[j]);
+		if (pwr_spec_binned.y[j]) fprintf (pFile, "%e\t%e\n",  pwr_spec_binned.x[j], pwr_spec_binned.y[j]);
 	}
 
 	fclose (pFile);
@@ -117,7 +117,7 @@ void print_corr_func(const Data_x_y<double> &pwr_spec_binned, string out_dir, st
 	fprintf (pFile, "# x [Mpc/h]\txsi(r)\n");
 	
 	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
-		if (pwr_spec_binned.y[j]) fprintf (pFile, "%f\t%f\n",  pwr_spec_binned.x[j], pwr_spec_binned.y[j]);
+		if (pwr_spec_binned.y[j]) fprintf (pFile, "%e\t%e\n",  pwr_spec_binned.x[j], pwr_spec_binned.y[j]);
 	}
 
 	fclose (pFile);
@@ -140,7 +140,7 @@ void print_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data_x_y
 		if (pwr_spec_binned.x[j] == pwr_spec_binned_0.x[i]){
 			P_k = pwr_spec_binned.y[j];
 			P_ZA = pwr_spec_binned_0.y[i] * pow(b, 2.);
-            if((P_ZA) && (P_k)) fprintf (pFile, "%f\t%f\n", pwr_spec_binned.x[j], (P_k-P_ZA)/P_ZA);
+            if((P_ZA) && (P_k)) fprintf (pFile, "%e\t%f\n", pwr_spec_binned.x[j], (P_k-P_ZA)/P_ZA);
             i++;
             j++;
         } else if (pwr_spec_binned.x[j] < pwr_spec_binned_0.x[i]) j++;
