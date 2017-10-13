@@ -227,13 +227,14 @@ Interp_obj(data), n_s(sim.power.ns)
     }
     printf("\t[a0 = %f", a_m[0]);
     for(unsigned j = 0; j < b_n.size(); j++) printf(", b%i = %f", j+1, b_n[j]);
-    printf("]\n"); 
+    printf("]\n");
+    if ((b_n[0]*b_n[0] - 4*b_n[1]) > 0) printf("WARNING! Padé approximant has roots!\n");
+    if (b_n[1]*a_m[0] < 0) printf("ERROR! Padé approximant has roots in the upper range of extrapolation!\n");
 }
 
 
 double Extrap_Pk::eval(double k) const
 {
-    double val;
     if (k < k_min)
     {
         return A*pow(k, n_s);
@@ -245,44 +246,54 @@ double Extrap_Pk::eval(double k) const
     }
 }
 
-template <class spec_params>
-// class [spec_params] has to have parameter r;
-class Integr_obj_qawo
+class Integr_obj
 {
 public:
     // CONSTRUCTOR
-    Integr_obj_qawo(double(*f) (double, void*), spec_params* params,  double a, double b, size_t limit, size_t n):
-    a(a), L(b-a), limit(limit), params(params)
+    Integr_obj(double(*f) (double, void*),  double a, double b, size_t limit):
+    a(a), b(b), L(b-a), limit(limit)
     {
         w = gsl_integration_workspace_alloc (limit);
-        t = gsl_integration_qawo_table_alloc(1, 1, GSL_INTEG_SINE, n);
         F.function = f;
+    }
+    // DESTRUCTOR
+    ~Integr_obj()
+    {
+        gsl_integration_workspace_free (w);
+    }
+    // VARIABLES
+    double result, error;
+protected:
+    const double a, b, L;
+    const size_t limit;
+    gsl_function F;
+    gsl_integration_workspace* w;
+};
+
+class Integr_obj_qawo : public Integr_obj
+{
+public:
+    // CONSTRUCTOR
+    Integr_obj_qawo(double(*f) (double, void*),  double a, double b, size_t limit, size_t n):
+    Integr_obj(f, a, b, limit)
+    {
+        t = gsl_integration_qawo_table_alloc(1, 1, GSL_INTEG_SINE, n);
     }
     // DESTRUCTOR
     ~Integr_obj_qawo()
     {
-        gsl_integration_workspace_free (w);
         gsl_integration_qawo_table_free(t);
     }
     // METHODS
-    double operator()(double r)
+    double operator()(double r, void* params)
     {
         gsl_integration_qawo_table_set(t, r, L, GSL_INTEG_SINE);
-        params->r = r;
         F.params = params;
         gsl_integration_qawo(&F, a, 1e-3, 1e-3, limit, w, t, &result, &error);
         return result;
     }
-
-    // VARIABLES
-    double result, error;
-private:
-    const double a, L;
-    const size_t limit;
-    spec_params* params;
-    gsl_function F;
+protected:
     gsl_integration_qawo_table* t;
-    gsl_integration_workspace* w;
 };
 
 struct xi_integrand_param
@@ -291,21 +302,39 @@ struct xi_integrand_param
     const Extrap_Pk* P_k;
 };
 
-double xi_integrand(double k, void* params){
+/**
+ * @brief integrand for correlation function when weight-function 'sin(kr)' is used in integration
+ */
+double xi_integrand_W(double k, void* params){
     xi_integrand_param* my_par = (xi_integrand_param*) params;
     const double r = my_par->r;
     const Extrap_Pk* P_k = my_par->P_k;
     return 1/(2*PI*PI)*k/r*P_k->eval(k);
 };
 
-void gen_corr_func_binned_gsl(const Sim_Param &sim, const double x_min, const double x_max, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned)
+/**
+ * @brief integrand for correlation function when non-weighted integration is used
+ */
+double xi_integrand_G(double k, void* params){
+    xi_integrand_param* my_par = (xi_integrand_param*) params;
+    const double r = my_par->r;
+    double j0;
+    if (k*r < 1e-3) j0 = 1 - k*k*r*r/6.;
+    else j0 = sin(k*r) / (k*r);
+    const Extrap_Pk* P_k = my_par->P_k;
+    return 1/(2*PI*PI)*k*k*j0*P_k->eval(k);
+};
+
+void gen_corr_func_binned_gsl(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned)
 {
-    const double k_min = 0;
-    const double k_max = 1e6;
+    const double x_min = sim.x_corr.lower;
+    const double x_max = sim.x_corr.upper;
+    const double k_min = 1e-4;
+    const double k_max = 1e1;
 
     xi_integrand_param my_param;
     my_param.P_k = &P_k;
-    Integr_obj_qawo<xi_integrand_param> xi_r(&xi_integrand, &my_param, k_min, k_max, 1000, 25);
+    Integr_obj_qawo xi_r(&xi_integrand_W, k_min, k_max, 4000, 50);
 
     printf("Computing correlation function via [QAWO adaptive integration for oscillatory functions]...\n");
     const unsigned int N = corr_func_binned->size();
@@ -313,7 +342,8 @@ void gen_corr_func_binned_gsl(const Sim_Param &sim, const double x_min, const do
 	double r;
 	for(unsigned i = 0; i < N; i++){
         r = x_min + i*lin_bin;
+        my_param.r = r;
         corr_func_binned->x[i] = r;
-        corr_func_binned->y[i] = xi_r(r);
+        corr_func_binned->y[i] = xi_r(r, &my_param);
     }
 }

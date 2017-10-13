@@ -493,9 +493,11 @@ void gen_corr_func_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<
 }
 
 template<class T>
-void gen_corr_func_binned_pp(const Sim_Param &sim, T* particles, Data_x_y<double>* corr_func_binned,
-                             const double x_min, const double x_max, const double x_0)
-{ /* x_min and x_max are in [Mpc/h], transformation from particles distances to Mpc/h assumed to be x_0 */
+void gen_corr_func_binned_pp(const Sim_Param &sim, T* particles, Data_x_y<double>* corr_func_binned)
+{ /* x_min and x_max are in [Mpc/h], transformation from particles distances to Mpc/h assumed to be sim.x_0() */
+    const double x_min = sim.x_corr.lower;
+    const double x_max = sim.x_corr.upper;
+    const double x_0 = sim.x_0();
     printf("Computing binned correlation function via direct sum...\n");
 
     const double lin_bin = (x_max - x_min) / corr_func_binned->size(); // [lin_bin] = Mpc/h
@@ -693,5 +695,5 @@ void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param 
 
 template void get_rho_from_par(Particle_x*, Mesh*, const Sim_Param&);
 template void get_rho_from_par(Particle_v*, Mesh*, const Sim_Param&);
-template void gen_corr_func_binned_pp(const Sim_Param&, Particle_x*, Data_x_y<double>*, const double, const double, const double);
-template void gen_corr_func_binned_pp(const Sim_Param&, Particle_v*, Data_x_y<double>*, const double, const double, const double);
+template void gen_corr_func_binned_pp(const Sim_Param&, Particle_x*, Data_x_y<double>*);
+template void gen_corr_func_binned_pp(const Sim_Param&, Particle_v*, Data_x_y<double>*);

@@ -33,8 +33,7 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<d
 void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const Extrap_Pk &P_k, Data_x_y<double>* pwr_spec_binned);
 void gen_corr_func_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<double>* corr_func_binned);
 template<class T>
-void gen_corr_func_binned_pp(const Sim_Param &sim, T* particles, Data_x_y<double>* corr_func_binned,
-                             const double x_min, const double x_max, const double x_0);
+void gen_corr_func_binned_pp(const Sim_Param &sim, T* particles, Data_x_y<double>* corr_func_binned);
 void gen_dens_binned(const Mesh& rho, std::vector<int> &dens_binned, const Sim_Param &sim);
 
 void force_short(const Sim_Param &sim, const LinkedList& linked_list, Particle_v *particles,

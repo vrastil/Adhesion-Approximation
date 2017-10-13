@@ -50,4 +50,4 @@ private:
     double k_min, k_max; // interpolation range
 };
 
-void gen_corr_func_binned_gsl(const Sim_Param &sim, const double x_min, const double x_max, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned);
+void gen_corr_func_binned_gsl(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned);

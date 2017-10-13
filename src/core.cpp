@@ -453,7 +453,8 @@ int Sim_Param::init(int ac, char* av[])
         k_par.nyquist["particle"] = PI*pow(par_num, 1/3.) / box_size;
 
         /* RANGE : x */
-		
+        x_corr.lower = 0.1;
+        x_corr.upper = 200;
     }
     return err;
 }
@@ -471,7 +472,7 @@ void Sim_Param::print_info(string out, string app) const
             printf("Num_par:\t%G^3\n", pow(par_num, 1/3.));
             printf("Num_mesh:\t%i^3\n", mesh_num);
             printf("Num_mesh_pwr:\t%i^3\n", mesh_num_pwr);
-            printf("Box size:\t%i Mpc/h\n", box_size);
+            printf("Box size:\t%.0f Mpc/h\n", box_size);
             printf("Redshift:\t%G--->%G\n", z_in, z_out);
             printf("Pk:\t\t[sigma_8 = %G, As = %G, ns = %G, k_smooth = %G, pwr_type = %i]\n", 
                 power.sigma8, power.A, power.ns, sqrt(power.k2_G), power.pwr_type);
@@ -632,9 +633,9 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
     print_pow_spec(pwr_spec_binned, out_dir_app, "_extrap" + z_suffix());
 
     /* Printing correlation function */
-    // corr_func_binned.resize(sim.bin_num / 4);
-    // gen_corr_func_binned_gsl(sim, pwr_spec_binned, &corr_func_binned);
-    // print_corr_func(corr_func_binned, out_dir_app, "_gsl" + z_suffix());
+    corr_func_binned.resize(sim.bin_num / 4);
+    gen_corr_func_binned_gsl(sim, P_k, &corr_func_binned);
+    print_corr_func(corr_func_binned, out_dir_app, "_gsl" + z_suffix());
 
     // power_aux.reset_im(); // P(k) is a real function
     // fftw_execute_dft_c2r(p_B_pwr, power_aux);
@@ -642,7 +643,7 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
     // gen_corr_func_binned(sim, power_aux, &corr_func_binned);
     // print_corr_func(corr_func_binned, out_dir_app, "_fft" + z_suffix());
 
-    // gen_corr_func_binned_pp(sim, particles, &corr_func_binned, 1, 200, sim.x_0());
+    // gen_corr_func_binned_pp(sim, particles, &corr_func_binned);
     // print_corr_func(corr_func_binned, out_dir_app, "_pp" + z_suffix());
 }
 

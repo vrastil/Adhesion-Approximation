@@ -250,7 +250,7 @@ struct Range
     double lower, upper;
 };
 
-struct Extrap_k_param
+struct Wavenumber_param
 {
     // k-range where to use (linear) interpolation and k-range in which print 'pwr_spec_extrap_*'
     Range k_interp, k_print;
@@ -287,10 +287,30 @@ public:
 };
 
 /**
+ * @brief An enum class that defines which integration scheme use in computation of correlation function.
+
+Q - quadrature routine
+
+N - non-adaptive integrator
+A - adaptive integrator
+
+G - general integrand (user-defined)
+W - weight function with integrand
+
+S - singularities can be more readily integrated
+P - points of special difficulty can be supplied
+I - infinite range of integration
+O - oscillatory weight function, cos or sin
+F - Fourier integral
+C - Cauchy principal value
+*/
+enum class corr_int_type { QAWO, FFTLOG };
+
+/**
  * @class:	Sim_Param
  * @brief:	class storing simulation parameters
  */
- 
+
 class Sim_Param
 {
 public:
@@ -305,9 +325,10 @@ public:
 	unsigned nt;
 	double rs, Hc, a;
 	unsigned M;
-	std::string out_dir;
-    Pow_Spec_Param power;
-    Extrap_k_param k_par;
+	std::string out_dir; ///< where to save output of the simulation
+    Pow_Spec_Param power; ///< all information about our cosmology
+    Wavenumber_param k_par; ///< all the important k-values we need
+    Range x_corr; ///< range in which compute the correlation function
     bool comp_ZA, comp_FF, comp_FP, comp_AA, comp_FP_pp;
 	
 	// METHODS
