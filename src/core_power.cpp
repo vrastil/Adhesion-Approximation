@@ -288,7 +288,7 @@ public:
         gsl_integration_qawo_table_free(wf);
     }
     // METHODS
-    double operator()(double r, void* params)
+    double eval(double r, void* params)
     {
         gsl_integration_qawo_table_set(wf, r, L, GSL_INTEG_SINE);
         F.params = params;
@@ -315,7 +315,7 @@ public:
         gsl_integration_workspace_free (wc);
     }
     // METHODS
-    double operator()(double r, void* params)
+    double eval(double r, void* params)
     {
         gsl_integration_qawo_table_set(wf, r, L, GSL_INTEG_SINE);
         F.params = params;
@@ -355,20 +355,15 @@ double xi_integrand_G(double k, void* params){
     return 1/(2*PI*PI)*k*k*j0*P_k->eval(k);
 };
 
-void gen_corr_func_binned_gsl(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned)
+template <class T>
+void gen_corr_func_binned_gsl(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned, T* xi_r)
 {
     const double x_min = sim.x_corr.lower;
     const double x_max = sim.x_corr.upper;
-    const double k_min = 1e-4;
-    const double k_max = 1e1;
-    const double epsabs = 1e-3;
-    const double epsrel = 1e-3;
 
     xi_integrand_param my_param;
     my_param.P_k = &P_k;
-    Integr_obj_qawo xi_r(&xi_integrand_W, k_min, k_max, epsabs, epsrel,  4000, 50);
 
-    printf("Computing correlation function via [QAWO adaptive integration for oscillatory functions]...\n");
     const unsigned int N = corr_func_binned->size();
     const double lin_bin = (x_max - x_min)/N;
 	double r;
@@ -376,6 +371,32 @@ void gen_corr_func_binned_gsl(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x
         r = x_min + i*lin_bin;
         my_param.r = r;
         corr_func_binned->x[i] = r;
-        corr_func_binned->y[i] = xi_r(r, &my_param);
+        corr_func_binned->y[i] = xi_r->eval(r, &my_param);
     }
+}
+
+#define EPSABS 1e-7
+#define EPSREL 1e-4
+
+void gen_corr_func_binned_gsl_qagi(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned)
+{
+    printf("Computing correlation function via GSL integration QAGI of extrapolated power spectrum...\n");
+    
+}
+
+void gen_corr_func_binned_gsl_qawo(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned)
+{
+    printf("Computing correlation function via GSL integration QAWO of extrapolated power spectrum...\n");
+    const double k_min = 3e-3;
+    const double k_max = 1e-1;
+    Integr_obj_qawo xi_r(&xi_integrand_W, k_min, k_max, EPSABS, EPSREL,  4000, 50);
+    gen_corr_func_binned_gsl(sim, P_k, corr_func_binned, &xi_r);
+}
+
+void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned)
+{
+    printf("Computing correlation function via GSL integration QAWF of extrapolated power spectrum...\n");
+
+    Integr_obj_qawf xi_r(&xi_integrand_W, 0, EPSABS,  4000, 50);
+    gen_corr_func_binned_gsl(sim, P_k, corr_func_binned, &xi_r);
 }

@@ -127,7 +127,8 @@ def plot_corr_func(corr_func_files, zs, a_sim_info, out_dir='auto', save=True, s
     plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
     plt.ylabel(r"$\xi(r)$", fontsize=15)
     plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
-    plt.ylim(ymin=-0.02, ymax=0.05)
+    linthreshy=1e-3
+    plt.yscale("symlog", linthreshy=linthreshy, linscaley=4)
     plt.draw()
     plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
@@ -148,7 +149,7 @@ def plot_corr_func(corr_func_files, zs, a_sim_info, out_dir='auto', save=True, s
     plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
     plt.ylabel(r"$r^2\xi(r)$", fontsize=15)
     plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
-    #plt.ylim(ymin=-0.02, ymax=0.05)
+    plt.yscale("linear")
     plt.draw()
     plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')

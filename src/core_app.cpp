@@ -488,7 +488,7 @@ void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const Extrap_Pk &P_k,
 
 void gen_corr_func_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<double>* corr_func_binned)
 {
-    printf("Computing binned correlation function...\n");
+    printf("Computing correlation function via FFT of power spectrum on a mesh...\n");
 	gen_rqty_binned(1, 200, sim.x_0_pwr(), power_aux, *corr_func_binned, 1);
 }
 
@@ -498,7 +498,7 @@ void gen_corr_func_binned_pp(const Sim_Param &sim, T* particles, Data_x_y<double
     const double x_min = sim.x_corr.lower;
     const double x_max = sim.x_corr.upper;
     const double x_0 = sim.x_0();
-    printf("Computing binned correlation function via direct sum...\n");
+    printf("Computing correlation function via direct particle-particle sum...\n");
 
     const double lin_bin = (x_max - x_min) / corr_func_binned->size(); // [lin_bin] = Mpc/h
     const unsigned Np = sim.par_num;

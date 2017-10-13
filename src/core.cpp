@@ -453,9 +453,9 @@ int Sim_Param::init(int ac, char* av[])
         k_par.nyquist["particle"] = PI*pow(par_num, 1/3.) / box_size;
 
         /* CORRELATION FUNCTION */
-        x_corr.lower = 0.1;
+        x_corr.lower = 1;
         x_corr.upper = 200;
-        corr_int = corr_int_type::QAWO;
+        corr_int = corr_int_type::QAWF;
     }
     return err;
 }
@@ -634,7 +634,7 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
     print_pow_spec(pwr_spec_binned, out_dir_app, "_extrap" + z_suffix());
 
     /* Printing correlation function */
-    corr_func_binned.resize(sim.bin_num / 2);
+    corr_func_binned.resize(sim.bin_num);
     switch(sim.corr_int)
     {
         case corr_int_type::FFT:
@@ -649,9 +649,17 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
             break;
         case corr_int_type::FFTLOG:
             break;
-        default:
-            gen_corr_func_binned_gsl(sim, P_k, &corr_func_binned);
-            print_corr_func(corr_func_binned, out_dir_app, "_gsl" + z_suffix());
+        case corr_int_type::QAGI:
+            gen_corr_func_binned_gsl_qagi(sim, P_k, &corr_func_binned);
+            print_corr_func(corr_func_binned, out_dir_app, "_gsl_qagi" + z_suffix());
+            break;
+        case corr_int_type::QAWO:
+            gen_corr_func_binned_gsl_qawo(sim, P_k, &corr_func_binned);
+            print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawo" + z_suffix());
+            break;
+        case corr_int_type::QAWF:
+            gen_corr_func_binned_gsl_qawf(sim, P_k, &corr_func_binned);
+            print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf" + z_suffix());
             break;
     }
 }
