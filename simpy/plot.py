@@ -3,6 +3,7 @@ matplotlib.use('Agg')
 from matplotlib import animation
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import matplotlib.cm as cm
 # from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 from scipy import interpolate
@@ -43,6 +44,7 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, ou
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     fig = plt.figure(figsize=(15, 11))
+    ax = plt.gca()
     plt.yscale('log')
     plt.xscale('log')
     a_ = 0
@@ -72,6 +74,13 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, ou
             k, P_k = data[:, 0], data[:, 1]
             plt.plot(k, P_k, 'k--')
             del k, P_k, data
+
+    if a_sim_info.k_nyquist is not None:
+        ls = [':', '-.', '--']
+        ls *= (len(a_sim_info.k_nyquist) - 1) / 3 + 1
+        ls = iter(ls)
+        for key, val in a_sim_info.k_nyquist.iteritems():
+            ax.axvline(val, ls=next(ls), c='k', label=r"$k_{Nq}$ (" + key + r")")
 
     data = np.loadtxt(pwr_spec_files[-1])
     k = data[:, 0]

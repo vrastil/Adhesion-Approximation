@@ -78,6 +78,8 @@ class SimInfo(object):
         self.pwr["pwr_type"] = data["pwr_type"]
         if "k_pade" in data: self.k_pade = data["k_pade"]
         else: self.k_pade = None
+        if "k_nyquist" in data: self.k_nyquist = data["k_nyquist"]
+        else: self.k_nyquist = None
         self.ccl = {}
         self.ccl["transfer_function_method"] = data["transfer_function_method"]
         self.ccl["matter_power_spectrum_method"] = data["matter_power_spectrum_method"]

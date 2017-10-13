@@ -448,8 +448,8 @@ int Sim_Param::init(int ac, char* av[])
         k_par.k_print.upper = 2*PI/box_size*mesh_num_pwr;
         k_par.k_interp.upper = PI*pow(par_num, 1/3.) / box_size;
 
-        k_par.nyquist["analysis"] = PI*pow(par_num, 1/3.) / box_size;
-        k_par.nyquist["potential"] = PI*pow(par_num, 1/3.) / box_size;
+        k_par.nyquist["analysis"] = PI*mesh_num_pwr / box_size;
+        k_par.nyquist["potential"] = PI*mesh_num / box_size;
         k_par.nyquist["particle"] = PI*pow(par_num, 1/3.) / box_size;
 
         /* RANGE : x */
