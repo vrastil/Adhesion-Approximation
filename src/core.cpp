@@ -452,9 +452,10 @@ int Sim_Param::init(int ac, char* av[])
         k_par.nyquist["potential"] = PI*mesh_num / box_size;
         k_par.nyquist["particle"] = PI*pow(par_num, 1/3.) / box_size;
 
-        /* RANGE : x */
+        /* CORRELATION FUNCTION */
         x_corr.lower = 0.1;
         x_corr.upper = 200;
+        corr_int = corr_int_type::QAWO;
     }
     return err;
 }
@@ -633,18 +634,26 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
     print_pow_spec(pwr_spec_binned, out_dir_app, "_extrap" + z_suffix());
 
     /* Printing correlation function */
-    corr_func_binned.resize(sim.bin_num / 4);
-    gen_corr_func_binned_gsl(sim, P_k, &corr_func_binned);
-    print_corr_func(corr_func_binned, out_dir_app, "_gsl" + z_suffix());
-
-    // power_aux.reset_im(); // P(k) is a real function
-    // fftw_execute_dft_c2r(p_B_pwr, power_aux);
-    // corr_func_binned.resize(sim.bin_num / 4);
-    // gen_corr_func_binned(sim, power_aux, &corr_func_binned);
-    // print_corr_func(corr_func_binned, out_dir_app, "_fft" + z_suffix());
-
-    // gen_corr_func_binned_pp(sim, particles, &corr_func_binned);
-    // print_corr_func(corr_func_binned, out_dir_app, "_pp" + z_suffix());
+    corr_func_binned.resize(sim.bin_num / 2);
+    switch(sim.corr_int)
+    {
+        case corr_int_type::FFT:
+            power_aux.reset_im(); // P(k) is a real function
+            fftw_execute_dft_c2r(p_B_pwr, power_aux);
+            gen_corr_func_binned(sim, power_aux, &corr_func_binned);
+            print_corr_func(corr_func_binned, out_dir_app, "_fft" + z_suffix());
+            break;
+        case corr_int_type::PP:
+            gen_corr_func_binned_pp(sim, particles, &corr_func_binned);
+            print_corr_func(corr_func_binned, out_dir_app, "_pp" + z_suffix());
+            break;
+        case corr_int_type::FFTLOG:
+            break;
+        default:
+            gen_corr_func_binned_gsl(sim, P_k, &corr_func_binned);
+            print_corr_func(corr_func_binned, out_dir_app, "_gsl" + z_suffix());
+            break;
+    }
 }
 
 /**

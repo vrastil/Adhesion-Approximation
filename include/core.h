@@ -304,7 +304,7 @@ O - oscillatory weight function, cos or sin
 F - Fourier integral
 C - Cauchy principal value
 */
-enum class corr_int_type { QAWO, FFTLOG };
+enum class corr_int_type { QAGI, QAWO, QAWF, FFT, FFTLOG, PP };
 
 /**
  * @class:	Sim_Param
@@ -314,13 +314,16 @@ enum class corr_int_type { QAWO, FFTLOG };
 class Sim_Param
 {
 public:
-	// VARIABLES
+    /* SIMULATION BOX*/
     unsigned par_num, mesh_num, mesh_num_pwr, Ng, Ng_pwr, print_every;
     double box_size;
     unsigned order = 1, bin_num = 100;
-	unsigned long seed = 12345678;
+    unsigned long seed = 12345678;
+
+    /* TIME */
 	double z_in, z_out;
-	double b_in, b_out, db;
+    double b_in, b_out, db;
+    
 	double nu;
 	unsigned nt;
 	double rs, Hc, a;
@@ -328,7 +331,11 @@ public:
 	std::string out_dir; ///< where to save output of the simulation
     Pow_Spec_Param power; ///< all information about our cosmology
     Wavenumber_param k_par; ///< all the important k-values we need
+
+    /* CORRELATION FUNCTION */
     Range x_corr; ///< range in which compute the correlation function
+    corr_int_type corr_int;
+
     bool comp_ZA, comp_FF, comp_FP, comp_AA, comp_FP_pp;
 	
 	// METHODS

@@ -250,8 +250,9 @@ class Integr_obj
 {
 public:
     // CONSTRUCTOR
-    Integr_obj(double(*f) (double, void*),  double a, double b, size_t limit):
-    a(a), b(b), L(b-a), limit(limit)
+    Integr_obj(double(*f) (double, void*),  const double a, const double b,
+               const double epsabs, const double epsrel, size_t limit):
+    a(a), b(b), L(b-a), epsabs(epsabs), epsrel(epsrel),  limit(limit)
     {
         w = gsl_integration_workspace_alloc (limit);
         F.function = f;
@@ -265,6 +266,7 @@ public:
     double result, error;
 protected:
     const double a, b, L;
+    const double epsabs, epsrel;
     const size_t limit;
     gsl_function F;
     gsl_integration_workspace* w;
@@ -274,26 +276,54 @@ class Integr_obj_qawo : public Integr_obj
 {
 public:
     // CONSTRUCTOR
-    Integr_obj_qawo(double(*f) (double, void*),  double a, double b, size_t limit, size_t n):
-    Integr_obj(f, a, b, limit)
+    Integr_obj_qawo(double(*f) (double, void*),  double a, double b,
+                    const double epsabs, const double epsrel, size_t limit, size_t n):
+    Integr_obj(f, a, b, epsabs, epsrel, limit)
     {
-        t = gsl_integration_qawo_table_alloc(1, 1, GSL_INTEG_SINE, n);
+        wf = gsl_integration_qawo_table_alloc(1, 1, GSL_INTEG_SINE, n);
     }
     // DESTRUCTOR
     ~Integr_obj_qawo()
     {
-        gsl_integration_qawo_table_free(t);
+        gsl_integration_qawo_table_free(wf);
     }
     // METHODS
     double operator()(double r, void* params)
     {
-        gsl_integration_qawo_table_set(t, r, L, GSL_INTEG_SINE);
+        gsl_integration_qawo_table_set(wf, r, L, GSL_INTEG_SINE);
         F.params = params;
-        gsl_integration_qawo(&F, a, 1e-3, 1e-3, limit, w, t, &result, &error);
+        gsl_integration_qawo(&F, a, epsabs, epsrel, limit, w, wf, &result, &error);
         return result;
     }
 protected:
-    gsl_integration_qawo_table* t;
+    gsl_integration_qawo_table* wf;
+};
+
+class Integr_obj_qawf : public Integr_obj_qawo
+{
+public:
+    // CONSTRUCTOR
+    Integr_obj_qawf(double(*f) (double, void*),  double a,
+                    const double epsabs, size_t limit, size_t n):
+    Integr_obj_qawo(f, a, 0, epsabs, 0, limit, n)
+    {
+        wc = gsl_integration_workspace_alloc (limit);
+    }
+    // DESTRUCTOR
+    ~Integr_obj_qawf()
+    {
+        gsl_integration_workspace_free (wc);
+    }
+    // METHODS
+    double operator()(double r, void* params)
+    {
+        gsl_integration_qawo_table_set(wf, r, L, GSL_INTEG_SINE);
+        F.params = params;
+        gsl_integration_qawf(&F, a, epsabs, limit, w, wc, wf, &result, &error);
+        return result;
+    }
+protected:
+    gsl_integration_workspace* wc;
 };
 
 struct xi_integrand_param
@@ -331,10 +361,12 @@ void gen_corr_func_binned_gsl(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x
     const double x_max = sim.x_corr.upper;
     const double k_min = 1e-4;
     const double k_max = 1e1;
+    const double epsabs = 1e-3;
+    const double epsrel = 1e-3;
 
     xi_integrand_param my_param;
     my_param.P_k = &P_k;
-    Integr_obj_qawo xi_r(&xi_integrand_W, k_min, k_max, 4000, 50);
+    Integr_obj_qawo xi_r(&xi_integrand_W, k_min, k_max, epsabs, epsrel,  4000, 50);
 
     printf("Computing correlation function via [QAWO adaptive integration for oscillatory functions]...\n");
     const unsigned int N = corr_func_binned->size();
