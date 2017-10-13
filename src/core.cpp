@@ -4,14 +4,11 @@
  */
  
 #include "stdafx.h"
-#include <fftw3.h>
 #include "core.h"
 #include "core_cmd.h"
 #include "core_out.h"
 #include "core_app.h"
 #include "core_mesh.h"
-#include "json.hpp"
-#include <ccl.h>
 
 using namespace std;
 using json = nlohmann::json;
@@ -451,6 +448,10 @@ int Sim_Param::init(int ac, char* av[])
         k_par.k_print.upper = 2*PI/box_size*mesh_num_pwr;
         k_par.k_interp.upper = PI*pow(par_num, 1/3.) / box_size;
 
+        k_par.nyquist["analysis"] = PI*pow(par_num, 1/3.) / box_size;
+        k_par.nyquist["potential"] = PI*pow(par_num, 1/3.) / box_size;
+        k_par.nyquist["particle"] = PI*pow(par_num, 1/3.) / box_size;
+
         /* RANGE : x */
 		
     }
@@ -503,6 +504,7 @@ void Sim_Param::print_info(string out, string app) const
                 {"Omega_b", power.Omega_b},
                 {"h", power.h},
                 {"k_pade", k_par.k_pade},
+                {"k_nyquist" ,k_par.nyquist},
                 {"viscosity", nu},
                 {"cut_radius", rs},
                 {"num_thread", nt},

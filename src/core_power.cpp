@@ -3,12 +3,6 @@
 #include "core.h"
 #include "core_mesh.h"
 #include "core_power.h"
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_sf_bessel.h>
-#include <gsl/gsl_spline.h>
-#include <gsl/gsl_fit.h>
-#include <gsl/gsl_linalg.h>
-#include <ccl.h>
 
 using namespace std;
 

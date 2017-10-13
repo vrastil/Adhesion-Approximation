@@ -1,6 +1,5 @@
 
 #include "stdafx.h"
-#include <boost/filesystem.hpp>
 #include "core.h"
 
 namespace fs = boost::filesystem;

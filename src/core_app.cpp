@@ -3,7 +3,6 @@
 #include "core.h"
 #include "core_mesh.h"
 #include "core_power.h"
-#include <fftw3.h>
 #include "CBRNG_Random.h"
 
 #define N_MAX 1

@@ -7,7 +7,6 @@
 
 #include "stdafx.h"
 #include "core.h"
-#include <fftw3.h>
 
 void get_k_vec(int N, int index, int* k_vec);
 void get_k_vec(int N, int index, Vec_3D<int> &k_vec);

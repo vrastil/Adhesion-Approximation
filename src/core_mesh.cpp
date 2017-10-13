@@ -1,7 +1,6 @@
 
 #include "stdafx.h"
 #include "core.h"
-#include <fftw3.h>
 
 using namespace std;
 

@@ -6,7 +6,6 @@
 #pragma once
 
 #include "stdafx.h"
-#include <fftw3.h>
 #include <ccl.h>
 
 constexpr double PI = M_PI;
@@ -257,7 +256,7 @@ struct Extrap_k_param
     Range k_interp, k_print;
 
     // Nyquist frequencies of potential mesh, analyses mesh and particle separation
-    double k_nyquist_pot, k_nyquist_anl, k_nyquist_par;
+    std::map<std::string,double> nyquist;
 
     // use Padé approximant R[m=0; n=pade_order-1], i.e. pade_order of DOF
     unsigned pade_order = 3;

@@ -8,7 +8,6 @@
 #include "stdafx.h"
 #include "core.h"
 #include "core_power.h"
-#include <fftw3.h>
 
 void set_unpert_pos(const Sim_Param &sim, Particle_x* particles);
 void set_unpert_pos_w_vel(const Sim_Param &sim, Particle_v* particles, const std::vector< Mesh> &vel_field);

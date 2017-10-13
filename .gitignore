@@ -8,6 +8,7 @@ adh_app
 tests/test
 *.o
 *.d
+*.gch
 *.sh
 *.ipynb
 *.pyc
