@@ -417,10 +417,9 @@ Tracking::Tracking(int sqr_num_track_par, int par_num_per_dim):
  * @brief:	class storing simulation parameters
  */
  
-int Sim_Param::init(int ac, char* av[])
+Sim_Param::Sim_Param(int ac, char* av[])
 {
-	int err = handle_cmd_line(ac, av, this);
-	if (err) is_init = 0;
+	if (handle_cmd_line(ac, av, this)) is_init = 0;
 	else {
 		is_init = 1;
 		/* MULTITHREADING */
@@ -443,6 +442,7 @@ int Sim_Param::init(int ac, char* av[])
         power.k2_G *= power.k2_G;
         power.h = power.H0/100;
         power.init();
+        norm_pwr(&power);
 
         /* RANGE : k */
         k_par.k_print.lower = 2*PI/box_size;
@@ -459,7 +459,6 @@ int Sim_Param::init(int ac, char* av[])
         x_corr.upper = 200;
         corr_int = corr_int_type::QAWF;
     }
-    return err;
 }
 
 void Sim_Param::print_info(string out, string app) const

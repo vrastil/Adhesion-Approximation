@@ -103,9 +103,9 @@ double lin_pow_spec(double k, const Pow_Spec_Param& pwr_par)
     }
 }
 
-double lin_pow_spec(double k, void* parameters)
+double find_pk_max(double k, void* parameters)
 {
-    return lin_pow_spec(k, *static_cast<const Pow_Spec_Param*>(parameters));
+    return -lin_pow_spec(k, *static_cast<Pow_Spec_Param*>(parameters));
 }
 
 double pade_approx(double x, unsigned m, const double* a, unsigned n, const double* b)
@@ -193,8 +193,13 @@ Interp_obj(data), n_s(sim.power.ns)
         unsigned order = sim.k_par.pade_order; // Pade approximant R [0/order-1]
 
         vector<double> R_0m(order);
+        k_min = sim.k_par.k_interp.lower;
         k_max = sim.k_par.k_interp.upper;
-        const int n = get_nearest(k_max, data.x);
+        
+        const unsigned m = get_nearest(k_min, data.x);
+        const unsigned n = get_nearest(k_max, data.x);
+        const unsigned l = (n - m)/ (order - 1);
+        printf("\t[k_min = %.5e, m = %i, k[m] = %.5e]\n", k_min, m, data.x[m]);
         printf("\t[k_max = %.5e, n = %i, k[n] = %.5e]\n", k_max, n, data.x[n]);
 
         vector<double> A, b;
@@ -203,12 +208,12 @@ Interp_obj(data), n_s(sim.power.ns)
         // TEMPORARY!!!
         sim.k_par.k_pade.clear();
 
-        for(unsigned i = 0; i < order; i++)
+        for(unsigned i = m; i <= n; i+=l)
         {
-            k = data.x[n-i*7]; // TEMPORARY!!! these two lines are to be other way around
+            k = data.x[i]; // TEMPORARY!!! these two lines are to be other way around
             sim.k_par.k_pade.push_back(k); // i.e. load k from simulation parameters
 
-            Pk = data.y[n-i*7];
+            Pk = data.y[i];
             A.push_back(1.); // a0
             for(unsigned j = 1; j < order; j++)
             {
@@ -411,24 +416,27 @@ double  get_max_Pk(Sim_Param* sim)
     const gsl_min_fminimizer_type * T = gsl_min_fminimizer_brent;
     gsl_min_fminimizer * s = gsl_min_fminimizer_alloc (T);
     gsl_function F;
-    F.function = &lin_pow_spec;
+    F.function = &find_pk_max;
     F.params = &sim->power;
-    double k;
     double k_l = sim->k_par.k_print.lower;
     double k_u = sim->k_par.k_print.upper;
-    gsl_min_fminimizer_set(s, &F, (k_l + k_u) / 2., k_l, k_u);
+    double k = (k_l + k_u) / 2.;
+    gsl_min_fminimizer_set(s, &F, k, k_l, k_u);
 
     int status;
     int iter = 0, max_iter = 100;
     do
     {
         iter++;
+        status = gsl_min_fminimizer_iterate (s);
+
+        k = gsl_min_fminimizer_x_minimum (s);
         k_l = gsl_min_fminimizer_x_lower (s);
         k_u = gsl_min_fminimizer_x_upper (s);
 
         status = gsl_min_test_interval (k_l, k_u, 0, 1e-3);
+
     } while ((status == GSL_CONTINUE) && (iter < max_iter));
-    k = gsl_min_fminimizer_x_minimum (s);
     gsl_min_fminimizer_free(s);
     return k;
 }

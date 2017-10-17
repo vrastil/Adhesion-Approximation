@@ -10,7 +10,6 @@
 
 void norm_pwr(Pow_Spec_Param* pwr_par);
 double lin_pow_spec(double k, const Pow_Spec_Param& parameters);
-double lin_pow_spec(double k, void* parameters);
 double  get_max_Pk(Sim_Param* sim);
 
 /**

@@ -314,6 +314,8 @@ enum class corr_int_type { QAGI, QAWO, QAWF, FFT, FFTLOG, PP };
 class Sim_Param
 {
 public:
+    // CONSTRUCTOR
+    Sim_Param(int ac, char* av[]);
     /* SIMULATION BOX*/
     unsigned par_num, mesh_num, mesh_num_pwr, Ng, Ng_pwr, print_every;
     double box_size;
@@ -339,7 +341,6 @@ public:
     bool comp_ZA, comp_FF, comp_FP, comp_AA, comp_FP_pp;
 	
 	// METHODS
-	int init(int ac, char* av[]);
     void print_info(std::string out, std::string app) const;
 	void print_info() const;
 	inline const double x_0() const{return (double)box_size/mesh_num;}
