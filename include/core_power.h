@@ -2,13 +2,16 @@
  * @file:	core_power.h
  * @brief:	functions handling operations with power spectra
  */
+#pragma once
  
 #include "stdafx.h"
 #include "core.h"
 
 
 void norm_pwr(Pow_Spec_Param* pwr_par);
-double lin_pow_spec(const Pow_Spec_Param* pwr_par, double k);
+double lin_pow_spec(double k, const Pow_Spec_Param& parameters);
+double lin_pow_spec(double k, void* parameters);
+double  get_max_Pk(Sim_Param* sim);
 
 /**
  * @class:	Interp_obj

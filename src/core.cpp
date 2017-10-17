@@ -9,6 +9,7 @@
 #include "core_out.h"
 #include "core_app.h"
 #include "core_mesh.h"
+#include "core_power.h"
 
 using namespace std;
 using json = nlohmann::json;
@@ -446,7 +447,8 @@ int Sim_Param::init(int ac, char* av[])
         /* RANGE : k */
         k_par.k_print.lower = 2*PI/box_size;
         k_par.k_print.upper = 2*PI/box_size*mesh_num_pwr;
-        k_par.k_interp.upper = PI*pow(par_num, 1/3.) / box_size;
+        k_par.k_interp.lower = get_max_Pk(this);
+        k_par.k_interp.upper = PI*pow(par_num, 1/3.) / (2*box_size); // k_Nyq / 2 (for safety)
 
         k_par.nyquist["analysis"] = PI*mesh_num_pwr / box_size;
         k_par.nyquist["potential"] = PI*mesh_num / box_size;

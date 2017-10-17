@@ -6,47 +6,47 @@
 
 using namespace std;
 
-double transfer_function_2(double k, const Pow_Spec_Param* parameters)
+double transfer_function_2(double k, const Pow_Spec_Param& parameters)
 {
     if (k == 0) return 1.;
 
-	const double q = k / (parameters->Omega_m()*parameters->h);
+	const double q = k / (parameters.Omega_m()*parameters.h);
 	double T_k =	log(1+2.34*q)/(2.34*q)*
 					pow(1 + 3.89*q + pow(16.2*q, 2.) + pow(5.47*q, 3.) + pow(6.71*q, 4.)
 					, -1./4.);
 	return pow(T_k, 2.);
 }
 
-double power_spectrum_T(double k, const Pow_Spec_Param* parameters)
+double power_spectrum_T(double k, const Pow_Spec_Param& parameters)
 {
 	if (k == 0) return 0;
-	const double ns = parameters->ns;
+	const double ns = parameters.ns;
 	return pow(k, ns)*transfer_function_2(k, parameters);
 }
 
-double power_spectrum_scale_free(double k, const Pow_Spec_Param* parameters)
+double power_spectrum_scale_free(double k, const Pow_Spec_Param& parameters)
 {
 	if (k == 0) return 0;
-	const double ns = parameters->ns;
+	const double ns = parameters.ns;
 	return pow(k, ns);
 }
 
-double flat_power_spectrum(double k, const Pow_Spec_Param* parameters)
+double flat_power_spectrum(double k, const Pow_Spec_Param& parameters)
 {
 	return 1;
 }
 
-double single_power_spectrum_T(double k, const Pow_Spec_Param* parameters)
+double single_power_spectrum_T(double k, const Pow_Spec_Param& parameters)
 {
 	if ((k > 0.01) and (k < 0.04)) return power_spectrum_T(k, parameters);
 	else return 0.;
 }
 
-double power_spectrum(double k, const Pow_Spec_Param* parameters)
+double power_spectrum(double k, const Pow_Spec_Param& parameters)
 {
-    const double A = parameters->A;
-    const double supp = parameters->k2_G ? exp(-k*k/parameters->k2_G) : 1;
-	switch (parameters->pwr_type)
+    const double A = parameters.A;
+    const double supp = parameters.k2_G ? exp(-k*k/parameters.k2_G) : 1;
+	switch (parameters.pwr_type)
 	{
 		case power_law_T: return supp*A*power_spectrum_T(k, parameters);
 		case power_law: return supp*A*power_spectrum_scale_free(k, parameters);
@@ -60,7 +60,7 @@ double power_spectrum(double k, const Pow_Spec_Param* parameters)
 double power_spectrum_s8(double k, void* parameters)
 {
 	return	k*k/(2.*PI*PI) // spherical factor
-			*power_spectrum(k, static_cast<Pow_Spec_Param*>(parameters)) // P(k)
+			*power_spectrum(k, *static_cast<const Pow_Spec_Param*>(parameters)) // P(k)
 			*pow(3.*gsl_sf_bessel_j1(k*8)/(k*8), 2.); // window function R = 8 Mpc/h
 }
 
@@ -93,14 +93,19 @@ void norm_pwr(Pow_Spec_Param* pwr_par)
     else norm_pwr_ccl(pwr_par);
 }
 
-double lin_pow_spec(const Pow_Spec_Param* pwr_par, double k)
+double lin_pow_spec(double k, const Pow_Spec_Param& pwr_par)
 {
-    if (pwr_par->pwr_type < 4){
+    if (pwr_par.pwr_type < 4){
         return power_spectrum(k, pwr_par);
     } else {
         int status = 0;
-        return ccl_linear_matter_power(pwr_par->cosmo, k*pwr_par->h, 1, &status)*pow(pwr_par->h, 3);
+        return ccl_linear_matter_power(pwr_par.cosmo, k*pwr_par.h, 1, &status)*pow(pwr_par.h, 3);
     }
+}
+
+double lin_pow_spec(double k, void* parameters)
+{
+    return lin_pow_spec(k, *static_cast<const Pow_Spec_Param*>(parameters));
 }
 
 double pade_approx(double x, unsigned m, const double* a, unsigned n, const double* b)
@@ -399,4 +404,31 @@ void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const Extrap_Pk& P_k, D
 
     Integr_obj_qawf xi_r(&xi_integrand_W, 0, EPSABS,  4000, 50);
     gen_corr_func_binned_gsl(sim, P_k, corr_func_binned, &xi_r);
+}
+
+double  get_max_Pk(Sim_Param* sim)
+{
+    const gsl_min_fminimizer_type * T = gsl_min_fminimizer_brent;
+    gsl_min_fminimizer * s = gsl_min_fminimizer_alloc (T);
+    gsl_function F;
+    F.function = &lin_pow_spec;
+    F.params = &sim->power;
+    double k;
+    double k_l = sim->k_par.k_print.lower;
+    double k_u = sim->k_par.k_print.upper;
+    gsl_min_fminimizer_set(s, &F, (k_l + k_u) / 2., k_l, k_u);
+
+    int status;
+    int iter = 0, max_iter = 100;
+    do
+    {
+        iter++;
+        k_l = gsl_min_fminimizer_x_lower (s);
+        k_u = gsl_min_fminimizer_x_upper (s);
+
+        status = gsl_min_test_interval (k_l, k_u, 0, 1e-3);
+    } while ((status == GSL_CONTINUE) && (iter < max_iter));
+    k = gsl_min_fminimizer_x_minimum (s);
+    gsl_min_fminimizer_free(s);
+    return k;
 }
