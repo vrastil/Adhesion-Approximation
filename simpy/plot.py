@@ -50,6 +50,7 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, ou
     a_ = 0
 
     lab = 'init'
+    lab_p = "Pade app."
     for i, pwr in enumerate(pwr_spec_files):
         a_end = 1 / (1 + zs[-1])
         if zs[i] != 'init':
@@ -65,7 +66,9 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, ou
         if a_sim_info.k_pade is not None:
             for k_pade in a_sim_info.k_pade:
                 Pk_pade = P_k[np.where(np.isclose(k, k_pade))[0][0]]
-                plt.plot(k_pade, Pk_pade, 'kx', ms=8)
+                plt.plot(k_pade, Pk_pade, 'kx', ms=9, label=lab_p)
+                if lab_p is not None:
+                    lab_p = None
 
         del k, P_k, data
 
@@ -79,8 +82,14 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, ou
         ls = [':', '-.', '--']
         ls *= (len(a_sim_info.k_nyquist) - 1) / 3 + 1
         ls = iter(ls)
+        val_lab = {}
         for key, val in a_sim_info.k_nyquist.iteritems():
-            ax.axvline(val, ls=next(ls), c='k', label=r"$k_{Nq}$ (" + key + r")")
+            if val in val_lab:
+               val_lab[val] +=",\n" + " "*8 + key
+            else:
+                val_lab[val] = r"$k_{Nq}$ (" + key
+        for val, lab in val_lab.iteritems():
+            ax.axvline(val, ls=next(ls), c='k', label=lab+r")")
 
     data = np.loadtxt(pwr_spec_files[-1])
     k = data[:, 0]
@@ -94,7 +103,16 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, ou
     fig.suptitle("Power spectrum", y=0.99, size=20)
     plt.xlabel(r"$k [h/$Mpc$]$", fontsize=15)
     plt.ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=15)
-    plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
+
+    # LEGEND manipulation
+    handles, labels = ax.get_legend_handles_labels()
+    hl = sorted(zip(handles, labels), key=lambda x: x[1], reverse=True)
+    handles, labels = zip(*hl)
+    # pade_lab_index = labels.index("Pade app.")
+    # labels.insert(-1, labels.pop(pade_lab_index))
+    # handles.insert(-1, handles.pop(pade_lab_index))
+    plt.legend(handles, labels, loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
+
     plt.draw()
     plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
@@ -107,7 +125,7 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, ou
     plt.close(fig)
 
 
-def plot_corr_func(corr_func_files, zs, a_sim_info, out_dir='auto', save=True, show=False):
+def plot_corr_func(corr_func_files, zs, a_sim_info, corr_func_files_lin=None, out_dir='auto', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     fig = plt.figure(figsize=(15, 11))
@@ -115,20 +133,27 @@ def plot_corr_func(corr_func_files, zs, a_sim_info, out_dir='auto', save=True, s
     lab = 'z = ' + str(zs[-1])
     data = np.loadtxt(corr_func_files[-1])
     r, xi = data[:, 0], data[:, 1]
+    del data
+    if corr_func_files_lin is not None:
+        data = np.loadtxt(corr_func_files_lin[-1])
+        r_lin, xi_lin = data[:, 0], data[:, 1]
+        del data
 
-    inter = interpolate.PchipInterpolator(r, xi)
-    xnew = np.linspace(np.min(r), np.max(r), num=10*len(r), endpoint=True)
-    ynew = inter(xnew)
+    # inter = interpolate.PchipInterpolator(r, xi)
+    # xnew = np.linspace(np.min(r), np.max(r), num=10*len(r), endpoint=True)
+    # ynew = inter(xnew)
 
-    plt.plot(r, xi, 'x', ms=3, label=lab)
-    plt.plot(xnew, ynew, '-')
+    plt.plot(r, xi, 'o', ms=3, label=lab)
+    plt.plot(r_lin, xi_lin, '-', label=r"$\Lambda$CDM (lin)")
 
     fig.suptitle("Correlation function", y=0.99, size=20)
     plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
     plt.ylabel(r"$\xi(r)$", fontsize=15)
     plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
     linthreshy=1e-3
-    plt.yscale("symlog", linthreshy=linthreshy, linscaley=4)
+    # plt.yscale("symlog", linthreshy=linthreshy, linscaley=4)
+    plt.yscale("log")
+    plt.xscale("log")
     plt.draw()
     plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
@@ -142,8 +167,8 @@ def plot_corr_func(corr_func_files, zs, a_sim_info, out_dir='auto', save=True, s
 
     fig = plt.figure(figsize=(15, 11))
 
-    plt.plot(r, r*r*xi, 'x', ms=3, label=lab)
-    plt.plot(xnew, xnew*xnew*ynew, '-')
+    plt.plot(r, r*r*xi, 'o', ms=3, label=lab)
+    plt.plot(r_lin, r_lin*r_lin*xi_lin, '-', label=r"$\Lambda$CDM (lin)")
 
     fig.suptitle("Correlation function", y=0.99, size=20)
     plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)

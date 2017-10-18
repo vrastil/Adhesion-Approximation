@@ -448,7 +448,7 @@ Sim_Param::Sim_Param(int ac, char* av[])
         k_par.k_print.lower = 2*PI/box_size;
         k_par.k_print.upper = 2*PI/box_size*mesh_num_pwr;
         k_par.k_interp.lower = get_max_Pk(this);
-        k_par.k_interp.upper = PI*pow(par_num, 1/3.) / (2*box_size); // k_Nyq / 2 (for safety)
+        k_par.k_interp.upper = PI*pow(par_num, 1/3.) / (1.1*box_size); // k_Nyq / 1.1 (for safety)
 
         k_par.nyquist["analysis"] = PI*mesh_num_pwr / box_size;
         k_par.nyquist["potential"] = PI*mesh_num / box_size;
@@ -652,17 +652,19 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
             break;
         case corr_int_type::QAGI:
             gen_corr_func_binned_gsl_qagi(sim, P_k, &corr_func_binned);
-            print_corr_func(corr_func_binned, out_dir_app, "_gsl_qagi" + z_suffix());
+            print_corr_func(corr_func_binned, out_dir_app, "_gsl_qagi_par" + z_suffix());
             break;
         case corr_int_type::QAWO:
             gen_corr_func_binned_gsl_qawo(sim, P_k, &corr_func_binned);
-            print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawo" + z_suffix());
+            print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawo_par" + z_suffix());
             break;
         case corr_int_type::QAWF:
             gen_corr_func_binned_gsl_qawf(sim, P_k, &corr_func_binned);
-            print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf" + z_suffix());
+            print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_par" + z_suffix());
             break;
     }
+    gen_corr_func_binned_gsl_qawf_lin(sim, b, &corr_func_binned);
+    print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_lin" + z_suffix());
 }
 
 /**

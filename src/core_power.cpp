@@ -4,6 +4,12 @@
 #include "core_mesh.h"
 #include "core_power.h"
 
+#define FIX_POWER_LAW -2.2
+
+#ifndef FIX_POWER_LAW
+#define PADE
+#endif
+
 using namespace std;
 
 double transfer_function_2(double k, const Pow_Spec_Param& parameters)
@@ -93,14 +99,19 @@ void norm_pwr(Pow_Spec_Param* pwr_par)
     else norm_pwr_ccl(pwr_par);
 }
 
-double lin_pow_spec(double k, const Pow_Spec_Param& pwr_par)
+double lin_pow_spec(double k, const Pow_Spec_Param& pwr_par, double a)
 {
     if (pwr_par.pwr_type < 4){
         return power_spectrum(k, pwr_par);
     } else {
         int status = 0;
-        return ccl_linear_matter_power(pwr_par.cosmo, k*pwr_par.h, 1, &status)*pow(pwr_par.h, 3);
+        return ccl_linear_matter_power(pwr_par.cosmo, k*pwr_par.h, a, &status)*pow(pwr_par.h, 3);
     }
+}
+
+double lin_pow_spec(double k, const Pow_Spec_Param& pwr_par)
+{
+    return lin_pow_spec(k, pwr_par, 1.);
 }
 
 double find_pk_max(double k, void* parameters)
@@ -186,20 +197,21 @@ Interp_obj(data), n_s(sim.power.ns)
         }
         double A_sigma2, sumsq;
         gsl_fit_mul(k.data(), 1, Pk.data(), 1, n, &A, &A_sigma2, &sumsq);
-        printf("\t[fit A = %.12f, sigma = %.12f, sumsq = %.12f]\n", A, sqrt(A_sigma2), sumsq);
+        printf("\t[fit A = %e, sigma = %f, sumsq = %f]\n", A, sqrt(A_sigma2), sumsq);
     }
+    #ifdef PADE
     {   // UPPER RANGE -- solve Ax=b to get Pade approximant
         printf("Computing Padé approximant of P(k) in upper range.\n");
         unsigned order = sim.k_par.pade_order; // Pade approximant R [0/order-1]
 
         vector<double> R_0m(order);
-        k_min = sim.k_par.k_interp.lower;
+        double k_min_ = sim.k_par.k_interp.lower;
         k_max = sim.k_par.k_interp.upper;
         
-        const unsigned m = get_nearest(k_min, data.x);
+        const unsigned m = get_nearest(k_min_, data.x);
         const unsigned n = get_nearest(k_max, data.x);
         const unsigned l = (n - m)/ (order - 1);
-        printf("\t[k_min = %.5e, m = %i, k[m] = %.5e]\n", k_min, m, data.x[m]);
+        printf("\t[k_min = %.5e, m = %i, k[m] = %.5e]\n", k_min_, m, data.x[m]);
         printf("\t[k_max = %.5e, n = %i, k[n] = %.5e]\n", k_max, n, data.x[n]);
 
         vector<double> A, b;
@@ -234,12 +246,33 @@ Interp_obj(data), n_s(sim.power.ns)
         a_m.push_back(R_0m[0]);
         b_n = vector<double>(R_0m.begin() + 1, R_0m.end());
         gsl_permutation_free (p);
+        printf("\t[a0 = %f", a_m[0]);
+        for(unsigned j = 0; j < b_n.size(); j++) printf(", b%i = %f", j+1, b_n[j]);
+        printf("]\n");
+        if ((b_n[0]*b_n[0] - 4*b_n[1]) > 0) printf("WARNING! Padé approximant has roots!\n");
+        if (b_n[1]*a_m[0] < 0) printf("ERROR! Padé approximant has roots in the upper range of extrapolation!\n");
     }
-    printf("\t[a0 = %f", a_m[0]);
-    for(unsigned j = 0; j < b_n.size(); j++) printf(", b%i = %f", j+1, b_n[j]);
-    printf("]\n");
-    if ((b_n[0]*b_n[0] - 4*b_n[1]) > 0) printf("WARNING! Padé approximant has roots!\n");
-    if (b_n[1]*a_m[0] < 0) printf("ERROR! Padé approximant has roots in the upper range of extrapolation!\n");
+    #elif defined FIX_POWER_LAW
+    {   // UPPER RANGE -- fit Ak^ns to data[m,m+n]
+        printf("Fitting amplitude of P(k) in upper range.\n");
+        constexpr int n = 2;
+        n_s_up = FIX_POWER_LAW;
+        k_max = sim.k_par.k_interp.upper;
+        const unsigned m = get_nearest(k_max, data.x) - n + 1;
+        
+        vector<double> k, Pk;
+
+        for(unsigned i = m; i < m+n; i++){
+            k.push_back(pow(data.x[i], n_s_up));
+            Pk.push_back(data.y[i]);
+        }
+        double A_sigma2, sumsq;
+        gsl_fit_mul(k.data(), 1, Pk.data(), 1, n, &A_up, &A_sigma2, &sumsq);
+        printf("\t[fit A = %e, n_s = %.3f, sigma = %f, sumsq = %f]\n", A_up, n_s_up, sqrt(A_sigma2), sumsq);
+    }
+    #else
+
+    #endif
 }
 
 
@@ -252,7 +285,12 @@ double Extrap_Pk::eval(double k) const
     else if (k <= k_max) return Interp_obj::eval(k);
     else
     {
+        #ifdef PADE
         return pade_approx(k, a_m, b_n);
+        #elif defined FIX_POWER_LAW
+        return A_up*pow(k, n_s_up);
+        #else
+        #endif
     }
 }
 
@@ -342,6 +380,12 @@ struct xi_integrand_param
     const Extrap_Pk* P_k;
 };
 
+struct xi_integrand_param_lin
+{
+    double r;
+    const Pow_Spec_Param& pwr_par;
+};
+
 /**
  * @brief integrand for correlation function when weight-function 'sin(kr)' is used in integration
  */
@@ -350,6 +394,13 @@ double xi_integrand_W(double k, void* params){
     const double r = my_par->r;
     const Extrap_Pk* P_k = my_par->P_k;
     return 1/(2*PI*PI)*k/r*P_k->eval(k);
+};
+
+double xi_integrand_W_lin(double k, void* params){
+    xi_integrand_param_lin* my_par = (xi_integrand_param_lin*) params;
+    const double r = my_par->r;
+    const double P_k = lin_pow_spec(k, my_par->pwr_par);
+    return 1/(2*PI*PI)*k/r*P_k;
 };
 
 /**
@@ -371,8 +422,7 @@ void gen_corr_func_binned_gsl(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x
     const double x_min = sim.x_corr.lower;
     const double x_max = sim.x_corr.upper;
 
-    xi_integrand_param my_param;
-    my_param.P_k = &P_k;
+    xi_integrand_param my_param = {0, &P_k};
 
     const unsigned int N = corr_func_binned->size();
     const double lin_bin = (x_max - x_min)/N;
@@ -382,6 +432,25 @@ void gen_corr_func_binned_gsl(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x
         my_param.r = r;
         corr_func_binned->x[i] = r;
         corr_func_binned->y[i] = xi_r->eval(r, &my_param);
+    }
+}
+
+template <class T>
+void gen_corr_func_binned_gsl_lin(const Sim_Param &sim, double a, Data_x_y<double>* corr_func_binned, T* xi_r)
+{
+    const double x_min = sim.x_corr.lower;
+    const double x_max = sim.x_corr.upper;
+
+    xi_integrand_param_lin my_param = {0, sim.power};
+
+    const unsigned int N = corr_func_binned->size();
+    const double lin_bin = (x_max - x_min)/N;
+	double r;
+	for(unsigned i = 0; i < N; i++){
+        r = x_min + i*lin_bin;
+        my_param.r = r;
+        corr_func_binned->x[i] = r;
+        corr_func_binned->y[i] = a*a*xi_r->eval(r, &my_param);
     }
 }
 
@@ -409,6 +478,14 @@ void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const Extrap_Pk& P_k, D
 
     Integr_obj_qawf xi_r(&xi_integrand_W, 0, EPSABS,  4000, 50);
     gen_corr_func_binned_gsl(sim, P_k, corr_func_binned, &xi_r);
+}
+
+void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, double a, Data_x_y<double>* corr_func_binned)
+{
+    printf("Computing correlation function via GSL integration QAWF of linear power spectrum...\n");
+
+    Integr_obj_qawf xi_r(&xi_integrand_W_lin, 0, EPSABS,  4000, 50);
+    gen_corr_func_binned_gsl_lin(sim, a, corr_func_binned, &xi_r);
 }
 
 double  get_max_Pk(Sim_Param* sim)

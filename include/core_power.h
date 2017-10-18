@@ -9,6 +9,7 @@
 
 
 void norm_pwr(Pow_Spec_Param* pwr_par);
+double lin_pow_spec(double k, const Pow_Spec_Param& pwr_par, double a);
 double lin_pow_spec(double k, const Pow_Spec_Param& parameters);
 double  get_max_Pk(Sim_Param* sim);
 
@@ -49,9 +50,11 @@ public:
 private:
     double n_s, A; // lower range, priomordial
     std::vector<double> a_m, b_n; // upper range, Pade approximant
+    double n_s_up, A_up; //upper range, simple power law
     double k_min, k_max; // interpolation range
 };
 
 void gen_corr_func_binned_gsl_qagi(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned);
 void gen_corr_func_binned_gsl_qawo(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned);
 void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned);
+void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, double a, Data_x_y<double>* corr_func_binned);
