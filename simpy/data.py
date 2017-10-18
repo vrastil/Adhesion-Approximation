@@ -11,7 +11,7 @@ from . import *
 from . import plot
 
 RESULTS_KEYS = ["pwr_spec", "pwr_spec_diff", "pwr_spec_supp", "dens_hist",
-                "par_slice", "par_ani", "dens_slice", "dens_ani"]
+                "par_slice", "par_ani", "dens_slice", "dens_ani", "corr_func"]
 
 class SimInfo(object):
     def __init__(self, *args):
@@ -21,16 +21,18 @@ class SimInfo(object):
         elif len(args) == 2 and  args[0].endswith('.log'):
             self.load_file_log(*args)
         else:
-            self.num_g = 0
-            self.num_p = 0
-            self.num_m = 0
-            self.num_M = 0
-            self.box = 0
-            self.nu = 0
-            self.rs = 0
-            self.app = ''
-            self.dir = ''
-            self.res_dir = ''
+            print "WARNING! Invalid simulation parameters file '%s'." % args[0]
+
+        self.cosmo = None
+        if hasattr(self, 'pwr'):
+            if self.pwr["pwr_type"] >= 4:
+                import pyccl as ccl
+                self.cosmo = ccl.Cosmology(
+                    Omega_c=self.pwr["Omega_c"], Omega_b=self.pwr["Omega_b"], h=self.pwr["h"],
+                    sigma8=self.pwr["sigma8"], n_s=self.pwr["ns"],
+                    transfer_function=self.ccl["transfer_function_method"],
+                    matter_power_spectrum=self.ccl["matter_power_spectrum_method"],
+                    mass_function=self.ccl["mass_function_method"])
 
     def info(self):
         info = ''
@@ -65,6 +67,23 @@ class SimInfo(object):
         self.nu = data["viscosity"]
         self.rs = data["cut_radius"]
         self.app = data["app"]
+        self.pwr = {}
+        self.pwr["A"] = data["A"]
+        self.pwr["ns"] = data["index"]
+        self.pwr["k2_G"] = data["smoothing_k"]
+        self.pwr["sigma8"] = data["sigma8"]
+        self.pwr["Omega_c"] = data["Omega_c"]
+        self.pwr["Omega_b"] = data["Omega_b"]
+        self.pwr["h"] = data["h"]
+        self.pwr["pwr_type"] = data["pwr_type"]
+        if "k_pade" in data: self.k_pade = data["k_pade"]
+        else: self.k_pade = None
+        if "k_nyquist" in data: self.k_nyquist = data["k_nyquist"]
+        else: self.k_nyquist = None
+        self.ccl = {}
+        self.ccl["transfer_function_method"] = data["transfer_function_method"]
+        self.ccl["matter_power_spectrum_method"] = data["matter_power_spectrum_method"]
+        self.ccl["mass_function_method"] = data["mass_function_method"]
 
         self.results = data["results"]
         if self.results is None:
@@ -164,18 +183,16 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
 
     if rerun is None:
         rerun = []
-    elif rerun == "all":
-        rerun = ["pwr_spec", "pwr_spec_supp", "pwr_spec_supp",
-                 "dens_hist", "par_slice", "par_ani", "dens_slice", "dens_ani"]
 
     # Power spectrum
     key = "pwr_spec"
-    zs, files = try_get_zs_files(a_sim_info, 'pwr_spec/')
+    zs, files_extrap = try_get_zs_files(a_sim_info, 'pwr_spec/', a_file='*extrap*.dat')
+    zs, files = try_get_zs_files(a_sim_info, 'pwr_spec/', a_file='*par*.dat')
     if a_sim_info.rerun(rerun, key, skip, zs):
         print 'Plotting power spectrum...'
-        plot.plot_pwr_spec(files, zs, a_sim_info)
+        plot.plot_pwr_spec(files, zs, a_sim_info, pwr_spec_files_extrap=files_extrap)
         a_sim_info.done(key)
-    del zs, files
+    del zs, files, files_extrap
 
     # Power spectrum difference
     key = "pwr_spec_supp"
@@ -193,6 +210,16 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         plot.plot_supp_lms(supp_lms, a, a_sim_info, k_lms=k_lms)
         a_sim_info.done(key)
     del zs, files
+
+    # Correlation function
+    key = "corr_func"
+    zs, files_lin = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*lin*.dat')
+    zs, files = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*par*.dat')
+    if a_sim_info.rerun(rerun, key, skip, zs):
+        print 'Plotting correlation function...'
+        plot.plot_corr_func(files, zs, a_sim_info, corr_func_files_lin=files_lin)
+        a_sim_info.done(key)
+    del zs, files, files_lin
 
     # Density distribution
     key = "dens_hist"
@@ -224,7 +251,7 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
     del zs, files, zs_t, files_t
 
     # Density evolution
-    zs, files = try_get_zs_files(a_sim_info, 'rho_map/', a_file='*.dat')
+    zs, files = try_get_zs_files(a_sim_info, 'rho_map/')
     # two slices
     key = "dens_slice"
     if a_sim_info.rerun(rerun, key, skip, zs):

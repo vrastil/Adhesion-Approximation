@@ -1,10 +1,8 @@
 
 #include "stdafx.h"
 #include "core.h"
-#include <fftw3.h>
 
 using namespace std;
-const double PI = acos(-1.);
 
 void get_k_vec(int N, int index, int* k_vec)
 {
@@ -33,78 +31,43 @@ int get_k_sq(int N, int index)
 	return tmp;
 }
 
-int get_per(int vec, int per)
+inline double get_per(double vec, int per)
 {
-	if (vec > per) vec %= per;
-	else if (vec < 0)
-    {
+    return ((vec >= per) || (vec < 0) ) ? vec - per * floor( vec / per ) : vec;
+}
+
+inline int get_per(int vec, int per)
+{
+    if ((vec >= per) || (vec < 0) ){
         vec %= per;
-        if (vec != 0) vec += per;
+        return (vec < 0) ? vec + per : vec;
     }
-	return vec;
+    else return vec;
 }
 
 void get_per(Vec_3D<double> &position, int per)
 {
-	for (int i = 0; i < 3; i++)
-	{
-		if (position[i] >= per) position[i] = fmod(position[i], per);
-		else if (position[i] < 0)
-        {
-            position[i] = fmod(position[i], per);
-            if (position[i] != 0) position[i] += per;
-        }
-	}
+    for (double& pos : position) pos = get_per(pos, per);
 }
 
 void get_per(Vec_3D<int> &position, int per)
 {
-	for (int i = 0; i < 3; i++)
-	{
-		if (position[i] >= per) position[i] %= per;
-		else if (position[i] < 0)
-        {
-            position[i] %= per;
-            if (position[i] != 0) position[i] += per;
-        }
-	}
+    for (int& pos : position) pos = get_per(pos, per);
 }
 
 void get_per(Vec_3D<int> &position, const Vec_3D<int> &per)
 {
-	for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++)
 	{
-		if (position[i] >= per[i]) position[i] %= per[i];
-		else if (position[i] < 0) 
-        {
-            position[i] %= per[i];
-            if (position[i] != 0) position[i] += per[i];
-        }
+        position[i] = get_per(position[i], per[i]);
 	}
 }
 
 void get_per(Vec_3D<int> &position, int perx, int pery, int perz)
 {
-	if (position[0] >= perx) position[0] %= perx;
-	else if (position[0] < 0)
-    {
-        position[0] %= perx;
-        if (position[0] != 0) position[0] += perx;
-    } 
-	
-	if (position[1] >= pery) position[1] %= pery;
-	else if (position[1] < 0)
-    {
-        position[1] %= pery;
-        if (position[1] != 0) position[1] += pery;
-    } 
-	
-	if (position[2] >= perz) position[2] %= perz;
-	else if (position[2] < 0)
-    {
-        position[2] %= perz;
-        if (position[2] != 0) position[2] += perz;
-    }
+    position[0] = get_per(position[0], perx);
+    position[1] = get_per(position[1], pery);
+    position[2] = get_per(position[2], perz);
 }
 
 double get_distance_1D(double x_1, double x_2, int per)
@@ -153,16 +116,16 @@ double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num, const int o
 	case 0: {	// NGP: Nearest grid point
 				for (int i = 0; i < 3; i++)
 				{
-					if ((int)x[i] != y[i]) w *= 0;
+					if ((int)x[i] != y[i]) return 0;
 				}
-				return w;
+				return 1;
 	}
 	case 1: {	// CIC: Cloud in cells
 				for (int i = 0; i < 3; i++)
 				{
 				//	dx = fmin(fmin(abs(x[i] - y[i]), x[i] + mesh_num - y[i]), y[i] + mesh_num - x[i]);
 					dx = get_distance_1D(x[i], y[i], mesh_num);
-					if (dx > 1) w *= 0;
+					if (dx > 1) return 0;
 					else w *= 1 - dx;
 				}
 				return w;
@@ -172,7 +135,7 @@ double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num, const int o
 				{
 				//	dx = fmin(fmin(abs(x[i] - y[i]), x[i] + mesh_num - y[i]), y[i] + mesh_num - x[i]);
 					dx = get_distance_1D(x[i], y[i], mesh_num);
-					if (dx > 1.5) w *= 0;
+					if (dx > 1.5) return 0;
 					else if (dx > 0.5) w *= (1.5 - dx)*(1.5 - dx) / 2.0;
 					else w *= 3 / 4.0 - dx*dx;
 				}
@@ -182,45 +145,57 @@ double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num, const int o
 	return 0;
 }
 
-void assign_to(Mesh* field, const Vec_3D<double> &position, const double value, int order)
+class IT
 {
+public:
+    // CONSTRUCTORS
+    IT(const Vec_3D<double> &pos, int order):
+    counter(0), points(order+1), max_counter(points*points*points){
+        for(unsigned i = 0; i < 3; i++){
+            vec[i] = (int)(pos[i] - 0.5*(points - 2));
+        }
+    }
 
-    // int rnd = rand() % (128*128);
-    // if (rnd < 10) printf("Position = [%f, %f, %f]\n", position.x, position.y, position.z);
+    // VARIABLES
+    int counter;
+    const int points, max_counter;
+    Vec_3D<int> vec;
 
-	Vec_3D<int> y, z;
-	for (int i = 0; i < 3; i++) z[i] = (int)(position[i] - 0.5*(order - 1));
-	for (y[0] = z[0]; y[0] < z[0] + 1 + order; y[0]++)
-	{
-		for (y[1] = z[1]; y[1] < z[1] + 1 + order; y[1]++){
-		
-			for (y[2] = z[2]; y[2] < z[2] + 1 + order; y[2]++)
-			{
-				#pragma omp atomic
-				(*field)(y) += value * wgh_sch(position, y, field->N, order);
-			}
-		}
-	}
+    // METHODS
+    bool iter(){
+        if (++counter == max_counter) return false;
+        vec[2]++;
+        if ((counter % points) == 0){
+            vec[2] -= points;
+            vec[1]++;
+            if ((counter % (points*points)) == 0){
+                vec[1] -= points;
+                vec[0]++;
+            }
+        }
+        return true;
+    }
+};
+
+void assign_to(Mesh* field, const Vec_3D<double> &position, const double value, const int order)
+{
+    IT it(position, order);
+    do{
+        #pragma omp atomic
+        (*field)(it.vec) += value * wgh_sch(position, it.vec, field->N, order);
+    } while( it.iter() );
 }
 
-void assign_from(const Mesh &field, const Vec_3D<double> &position, double* value, int order)
+void assign_from(const Mesh &field, const Vec_3D<double> &position, double* value, const int order)
 {
-	Vec_3D<int> y, z;
-	for (int i = 0; i < 3; i++) z[i] = (int)(position[i] - 0.5*(order - 1));
-	for (y[0] = z[0]; y[0] < z[0] + 1 + order; y[0]++)
-	{
-		for (y[1] = z[1]; y[1] < z[1] + 1 + order; y[1]++){
-		
-			for (y[2] = z[2]; y[2] < z[2] + 1 + order; y[2]++)
-			{
-				#pragma omp atomic
-				*value += field(y) * wgh_sch(position, y, field.N, order);
-			}
-		}
-	}
+	IT it(position, order);
+    do{
+        #pragma omp atomic
+        *value += field(it.vec) * wgh_sch(position, it.vec, field.N, order);
+	} while( it.iter() );
 }
 
-void assign_from(const vector< Mesh> &field, const Vec_3D<double> &position, Vec_3D<double>* value, int order)
+void assign_from(const vector< Mesh> &field, const Vec_3D<double> &position, Vec_3D<double>* value, const int order)
 {
 	for (int i = 0; i < 3; i++) assign_from(field[i], position, &((*value)[i]), order);
 }
@@ -278,7 +253,7 @@ double std_dev(double* p_data, int len, double t_mean)
 	double tmp = 0;
 	
 	#pragma omp parallel for reduction(+:tmp)
-	for (int i = 0; i < len; i++) tmp += pow(p_data[i]-t_mean, 2.);
+	for (int i = 0; i < len; i++) tmp += (p_data[i]-t_mean)*(p_data[i]-t_mean);
 	
 	return sqrt(tmp / len);
 }
@@ -292,3 +267,17 @@ double max(double* p_data, int len)
 {
     return *std::max_element(p_data,p_data+len);
 }
+
+double min(const vector<double>& data)
+{
+    return *std::min_element(data.begin(), data.end());
+}
+
+double max(const vector<double>& data)
+{
+    return *std::max_element(data.begin(), data.end());
+}
+
+#ifdef TEST
+#include "test_core_mesh.cpp"
+#endif

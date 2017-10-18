@@ -6,7 +6,6 @@
 #include "core_mesh.h"
 
 using namespace std;
-const double PI = acos(-1.);
 
 int frozen_flow(const Sim_Param &sim)
 {
@@ -17,7 +16,6 @@ int frozen_flow(const Sim_Param &sim)
 	
     string out_dir_app = std_out_dir("FF_run/", sim);
 	work_dir_over(out_dir_app);
-	sim.print_info(out_dir_app, "FF");
     
 	/******************************************
     * ALLOCATION OF MEMORY + FFTW PREPARATION *
@@ -71,7 +69,8 @@ int frozen_flow(const Sim_Param &sim)
 		if (APP.printing()) APP.print(sim, out_dir_app);
 		APP.upd_time();
 	}
-		
+    
+    sim.print_info(out_dir_app, "FF");
 	printf("Frozen-flow approximation ended successfully.\n");
 	return APP.err;
 }

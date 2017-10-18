@@ -3,16 +3,18 @@ matplotlib.use('Agg')
 from matplotlib import animation
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import matplotlib.cm as cm
 # from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
+from scipy import interpolate
 
 from . import get_files_in_traverse_dir
 
 
-def trans_fce(k, Omega_0=1, h=0.67, q_log=2.34, q_1=3.89, q_2=16.1, q_3=5.4, q_4=6.71):
+def trans_fce(k, Omega_m=1, h=0.67, q_log=2.34, q_1=3.89, q_2=16.2, q_3=5.47, q_4=6.71):
     if k == 0:
         return 1
-    q = k / (Omega_0 * h)
+    q = k / (Omega_m * h)
     tmp_log = np.log(1 + q_log * q) / (q_log * q)
     tmp_pol = 1 + q_1 * q + (q_2 * q)**2 + (q_3 * q)**3 + (q_4 * q)**4
     return tmp_log * tmp_pol**(-1. / 4)
@@ -22,47 +24,95 @@ def pwr_spec_prim(k, A=187826, n=1):
     return A * k**n
 
 
-def pwr_spec(k, z=0, A=187826, n=1, Omega_0=1, h=0.67, q_log=2.34, q_1=3.89, q_2=16.1, q_3=5.4, q_4=6.71):
-    P_prim = pwr_spec_prim(k, A=A, n=n)
-    T_k = trans_fce(k, Omega_0=Omega_0, h=h, q_log=q_log,
-                    q_1=q_1, q_2=q_2, q_3=q_3, q_4=q_4)
-    return P_prim * T_k**2 / (z + 1)**2
+def pwr_spec(k, pwr, cosmo=None, z=0, q_log=2.34, q_1=3.89, q_2=16.2, q_3=5.47, q_4=6.71):
+    supp = np.exp(-k*k/pwr["k2_G"]) if pwr["k2_G"] else 1
+    supp /= (z + 1.)**2
+    if cosmo is None:
+        A = pwr["A"]
+        n = pwr["ns"]
+        Omega_m = pwr["Omega_b"] + pwr["Omega_c"]
+        h = pwr["h"]
+        P_prim = pwr_spec_prim(k, A=A, n=n)
+        T_k = trans_fce(k, Omega_m=Omega_m, h=h, q_log=q_log,
+                        q_1=q_1, q_2=q_2, q_3=q_3, q_4=q_4)
+        return supp*P_prim * T_k**2
+    else:
+        import pyccl as ccl
+        return supp*ccl.linear_matter_power(cosmo, k*pwr["h"], 1.)*pwr["h"]**3
 
-
-def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, out_dir='auto', save=True, show=False):
+def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, out_dir='auto', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     fig = plt.figure(figsize=(15, 11))
+    ax = plt.gca()
     plt.yscale('log')
     plt.xscale('log')
     a_ = 0
 
     lab = 'init'
+    lab_p = "Pade app."
     for i, pwr in enumerate(pwr_spec_files):
+        a_end = 1 / (1 + zs[-1])
         if zs[i] != 'init':
             a = 1 / (1 + zs[i])
-            if (a < 2.4 * a_) and a != 1:
+            if (a < 2.4 * a_) and a != a_end:
                 continue
             a_ = a
             lab = 'z = ' + str(zs[i])
         data = np.loadtxt(pwr)
         k, P_k = data[:, 0], data[:, 1]
         plt.plot(k, P_k, 'o', ms=3, label=lab)
+
+        if a_sim_info.k_pade is not None:
+            for k_pade in a_sim_info.k_pade:
+                Pk_pade = P_k[np.where(np.isclose(k, k_pade))[0][0]]
+                plt.plot(k_pade, Pk_pade, 'kx', ms=9, label=lab_p)
+                if lab_p is not None:
+                    lab_p = None
+
         del k, P_k, data
+
+        if pwr_spec_files_extrap is not None:
+            data = np.loadtxt(pwr_spec_files_extrap[i])
+            k, P_k = data[:, 0], data[:, 1]
+            plt.plot(k, P_k, 'k--')
+            del k, P_k, data
+
+    if a_sim_info.k_nyquist is not None:
+        ls = [':', '-.', '--']
+        ls *= (len(a_sim_info.k_nyquist) - 1) / 3 + 1
+        ls = iter(ls)
+        val_lab = {}
+        for key, val in a_sim_info.k_nyquist.iteritems():
+            if val in val_lab:
+               val_lab[val] +=",\n" + " "*8 + key
+            else:
+                val_lab[val] = r"$k_{Nq}$ (" + key
+        for val, lab in val_lab.iteritems():
+            ax.axvline(val, ls=next(ls), c='k', label=lab+r")")
 
     data = np.loadtxt(pwr_spec_files[-1])
     k = data[:, 0]
-    k = np.logspace(np.log10(k[0]), np.log10(k[-1]), num=20)
+    k = np.logspace(np.log10(k[0]), np.log10(k[-1]), num=50)
     del data
-    P_0 = [pwr_spec(k_) for k_ in k]
-    P_i = [pwr_spec(k_, z=200) for k_ in k]
+    P_0 = [pwr_spec(k_, a_sim_info.pwr, cosmo=a_sim_info.cosmo, z=zs[-1]) for k_ in k]
+    P_i = [pwr_spec(k_, a_sim_info.pwr, cosmo=a_sim_info.cosmo, z=zs[0]) for k_ in k]
     plt.plot(k, P_0, '-')
     plt.plot(k, P_i, '-')
 
     fig.suptitle("Power spectrum", y=0.99, size=20)
     plt.xlabel(r"$k [h/$Mpc$]$", fontsize=15)
     plt.ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=15)
-    plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
+
+    # LEGEND manipulation
+    handles, labels = ax.get_legend_handles_labels()
+    hl = sorted(zip(handles, labels), key=lambda x: x[1], reverse=True)
+    handles, labels = zip(*hl)
+    # pade_lab_index = labels.index("Pade app.")
+    # labels.insert(-1, labels.pop(pade_lab_index))
+    # handles.insert(-1, handles.pop(pade_lab_index))
+    plt.legend(handles, labels, loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
+
     plt.draw()
     plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
@@ -72,7 +122,69 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, out_dir='auto', save=True, sho
         plt.savefig(out_dir + 'pwr_spec.png')
     if show:
         plt.show()
-        plt.close(fig)
+    plt.close(fig)
+
+
+def plot_corr_func(corr_func_files, zs, a_sim_info, corr_func_files_lin=None, out_dir='auto', save=True, show=False):
+    if out_dir == 'auto':
+        out_dir = a_sim_info.res_dir
+    fig = plt.figure(figsize=(15, 11))
+
+    lab = 'z = ' + str(zs[-1])
+    data = np.loadtxt(corr_func_files[-1])
+    r, xi = data[:, 0], data[:, 1]
+    del data
+    if corr_func_files_lin is not None:
+        data = np.loadtxt(corr_func_files_lin[-1])
+        r_lin, xi_lin = data[:, 0], data[:, 1]
+        del data
+
+    # inter = interpolate.PchipInterpolator(r, xi)
+    # xnew = np.linspace(np.min(r), np.max(r), num=10*len(r), endpoint=True)
+    # ynew = inter(xnew)
+
+    plt.plot(r, xi, 'o', ms=3, label=lab)
+    plt.plot(r_lin, xi_lin, '-', label=r"$\Lambda$CDM (lin)")
+
+    fig.suptitle("Correlation function", y=0.99, size=20)
+    plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
+    plt.ylabel(r"$\xi(r)$", fontsize=15)
+    plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
+    linthreshy=1e-3
+    # plt.yscale("symlog", linthreshy=linthreshy, linscaley=4)
+    plt.yscale("log")
+    plt.xscale("log")
+    plt.draw()
+    plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
+                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
+    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
+
+    if save:
+        plt.savefig(out_dir + 'corr_func.png')
+    if show:
+        plt.show()
+    plt.close(fig)
+
+    fig = plt.figure(figsize=(15, 11))
+
+    plt.plot(r, r*r*xi, 'o', ms=3, label=lab)
+    plt.plot(r_lin, r_lin*r_lin*xi_lin, '-', label=r"$\Lambda$CDM (lin)")
+
+    fig.suptitle("Correlation function", y=0.99, size=20)
+    plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
+    plt.ylabel(r"$r^2\xi(r)$", fontsize=15)
+    plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
+    plt.yscale("linear")
+    plt.draw()
+    plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
+                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
+    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
+    
+    if save:
+        plt.savefig(out_dir + 'corr_r2_func.png')
+    if show:
+        plt.show()
+    plt.close(fig)
 
 
 def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', save=True, show=False):

@@ -8,8 +8,6 @@
 #include "adhesion_approximation.h"
 #include "mod_frozen_potential.h"
 
-int example(Sim_Param &sim);
-
 using namespace std;
 
 int main(int argc, char* argv[]){
@@ -18,16 +16,14 @@ int main(int argc, char* argv[]){
 	const clock_t START = clock();
 	clock_gettime(CLOCK_MONOTONIC, &start);
 	
-	/* HANDLE COMMAND LINE OPTIONS */	
-	
-	Sim_Param sim; // simulation parameters	
-	int err = sim.init(argc, argv);
-	if (err) return err; // read command line options / config file
-	norm_pwr(&sim.power); // compute power spectrum normalization
-	sim.print_info(); // print simulation parameters
-	
+	int err = 0;
 	try{
-	//	err = example(sim);
+        /* SIMULATION PARAMETERS
+            - read and handle command line options / config file
+            - compute power spectrum normalization
+        */
+        Sim_Param sim(argc, argv);
+        sim.print_info();
 		
 		/* ZEL`DOVICH APPROXIMATION */
 		if(sim.comp_ZA)	err = zel_app(sim);

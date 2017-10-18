@@ -1,28 +1,26 @@
-gnuplot_scripts/
+
+# output directory, internal documents
 output/
-old_output/
 report/
-test/
-results/
+
+# program, object files, depedency files, scripts
 adh_app
+tests/test
 *.o
 *.d
-*.a
-*.so
+*.gch
 *.sh
-*.exe
-*.stackdump
-*.plt
 *.ipynb
 *.pyc
+
+# other files
 *.gcda
-res_req
-TODO.md
-Adhesion_Approximation.batch_build
-Adhesion_Approximation.project
-Adhesion_Approximation.workspace
-.codelite/
+*.dot
+*.out
+
+# Visual Studio Code
 .vscode/
-*_golias*
+
+# metacentrum files for jobs
 logs/
 qsub*
