@@ -117,15 +117,15 @@ static void convolution_y1(Mesh* potential, const vector<double>& gaussian, cons
 	// multi-thread index is y3
 	// compute f1 (x1, y2, y3)
 
-    const unsigned N = potential->N;
+    const int N = potential->N;
     vector<double> exp_aux(N);
     
 	#pragma omp parallel for private(exp_aux)
-	for (unsigned x1 = 0; x1 < N; x1++){
-		for (unsigned y2 = 0; y2 < N; y2++){
-			for (unsigned y3 = 0; y3 < N; y3++){
+	for (int x1 = 0; x1 < N; x1++){
+		for (int y2 = 0; y2 < N; y2++){
+			for (int y3 = 0; y3 < N; y3++){
                 // fill in exponents
-                for (unsigned y1 = 0; y1 < N; y1++){
+                for (int y1 = 0; y1 < N; y1++){
                     exp_aux.push_back(expotential_0(y1, y2, y3)+gaussian[abs(x1-y1)]);
 				}
 				(*potential)(x1, y2, y3) = get_summation(exp_aux); // potential is now f1
@@ -137,23 +137,23 @@ static void convolution_y1(Mesh* potential, const vector<double>& gaussian, cons
 
 static void convolution_y2(Mesh* potential, const vector<double>& gaussian){
     // compute f2 (x1, x2, y3)
-    const unsigned N = potential->N;
+    const int N = potential->N;
 	vector<double> sum_aux(N);
 	vector<double> exp_aux(N);
 
 	#pragma omp parallel for private(sum_aux, exp_aux)
-	for (unsigned x1 = 0; x1 < N; x1++){
-		for (unsigned y3 = 0; y3 < N; y3++){
-			for (unsigned x2 = 0; x2 < N; x2++){
+	for (int x1 = 0; x1 < N; x1++){
+		for (int y3 = 0; y3 < N; y3++){
+			for (int x2 = 0; x2 < N; x2++){
 				// fill in exponents
-                for (unsigned y2 = 0; y2 < N; y2++){
+                for (int y2 = 0; y2 < N; y2++){
                     exp_aux.push_back((*potential)(x1, y2, y3) + gaussian[abs(x2-y2)]);
 				}
 				sum_aux.push_back(get_summation(exp_aux));
                 exp_aux.clear();
 			}
 
-			for (unsigned x2 = 0; x2 < N; x2++){
+			for (int x2 = 0; x2 < N; x2++){
 				(*potential)(x1, x2, y3) = sum_aux[x2]; // potential is now f2
 			}
 			sum_aux.clear();
@@ -163,22 +163,22 @@ static void convolution_y2(Mesh* potential, const vector<double>& gaussian){
 
 static void convolution_y3(Mesh* potential, const vector<double>& gaussian){
     // compute f3 (x1, x2, x3) == expotential(x, b)
-    const unsigned N = potential->N;
+    const int N = potential->N;
 	vector<double> sum_aux(N);
     vector<double> exp_aux(N);
 
 	#pragma omp parallel for private(sum_aux, exp_aux)
-	for (unsigned x1 = 0; x1 < N; x1++){
-		for (unsigned x2 = 0; x2 < N; x2++){
-			for (unsigned x3 = 0; x3 < N; x3++){
+	for (int x1 = 0; x1 < N; x1++){
+		for (int x2 = 0; x2 < N; x2++){
+			for (int x3 = 0; x3 < N; x3++){
 				// fill in exponents
-                for (unsigned y3 = 0; y3 < N; y3++){
+                for (int y3 = 0; y3 < N; y3++){
                     exp_aux.push_back((*potential)(x1, x2, y3) + gaussian[abs(x3-y3)]);
 				}
 				sum_aux.push_back(get_summation(exp_aux));
                 exp_aux.clear();
 			}
-			for (unsigned x3 = 0; x3 < N; x3++){
+			for (int x3 = 0; x3 < N; x3++){
 				(*potential)(x1, x2, x3) = sum_aux[x3]; // potential is now f3
 			}
 			sum_aux.clear();
