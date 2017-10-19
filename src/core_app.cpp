@@ -682,7 +682,7 @@ void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param 
 					}
 				}
 				rho_avg /= pow(Ng_pwr, 3);
-                bin = (int)((rho_avg+1)/0.2);
+                bin = (int)((rho_avg+1)/0.1);
                 if (bin >= dens_binned.size()) bin = dens_binned.size() - 1;
                 // if (bin >= dens_binned.capacity()) dens_binned.resize(bin+1);
                 #pragma omp atomic
