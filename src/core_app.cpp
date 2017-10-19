@@ -16,7 +16,7 @@ static void set_unpert_pos_one_par(Vec_3D<int>& unpert_pos, const int par_index,
 	unpert_pos[2] = (par_index % par_per_dim) * Ng;
 }
 
-static void set_velocity_one_par(const Vec_3D<int>& unpert_pos, Vec_3D<double>& displ_field, const vector<Mesh> &vel_field)
+static void set_velocity_one_par(const Vec_3D<int> unpert_pos, Vec_3D<double>& displ_field, const vector<Mesh> &vel_field)
 {
 	for (int i = 0; i < 3; i++) displ_field[i] = vel_field[i](unpert_pos);
 }
@@ -148,7 +148,7 @@ static double force_tot(double r){
 }
 
 void force_short(const Sim_Param &sim, const LinkedList& linked_list, Particle_v *particles,
-				 const Vec_3D<double> &position, Vec_3D<double>* force)
+				 const Vec_3D<double> position, Vec_3D<double>* force)
 {	// Calculate short range force in position, force is added
 	int p;
     Vec_3D<int> y;
@@ -568,26 +568,24 @@ static double S2_shape(const double k2, const double a)
 	return 12 / pow(t, 4)*(2 - 2 * cos(t) - t*sin(t));
 }
 
-static double CIC_opt(const int index, const int N, const double a)
+static double CIC_opt(Vec_3D<double> k_vec, const double a)
 {
 	// optimalization for CIC and S2 shaped particle
-	int k_vec[3];
 	double k_n[3];
 	double U2, U_n, G_n, k2n;
 	
-	get_k_vec(N, index, k_vec);
 	G_n = 0;
 	U2 = 1;
-	for (int j = 0; j < 3; j++) U2 *= 1./3.*(1+2*cos(PI*k_vec[j]/N));
+	for (int j = 0; j < 3; j++) U2 *= 1./3.*(1+2*cos(k_vec[j]/2.));
 	for (int n1 = -N_MAX; n1 < N_MAX + 1; n1++)
 	{
-		k_n[0] = 2 * PI / N*k_vec[0] + 2 * PI*n1;
+		k_n[0] = k_vec[0] + 2 * PI*n1;
 		for (int n2 = -N_MAX; n2 < N_MAX + 1; n2++)
 		{
-			k_n[1] = 2 * PI / N*k_vec[1] + 2 * PI*n2;
+			k_n[1] = k_vec[1] + 2 * PI*n2;
 			for (int n3 = -N_MAX; n3 < N_MAX + 1; n3++)
 			{
-				k_n[2] = 2 * PI / N*k_vec[2] + 2 * PI*n3;
+				k_n[2] = k_vec[2] + 2 * PI*n3;
 				U_n = 1.;
 				k2n = 0;
 				for(int j=0; j<3; j++)
@@ -599,7 +597,7 @@ static double CIC_opt(const int index, const int N, const double a)
 				{
 					for(int j=0; j<3; j++)
 					{										
-						G_n += 2 * PI / N*k_vec[j]* // D(k)
+						G_n += k_vec[j]* // D(k)
 						k_n[j]/k2n*pow(S2_shape(k2n, a), 2)* // R(k_n)
 						pow(U_n, 2.); // W(k) for CIC
 					}
@@ -625,25 +623,27 @@ void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, const double a)
 	else printf("Computing force in k-space for S2 shaped particles with CIC opt...\n");
 
 	double opt;
-	int k_vec[3];
+    Vec_3D<int> k_vec;
+    Vec_3D<double> k_vec_phys;
     double potential_tmp[2];
     
     const int N = (*vel_field)[0].N; // for case when pot_k is different mesh than vel_field
     const unsigned l_half = (*vel_field)[0].length/2;
 	
-	#pragma omp parallel for private(opt, k_vec, potential_tmp)
+	#pragma omp parallel for private(opt, k_vec, k_vec_phys, potential_tmp)
 	for(unsigned i=0; i < l_half;i++)
 	{
 		potential_tmp[0] = pot_k[2*i]; // prevent overwriting if vel_field[0] == pot_k
-		potential_tmp[1] = pot_k[2*i+1]; // prevent overwriting if vel_field[0] == pot_k
+        potential_tmp[1] = pot_k[2*i+1]; // prevent overwriting if vel_field[0] == pot_k
+        get_k_vec(N, i, k_vec);
+        k_vec_phys = Vec_3D<double>(k_vec)*(2.*PI/N);
 		if (a == -1) opt = 1.;
-		else opt = CIC_opt(i, N, a);
-		get_k_vec(N, i, k_vec);		
+		else opt = CIC_opt(k_vec_phys, a);
 		for(unsigned j=0; j<3;j++)
 		{
 			// 2*PI/N comes from derivative WITH RESPECT to the mesh coordinates
-			(*vel_field)[j][2*i] = k_vec[j]*potential_tmp[1]*(2.*PI/N)*opt;
-			(*vel_field)[j][2*i+1] = -k_vec[j]*potential_tmp[0]*(2.*PI/N)*opt;
+			(*vel_field)[j][2*i] = k_vec_phys[j]*potential_tmp[1]*opt;
+			(*vel_field)[j][2*i+1] = -k_vec_phys[j]*potential_tmp[0]*opt;
 		}
 	}
 }

@@ -255,7 +255,7 @@ Interp_obj(data), n_s(sim.power.ns)
     #elif defined FIX_POWER_LAW
     {   // UPPER RANGE -- fit Ak^ns to data[m,m+n]
         printf("Fitting amplitude of P(k) in upper range.\n");
-        constexpr int n = 2;
+        constexpr int n = 3;
         n_s_up = FIX_POWER_LAW;
         k_max = sim.k_par.k_interp.upper;
         const unsigned m = get_nearest(k_max, data.x) - n + 1;
