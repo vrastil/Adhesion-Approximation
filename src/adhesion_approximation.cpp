@@ -115,15 +115,17 @@ static double get_summation(const vector<double>& exp_aux)
 
 static void convolution_y1(Mesh* potential, const vector<double>& gaussian, const Mesh& expotential_0){
 	// multi-thread index is y3
-	// compute f1 (x1, y2, y3)
+    // compute f1 (x1, y2, y3)
+    printf("\t-->Convolution y1\n");
 
     const int N = potential->N;
-    vector<double> exp_aux(N);
+    vector<double> exp_aux;
     
 	#pragma omp parallel for private(exp_aux)
 	for (int x1 = 0; x1 < N; x1++){
 		for (int y2 = 0; y2 < N; y2++){
 			for (int y3 = 0; y3 < N; y3++){
+                exp_aux.reserve(N);
                 // fill in exponents
                 for (int y1 = 0; y1 < N; y1++){
                     exp_aux.push_back(expotential_0(y1, y2, y3)+gaussian[abs(x1-y1)]);
@@ -137,14 +139,18 @@ static void convolution_y1(Mesh* potential, const vector<double>& gaussian, cons
 
 static void convolution_y2(Mesh* potential, const vector<double>& gaussian){
     // compute f2 (x1, x2, y3)
+    printf("\t-->Convolution y2\n");
+
     const int N = potential->N;
-	vector<double> sum_aux(N);
-	vector<double> exp_aux(N);
+	vector<double> sum_aux;
+	vector<double> exp_aux;
 
 	#pragma omp parallel for private(sum_aux, exp_aux)
 	for (int x1 = 0; x1 < N; x1++){
 		for (int y3 = 0; y3 < N; y3++){
+            sum_aux.reserve(N);
 			for (int x2 = 0; x2 < N; x2++){
+                exp_aux.reserve(N);
 				// fill in exponents
                 for (int y2 = 0; y2 < N; y2++){
                     exp_aux.push_back((*potential)(x1, y2, y3) + gaussian[abs(x2-y2)]);
@@ -163,14 +169,18 @@ static void convolution_y2(Mesh* potential, const vector<double>& gaussian){
 
 static void convolution_y3(Mesh* potential, const vector<double>& gaussian){
     // compute f3 (x1, x2, x3) == expotential(x, b)
+    printf("\t-->Convolution y3\n");
+
     const int N = potential->N;
-	vector<double> sum_aux(N);
-    vector<double> exp_aux(N);
+	vector<double> sum_aux;
+    vector<double> exp_aux;
 
 	#pragma omp parallel for private(sum_aux, exp_aux)
 	for (int x1 = 0; x1 < N; x1++){
 		for (int x2 = 0; x2 < N; x2++){
+            sum_aux.reserve(N);
 			for (int x3 = 0; x3 < N; x3++){
+                exp_aux.reserve(N);
 				// fill in exponents
                 for (int y3 = 0; y3 < N; y3++){
                     exp_aux.push_back((*potential)(x1, x2, y3) + gaussian[abs(x3-y3)]);
