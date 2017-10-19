@@ -49,6 +49,7 @@ public:
 
 private:
     double n_s, A; // lower range, priomordial
+    const Pow_Spec_Param& power;
     std::vector<double> a_m, b_n; // upper range, Pade approximant
     double n_s_up, A_up; //upper range, simple power law
     double k_min, k_max; // interpolation range

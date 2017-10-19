@@ -183,20 +183,25 @@ double Interp_obj::eval(double x) const{ return gsl_spline_eval(spline, x, acc);
  */
 
 Extrap_Pk::Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim):
-Interp_obj(data), n_s(sim.power.ns)
+Interp_obj(data), n_s(sim.power.ns), power(sim.power)
 {
-    {   // LOWER RANGE -- fit Ak^ns to data[0:n]
+    {   // LOWER RANGE -- fit A*T(k)^2*k^ns to data[m:n], T(k) BBKS
         printf("Fitting amplitude of P(k) in lower range.\n");
-        constexpr int n = 10;
+        const int m = get_nearest(2*PI/sim.box_size*4, data.x);
+        const int n = m + 5;
         k_min = data.x[n];
         vector<double> k, Pk;
 
-        for(unsigned i = 0; i < n; i++){
-            k.push_back(pow(data.x[i], n_s));
-            Pk.push_back(data.y[i]);
+        double pk, pk_pred;
+        for(unsigned i = m; i < n; i++){
+            pk = data.y[i];
+            pk_pred = pow(data.x[i], n_s)*transfer_function_2(data.x[i], power);
+            printf("i = %i, k = %f, P(k) = %f, P_fit(k)[no Amp] = %f\n", i, data.x[i], pk, pk_pred);
+            k.push_back(pk_pred);
+            Pk.push_back(pk);
         }
         double A_sigma2, sumsq;
-        gsl_fit_mul(k.data(), 1, Pk.data(), 1, n, &A, &A_sigma2, &sumsq);
+        gsl_fit_mul(k.data(), 1, Pk.data(), 1, n-m, &A, &A_sigma2, &sumsq);
         printf("\t[fit A = %e, sigma = %f, sumsq = %f]\n", A, sqrt(A_sigma2), sumsq);
     }
     #ifdef PADE
@@ -280,7 +285,7 @@ double Extrap_Pk::eval(double k) const
 {
     if (k < k_min)
     {
-        return A*pow(k, n_s);
+        return A*pow(k, n_s)*transfer_function_2(k, power);
     }
     else if (k <= k_max) return Interp_obj::eval(k);
     else

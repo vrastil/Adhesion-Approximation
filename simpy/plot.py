@@ -207,6 +207,20 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', save
         plt.plot(k, P_k, 'o', ms=3, label=lab)
         del k, P_k, data
 
+    if a_sim_info.k_nyquist is not None:
+        ax = plt.gca()
+        ls = [':', '-.', '--']
+        ls *= (len(a_sim_info.k_nyquist) - 1) / 3 + 1
+        ls = iter(ls)
+        val_lab = {}
+        for key, val in a_sim_info.k_nyquist.iteritems():
+            if val in val_lab:
+               val_lab[val] +=",\n" + " "*8 + key
+            else:
+                val_lab[val] = r"$k_{Nq}$ (" + key
+        for val, lab in val_lab.iteritems():
+            ax.axvline(val, ls=next(ls), c='k', label=lab+r")")
+
     data = np.loadtxt(pwr_spec_diff_files[-1])
     P_k = data[:, 1]
     ymax = 0.2
