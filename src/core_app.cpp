@@ -607,7 +607,7 @@ static double CIC_opt(Vec_3D<double> k_vec, const double a)
 	}
 	if ((G_n != G_n) || (U2 != U2))
 	{
-		printf("Gn = %f\tU2 = %f, k = (%i, %i, %i) \n", G_n, U2, k_vec[0], k_vec[1], k_vec[2]);
+		printf("Gn = %f\tU2 = %f, k = (%f, %f, %f) \n", G_n, U2, k_vec[0], k_vec[1], k_vec[2]);
 		return 1.;
 	}
 	return G_n/U2;

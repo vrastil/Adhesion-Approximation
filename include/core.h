@@ -390,81 +390,49 @@ public:
 };
 
 /**
- * @class:	App_Var_base
+ * @class:	App_Var
  * @brief:	class containing core variables for approximations
  */
- 
-class App_Var_base
+
+template <class T> 
+class App_Var
 {
 public:
 	// CONSTRUCTORS
-	App_Var_base(const Sim_Param &sim, std::string app_str);
+	App_Var(const Sim_Param &sim, std::string app_str);
 	
 	// DESTRUCTOR
-	~App_Var_base();
+	~App_Var();
 	
 	// VARIABLES
 	int err, step, print_every;
 	double b, b_init, b_out, db;
-	const std::string z_suffix_const;
+    const std::string z_suffix_const;
+    
 	std::vector<Mesh> app_field;
-	Mesh power_aux;
+    Mesh power_aux;
+    T* particles;
+
 	Data_x_y<double> pwr_spec_binned, pwr_spec_binned_0, corr_func_binned;
 	fftw_plan p_F, p_B, p_F_pwr, p_B_pwr;
 	Tracking track;
 	std::vector<int> dens_binned;
 	
 	// METHODS
-	inline double z(){ return 1./b - 1.;}
-	inline double b_half() {return b - db/2.; }
-	inline bool integrate(){return (b <= b_out) && (db > 0);}
-	inline bool printing(){ return ((step % print_every) == 0) or (b == b_out); }
-    template <class T> void print(const Sim_Param &sim, std::string out_dir_app, T* particles);
-	void upd_time();
+	inline double z() const{ return 1./b - 1.;}
+	inline double b_half() const { return b - db/2.; }
+	inline bool integrate() const { return (b <= b_out) && (db > 0);}
+	inline bool printing() const { return ((step % print_every) == 0) or (b == b_out); }
+    void print(const Sim_Param &sim, std::string out_dir_app);
+    void upd_time();
+    void print_mem() const;
 	
 	std::string z_suffix();
 	
 protected:	
     std::stringstream z_suffix_num;
     bool is_init_pwr_spec_0;
-};
-
-/**
- * @class:	App_Var
- * @brief:	class containing variables for approximations with particle positions only
- */
- 
- class App_Var: public App_Var_base
-{
-public:
-	// CONSTRUCTORS & DESTRUCTOR
-	App_Var(const Sim_Param &sim, std::string app_str);
-	~App_Var();
-	
-	// VARIABLES
-	Particle_x* particles;
-	
-	// METHODS
-	void print(const Sim_Param &sim, std::string out_dir_app);
-};
-
-/**
- * @class:	App_Var_v
- * @brief:	class containing variables for approximations with particle velocities
- */
- 
- class App_Var_v: public App_Var_base
-{
-public:
-	// CONSTRUCTORS & DESTRUCTOR
-	App_Var_v(const Sim_Param &sim, std::string app_str);
-	~App_Var_v();
-	
-	// VARIABLES
-	Particle_v* particles;
-	
-	// METHODS
-	void print(const Sim_Param &sim, std::string out_dir_app);
+    uint64_t memory_alloc; // only the largest chunks
 };
 
 /**
@@ -472,19 +440,14 @@ public:
  * @brief:	class containing variables for adhesion approximation
  */
  
- class App_Var_AA: public App_Var_base
+ class App_Var_AA: public App_Var<Particle_x>
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR
 	App_Var_AA(const Sim_Param &sim, std::string app_str);
-	~App_Var_AA();
-	
+
 	// VARIABLES
-	Particle_x* particles;
 	Mesh expotential;
-	
-	// METHODS
-	void print(const Sim_Param &sim, std::string out_dir_app);
 };
 
 /**
@@ -513,17 +476,12 @@ public:
  * @brief:	class containing variables for modified Frozen-potential approximation
  */
  
- class App_Var_FP_mod: public App_Var_base
+ class App_Var_FP_mod: public App_Var<Particle_v>
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR
 	App_Var_FP_mod(const Sim_Param &sim, std::string app_str);
-	~App_Var_FP_mod();
 	
 	// VARIABLES
-	Particle_v* particles;
 	LinkedList linked_list;
-	
-	// METHODS
-	void print(const Sim_Param &sim, std::string out_dir_app);
 };

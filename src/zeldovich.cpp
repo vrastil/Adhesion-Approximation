@@ -21,8 +21,8 @@ int zel_app(const Sim_Param &sim)
     * ALLOCATION OF MEMORY + FFTW PREPARATION *
     ******************************************/
 
-	App_Var APP(sim, "_ZA_");
-	printf("Initialization completed...\n");
+	App_Var<Particle_x> APP(sim, "_ZA_");
+	APP.print_mem();
 	
     /***************************************
     * STANDARD PREPARATION FOR INTEGRATIOM *

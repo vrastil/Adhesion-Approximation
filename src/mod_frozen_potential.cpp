@@ -22,7 +22,7 @@ int mod_frozen_potential(const Sim_Param &sim)
     ******************************************/
 
 	App_Var_FP_mod APP(sim, "_FP_pp_");
-	printf("Initialization completed...\n");
+	APP.print_mem();
 
 	/***************************************
     * STANDARD PREPARATION FOR INTEGRATIOM *

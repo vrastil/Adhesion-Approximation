@@ -21,8 +21,8 @@ int frozen_flow(const Sim_Param &sim)
     * ALLOCATION OF MEMORY + FFTW PREPARATION *
     ******************************************/
 
-	App_Var APP(sim, "_FF_");
-	printf("Initialization completed...\n");
+	App_Var<Particle_x> APP(sim, "_FF_");
+    APP.print_mem();
 	
 	/***************************************
     * STANDARD PREPARATION FOR INTEGRATIOM *

@@ -22,8 +22,8 @@ int frozen_potential(const Sim_Param &sim)
     * ALLOCATION OF MEMORY + FFTW PREPARATION *
     ******************************************/
 
-	App_Var_v APP(sim, "_FP_");
-	printf("Initialization completed...\n");
+    App_Var<Particle_v> APP(sim, "_FP_");
+	APP.print_mem();
 	
 	/***************************************
     * STANDARD PREPARATION FOR INTEGRATIOM *

@@ -549,19 +549,25 @@ void Sim_Param::print_info() const
 }
 
 /**
- * @class:	App_Var_base
+ * @class:	App_Var<T>
  * @brief:	class containing variables for approximations
  */
  
-App_Var_base::App_Var_base(const Sim_Param &sim, string app_str):
+template <class T> 
+App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
 	err(0), step(0), print_every(sim.print_every),
 	b(sim.b_in), b_init(1.), b_out(sim.b_out), db(sim.db), z_suffix_const(app_str),
 	app_field(3, Mesh(sim.mesh_num)),
 	power_aux (sim.mesh_num_pwr),
-	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num), corr_func_binned(sim.bin_num / 2),
+	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num), corr_func_binned(sim.bin_num),
 	track(4, sim.mesh_num/sim.Ng),
-	dens_binned(500), is_init_pwr_spec_0(false)
+    dens_binned(500), is_init_pwr_spec_0(false),
+    memory_alloc(sizeof(double)*(app_field[0].length*app_field.size()+power_aux.length))
 {
+    // PARTICLES INITIALIZATION
+    particles = new T[sim.par_num];
+    memory_alloc += sizeof(T)*sim.par_num;
+
 	// FFTW PREPARATION
 	err = !fftw_init_threads();
 	if (err){
@@ -579,8 +585,11 @@ App_Var_base::App_Var_base(const Sim_Param &sim, string app_str):
 		power_aux.real(), FFTW_ESTIMATE);
 }
 
-App_Var_base::~App_Var_base()
+template <class T> 
+App_Var<T>::~App_Var()
 {
+    delete[] particles;
+
 	// FFTW CLEANUP
 	fftw_destroy_plan(p_F);
     fftw_destroy_plan(p_B);
@@ -589,14 +598,16 @@ App_Var_base::~App_Var_base()
 	fftw_cleanup_threads();
 }
 
-string App_Var_base::z_suffix()
+template <class T> 
+string App_Var<T>::z_suffix()
 {
 	z_suffix_num.str("");
 	z_suffix_num << fixed << setprecision(2) << z();
 	return z_suffix_const + "z" + z_suffix_num.str();
 }
 
-void App_Var_base::upd_time()
+template <class T> 
+void App_Var<T>::upd_time()
 {
 	step++;
 	if ((b_out - b) < db) db = b_out - b;
@@ -604,7 +615,7 @@ void App_Var_base::upd_time()
 }
  
 template <class T> 
-void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* particles)
+void App_Var<T>::print(const Sim_Param &sim, std::string out_dir_app)
 {
     /* Printing positions */
     print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
@@ -667,51 +678,11 @@ void App_Var_base::print(const Sim_Param &sim, std::string out_dir_app, T* parti
     print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_lin" + z_suffix());
 }
 
-/**
- * @class:	App_Var
- * @brief:	class containing variables for approximations with particle positions only
- */
- 
-App_Var::App_Var(const Sim_Param &sim, string app_str):
-	App_Var_base(sim, app_str)
+template <class T> 
+void App_Var<T>::print_mem() const
 {
-	particles = new Particle_x[sim.par_num];
-	printf("Allocated %s of memory.\n", humanSize
-	(
-		sizeof(Particle_x)*sim.par_num
-		+sizeof(double)*(app_field[0].length*3+power_aux.length)
-	));
+    printf("Allocated %s of memory.\n", humanSize(memory_alloc));
 }
-
-App_Var::~App_Var()
-{
-	delete[] particles;
-}
-
-void App_Var::print(const Sim_Param &sim, std::string out_dir_app) {App_Var_base::print(sim, out_dir_app, particles);}
-
- /**
- * @class:	App_Var_v
- * @brief:	class containing variables for approximations with particle velocities
- */
- 
-App_Var_v::App_Var_v(const Sim_Param &sim, string app_str):
-	App_Var_base(sim, app_str)
-{
-	particles = new Particle_v[sim.par_num];
-	printf("Allocated %s of memory.\n", humanSize
-	(
-		sizeof(Particle_v)*sim.par_num
-		+sizeof(double)*(app_field[0].length*3+power_aux.length)
-	));
-}
-
-App_Var_v::~App_Var_v()
-{
-	delete[] particles;
-}
-
-void App_Var_v::print(const Sim_Param &sim, std::string out_dir_app) {App_Var_base::print(sim, out_dir_app, particles);}
 
 /**
  * @class:	App_Var_AA
@@ -719,22 +690,10 @@ void App_Var_v::print(const Sim_Param &sim, std::string out_dir_app) {App_Var_ba
  */
  
  App_Var_AA::App_Var_AA(const Sim_Param &sim, string app_str):
-	App_Var_base(sim, app_str), expotential (sim.mesh_num)
+    App_Var<Particle_x>(sim, app_str), expotential (sim.mesh_num)
 {
-	particles = new Particle_x[sim.par_num];
-	printf("Allocated %s of memory.\n", humanSize
-	(
-		sizeof(Particle_x)*sim.par_num
-		+sizeof(double)*(app_field[0].length*3+power_aux.length +expotential.length)
-	));
+    memory_alloc += sizeof(double)*expotential.length;
 }
-
-App_Var_AA::~App_Var_AA()
-{
-	delete[] particles;
-}
-
-void App_Var_AA::print(const Sim_Param &sim, std::string out_dir_app) {App_Var_base::print(sim, out_dir_app, particles);}
 
 /**
  * @class:	App_Var_FP_mod
@@ -742,23 +701,10 @@ void App_Var_AA::print(const Sim_Param &sim, std::string out_dir_app) {App_Var_b
  */
  
  App_Var_FP_mod::App_Var_FP_mod(const Sim_Param &sim, string app_str):
-	App_Var_base(sim, app_str), linked_list (sim.par_num, sim.M, sim.Hc)
+    App_Var<Particle_v>(sim, app_str), linked_list(sim.par_num, sim.M, sim.Hc)
 {
-	particles = new Particle_v[sim.par_num];
-	printf("Allocated %s of memory.\n", humanSize
-	(
-		sizeof(Particle_v)*sim.par_num
-		+sizeof(double)*(app_field[0].length*3+power_aux.length)
-		+sizeof(int)*(linked_list.HOC.length+linked_list.par_num)
-	));
+    memory_alloc += sizeof(int)*(linked_list.HOC.length+linked_list.par_num);
 }
-
-App_Var_FP_mod::~App_Var_FP_mod()
-{
-	delete[] particles;
-}
-
-void App_Var_FP_mod::print(const Sim_Param &sim, std::string out_dir_app) {App_Var_base::print(sim, out_dir_app, particles);}
 
 /**
  * @class LinkedList
@@ -792,8 +738,8 @@ template class Mesh_base<int>;
 template class Mesh_base<double>;
 template void Tracking::update_track_par(Particle_x* particles);
 template void Tracking::update_track_par(Particle_v* particles);
-template void App_Var_base::print(const Sim_Param&, std::string, Particle_x*);
-template void App_Var_base::print(const Sim_Param&, std::string, Particle_v*);
+template class App_Var<Particle_x>;
+template class App_Var<Particle_v>;
 
 #ifdef TEST
 #include "test_core.cpp"

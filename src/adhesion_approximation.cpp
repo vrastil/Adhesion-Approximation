@@ -28,7 +28,7 @@ int adhesion_approximation(const Sim_Param &sim)
     ******************************************/
 
 	App_Var_AA APP(sim, "_AA_");
-	printf("Initialization completed...\n");
+	APP.print_mem();
 	
 	/***************************************
     * STANDARD PREPARATION FOR INTEGRATIOM *

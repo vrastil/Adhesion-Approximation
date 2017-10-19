@@ -187,18 +187,14 @@ Interp_obj(data), n_s(sim.power.ns), power(sim.power)
 {
     {   // LOWER RANGE -- fit A*T(k)^2*k^ns to data[m:n], T(k) BBKS
         printf("Fitting amplitude of P(k) in lower range.\n");
-        const int m = get_nearest(2*PI/sim.box_size*4, data.x);
-        const int n = m + 5;
+        const unsigned m = get_nearest(2*PI/sim.box_size*4, data.x);
+        const unsigned n = m + 5;
         k_min = data.x[n];
         vector<double> k, Pk;
 
-        double pk, pk_pred;
         for(unsigned i = m; i < n; i++){
-            pk = data.y[i];
-            pk_pred = pow(data.x[i], n_s)*transfer_function_2(data.x[i], power);
-            printf("i = %i, k = %f, P(k) = %f, P_fit(k)[no Amp] = %f\n", i, data.x[i], pk, pk_pred);
-            k.push_back(pk_pred);
-            Pk.push_back(pk);
+            k.push_back(pow(data.x[i], n_s)*transfer_function_2(data.x[i], power));
+            Pk.push_back(data.y[i]);
         }
         double A_sigma2, sumsq;
         gsl_fit_mul(k.data(), 1, Pk.data(), 1, n-m, &A, &A_sigma2, &sumsq);
