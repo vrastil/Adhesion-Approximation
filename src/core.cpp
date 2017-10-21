@@ -510,7 +510,7 @@ void Sim_Param::print_info(string out, string app) const
                 {"h", power.h},
                 {"k_pade", k_par.k_pade},
                 {"k_nyquist" ,k_par.nyquist},
-                {"viscosity", nu},
+                {"viscosity", nu*pow(box_size/mesh_num, 2.)},
                 {"cut_radius", rs},
                 {"num_thread", nt},
                 {"out_dir", out},

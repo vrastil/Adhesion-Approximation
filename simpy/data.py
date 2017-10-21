@@ -41,7 +41,7 @@ class SimInfo(object):
         info += '$N_M = %i$\n' % self.num_M
         info += '$N_p = %i^3$\n' % self.num_p
         info += '$L = %i$ Mpc/h\n' % self.box
-        if self.app == 'AA': info += r'$\nu = %.1f$' % self.nu
+        if self.app == 'AA': info += r'$\nu = %.1f$ (Mpc/h)$^2$' % self.nu
         if self.app == 'FP_pp': info += r'$r_s = %.1f$' % self.rs
         return info
 

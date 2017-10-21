@@ -95,8 +95,8 @@ int adhesion_approximation(const Sim_Param &sim)
 static void aa_convolution(App_Var_AA* APP, const Sim_Param &sim)
 {
     printf("Computing potential...\n");	
-    //	gen_expot(&APP->app_field[0], APP->expotential, sim.nu, APP->b_half());
-	gen_expot(&APP->app_field[0], APP->expotential, sim.nu, APP->b);
+    gen_expot(&APP->app_field[0], APP->expotential, sim.nu, APP->b_half());
+	// gen_expot(&APP->app_field[0], APP->expotential, sim.nu, APP->b);
     APP->app_field[0] *= -2*sim.nu;
 				
 	printf("Computing velocity field via FFT...\n");
@@ -109,7 +109,10 @@ static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu)
 {
 	printf("Storing initial expotenital in q-space...\n");
     // store exponent only
-	*expotential = potential;
+    // *expotential = potential; !!! <- do not use this in case potential and expotential are meshes of different size
+    #pragma omp parallel for
+    for (unsigned i = 0; i < expotential->length; i++) (*expotential)[i] = potential[i];
+
     *expotential /= -2*nu;
 }
 
