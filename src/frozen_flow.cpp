@@ -32,10 +32,10 @@ int frozen_flow(const Sim_Param &sim)
 	gen_rho_dist_k(sim, &APP.app_field[0], APP.p_F);
 	
 	/* Computing initial potential in k-space */
-	gen_pot_k(&APP.app_field[0]);
+	gen_pot_k(APP.app_field[0], &APP.power_aux);
 	
 	/* Computing displacement in k-space */
-	gen_displ_k(&APP.app_field, APP.app_field[0]);
+	gen_displ_k(&APP.app_field, APP.power_aux);
 	
 	/* Computing displacement in q-space */
 	printf("Computing displacement in q-space...\n");
@@ -48,6 +48,17 @@ int frozen_flow(const Sim_Param &sim)
     printf("\nSetting initial positions of particles...\n");
     set_pert_pos(sim, sim.b_in,  APP.particles, APP.app_field);
 
+    /***************************************
+    * PREPARATION FOR INTEGRATIOM WITH CIC *
+    ***************************************/
+
+    /* Computing displacement in k-space with CIC opt */
+    // gen_displ_k_cic(&APP.app_field, APP.power_aux);
+	
+	// /* Computing force in q-space */
+	// printf("Computing force in q-space...\n");
+    // fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
+    
     /* Setting initial (binned) power spectrum, WARNING: power_aux is modified */
     APP.track.update_track_par(APP.particles);
 	APP.print(sim, out_dir_app);

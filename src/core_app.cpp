@@ -570,7 +570,6 @@ static double S2_shape(const double k2, const double a)
 
 static double CIC_opt(Vec_3D<double> k_vec, const double a)
 {
-	// optimalization for CIC and S2 shaped particle
 	double k_n[3];
 	double U2, U_n, G_n, k2n;
 	
@@ -636,8 +635,10 @@ void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, const double a)
 		potential_tmp[0] = pot_k[2*i]; // prevent overwriting if vel_field[0] == pot_k
         potential_tmp[1] = pot_k[2*i+1]; // prevent overwriting if vel_field[0] == pot_k
         get_k_vec(N, i, k_vec);
-        k_vec_phys = Vec_3D<double>(k_vec)*(2.*PI/N);
-		if (a == -1) opt = 1.;
+        k_vec_phys = Vec_3D<double>(k_vec)*(2.*PI/N);	
+        // no optimalization
+        if (a == -1) opt = 1.;
+        // optimalization for CIC and S2 shaped particle
 		else opt = CIC_opt(k_vec_phys, a);
 		for(unsigned j=0; j<3;j++)
 		{

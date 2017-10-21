@@ -433,6 +433,8 @@ Sim_Param::Sim_Param(int ac, char* av[])
         M = (int)(mesh_num / rs);
         Hc = double(mesh_num) / M;
 
+        nu /= pow(box_size/mesh_num, 2.); // converting to dimensionless units
+
         /* TIME */
         b_in = 1./(z_in + 1);
 		b_out = 1./(z_out + 1);

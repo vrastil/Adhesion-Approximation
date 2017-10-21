@@ -19,7 +19,8 @@ int adhesion_approximation(const Sim_Param &sim)
 	cout << "\n"
 	"**********************\n"
 	"ADHESION APPROXIMATION\n"
-	"**********************\n";
+    "**********************\n";
+    
 	string out_dir_app = std_out_dir("AA_run/", sim);
 	work_dir_over(out_dir_app);
     
@@ -36,28 +37,37 @@ int adhesion_approximation(const Sim_Param &sim)
 	
 	/* Generating the right density distribution in k-space */	
 	gen_rho_dist_k(sim, &APP.app_field[0], APP.p_F);
+    
+    /* Computing initial potential in k-space */
+	gen_pot_k(APP.app_field[0], &APP.power_aux);
 	
-	/* Computing initial potential in k-space */
-	gen_pot_k(&APP.app_field[0]);
-
-	/* Computing initial expotential */
-	fftw_execute_dft_c2r(APP.p_B, APP.app_field[0]);
-	gen_init_expot(APP.app_field[0], &APP.expotential, sim.nu);
+	/* Computing displacement in k-space */
+	gen_displ_k(&APP.app_field, APP.power_aux);
+	
+	/* Computing displacement in q-space */
+	printf("Computing displacement in q-space...\n");
+    fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
 
 	/*********************
     * INITIAL CONDITIONS *
     *********************/
 
     printf("\nSetting initial positions of particles...\n");
-	set_unpert_pos(sim, APP.particles);
-	aa_convolution(&APP, sim);
-    upd_pos_first_order(sim, sim.b_in, APP.particles, APP.app_field);
+    set_pert_pos(sim, sim.b_in,  APP.particles, APP.app_field);
+
+    /***********************
+    * ADHESION PREPARATION *
+    ***********************/
+
+    /* Computing initial expotential */
+	fftw_execute_dft_c2r(APP.p_B, APP.power_aux);
+    gen_init_expot(APP.power_aux, &APP.expotential, sim.nu);
 
     /* Setting initial (binned) power spectrum, WARNING: power_aux is modified */
     APP.track.update_track_par(APP.particles);
     APP.print(sim, out_dir_app);
 	APP.upd_time();
-
+    
 	/**************
     * INTEGRATION *
     **************/
@@ -116,7 +126,6 @@ static double get_summation(const vector<double>& exp_aux)
 static void convolution_y1(Mesh* potential, const vector<double>& gaussian, const Mesh& expotential_0){
 	// multi-thread index is y3
     // compute f1 (x1, y2, y3)
-    printf("\t-->Convolution y1\n");
 
     const int N = potential->N;
     vector<double> exp_aux;
@@ -139,7 +148,6 @@ static void convolution_y1(Mesh* potential, const vector<double>& gaussian, cons
 
 static void convolution_y2(Mesh* potential, const vector<double>& gaussian){
     // compute f2 (x1, x2, y3)
-    printf("\t-->Convolution y2\n");
 
     const int N = potential->N;
 	vector<double> sum_aux;
@@ -169,7 +177,6 @@ static void convolution_y2(Mesh* potential, const vector<double>& gaussian){
 
 static void convolution_y3(Mesh* potential, const vector<double>& gaussian){
     // compute f3 (x1, x2, x3) == expotential(x, b)
-    printf("\t-->Convolution y3\n");
 
     const int N = potential->N;
 	vector<double> sum_aux;

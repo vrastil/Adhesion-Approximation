@@ -7,7 +7,6 @@
 
 using namespace std;
 
-
 int frozen_potential(const Sim_Param &sim)
 {
 	cout << "\n"
