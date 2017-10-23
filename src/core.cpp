@@ -291,7 +291,22 @@ const char *humanSize(uint64_t bytes){
 
 Mesh::Mesh(unsigned n): Mesh_base(n, n, n+2), N(n) {}
 
-Mesh::Mesh(const Mesh& that): Mesh_base(that), N(that.N) {}
+// Mesh::Mesh(const Mesh& that): Mesh_base(that), N(that.N) {}
+
+// Mesh::Mesh(Mesh&& that) noexcept: Mesh_base(that), N(that.N) {}
+
+// Mesh& Mesh::operator=(Mesh that) &
+// {
+//     printf("Copy or move assignemnt: %p <-- %p\n", this, &that);
+//     swap(*this, that);
+//     return *this;
+// }
+
+// void swap(Mesh& first, Mesh& second)
+// {
+//     std::swap(first.N, second.N);
+//     swap<Mesh_base<double>>(first, second);
+// }
 
 void Mesh::reset_part(bool part)
 {
@@ -336,20 +351,6 @@ Mesh& Mesh::operator/=(const double& rhs)
 		for (unsigned i = 0; i < length; i++) this->data[i]/=rhs;
 		
 	return *this;
-}
-
-void swap(Mesh& first, Mesh& second)
-{
-    std::swap(first.N, second.N);
-    swap<Mesh_base<double>>(first, second);
-}
-
-Mesh& Mesh::operator=(const Mesh& other)
-{
-//	printf("Copy assignemnt %p\n", this);
-	Mesh temp(other);
-	swap(*this, temp);
-    return *this;
 }
 
 /**
@@ -565,13 +566,18 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
 	sim(sim), err(0), step(0), print_every(sim.print_every),
     b(sim.b_in), b_init(1.), b_out(sim.b_out), db(sim.db),
     app_str(app_str), z_suffix_const("_" + app_str + "_"), out_dir_app(std_out_dir(app_str + "_run/", sim)),
-	app_field(3, Mesh(sim.mesh_num)),
 	power_aux (sim.mesh_num_pwr),
 	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num), corr_func_binned(sim.bin_num),
 	track(4, sim.mesh_num/sim.Ng),
-    dens_binned(500), is_init_pwr_spec_0(false),
-    memory_alloc(sizeof(double)*(app_field[0].length*app_field.size()+power_aux.length))
+    dens_binned(500), is_init_pwr_spec_0(false)
 {
+    // EFFICIENTLY ALLOCATE VECTOR OF MESHES
+    app_field.reserve(3);
+    for(size_t i = 0; i < app_field.capacity(); i++){
+        app_field.emplace_back(sim.mesh_num);
+    }
+    memory_alloc = sizeof(double)*(app_field[0].length*app_field.size()+power_aux.length);
+    
     // CREAT SUBDIR STRUCTURE
     work_dir_over(out_dir_app);
 

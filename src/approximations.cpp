@@ -7,6 +7,8 @@
 
 using namespace std;
 
+#define VEL_PK
+
 static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu);
 static void gen_expot(Mesh* potential,  const Mesh& expotential, double nu, double b);
 static void aa_convolution(App_Var_AA* APP);
@@ -117,13 +119,26 @@ int zel_app(const Sim_Param &sim)
 	"ZEL`DOVICH APPROXIMATION\n"
     "************************\n";
 
+    #ifdef VEL_PK
+    App_Var<Particle_v> APP(sim, "ZA");
+    #else
     App_Var<Particle_x> APP(sim, "ZA");
+    #endif
+
     APP.print_mem();
     standard_preparation(APP);
+    #ifdef VEL_PK
+    init_cond_w_vel(APP); //< with velocities
+    #else
     init_cond_no_vel(APP); //< no velocities
+    #endif
     print_init(APP); // WARNING: power_aux is modified
     auto upd_pos = [&](){
+        #ifdef VEL_PK
+        set_pert_pos_w_vel(APP.sim, APP.b, APP.particles, APP.app_field); //< ZA with velocitites
+        #else
         set_pert_pos(APP.sim, APP.b, APP.particles, APP.app_field); //< ZA specific
+        #endif
     };
     integration(APP, upd_pos);
     APP.print_info();

@@ -92,6 +92,7 @@ public:
     Mesh_base(const Mesh_base& that);
     Mesh_base(Mesh_base<T>&& that) noexcept;
     Mesh_base& operator=(Mesh_base that) &;
+    template <class U> friend void swap(Mesh_base<U>& first, Mesh_base<U>& second);
 	~Mesh_base();
 	
 	// VARIABLES
@@ -118,8 +119,6 @@ public:
 	Mesh_base& operator-=(const T& rhs){ return *this+=-rhs; }
 	Mesh_base& operator*=(const T& rhs);
 	Mesh_base& operator/=(const T& rhs);
-	
-    template <class U> friend void swap(Mesh_base<U>& first, Mesh_base<U>& second);
 
 protected:
 	// VARIABLES
@@ -137,8 +136,12 @@ class Mesh : public Mesh_base<double>
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR
-	Mesh(unsigned n);
-	Mesh(const Mesh& that);
+    Mesh(unsigned n);
+    // default constructors / assignemnts belowe
+    // Mesh(const Mesh& that);
+    // Mesh(Mesh&& that) noexcept;
+    // Mesh& operator=(Mesh that) &;
+    // friend void swap(Mesh& first, Mesh& second);
 	
 	// VARIABLES
 	unsigned N; // acces dimension of mesh
@@ -158,9 +161,6 @@ public:
 	Mesh& operator-=(const double& rhs){ return *this+=-rhs; }
 	Mesh& operator*=(const double& rhs);
 	Mesh& operator/=(const double& rhs);
-	
-	friend void swap(Mesh& first, Mesh& second);
-	Mesh& operator=(const Mesh& other);
 };
 
 /**
