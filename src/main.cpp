@@ -4,10 +4,6 @@
 #include "core_power.h"
 #include "approximations.hpp"
 
-#include "frozen_potential.h"
-#include "adhesion_approximation.h"
-#include "mod_frozen_potential.h"
-
 using namespace std;
 
 int main(int argc, char* argv[]){

@@ -7,13 +7,17 @@
 
 using namespace std;
 
+static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu);
+static void gen_expot(Mesh* potential,  const Mesh& expotential, double nu, double b);
+static void aa_convolution(App_Var_AA* APP, const Sim_Param &sim);
+
+/***************************************
+* STANDARD PREPARATION FOR INTEGRATIOM *
+***************************************/
+
 template<class T>
 void standard_preparation(T& APP)
 {
-    /***************************************
-    * STANDARD PREPARATION FOR INTEGRATIOM *
-    ***************************************/
-
     /* Generating the right density distribution in k-space */	
     gen_rho_dist_k(APP.sim, &APP.app_field[0], APP.p_F);
     
@@ -28,15 +32,52 @@ void standard_preparation(T& APP)
     fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
 }
 
+/*********************
+* INITIAL CONDITIONS *
+*********************/
+
 template<class T>
 void init_cond_no_vel(T& APP)
 {
-    /*********************
-    * INITIAL CONDITIONS *
-    *********************/
-
     printf("\nSetting initial positions of particles...\n");
     set_pert_pos(APP.sim, APP.sim.b_in, APP.particles, APP.app_field);
+}
+
+template<class T>
+void init_cond_w_vel(T& APP)
+{
+    printf("\nSetting initial positions and velocitis of particles...\n");
+	set_pert_pos_w_vel(APP.sim, APP.sim.b_in, APP.particles, APP.app_field);
+}
+
+template<class T>
+void init_pot_w_s2(T& APP)
+{
+    /* Computing displacement in k-space with S2 shaped particles */
+	gen_displ_k_S2(&APP.app_field, APP.power_aux, APP.sim.a);
+    
+    /* Computing force in q-space */
+    printf("Computing force in q-space...\n");
+    fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
+}
+
+template<class T>
+void init_pot_w_cic(T& APP)
+{
+    /* Computing displacement in k-space with CIC opt */
+    gen_displ_k_cic(&APP.app_field, APP.power_aux);
+
+    /* Computing force in q-space */
+    printf("Computing force in q-space...\n");
+    fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
+}
+
+template<class T>
+void init_adhesion(T& APP)
+{
+    /* Computing initial expotential */
+	fftw_execute_dft_c2r(APP.p_B, APP.power_aux);
+    gen_init_expot(APP.power_aux, &APP.expotential, APP.sim.nu);
 }
 
 template<class T>
@@ -48,23 +89,26 @@ void print_init(T& APP)
     APP.upd_time();
 }
 
+/**************
+* INTEGRATION *
+**************/
+
 template<class T>
 void integration(T& APP, function<void()> upd_pos)
 {
-    /**************
-    * INTEGRATION *
-    **************/
-	
 	while(APP.integrate())
 	{
 		printf("\nStarting computing step with z = %.2f (b = %.3f)\n", APP.z(), APP.b);
-		printf("Updating positions of particles...\n");
 		upd_pos();
         APP.track.update_track_par(APP.particles);
 		if (APP.printing()) APP.print(APP.sim);
 		APP.upd_time();
 	}
 }
+
+/*****************
+* APPROXIMATIONS *
+*****************/
 
 int zel_app(const Sim_Param &sim)
 {
@@ -78,7 +122,9 @@ int zel_app(const Sim_Param &sim)
     standard_preparation(APP);
     init_cond_no_vel(APP);
     print_init(APP);
-    auto upd_pos = [&](){set_pert_pos(sim, APP.b, APP.particles, APP.app_field);};
+    auto upd_pos = [&](){
+        set_pert_pos(sim, APP.b, APP.particles, APP.app_field);
+    };
     integration(APP, upd_pos);
     APP.print_info();
 	printf("Zel`dovich approximation ended successfully.\n");
@@ -97,9 +143,224 @@ int frozen_flow(const Sim_Param &sim)
     standard_preparation(APP);
     init_cond_no_vel(APP);
     print_init(APP);
-    auto upd_pos = [&](){upd_pos_first_order(sim, APP.db, APP.particles, APP.app_field);};
+    auto upd_pos = [&](){
+        upd_pos_first_order(sim, APP.db, APP.particles, APP.app_field);
+    };
     integration(APP, upd_pos);
     APP.print_info();
     printf("Frozen-flow approximation ended successfully.\n");
     return APP.err;
+}
+
+int frozen_potential(const Sim_Param &sim)
+{
+	cout << "\n"
+	"******************************\n"
+	"FROZEN-POTENTIAL APPROXIMATION\n"
+    "******************************\n";
+    
+    App_Var<Particle_v> APP(sim, "FP");
+    APP.print_mem();
+    standard_preparation(APP);
+    init_cond_w_vel(APP);
+    init_pot_w_cic(APP);
+    print_init(APP);
+    auto upd_pos = [&](){
+        upd_pos_second_order(sim, APP.db, APP.b, APP.particles, APP.app_field);
+    };
+    integration(APP, upd_pos);
+    APP.print_info();
+    printf("Frozen-potential approximation ended successfully.\n");
+    return APP.err;
+}
+
+int mod_frozen_potential(const Sim_Param &sim)
+{
+	cout << "\n"
+	"***************************************\n"
+	"MODIFIED FROZEN-POTENTIAL APPROXIMATION\n"
+	"***************************************\n";
+    
+    App_Var_FP_mod APP(sim, "FP_pp");
+    APP.print_mem();
+    standard_preparation(APP);
+    init_cond_w_vel(APP);
+    init_pot_w_s2(APP);
+    print_init(APP);
+    auto upd_pos = [&](){
+        upd_pos_second_order_w_short_force(sim, &APP.linked_list, APP.db, APP.b, APP.particles, APP.app_field);
+    };
+    integration(APP, upd_pos);
+    APP.print_info();
+    printf("Modified Frozen-potential approximation ended successfully.\n");
+    return APP.err;
+}
+
+int adhesion_approximation(const Sim_Param &sim)
+{
+	cout << "\n"
+	"**********************\n"
+	"ADHESION APPROXIMATION\n"
+    "**********************\n";
+
+    App_Var_AA APP(sim, "AA");
+    APP.print_mem();
+    standard_preparation(APP);
+    init_cond_no_vel(APP);
+    init_adhesion(APP);
+    print_init(APP);
+    auto upd_pos = [&](){
+        aa_convolution(&APP, sim);
+        upd_pos_first_order(sim, APP.db, APP.particles, APP.app_field);
+    };
+    integration(APP, upd_pos);
+    APP.print_info();
+	printf("Adhesion approximation ended successfully.\n");
+    return APP.err;
+}
+
+/***********************************
+* ADHESION APPROXIMATION FUNCTIONS *
+***********************************/
+
+const double ACC = 1e-10;
+const double log_acc = log(ACC);
+
+static void aa_convolution(App_Var_AA* APP, const Sim_Param &sim)
+{
+    printf("Computing potential...\n");	
+    gen_expot(&APP->app_field[0], APP->expotential, sim.nu, APP->b_half());
+	// gen_expot(&APP->app_field[0], APP->expotential, sim.nu, APP->b);
+    APP->app_field[0] *= -2*sim.nu;
+				
+	printf("Computing velocity field via FFT...\n");
+	fftw_execute_dft_r2c(APP->p_F, APP->app_field[0]);
+	gen_displ_k(&APP->app_field, APP->app_field[0]);
+	fftw_execute_dft_c2r_triple(APP->p_B, APP->app_field);
+}
+
+static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu)
+{
+	printf("Storing initial expotenital in q-space...\n");
+    // store exponent only
+    // *expotential = potential; !!! <- do not use this in case potential and expotential are meshes of different size
+    #pragma omp parallel for
+    for (unsigned i = 0; i < expotential->length; i++) (*expotential)[i] = potential[i];
+
+    *expotential /= -2*nu;
+}
+
+static double get_summation(const vector<double>& exp_aux)
+{
+    double max_exp = *max_element(exp_aux.begin(), exp_aux.end());
+    double sum = 0;
+    for(auto const& a_exp: exp_aux) {
+        if ((a_exp - max_exp) > log_acc) sum+= exp(a_exp - max_exp);
+    }
+    return max_exp + log(sum);
+}
+
+static void convolution_y1(Mesh* potential, const vector<double>& gaussian, const Mesh& expotential_0){
+	// multi-thread index is y3
+    // compute f1 (x1, y2, y3)
+
+    const int N = potential->N;
+    vector<double> exp_aux;
+    
+	#pragma omp parallel for private(exp_aux)
+	for (int x1 = 0; x1 < N; x1++){
+		for (int y2 = 0; y2 < N; y2++){
+			for (int y3 = 0; y3 < N; y3++){
+                exp_aux.reserve(N);
+                // fill in exponents
+                for (int y1 = 0; y1 < N; y1++){
+                    exp_aux.push_back(expotential_0(y1, y2, y3)+gaussian[abs(x1-y1)]);
+				}
+				(*potential)(x1, y2, y3) = get_summation(exp_aux); // potential is now f1
+                exp_aux.clear();
+			}
+		}
+	}
+}
+
+static void convolution_y2(Mesh* potential, const vector<double>& gaussian){
+    // compute f2 (x1, x2, y3)
+
+    const int N = potential->N;
+	vector<double> sum_aux;
+	vector<double> exp_aux;
+
+	#pragma omp parallel for private(sum_aux, exp_aux)
+	for (int x1 = 0; x1 < N; x1++){
+		for (int y3 = 0; y3 < N; y3++){
+            sum_aux.reserve(N);
+			for (int x2 = 0; x2 < N; x2++){
+                exp_aux.reserve(N);
+				// fill in exponents
+                for (int y2 = 0; y2 < N; y2++){
+                    exp_aux.push_back((*potential)(x1, y2, y3) + gaussian[abs(x2-y2)]);
+				}
+				sum_aux.push_back(get_summation(exp_aux));
+                exp_aux.clear();
+			}
+
+			for (int x2 = 0; x2 < N; x2++){
+				(*potential)(x1, x2, y3) = sum_aux[x2]; // potential is now f2
+			}
+			sum_aux.clear();
+		}
+	}
+}
+
+static void convolution_y3(Mesh* potential, const vector<double>& gaussian){
+    // compute f3 (x1, x2, x3) == expotential(x, b)
+
+    const int N = potential->N;
+	vector<double> sum_aux;
+    vector<double> exp_aux;
+
+	#pragma omp parallel for private(sum_aux, exp_aux)
+	for (int x1 = 0; x1 < N; x1++){
+		for (int x2 = 0; x2 < N; x2++){
+            sum_aux.reserve(N);
+			for (int x3 = 0; x3 < N; x3++){
+                exp_aux.reserve(N);
+				// fill in exponents
+                for (int y3 = 0; y3 < N; y3++){
+                    exp_aux.push_back((*potential)(x1, x2, y3) + gaussian[abs(x3-y3)]);
+				}
+				sum_aux.push_back(get_summation(exp_aux));
+                exp_aux.clear();
+			}
+			for (int x3 = 0; x3 < N; x3++){
+				(*potential)(x1, x2, x3) = sum_aux[x3]; // potential is now f3
+			}
+			sum_aux.clear();
+		}
+	}
+}
+
+static void gen_expot(Mesh* potential,  const Mesh& expotential_0, double nu, double b)
+{
+	/* Computing convolution using direct sum */
+	printf("Computing expotential in q-space...\n");
+	/*
+	f(x1, x2, x3) = \int dy^3 { g(y1, y2, y3) * h(x1 - y1) * h(x2 - y2) * h(x3 - y3)}
+	..
+	f1 (x1, y2, y3) = \int dy1 { g  (y1, y2, y3) * h(x1 - y1)}	:: N^3 sums of length N
+	f2 (x1, x2, y3) = \int dy2 { f1 (x1, y2, y3) * h(x2 - y2)}	:: N^3 sums of length N
+	f3 (x1, x2, x3) = \int dy3 { f2 (x1, x2, y3) * h(x3 - y3)}	:: N^3 sums of length N
+	*/
+
+	// store values of exponential - every convolution uses the same exp(-r^2/4bv)
+	vector<double> gaussian(expotential_0.N);
+
+	#pragma omp parallel for
+	for (unsigned i = 0; i < expotential_0.N; i++){
+		gaussian[i]=-i*i/(4.*b*nu);
+	}
+
+	convolution_y1(potential, gaussian, expotential_0);
+	convolution_y2(potential, gaussian);
+	convolution_y3(potential, gaussian);
 }
