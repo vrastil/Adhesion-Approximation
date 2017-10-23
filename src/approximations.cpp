@@ -21,11 +21,11 @@ void standard_preparation(T& APP)
     /* Generating the right density distribution in k-space */	
     gen_rho_dist_k(APP.sim, &APP.app_field[0], APP.p_F);
     
-    /* Computing initial potential in k-space */
-    gen_pot_k(&APP.app_field[0]);
-    
-    /* Computing displacement in k-space */
-    gen_displ_k(&APP.app_field, APP.app_field[0]);
+	/* Computing initial potential in k-space */
+	gen_pot_k(APP.app_field[0], &APP.power_aux);
+	
+	/* Computing displacement in k-space */
+	gen_displ_k(&APP.app_field, APP.power_aux);
     
     /* Computing displacement in q-space */
     printf("Computing displacement in q-space...\n");
@@ -121,7 +121,7 @@ int zel_app(const Sim_Param &sim)
     APP.print_mem();
     standard_preparation(APP);
     init_cond_no_vel(APP);
-    print_init(APP);
+    print_init(APP); // WARNING: power_aux is modified
     auto upd_pos = [&](){
         set_pert_pos(sim, APP.b, APP.particles, APP.app_field);
     };
@@ -142,7 +142,7 @@ int frozen_flow(const Sim_Param &sim)
     APP.print_mem();
     standard_preparation(APP);
     init_cond_no_vel(APP);
-    print_init(APP);
+    print_init(APP); // WARNING: power_aux is modified
     auto upd_pos = [&](){
         upd_pos_first_order(sim, APP.db, APP.particles, APP.app_field);
     };
@@ -164,7 +164,7 @@ int frozen_potential(const Sim_Param &sim)
     standard_preparation(APP);
     init_cond_w_vel(APP);
     init_pot_w_cic(APP);
-    print_init(APP);
+    print_init(APP); // WARNING: power_aux is modified
     auto upd_pos = [&](){
         upd_pos_second_order(sim, APP.db, APP.b, APP.particles, APP.app_field);
     };
@@ -186,7 +186,7 @@ int mod_frozen_potential(const Sim_Param &sim)
     standard_preparation(APP);
     init_cond_w_vel(APP);
     init_pot_w_s2(APP);
-    print_init(APP);
+    print_init(APP); // WARNING: power_aux is modified
     auto upd_pos = [&](){
         upd_pos_second_order_w_short_force(sim, &APP.linked_list, APP.db, APP.b, APP.particles, APP.app_field);
     };
@@ -208,7 +208,7 @@ int adhesion_approximation(const Sim_Param &sim)
     standard_preparation(APP);
     init_cond_no_vel(APP);
     init_adhesion(APP);
-    print_init(APP);
+    print_init(APP); // WARNING: power_aux is modified
     auto upd_pos = [&](){
         aa_convolution(&APP, sim);
         upd_pos_first_order(sim, APP.db, APP.particles, APP.app_field);
