@@ -11,6 +11,7 @@ from . import *
 from . import plot
 
 RESULTS_KEYS = ["pwr_spec", "pwr_spec_diff", "pwr_spec_supp", "dens_hist",
+                "vel_pwr_spec", "vel_pwr_spec_diff", "vel_pwr_spec_supp",
                 "par_slice", "par_ani", "dens_slice", "dens_ani", "corr_func"]
 
 class SimInfo(object):
@@ -193,9 +194,8 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         plot.plot_pwr_spec(files, zs, a_sim_info, pwr_spec_files_extrap=files_extrap)
         a_sim_info.done(key)
     del zs, files, files_extrap
-
     # Power spectrum difference
-    key = "pwr_spec_supp"
+    key = "pwr_spec_diff"
     zs, files = try_get_zs_files(a_sim_info, 'pwr_diff/')
     if a_sim_info.rerun(rerun, key, skip, zs):
         print 'Plotting power spectrum difference...'
@@ -208,6 +208,31 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         a = [1./(z+1) for z in zs]
         supp_lms, k_lms = load_k_supp(files)
         plot.plot_supp_lms(supp_lms, a, a_sim_info, k_lms=k_lms)
+        a_sim_info.done(key)
+    del zs, files
+
+    # Velocity power spectrum
+    key = "vel_pwr_spec"
+    zs, files = try_get_zs_files(a_sim_info, 'vel_pwr_spec/')
+    if a_sim_info.rerun(rerun, key, skip, zs):
+        print 'Plotting velocity power spectrum...'
+        plot.plot_pwr_spec(files, zs, a_sim_info, pk_type='vel')
+        a_sim_info.done(key)
+    del zs, files
+    # Velocity power spectrum difference
+    key = "vel_pwr_spec_diff"
+    zs, files = try_get_zs_files(a_sim_info, 'vel_pwr_diff/')
+    if a_sim_info.rerun(rerun, key, skip, zs):
+        print 'Plotting velocity power spectrum difference...'
+        plot.plot_pwr_spec_diff(files, zs, a_sim_info, pk_type='vel')
+        a_sim_info.done(key)
+    # Velocity power spectrum suppression
+    key = "vel_pwr_spec_supp"
+    if a_sim_info.rerun(rerun, key, skip, zs):
+        print 'Plotting power spectrum suppression...'
+        a = [1./(z+1) for z in zs]
+        supp_lms, k_lms = load_k_supp(files)
+        plot.plot_supp_lms(supp_lms, a, a_sim_info, k_lms=k_lms, pk_type='vel')
         a_sim_info.done(key)
     del zs, files
 

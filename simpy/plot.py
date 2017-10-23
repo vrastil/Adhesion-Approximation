@@ -40,9 +40,15 @@ def pwr_spec(k, pwr, cosmo=None, z=0, q_log=2.34, q_1=3.89, q_2=16.2, q_3=5.47, 
         import pyccl as ccl
         return supp*ccl.linear_matter_power(cosmo, k*pwr["h"], 1.)*pwr["h"]**3
 
-def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, out_dir='auto', save=True, show=False):
+def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, out_dir='auto', pk_type='dens', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
+    if pk_type == "dens":
+        out_file='pwr_spec.png'
+        suptitle="Power spectrum"
+    elif pk_type == "vel":
+        out_file='vel_pwr_spec.png'
+        suptitle=r"Power spectrum $(\nabla\cdot u)$"
     fig = plt.figure(figsize=(15, 11))
     ax = plt.gca()
     plt.yscale('log')
@@ -95,12 +101,18 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, ou
     k = data[:, 0]
     k = np.logspace(np.log10(k[0]), np.log10(k[-1]), num=50)
     del data
-    P_0 = [pwr_spec(k_, a_sim_info.pwr, cosmo=a_sim_info.cosmo, z=zs[-1]) for k_ in k]
-    P_i = [pwr_spec(k_, a_sim_info.pwr, cosmo=a_sim_info.cosmo, z=zs[0]) for k_ in k]
-    plt.plot(k, P_0, '-')
-    plt.plot(k, P_i, '-')
 
-    fig.suptitle("Power spectrum", y=0.99, size=20)
+    if pk_type == "dens":
+        P_0 = [pwr_spec(k_, a_sim_info.pwr, cosmo=a_sim_info.cosmo, z=zs[-1]) for k_ in k]
+        P_i = [pwr_spec(k_, a_sim_info.pwr, cosmo=a_sim_info.cosmo, z=zs[0]) for k_ in k]
+        plt.plot(k, P_0, '-')
+        plt.plot(k, P_i, '-')
+    elif pk_type == "vel":
+        P_0 = [pwr_spec(k_, a_sim_info.pwr, cosmo=a_sim_info.cosmo, z=0) for k_ in k]
+        plt.plot(k, P_0, '-')
+    
+
+    fig.suptitle(suptitle, y=0.99, size=20)
     plt.xlabel(r"$k [h/$Mpc$]$", fontsize=15)
     plt.ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=15)
 
@@ -119,7 +131,7 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, ou
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
     
     if save:
-        plt.savefig(out_dir + 'pwr_spec.png')
+        plt.savefig(out_dir + out_file)
     if show:
         plt.show()
     plt.close(fig)
@@ -187,9 +199,15 @@ def plot_corr_func(corr_func_files, zs, a_sim_info, corr_func_files_lin=None, ou
     plt.close(fig)
 
 
-def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', save=True, show=False):
+def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_type='dens', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
+    if pk_type == "dens":
+        out_file='pwr_spec_diff.png'
+        suptitle = "Power spectrum difference"
+    elif pk_type == "vel":
+        out_file='vel_pwr_spec_diff.png'
+        suptitle=r"Power spectrum difference $(\nabla\cdot u)$"
     fig = plt.figure(figsize=(15, 11))
     plt.xscale('log')
     a_ = 0
@@ -229,7 +247,7 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', save
     for y in np.arange(ymax - 0.2, ymin, -0.2):
         plt.axhline(y=y, color='black', lw=0.2)
     plt.ylim(ymin=ymin, ymax=ymax)
-    fig.suptitle("Power spectrum difference", y=0.99, size=20)
+    fig.suptitle(suptitle, y=0.99, size=20)
     plt.xlabel(r"$k [h/$Mpc$]$", fontsize=15)
     plt.ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$", fontsize=25)
     plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
@@ -238,7 +256,7 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', save
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
     if save:
-        plt.savefig(out_dir + 'pwr_spec_diff.png')
+        plt.savefig(out_dir + out_file)
     if show:
         plt.show()
     plt.close(fig)
@@ -516,9 +534,15 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir='auto', save=True):
     del ani
 
 
-def plot_supp_lms(supp_lms, a, a_sim_info, out_dir='auto', k_lms=None, suptitle='', save=True, show=False):
+def plot_supp_lms(supp_lms, a, a_sim_info, out_dir='auto', pk_type='dens', k_lms=None, suptitle='', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
+    if pk_type == "dens":
+        out_file='supp.png'
+        suptitle="Power spectrum suppression"
+    elif pk_type == "vel":
+        out_file='supp_vel.png'
+        suptitle=r"Power spectrum suppression $(\nabla\cdot u)$"
     fig = plt.figure(figsize=(15, 11))
     supp_l, supp_m, supp_s = supp_lms
     k_l, k_m, k_s = k_lms
@@ -532,7 +556,7 @@ def plot_supp_lms(supp_lms, a, a_sim_info, out_dir='auto', k_lms=None, suptitle=
     # plt.plot(a, supp_m, '-o', ms=3, label='Medium-scale:\n'r'$\langle%.2f,%.2f\rangle$ h/Mpc' % (k_m[0], k_m[1]))
     # plt.plot(a, supp_s, '-o', ms=3, label='Small-scale:\n'r'$\langle%.2f,%.2f\rangle$ h/Mpc' % (k_s[0], k_s[1]))
 
-    fig.suptitle("Power spectrum suppression", y=0.99, size=20)
+    fig.suptitle(suptitle, y=0.99, size=20)
     plt.xlabel(r"$a(t)$", fontsize=15)
     plt.ylabel(
         r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$", fontsize=25)
@@ -543,7 +567,7 @@ def plot_supp_lms(supp_lms, a, a_sim_info, out_dir='auto', k_lms=None, suptitle=
     plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     if save:
-        plt.savefig(out_dir + 'supp.png')
+        plt.savefig(out_dir + out_file)
     if show:
         plt.show()
     plt.close(fig)
