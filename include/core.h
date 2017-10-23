@@ -412,8 +412,9 @@ public:
 	double b, b_init, b_out, db;
     const std::string app_str, z_suffix_const, out_dir_app;
     
+    // LARGE FIELDS
 	std::vector<Mesh> app_field;
-    Mesh power_aux;
+    std::vector<Mesh> power_aux;
     T* particles;
 
 	Data_x_y<double> pwr_spec_binned, pwr_spec_binned_0, corr_func_binned;

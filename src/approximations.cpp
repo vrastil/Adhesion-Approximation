@@ -24,10 +24,10 @@ void standard_preparation(T& APP)
     gen_rho_dist_k(APP.sim, &APP.app_field[0], APP.p_F);
     
 	/* Computing initial potential in k-space */
-	gen_pot_k(APP.app_field[0], &APP.power_aux);
+	gen_pot_k(APP.app_field[0], &APP.power_aux[0]);
 	
 	/* Computing displacement in k-space */
-	gen_displ_k(&APP.app_field, APP.power_aux);
+	gen_displ_k(&APP.app_field, APP.power_aux[0]);
     
     /* Computing displacement in q-space */
     printf("Computing displacement in q-space...\n");
@@ -56,7 +56,7 @@ template<class T>
 void init_pot_w_s2(T& APP)
 {
     /* Computing displacement in k-space with S2 shaped particles */
-	gen_displ_k_S2(&APP.app_field, APP.power_aux, APP.sim.a);
+	gen_displ_k_S2(&APP.app_field, APP.power_aux[0], APP.sim.a);
     
     /* Computing force in q-space */
     printf("Computing force in q-space...\n");
@@ -67,7 +67,7 @@ template<class T>
 void init_pot_w_cic(T& APP)
 {
     /* Computing displacement in k-space with CIC opt */
-    gen_displ_k_cic(&APP.app_field, APP.power_aux);
+    gen_displ_k_cic(&APP.app_field, APP.power_aux[0]);
 
     /* Computing force in q-space */
     printf("Computing force in q-space...\n");
@@ -78,14 +78,14 @@ template<class T>
 void init_adhesion(T& APP)
 {
     /* Computing initial expotential */
-	fftw_execute_dft_c2r(APP.p_B, APP.power_aux);
-    gen_init_expot(APP.power_aux, &APP.expotential, APP.sim.nu);
+	fftw_execute_dft_c2r(APP.p_B, APP.power_aux[0]);
+    gen_init_expot(APP.power_aux[0], &APP.expotential, APP.sim.nu);
 }
 
 template<class T>
 void print_init(T& APP)
 {
-    /* Setting initial (binned) power spectrum, WARNING: power_aux is modified */
+    /* Setting initial (binned) power spectrum, WARNING: power_aux[0] is modified */
     APP.track.update_track_par(APP.particles);
     APP.print();
     APP.upd_time();
@@ -132,7 +132,7 @@ int zel_app(const Sim_Param &sim)
     #else
     init_cond_no_vel(APP); //< no velocities
     #endif
-    print_init(APP); // WARNING: power_aux is modified
+    print_init(APP); // WARNING: power_aux[0] is modified
     auto upd_pos = [&](){
         #ifdef VEL_PK
         set_pert_pos_w_vel(APP.sim, APP.b, APP.particles, APP.app_field); //< ZA with velocitites
@@ -156,8 +156,8 @@ int frozen_flow(const Sim_Param &sim)
     App_Var<Particle_x> APP(sim, "FF");
     APP.print_mem();
     standard_preparation(APP);
-    init_cond_no_vel(APP); //< no velocities
-    print_init(APP); // WARNING: power_aux is modified
+    init_cond_no_vel(APP); //< FF specific, no velocities
+    print_init(APP); // WARNING: power_aux[0] is modified
     auto upd_pos = [&](){
         upd_pos_first_order(APP.sim, APP.db, APP.particles, APP.app_field); //< FF specific
     };
@@ -177,9 +177,9 @@ int frozen_potential(const Sim_Param &sim)
     App_Var<Particle_v> APP(sim, "FP");
     APP.print_mem();
     standard_preparation(APP);
-    init_cond_w_vel(APP); //< with velocities
+    init_cond_w_vel(APP); //< FP specific, with velocities
     init_pot_w_cic(APP); //< FP specific
-    print_init(APP); // WARNING: power_aux is modified
+    print_init(APP); // WARNING: power_aux[0] is modified
     auto upd_pos = [&](){
         upd_pos_second_order(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< FP specific
     };
@@ -199,9 +199,9 @@ int mod_frozen_potential(const Sim_Param &sim)
     App_Var_FP_mod APP(sim, "FP_pp");
     APP.print_mem();
     standard_preparation(APP);
-    init_cond_w_vel(APP); //< with velocities
+    init_cond_w_vel(APP); //< FP_pp specific, with velocities
     init_pot_w_s2(APP); //< FP_pp specific
-    print_init(APP); // WARNING: power_aux is modified
+    print_init(APP); // WARNING: power_aux[0] is modified
     auto upd_pos = [&](){
         upd_pos_second_order_w_short_force(APP.sim, &APP.linked_list, APP.db, APP.b, APP.particles, APP.app_field); //< FP_pp specific
     };
@@ -221,9 +221,9 @@ int adhesion_approximation(const Sim_Param &sim)
     App_Var_AA APP(sim, "AA");
     APP.print_mem();
     standard_preparation(APP);
-    init_cond_no_vel(APP); //< no velocities
+    init_cond_no_vel(APP); //< AA specific, no velocities
     init_adhesion(APP); //< AA specific
-    print_init(APP); // WARNING: power_aux is modified
+    print_init(APP); // WARNING: power_aux[0] is modified
     auto upd_pos = [&](){
         aa_convolution(&APP); //< AA specific
         upd_pos_first_order(APP.sim, APP.db, APP.particles, APP.app_field); //< AA specific

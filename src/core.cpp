@@ -566,17 +566,18 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
 	sim(sim), err(0), step(0), print_every(sim.print_every),
     b(sim.b_in), b_init(1.), b_out(sim.b_out), db(sim.db),
     app_str(app_str), z_suffix_const("_" + app_str + "_"), out_dir_app(std_out_dir(app_str + "_run/", sim)),
-	power_aux (sim.mesh_num_pwr),
 	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num), corr_func_binned(sim.bin_num),
 	track(4, sim.mesh_num/sim.Ng),
     dens_binned(500), is_init_pwr_spec_0(false)
 {
     // EFFICIENTLY ALLOCATE VECTOR OF MESHES
     app_field.reserve(3);
-    for(size_t i = 0; i < app_field.capacity(); i++){
+    power_aux.reserve(3);
+    for(size_t i = 0; i < 3; i++){
         app_field.emplace_back(sim.mesh_num);
+        power_aux.emplace_back(sim.mesh_num_pwr);
     }
-    memory_alloc = sizeof(double)*(app_field[0].length*app_field.size()+power_aux.length);
+    memory_alloc = sizeof(double)*(app_field[0].length*app_field.size()+power_aux[0].length*power_aux.size());
     
     // CREAT SUBDIR STRUCTURE
     work_dir_over(out_dir_app);
@@ -596,10 +597,10 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
         app_field[0].complex(), FFTW_ESTIMATE);
 	p_B = fftw_plan_dft_c2r_3d(sim.mesh_num, sim.mesh_num, sim.mesh_num, app_field[0].complex(),
         app_field[0].real(), FFTW_ESTIMATE);
-    p_F_pwr = fftw_plan_dft_r2c_3d(sim.mesh_num_pwr, sim.mesh_num_pwr, sim.mesh_num_pwr, power_aux.real(),
-		power_aux.complex(), FFTW_ESTIMATE);
-	p_B_pwr = fftw_plan_dft_c2r_3d(sim.mesh_num_pwr, sim.mesh_num_pwr, sim.mesh_num_pwr, power_aux.complex(),
-		power_aux.real(), FFTW_ESTIMATE);
+    p_F_pwr = fftw_plan_dft_r2c_3d(sim.mesh_num_pwr, sim.mesh_num_pwr, sim.mesh_num_pwr, power_aux[0].real(),
+		power_aux[0].complex(), FFTW_ESTIMATE);
+	p_B_pwr = fftw_plan_dft_c2r_3d(sim.mesh_num_pwr, sim.mesh_num_pwr, sim.mesh_num_pwr, power_aux[0].complex(),
+		power_aux[0].real(), FFTW_ESTIMATE);
 }
 
 template <class T> 
@@ -639,16 +640,16 @@ void App_Var<T>::print()
     print_track_par(track, sim, out_dir_app, z_suffix());
 
     /* Printing density */
-    get_rho_from_par(particles, &power_aux, sim);
-    gen_dens_binned(power_aux, dens_binned, sim);    
-    print_rho_map(power_aux, sim, out_dir_app, z_suffix());
+    get_rho_from_par(particles, &power_aux[0], sim);
+    gen_dens_binned(power_aux[0], dens_binned, sim);    
+    print_rho_map(power_aux[0], sim, out_dir_app, z_suffix());
     print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
 
     /* Printing power spectrum */
-    fftw_execute_dft_r2c(p_F_pwr, power_aux);
-    pwr_spec_k(sim, power_aux, &power_aux);
+    fftw_execute_dft_r2c(p_F_pwr, power_aux[0]);
+    pwr_spec_k(sim, power_aux[0], &power_aux[0]);
     pwr_spec_binned.resize(sim.bin_num);
-    gen_pow_spec_binned(sim, power_aux, &pwr_spec_binned);
+    gen_pow_spec_binned(sim, power_aux[0], &pwr_spec_binned);
     print_pow_spec(pwr_spec_binned, out_dir_app, "_par" + z_suffix());
     if (!is_init_pwr_spec_0){
         pwr_spec_binned_0 = pwr_spec_binned;
@@ -667,9 +668,9 @@ void App_Var<T>::print()
     switch(sim.corr_int)
     {
         case corr_int_type::FFT:
-            power_aux.reset_im(); // P(k) is a real function
-            fftw_execute_dft_c2r(p_B_pwr, power_aux);
-            gen_corr_func_binned(sim, power_aux, &corr_func_binned);
+            power_aux[0].reset_im(); // P(k) is a real function
+            fftw_execute_dft_c2r(p_B_pwr, power_aux[0]);
+            gen_corr_func_binned(sim, power_aux[0], &corr_func_binned);
             print_corr_func(corr_func_binned, out_dir_app, "_fft" + z_suffix());
             break;
         case corr_int_type::PP:
