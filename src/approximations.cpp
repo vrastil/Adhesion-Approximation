@@ -9,7 +9,7 @@ using namespace std;
 
 static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu);
 static void gen_expot(Mesh* potential,  const Mesh& expotential, double nu, double b);
-static void aa_convolution(App_Var_AA* APP, const Sim_Param &sim);
+static void aa_convolution(App_Var_AA* APP);
 
 /***************************************
 * STANDARD PREPARATION FOR INTEGRATIOM *
@@ -85,7 +85,7 @@ void print_init(T& APP)
 {
     /* Setting initial (binned) power spectrum, WARNING: power_aux is modified */
     APP.track.update_track_par(APP.particles);
-    APP.print(APP.sim);
+    APP.print();
     APP.upd_time();
 }
 
@@ -101,7 +101,7 @@ void integration(T& APP, function<void()> upd_pos)
 		printf("\nStarting computing step with z = %.2f (b = %.3f)\n", APP.z(), APP.b);
 		upd_pos();
         APP.track.update_track_par(APP.particles);
-		if (APP.printing()) APP.print(APP.sim);
+		if (APP.printing()) APP.print();
 		APP.upd_time();
 	}
 }
@@ -120,10 +120,10 @@ int zel_app(const Sim_Param &sim)
     App_Var<Particle_x> APP(sim, "ZA");
     APP.print_mem();
     standard_preparation(APP);
-    init_cond_no_vel(APP);
+    init_cond_no_vel(APP); //< no velocities
     print_init(APP); // WARNING: power_aux is modified
     auto upd_pos = [&](){
-        set_pert_pos(sim, APP.b, APP.particles, APP.app_field);
+        set_pert_pos(APP.sim, APP.b, APP.particles, APP.app_field); //< ZA specific
     };
     integration(APP, upd_pos);
     APP.print_info();
@@ -141,10 +141,10 @@ int frozen_flow(const Sim_Param &sim)
     App_Var<Particle_x> APP(sim, "FF");
     APP.print_mem();
     standard_preparation(APP);
-    init_cond_no_vel(APP);
+    init_cond_no_vel(APP); //< no velocities
     print_init(APP); // WARNING: power_aux is modified
     auto upd_pos = [&](){
-        upd_pos_first_order(sim, APP.db, APP.particles, APP.app_field);
+        upd_pos_first_order(APP.sim, APP.db, APP.particles, APP.app_field); //< FF specific
     };
     integration(APP, upd_pos);
     APP.print_info();
@@ -162,11 +162,11 @@ int frozen_potential(const Sim_Param &sim)
     App_Var<Particle_v> APP(sim, "FP");
     APP.print_mem();
     standard_preparation(APP);
-    init_cond_w_vel(APP);
-    init_pot_w_cic(APP);
+    init_cond_w_vel(APP); //< with velocities
+    init_pot_w_cic(APP); //< FP specific
     print_init(APP); // WARNING: power_aux is modified
     auto upd_pos = [&](){
-        upd_pos_second_order(sim, APP.db, APP.b, APP.particles, APP.app_field);
+        upd_pos_second_order(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< FP specific
     };
     integration(APP, upd_pos);
     APP.print_info();
@@ -184,11 +184,11 @@ int mod_frozen_potential(const Sim_Param &sim)
     App_Var_FP_mod APP(sim, "FP_pp");
     APP.print_mem();
     standard_preparation(APP);
-    init_cond_w_vel(APP);
-    init_pot_w_s2(APP);
+    init_cond_w_vel(APP); //< with velocities
+    init_pot_w_s2(APP); //< FP_pp specific
     print_init(APP); // WARNING: power_aux is modified
     auto upd_pos = [&](){
-        upd_pos_second_order_w_short_force(sim, &APP.linked_list, APP.db, APP.b, APP.particles, APP.app_field);
+        upd_pos_second_order_w_short_force(APP.sim, &APP.linked_list, APP.db, APP.b, APP.particles, APP.app_field); //< FP_pp specific
     };
     integration(APP, upd_pos);
     APP.print_info();
@@ -206,12 +206,12 @@ int adhesion_approximation(const Sim_Param &sim)
     App_Var_AA APP(sim, "AA");
     APP.print_mem();
     standard_preparation(APP);
-    init_cond_no_vel(APP);
-    init_adhesion(APP);
+    init_cond_no_vel(APP); //< no velocities
+    init_adhesion(APP); //< AA specific
     print_init(APP); // WARNING: power_aux is modified
     auto upd_pos = [&](){
-        aa_convolution(&APP, sim);
-        upd_pos_first_order(sim, APP.db, APP.particles, APP.app_field);
+        aa_convolution(&APP); //< AA specific
+        upd_pos_first_order(APP.sim, APP.db, APP.particles, APP.app_field); //< AA specific
     };
     integration(APP, upd_pos);
     APP.print_info();
@@ -226,12 +226,12 @@ int adhesion_approximation(const Sim_Param &sim)
 const double ACC = 1e-10;
 const double log_acc = log(ACC);
 
-static void aa_convolution(App_Var_AA* APP, const Sim_Param &sim)
+static void aa_convolution(App_Var_AA* APP)
 {
     printf("Computing potential...\n");	
-    gen_expot(&APP->app_field[0], APP->expotential, sim.nu, APP->b_half());
+    gen_expot(&APP->app_field[0], APP->expotential, APP->sim.nu, APP->b_half());
 	// gen_expot(&APP->app_field[0], APP->expotential, sim.nu, APP->b);
-    APP->app_field[0] *= -2*sim.nu;
+    APP->app_field[0] *= -2*APP->sim.nu;
 				
 	printf("Computing velocity field via FFT...\n");
 	fftw_execute_dft_r2c(APP->p_F, APP->app_field[0]);

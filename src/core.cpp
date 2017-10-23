@@ -626,7 +626,7 @@ void App_Var<T>::upd_time()
 }
  
 template <class T> 
-void App_Var<T>::print(const Sim_Param &sim)
+void App_Var<T>::print()
 {
     /* Printing positions */
     print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());

@@ -426,7 +426,7 @@ public:
 	inline double b_half() const { return b - db/2.; }
 	inline bool integrate() const { return (b <= b_out) && (db > 0);}
 	inline bool printing() const { return ((step % print_every) == 0) or (b == b_out); }
-    void print(const Sim_Param &sim);
+    void print();
     void upd_time();
     void print_mem() const;
     void print_info() const;
