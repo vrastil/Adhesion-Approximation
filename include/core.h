@@ -409,7 +409,7 @@ public:
     const Sim_Param &sim;
 
 	int err, step, print_every;
-	double b, b_init, b_out, db;
+	double b, b_init, b_init_vel, b_out, db;
     const std::string app_str, z_suffix_const, out_dir_app;
     
     // LARGE FIELDS
@@ -436,7 +436,7 @@ public:
 	
 protected:	
     std::stringstream z_suffix_num;
-    bool is_init_pwr_spec_0;
+    bool is_init_pwr_spec_0, is_init_vel_pwr_spec_0;
     uint64_t memory_alloc; // only the largest chunks
 };
 

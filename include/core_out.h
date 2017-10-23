@@ -15,8 +15,11 @@ void create_dir(std::string out_dir);
 void work_dir_over(std::string out_dir);
 
 void print_pow_spec(const Data_x_y<double> &pwr_spec_binned, std::string out_dir, std::string suffix);
+void print_vel_pow_spec(const Data_x_y<double> &pwr_spec_binned, std::string out_dir, std::string suffix);
 void print_corr_func(const Data_x_y<double> &pwr_spec_binned, std::string out_dir, std::string suffix);
 void print_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data_x_y<double> &pwr_spec_binned_0, 
+    double b, std::string out_dir, std::string suffix);
+void print_vel_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data_x_y<double> &pwr_spec_binned_0, 
     double b, std::string out_dir, std::string suffix);
 template <class T>
 void print_par_pos_cut_small(T* particles, const Sim_Param &sim, std::string out_dir, std::string suffix);

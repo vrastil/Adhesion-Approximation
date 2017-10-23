@@ -33,12 +33,14 @@ void create_dir(string out_dir)
 }
 void work_dir_over(string out_dir)
 {
-	create_dir(out_dir + "par_cut/");
-	create_dir(out_dir + "pwr_diff/");
-	create_dir(out_dir + "pwr_spec/");
-	create_dir(out_dir + "rho_map/");
-    create_dir(out_dir + "rho_bin/");
     create_dir(out_dir + "corr_func/");
+	create_dir(out_dir + "par_cut/");
+    create_dir(out_dir + "pwr_diff/");
+    create_dir(out_dir + "pwr_spec/");
+    create_dir(out_dir + "rho_bin/");
+    create_dir(out_dir + "rho_map/");
+    create_dir(out_dir + "vel_pwr_diff/");
+    create_dir(out_dir + "vel_pwr_spec/");
 }
 
 template <class T>
@@ -98,6 +100,30 @@ void print_pow_spec(const Data_x_y<double> &pwr_spec_binned, string out_dir, str
 	fclose (pFile);
 }
 
+void print_vel_pow_spec(const Data_x_y<double> &pwr_spec_binned, string out_dir, string suffix)
+{
+	out_dir += "vel_pwr_spec/";
+	string file_name = out_dir + "vel_pwr_spec" + suffix + ".dat";
+	FILE* pFile;
+	pFile = fopen(file_name.c_str(), "w");
+	if (pFile == NULL)
+	{
+		printf("Error while opening %s\n", file_name.c_str());
+		perror("Error");
+		return;
+	}
+	
+	cout << "Writing velocity divergence power spectrum into file " << file_name << endl;
+	fprintf (pFile, "# This file contains velocity divergence power spectrum P(k) in units [(Mpc/h)^3] depending on wavenumber k in units [h/Mpc].\n");
+	fprintf (pFile, "# k [h/Mpc]\tP(k) [(Mpc/h)^3]\n");
+	
+	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
+		if (pwr_spec_binned.y[j]) fprintf (pFile, "%e\t%e\n",  pwr_spec_binned.x[j], pwr_spec_binned.y[j]);
+	}
+
+	fclose (pFile);
+}
+
 void print_corr_func(const Data_x_y<double> &pwr_spec_binned, string out_dir, string suffix)
 {
 	out_dir += "corr_func/";
@@ -130,6 +156,34 @@ void print_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data_x_y
 	pFile = fopen((out_dir + "pwr_spec_diff" + suffix + ".dat").c_str(), "w");
 	cout << "Writing power spectrum difference into file " << out_dir + "pwr_spec_diff" + suffix + ".dat\n";
 	fprintf (pFile, "# This file contains relative difference between power spectrum P(k) and lineary extrapolated power spectrum depending on wavenumber k in units [h/Mpc].\n");
+	fprintf (pFile, "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n");
+	
+	double P_k, P_ZA;
+    
+    int i = 0;
+	for (unsigned j = 0; j < pwr_spec_binned.size(); ){
+		if (pwr_spec_binned.x[j] == pwr_spec_binned_0.x[i]){
+			P_k = pwr_spec_binned.y[j];
+			P_ZA = pwr_spec_binned_0.y[i] * pow(b, 2.);
+            if((P_ZA) && (P_k)) fprintf (pFile, "%e\t%f\n", pwr_spec_binned.x[j], (P_k-P_ZA)/P_ZA);
+            i++;
+            j++;
+        } else if (pwr_spec_binned.x[j] < pwr_spec_binned_0.x[i]) j++;
+        else i++;
+	}
+
+	fclose (pFile);
+}
+
+void print_vel_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data_x_y<double> &pwr_spec_binned_0,
+	double b, string out_dir, string suffix)
+{
+	out_dir += "vel_pwr_diff/";
+	FILE* pFile;
+	pFile = fopen((out_dir + "vel_pwr_spec_diff" + suffix + ".dat").c_str(), "w");
+	cout << "Writing power velocity divergence spectrum difference into file " << out_dir + "pwr_spec_diff" + suffix + ".dat\n";
+    fprintf (pFile, "# This file contains relative difference between velocity divergence power spectrum P(k)\n"
+                    "# and lineary extrapolated velocity divergence power spectrum depending on wavenumber k in units [h/Mpc].\n");
 	fprintf (pFile, "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n");
 	
 	double P_k, P_ZA;

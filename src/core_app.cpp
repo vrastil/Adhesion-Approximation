@@ -337,17 +337,34 @@ void get_rho_from_par(T* particles, Mesh* rho, const Sim_Param &sim)
     
     const double mesh_mod = (double)sim.mesh_num_pwr/sim.mesh_num;
 
-    #pragma omp parallel for
-    for (unsigned i = 0; i < rho->length; i++)
-    {
-        (*rho)[i]=-1.;
-    }
+    rho->assign(-1.);
     
     #pragma omp parallel for
     for (unsigned i = 0; i < sim.par_num; i++)
     {
         assign_to(rho, particles[i].position*mesh_mod, m, sim.order);
     }
+}
+
+int get_vel_from_par(Particle_v* particles, vector<Mesh>* vel_field, const Sim_Param &sim)
+{
+    printf("Computing the velocity field from particle positions...\n");
+    const double mesh_mod = (double)sim.mesh_num_pwr/sim.mesh_num;
+
+    for(Mesh& field : *vel_field) field.assign(0.);
+    
+    #pragma omp parallel for
+    for (unsigned i = 0; i < sim.par_num; i++)
+    {
+        assign_to(vel_field, particles[i].position*mesh_mod, particles[i].velocity*mesh_mod, sim.order);
+    }
+    return 1;
+}
+
+int get_vel_from_par(Particle_x* particles, vector<Mesh>* vel_field, const Sim_Param &sim)
+{
+    printf("WARNING! Trying to compute velocity divergence with particle positions only! Skipping...\n");
+    return 0;
 }
 
 void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux)
@@ -368,6 +385,37 @@ void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux)
 		get_k_vec(NM, i, k_vec);
 		for (int j = 0; j < 3; j++) if (k_vec[j] != 0) w_k *= pow(sin(PI*k_vec[j]/NM)/(PI*k_vec[j]/NM), order + 1);
         (*power_aux)[2*i] = (rho_k[2*i]*rho_k[2*i] + rho_k[2*i+1]*rho_k[2*i+1])/(w_k*w_k);
+		(*power_aux)[2*i+1] = k_vec.norm();
+	}
+}
+
+void vel_pwr_spec_k(const Sim_Param &sim, const vector<Mesh> &vel_field, Mesh* power_aux)
+{
+    /* Computing the velocity power spectrum P(k)/L^3 -- dimensionLESS!
+    in real part of power_aux is stored pk, in imaginary dimensionLESS k
+	 Preserve values in rho_k */
+	
+	double w_k;
+    Vec_3D<int> k_vec;
+    const int order = sim.order;
+    const int NM = sim.mesh_num_pwr;
+
+    double vel_div_re, vel_div_im, k;
+
+	#pragma omp parallel for private(w_k, k_vec)
+	for(unsigned i=0; i < power_aux->length/2;i++)
+	{
+        w_k = 1.;
+        vel_div_re = vel_div_im = 0;
+		get_k_vec(NM, i, k_vec);
+        for (int j = 0; j < 3; j++){
+            k = 2*PI*k_vec[j] / NM;
+            if (k != 0) w_k *= pow(sin(k/2.)/(k/2.), order + 1);
+            vel_div_re += vel_field[j][2*i]*k; // do not care about Re <-> Im in 2*PI*i/N, norm only
+            vel_div_im += vel_field[j][2*i+1]*k;
+        } 
+        
+        (*power_aux)[2*i] = (vel_div_re*vel_div_re + vel_div_im*vel_div_im)/(w_k*w_k);
 		(*power_aux)[2*i+1] = k_vec.norm();
 	}
 }

@@ -28,7 +28,11 @@ void gen_displ_k_S2(std::vector<Mesh>* vel_field, const Mesh& pot_k, const doubl
 
 template <class T>
 void get_rho_from_par(T* particles, Mesh* rho, const Sim_Param &sim);
+int get_vel_from_par(Particle_v* particles, std::vector<Mesh>* vel_field, const Sim_Param &sim);
+int get_vel_from_par(Particle_x* particles, std::vector<Mesh>* vel_field, const Sim_Param &sim);
+
 void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux);
+void vel_pwr_spec_k(const Sim_Param &sim, const std::vector<Mesh> &vel_field, Mesh* power_aux);
 void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<double>* pwr_spec_binned);
 void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const Extrap_Pk &P_k, Data_x_y<double>* pwr_spec_binned);
 void gen_corr_func_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<double>* corr_func_binned);
