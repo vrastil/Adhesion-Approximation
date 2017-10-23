@@ -86,14 +86,12 @@ template <typename T> inline bool operator>=(const Vec_3D<T>& lhs, const Vec_3D<
 template <typename T>
 class Mesh_base
 {
-protected:
-	// VARIABLES
-	T* data;
-	
 public:
 	// CONSTRUCTORS & DESTRUCTOR
 	Mesh_base(unsigned n1, unsigned n2, unsigned n3);
-	Mesh_base(const Mesh_base& that);
+    Mesh_base(const Mesh_base& that);
+    Mesh_base(Mesh_base<T>&& that) noexcept;
+    Mesh_base& operator=(Mesh_base that) &;
 	~Mesh_base();
 	
 	// VARIABLES
@@ -121,8 +119,11 @@ public:
 	Mesh_base& operator*=(const T& rhs);
 	Mesh_base& operator/=(const T& rhs);
 	
-	template <typename U> friend void swap(Mesh_base<U>& first, Mesh_base<U>& second);
-	Mesh_base& operator=(const Mesh_base& other);
+    template <typename U> friend void swap(Mesh_base<U>& first, Mesh_base<U>& second);
+
+protected:
+	// VARIABLES
+	T* data;
 };
 
 // template <typename T> void swap(Mesh_base<T>& first, Mesh_base<T>& second);

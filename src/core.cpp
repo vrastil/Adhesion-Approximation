@@ -189,20 +189,19 @@ const char *humanSize(uint64_t bytes){
   */
  
  template <typename T>
- Mesh_base<T>::Mesh_base(unsigned n1, unsigned n2, unsigned n3):N1(n1), N2(n2), N3(n3), length(n1*n2*n3)
+ Mesh_base<T>::Mesh_base(unsigned n1, unsigned n2, unsigned n3):
+    N1(n1), N2(n2), N3(n3), length(n1*n2*n3), data(new T[length])
  {
-     data = new T[length];
- //	printf("Normal base ctor %p, N1 = %i, N2 = %i, N3 = %i\n", this, N1, N2, N3); 
+ 	printf("Normal constructor %p, N1 = %i, N2 = %i, N3 = %i\n", this, N1, N2, N3); 
  }
  
  template <typename T>
- Mesh_base<T>::Mesh_base(const Mesh_base<T>& that): N1(that.N1), N2(that.N2), N3(that.N3), length(that.length)
+ Mesh_base<T>::Mesh_base(const Mesh_base<T>& that):
+    N1(that.N1), N2(that.N2), N3(that.N3), length(that.length), data(new T[length])
  {
-     data = new T[length];
-     
-     #pragma omp parallel for
-     for (unsigned i = 0; i < length; i++) data[i] = that.data[i];
- //	printf("Copy base ctor %p\n", this);
+    #pragma omp parallel for
+    for (unsigned i = 0; i < length; i++) data[i] = that.data[i];
+ 	printf("Copy constructor: %p <-- %p\n", this, &that);
  }
  
  template <typename T>
@@ -214,21 +213,27 @@ const char *humanSize(uint64_t bytes){
      std::swap(first.N3, second.N3);
      std::swap(first.data, second.data);
  }
+
+ template <typename T>
+ Mesh_base<T>::Mesh_base(Mesh_base<T>&& that) noexcept
+ {
+    swap(*this, that);
+ 	printf("Move constructor: %p <-- %p\n", this, &that);
+ }
  
  template <typename T>
- Mesh_base<T>& Mesh_base<T>::operator=(const Mesh_base<T>& other)
+ Mesh_base<T>& Mesh_base<T>::operator=(Mesh_base<T> that) &
  {
- //	printf("Copy base assignemnt %p\n", this);
-     Mesh_base<T> temp(other);
-     swap(*this, temp);
-     return *this;
+    printf("Copy or move assignemnt: %p <-- %p\n", this, &that);
+    swap(*this, that);
+    return *this;
  }
  
  template <typename T>
  Mesh_base<T>::~Mesh_base<T>()
  {
      delete[] data;
- //	printf("dtor base %p\n", this);
+ 	printf("Destructor: %p\n", this);
  }
  
  template <typename T>
