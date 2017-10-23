@@ -197,7 +197,16 @@ void assign_from(const Mesh &field, const Vec_3D<double> &position, double* valu
 
 void assign_from(const vector< Mesh> &field, const Vec_3D<double> &position, Vec_3D<double>* value, const int order)
 {
-	for (int i = 0; i < 3; i++) assign_from(field[i], position, &((*value)[i]), order);
+    IT it(position, order);
+    double w;
+    do{
+        w = wgh_sch(position, it.vec, field[0].N, order); //< resuse the same weigh for every field in vector
+        for (int i = 0; i < 3; i++)
+        {
+            #pragma omp atomic
+            (*value)[i] += field[i](it.vec) * w;
+        }
+	} while( it.iter() );
 }
 
 static inline void normalize_FFT_FORWARD(Mesh& rho)
