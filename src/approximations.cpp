@@ -37,7 +37,11 @@ void init_cond_no_vel(T& APP)
 
     printf("\nSetting initial positions of particles...\n");
     set_pert_pos(APP.sim, APP.sim.b_in, APP.particles, APP.app_field);
+}
 
+template<class T>
+void print_init(T& APP)
+{
     /* Setting initial (binned) power spectrum, WARNING: power_aux is modified */
     APP.track.update_track_par(APP.particles);
     APP.print(APP.sim);
@@ -62,20 +66,40 @@ void integration(T& APP, function<void()> upd_pos)
 	}
 }
 
-int zel_app_(const Sim_Param &sim)
+int zel_app(const Sim_Param &sim)
 {
     cout << "\n"
 	"************************\n"
 	"ZEL`DOVICH APPROXIMATION\n"
     "************************\n";
 
-    App_Var<Particle_x> APP(sim, "ZA"); //< ALLOCATION OF MEMORY + FFTW PREPARATION
+    App_Var<Particle_x> APP(sim, "ZA");
     APP.print_mem();
     standard_preparation(APP);
     init_cond_no_vel(APP);
-    auto upd_pos = bind(set_pert_pos, sim, APP.b, APP.particles, APP.app_field);
+    print_init(APP);
+    auto upd_pos = [&](){set_pert_pos(sim, APP.b, APP.particles, APP.app_field);};
     integration(APP, upd_pos);
     APP.print_info();
 	printf("Zel`dovich approximation ended successfully.\n");
 	return APP.err;
+}
+
+int frozen_flow(const Sim_Param &sim)
+{
+	cout << "\n"
+	"*************************\n"
+	"FROZEN-FLOW APPROXIMATION\n"
+	"*************************\n";
+
+    App_Var<Particle_x> APP(sim, "FF");
+    APP.print_mem();
+    standard_preparation(APP);
+    init_cond_no_vel(APP);
+    print_init(APP);
+    auto upd_pos = [&](){upd_pos_first_order(sim, APP.db, APP.particles, APP.app_field);};
+    integration(APP, upd_pos);
+    APP.print_info();
+    printf("Frozen-flow approximation ended successfully.\n");
+    return APP.err;
 }

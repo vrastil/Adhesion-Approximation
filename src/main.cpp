@@ -2,8 +2,8 @@
 #include "stdafx.h"
 #include "core.h"
 #include "core_power.h"
-#include "zeldovich.h"
-#include "frozen_flow.h"
+#include "approximations.hpp"
+
 #include "frozen_potential.h"
 #include "adhesion_approximation.h"
 #include "mod_frozen_potential.h"
