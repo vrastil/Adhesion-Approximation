@@ -409,7 +409,7 @@ public:
     const Sim_Param &sim;
 
 	int err, step, print_every;
-	double b, b_init, b_init_vel, b_out, db;
+	double b, b_init, b_out, db;
     const std::string app_str, z_suffix_const, out_dir_app;
     
     // LARGE FIELDS
@@ -417,7 +417,7 @@ public:
     std::vector<Mesh> power_aux;
     T* particles;
 
-	Data_x_y<double> pwr_spec_binned, pwr_spec_binned_0, corr_func_binned;
+	Data_x_y<double> pwr_spec_binned, pwr_spec_binned_0, vel_pwr_spec_binned_0, corr_func_binned;
 	fftw_plan p_F, p_B, p_F_pwr, p_B_pwr;
 	Tracking track;
 	std::vector<int> dens_binned;

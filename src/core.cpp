@@ -567,7 +567,7 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
 	sim(sim), err(0), step(0), print_every(sim.print_every),
     b(sim.b_in), b_init(1.), b_out(sim.b_out), db(sim.db),
     app_str(app_str), z_suffix_const("_" + app_str + "_"), out_dir_app(std_out_dir(app_str + "_run/", sim)),
-	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num), corr_func_binned(sim.bin_num),
+	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num), vel_pwr_spec_binned_0(sim.bin_num/2), corr_func_binned(sim.bin_num),
 	track(4, sim.mesh_num/sim.Ng),
     dens_binned(500), is_init_pwr_spec_0(false), is_init_vel_pwr_spec_0(false)
 {
@@ -699,14 +699,13 @@ void App_Var<T>::print()
     if (get_vel_from_par(particles, &power_aux, sim)){
         fftw_execute_dft_r2c_triple(p_F_pwr, power_aux);
         vel_pwr_spec_k(sim, power_aux, &power_aux[0]);
-        pwr_spec_binned.resize(sim.bin_num);
+        pwr_spec_binned.resize(sim.bin_num/2);
         gen_pow_spec_binned(sim, power_aux[0], &pwr_spec_binned);
         print_vel_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
         if (!is_init_vel_pwr_spec_0){
-            pwr_spec_binned_0 = pwr_spec_binned;
-            b_init_vel = b;
+            vel_pwr_spec_binned_0 = pwr_spec_binned;
             is_init_vel_pwr_spec_0 = true;
-        } else print_vel_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init_vel, out_dir_app, z_suffix());
+        } else print_vel_pow_spec_diff(pwr_spec_binned, vel_pwr_spec_binned_0, 1, out_dir_app, z_suffix());
     }
 }
 
