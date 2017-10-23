@@ -453,14 +453,15 @@ Sim_Param::Sim_Param(int ac, char* av[])
         norm_pwr(&power);
 
         /* RANGE : k */
-        k_par.k_print.lower = 2*PI/box_size;
-        k_par.k_print.upper = 2*PI/box_size*mesh_num_pwr;
-        k_par.k_interp.lower = get_max_Pk(this);
-        k_par.k_interp.upper = PI*pow(par_num, 1/3.) / (1.1*box_size); // k_Nyq / 1.1 (for safety)
-
         k_par.nyquist["analysis"] = PI*mesh_num_pwr / box_size;
         k_par.nyquist["potential"] = PI*mesh_num / box_size;
         k_par.nyquist["particle"] = PI*pow(par_num, 1/3.) / box_size;
+        
+        k_par.k_print.lower = 2*PI/box_size;
+        k_par.k_print.upper = 2*PI/box_size*mesh_num_pwr;
+        k_par.k_interp.lower = get_max_Pk(this);
+        k_par.k_interp.upper = k_par.nyquist["particle"]/1.1 < k_par.nyquist["analysis"]/2 ? 
+                               k_par.nyquist["particle"]/1.1 : k_par.nyquist["analysis"]/2; //< use lower of these
 
         /* CORRELATION FUNCTION */
         x_corr.lower = 1;
