@@ -188,14 +188,14 @@ const char *humanSize(uint64_t bytes){
   *			creates a mesh of N1*N2*N3 cells
   */
  
- template <typename T>
+ template <class T>
  Mesh_base<T>::Mesh_base(unsigned n1, unsigned n2, unsigned n3):
     N1(n1), N2(n2), N3(n3), length(n1*n2*n3), data(new T[length])
  {
  	printf("Normal constructor %p, N1 = %i, N2 = %i, N3 = %i\n", this, N1, N2, N3); 
  }
  
- template <typename T>
+ template <class T>
  Mesh_base<T>::Mesh_base(const Mesh_base<T>& that):
     N1(that.N1), N2(that.N2), N3(that.N3), length(that.length), data(new T[length])
  {
@@ -204,7 +204,7 @@ const char *humanSize(uint64_t bytes){
  	printf("Copy constructor: %p <-- %p\n", this, &that);
  }
  
- template <typename T>
+ template <class T>
  void swap(Mesh_base<T>& first, Mesh_base<T>& second)
  {
      std::swap(first.length, second.length);
@@ -214,14 +214,14 @@ const char *humanSize(uint64_t bytes){
      std::swap(first.data, second.data);
  }
 
- template <typename T>
+ template <class T>
  Mesh_base<T>::Mesh_base(Mesh_base<T>&& that) noexcept
  {
     swap(*this, that);
  	printf("Move constructor: %p <-- %p\n", this, &that);
  }
  
- template <typename T>
+ template <class T>
  Mesh_base<T>& Mesh_base<T>::operator=(Mesh_base<T> that) &
  {
     printf("Copy or move assignemnt: %p <-- %p\n", this, &that);
@@ -229,28 +229,28 @@ const char *humanSize(uint64_t bytes){
     return *this;
  }
  
- template <typename T>
+ template <class T>
  Mesh_base<T>::~Mesh_base<T>()
  {
      delete[] data;
  	printf("Destructor: %p\n", this);
  }
  
- template <typename T>
+ template <class T>
  T& Mesh_base<T>::operator()(Vec_3D<int> pos)
  {
      get_per(pos, N1, N2, N3);
      return data[pos[0]*N2*N3+pos[1]*N3+pos[2]]; 
  }
  
- template <typename T>
+ template <class T>
  const T& Mesh_base<T>::operator()(Vec_3D<int> pos) const
  {
      get_per(pos, N1, N2, N3);
      return data[pos[0]*N2*N3+pos[1]*N3+pos[2]];
  }
  
- template <typename T>
+ template <class T>
  Mesh_base<T>& Mesh_base<T>::operator+=(const T& rhs)
  {
      #pragma omp parallel for
@@ -259,7 +259,7 @@ const char *humanSize(uint64_t bytes){
      return *this;
  }
  
- template <typename T>
+ template <class T>
  Mesh_base<T>& Mesh_base<T>::operator*=(const T& rhs)
  {
      #pragma omp parallel for
@@ -268,7 +268,7 @@ const char *humanSize(uint64_t bytes){
      return *this;
  }
  
- template <typename T>
+ template <class T>
  Mesh_base<T>& Mesh_base<T>::operator/=(const T& rhs)
  {
      #pragma omp parallel for
@@ -277,7 +277,7 @@ const char *humanSize(uint64_t bytes){
      return *this;
  }
  
- template <typename T>
+ template <class T>
  void Mesh_base<T>::assign(T val)
  {
      #pragma omp parallel for
@@ -562,8 +562,9 @@ void Sim_Param::print_info() const
  
 template <class T> 
 App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
-	err(0), step(0), print_every(sim.print_every),
-	b(sim.b_in), b_init(1.), b_out(sim.b_out), db(sim.db), z_suffix_const(app_str),
+	sim(sim), err(0), step(0), print_every(sim.print_every),
+    b(sim.b_in), b_init(1.), b_out(sim.b_out), db(sim.db),
+    app_str(app_str), z_suffix_const("_" + app_str + "_"), out_dir_app(std_out_dir(app_str + "_run/", sim)),
 	app_field(3, Mesh(sim.mesh_num)),
 	power_aux (sim.mesh_num_pwr),
 	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num), corr_func_binned(sim.bin_num),
@@ -571,6 +572,9 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
     dens_binned(500), is_init_pwr_spec_0(false),
     memory_alloc(sizeof(double)*(app_field[0].length*app_field.size()+power_aux.length))
 {
+    // CREAT SUBDIR STRUCTURE
+    work_dir_over(out_dir_app);
+
     // PARTICLES INITIALIZATION
     particles = new T[sim.par_num];
     memory_alloc += sizeof(T)*sim.par_num;
@@ -622,7 +626,7 @@ void App_Var<T>::upd_time()
 }
  
 template <class T> 
-void App_Var<T>::print(const Sim_Param &sim, std::string out_dir_app)
+void App_Var<T>::print(const Sim_Param &sim)
 {
     /* Printing positions */
     print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
@@ -689,6 +693,12 @@ template <class T>
 void App_Var<T>::print_mem() const
 {
     printf("Allocated %s of memory.\n", humanSize(memory_alloc));
+}
+
+template <class T> 
+void App_Var<T>::print_info() const
+{
+    sim.print_info(out_dir_app, app_str);
 }
 
 /**

@@ -13,15 +13,12 @@ int frozen_flow(const Sim_Param &sim)
 	"*************************\n"
 	"FROZEN-FLOW APPROXIMATION\n"
 	"*************************\n";
-	
-    string out_dir_app = std_out_dir("FF_run/", sim);
-	work_dir_over(out_dir_app);
     
 	/******************************************
     * ALLOCATION OF MEMORY + FFTW PREPARATION *
     ******************************************/
 
-	App_Var<Particle_x> APP(sim, "_FF_");
+	App_Var<Particle_x> APP(sim, "FF");
     APP.print_mem();
 	
 	/***************************************
@@ -61,7 +58,7 @@ int frozen_flow(const Sim_Param &sim)
     
     /* Setting initial (binned) power spectrum, WARNING: power_aux is modified */
     APP.track.update_track_par(APP.particles);
-	APP.print(sim, out_dir_app);
+	APP.print(sim);
 	APP.upd_time();
 
 	/**************
@@ -77,11 +74,11 @@ int frozen_flow(const Sim_Param &sim)
 		upd_pos_first_order(sim, APP.db, APP.particles, APP.app_field);
         
         APP.track.update_track_par(APP.particles);
-		if (APP.printing()) APP.print(sim, out_dir_app);
+		if (APP.printing()) APP.print(sim);
 		APP.upd_time();
 	}
     
-    sim.print_info(out_dir_app, "FF");
+    APP.print_info();
 	printf("Frozen-flow approximation ended successfully.\n");
 	return APP.err;
 }

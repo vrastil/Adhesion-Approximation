@@ -119,7 +119,7 @@ public:
 	Mesh_base& operator*=(const T& rhs);
 	Mesh_base& operator/=(const T& rhs);
 	
-    template <typename U> friend void swap(Mesh_base<U>& first, Mesh_base<U>& second);
+    template <class U> friend void swap(Mesh_base<U>& first, Mesh_base<U>& second);
 
 protected:
 	// VARIABLES
@@ -400,15 +400,17 @@ class App_Var
 {
 public:
 	// CONSTRUCTORS
-	App_Var(const Sim_Param &sim, std::string app_str);
-	
+    App_Var(const Sim_Param &sim, std::string app_str);
+
 	// DESTRUCTOR
 	~App_Var();
 	
-	// VARIABLES
+    // VARIABLES
+    const Sim_Param &sim;
+
 	int err, step, print_every;
 	double b, b_init, b_out, db;
-    const std::string z_suffix_const;
+    const std::string app_str, z_suffix_const, out_dir_app;
     
 	std::vector<Mesh> app_field;
     Mesh power_aux;
@@ -424,9 +426,10 @@ public:
 	inline double b_half() const { return b - db/2.; }
 	inline bool integrate() const { return (b <= b_out) && (db > 0);}
 	inline bool printing() const { return ((step % print_every) == 0) or (b == b_out); }
-    void print(const Sim_Param &sim, std::string out_dir_app);
+    void print(const Sim_Param &sim);
     void upd_time();
     void print_mem() const;
+    void print_info() const;
 	
 	std::string z_suffix();
 	
