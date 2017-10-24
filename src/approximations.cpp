@@ -118,7 +118,6 @@ int zel_app(const Sim_Param &sim)
     "************************\n";
 
     App_Var<Particle_v> APP(sim, "ZA");
-
     APP.print_mem();
     standard_preparation(APP);
     init_cond_w_vel(APP); //< with velocities

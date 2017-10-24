@@ -423,7 +423,7 @@ Tracking::Tracking(int sqr_num_track_par, int par_num_per_dim):
      std::vector<Particle_x> par_pos_step;
      par_pos_step.reserve(num_track_par);
      for (int i=0; i<num_track_par; i++){
-         par_pos_step.push_back(particles[par_ids[i]]);
+         par_pos_step.emplace_back(particles[par_ids[i]].position);
      }
      par_pos.push_back(par_pos_step);
  }

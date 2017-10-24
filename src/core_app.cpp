@@ -370,8 +370,9 @@ int get_vel_from_par(Particle_v* particles, vector<Mesh>* vel_field, const Sim_P
     printf("Computing the velocity field from particle positions...\n");
     const double mesh_mod = (double)sim.mesh_num_pwr/sim.mesh_num;
     const double m = pow(sim.Ng_pwr, 3.);
-    for(Mesh& field : *vel_field) field.assign(0.);
-    
+    for(Mesh& field : *vel_field){
+        field.assign(0.);
+    }
     #pragma omp parallel for
     for (unsigned i = 0; i < sim.par_num; i++)
     {
@@ -421,7 +422,7 @@ void vel_pwr_spec_k(const Sim_Param &sim, const vector<Mesh> &vel_field, Mesh* p
 
     double vel_div_re, vel_div_im, k;
 
-	#pragma omp parallel for private(w_k, k_vec)
+	#pragma omp parallel for private(w_k, k_vec, k, vel_div_re, vel_div_im)
 	for(unsigned i=0; i < power_aux->length/2;i++)
 	{
         w_k = 1.;
