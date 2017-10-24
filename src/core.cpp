@@ -656,7 +656,8 @@ void App_Var<T>::print()
         pwr_spec_binned_0 = pwr_spec_binned;
         b_init = b;
         is_init_pwr_spec_0 = true;
-    } else print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init, out_dir_app, z_suffix());
+    }
+    print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init, out_dir_app, z_suffix());
 
     /* Print extrapolated power spectrum */
     Extrap_Pk P_k(pwr_spec_binned, sim);
@@ -705,7 +706,8 @@ void App_Var<T>::print()
         if (!is_init_vel_pwr_spec_0){
             vel_pwr_spec_binned_0 = pwr_spec_binned;
             is_init_vel_pwr_spec_0 = true;
-        } else print_vel_pow_spec_diff(pwr_spec_binned, vel_pwr_spec_binned_0, 1, out_dir_app, z_suffix());
+        }
+        print_vel_pow_spec_diff(pwr_spec_binned, vel_pwr_spec_binned_0, 1, out_dir_app, z_suffix());
     }
 }
 
