@@ -59,7 +59,8 @@ int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
 		po::options_description config_run("Run options");
 		config_run.add_options()
 			("out_dir,o", po::value<string>(&sim->out_dir)->default_value("output/"), "output folder name")
-			("num_thread,t", po::value<unsigned>(&sim->nt)->default_value(0), "number of threads the program will use, set 0 for max. available")
+            ("num_thread,t", po::value<unsigned>(&sim->nt)->default_value(0), "number of threads the program will use, set 0 for max. available")
+            ("seed", po::value<unsigned long>(&sim->seed)->default_value(0), "seed to random number generator, use 0 for random")
 			;
 		
 		po::options_description config_other("Approximation`s options");

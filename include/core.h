@@ -321,7 +321,7 @@ public:
     unsigned par_num, mesh_num, mesh_num_pwr, Ng, Ng_pwr, print_every;
     double box_size;
     unsigned order = 1, bin_num = 200;
-    unsigned long seed = 12345678;
+    unsigned long seed;
 
     /* TIME */
 	double z_in, z_out;

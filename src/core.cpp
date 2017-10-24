@@ -442,6 +442,12 @@ Sim_Param::Sim_Param(int ac, char* av[])
         if(nt == 0) nt = omp_get_max_threads();
         else omp_set_num_threads(nt);
 
+        /* RANDOM NUMBER GENERATOR */
+        if (seed == 0){
+            srand(time(NULL));
+            seed = (static_cast<long>(rand()) << (sizeof(int) * 8)) | rand();
+        }
+
         /* SIMULATION BOX*/
         Ng_pwr = Ng*mesh_num_pwr/mesh_num;
         par_num = pow(mesh_num / Ng, 3);
@@ -530,6 +536,7 @@ void Sim_Param::print_info(string out, string app) const
                 {"viscosity", nu*pow(box_size/mesh_num, 2.)},
                 {"cut_radius", rs},
                 {"num_thread", nt},
+                {"seed", seed},
                 {"out_dir", out},
                 {"results", {}}
             };
