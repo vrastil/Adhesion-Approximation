@@ -208,7 +208,7 @@ int adhesion_approximation(const Sim_Param &sim)
     App_Var_AA APP(sim, "AA");
     APP.print_mem();
     standard_preparation(APP);
-    init_cond_no_vel(APP); //< AA specific, no velocities
+    init_cond_w_vel(APP); //< with velocities
     init_adhesion(APP); //< AA specific
     print_init(APP); // WARNING: power_aux[0] is modified
     auto upd_pos = [&](){

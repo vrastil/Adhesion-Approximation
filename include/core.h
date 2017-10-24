@@ -445,7 +445,7 @@ protected:
  * @brief:	class containing variables for adhesion approximation
  */
  
- class App_Var_AA: public App_Var<Particle_x>
+ class App_Var_AA: public App_Var<Particle_v>
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR

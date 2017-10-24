@@ -192,7 +192,9 @@ const char *humanSize(uint64_t bytes){
  Mesh_base<T>::Mesh_base(unsigned n1, unsigned n2, unsigned n3):
     N1(n1), N2(n2), N3(n3), length(n1*n2*n3), data(new T[length])
  {
- 	printf("Normal constructor %p, N1 = %i, N2 = %i, N3 = %i\n", this, N1, N2, N3); 
+    #ifdef TEST
+    printf("Normal constructor %p, N1 = %i, N2 = %i, N3 = %i\n", this, N1, N2, N3); 
+    #endif
  }
  
  template <class T>
@@ -201,7 +203,9 @@ const char *humanSize(uint64_t bytes){
  {
     #pragma omp parallel for
     for (unsigned i = 0; i < length; i++) data[i] = that.data[i];
- 	printf("Copy constructor: %p <-- %p\n", this, &that);
+    #ifdef TEST
+    printf("Copy constructor: %p <-- %p\n", this, &that);
+    #endif
  }
  
  template <class T>
@@ -218,13 +222,17 @@ const char *humanSize(uint64_t bytes){
  Mesh_base<T>::Mesh_base(Mesh_base<T>&& that) noexcept
  {
     swap(*this, that);
- 	printf("Move constructor: %p <-- %p\n", this, &that);
+    #ifdef TEST
+    printf("Move constructor: %p <-- %p\n", this, &that);
+    #endif
  }
  
  template <class T>
  Mesh_base<T>& Mesh_base<T>::operator=(Mesh_base<T> that) &
  {
+    #ifdef TEST
     printf("Copy or move assignemnt: %p <-- %p\n", this, &that);
+    #endif
     swap(*this, that);
     return *this;
  }
@@ -233,7 +241,9 @@ const char *humanSize(uint64_t bytes){
  Mesh_base<T>::~Mesh_base<T>()
  {
      delete[] data;
- 	printf("Destructor: %p\n", this);
+     #ifdef TEST
+     printf("Destructor: %p\n", this);
+     #endif
  }
  
  template <class T>
@@ -729,7 +739,7 @@ void App_Var<T>::print_info() const
  */
  
  App_Var_AA::App_Var_AA(const Sim_Param &sim, string app_str):
-    App_Var<Particle_x>(sim, app_str), expotential (sim.mesh_num)
+    App_Var<Particle_v>(sim, app_str), expotential (sim.mesh_num)
 {
     memory_alloc += sizeof(double)*expotential.length;
 }
