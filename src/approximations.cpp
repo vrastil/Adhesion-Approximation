@@ -139,10 +139,11 @@ int frozen_flow(const Sim_Param &sim)
 	"FROZEN-FLOW APPROXIMATION\n"
 	"*************************\n";
 
-    App_Var<Particle_x> APP(sim, "FF");
+    App_Var<Particle_v> APP(sim, "FF");
     APP.print_mem();
     standard_preparation(APP);
-    init_cond_no_vel(APP); //< FF specific, no velocities
+    init_cond_w_vel(APP); //< with velocities
+    // init_cond_no_vel(APP); //< FF specific, no velocities
     print_init(APP); // WARNING: power_aux[0] is modified
     auto upd_pos = [&](){
         upd_pos_first_order(APP.sim, APP.db, APP.particles, APP.app_field); //< FF specific

@@ -15,6 +15,7 @@ void set_pert_pos(const Sim_Param &sim, const double db, Particle_x* particles, 
 void set_pert_pos_w_vel(const Sim_Param &sim, const double db, Particle_v* particles, const std::vector< Mesh> &vel_field);
 
 void upd_pos_first_order(const Sim_Param &sim, const double db, Particle_x* particles, const std::vector< Mesh> &vel_field);
+void upd_pos_first_order(const Sim_Param &sim, const double db, Particle_v* particles, const std::vector< Mesh> &vel_field);
 void upd_pos_second_order(const Sim_Param &sim, const double db, const double b, Particle_v* particles, const std::vector< Mesh> &force_field);
 void upd_pos_second_order_w_short_force(const Sim_Param &sim, LinkedList* linked_list, const double db, const double b, 
 	                                    Particle_v* particles, const std::vector< Mesh> &force_field);

@@ -97,16 +97,35 @@ void upd_pos_first_order(const Sim_Param &sim, const double db, Particle_x* part
 {
 	// Euler method
 	
-	Vec_3D<double> v;
+	Vec_3D<double> vel;
 	const int order = sim.order;
     const int Nm = sim.mesh_num;
 
-	#pragma omp parallel for private(v)
+	#pragma omp parallel for private(vel)
 	for (unsigned i = 0; i < sim.par_num; i++)
 	{
-		v.fill(0.);
-		assign_from(vel_field, particles[i].position, &v, order);
-		particles[i].position += v*db;
+		vel.fill(0.);
+		assign_from(vel_field, particles[i].position, &vel, order);
+		particles[i].position += vel*db;
+		get_per(particles[i].position, Nm);
+	}
+}
+
+void upd_pos_first_order(const Sim_Param &sim, const double db, Particle_v* particles, const vector< Mesh> &vel_field)
+{
+	// Euler method
+	
+	Vec_3D<double> vel;
+	const int order = sim.order;
+    const int Nm = sim.mesh_num;
+
+	#pragma omp parallel for private(vel)
+	for (unsigned i = 0; i < sim.par_num; i++)
+	{
+		vel.fill(0.);
+		assign_from(vel_field, particles[i].position, &vel, order);
+        particles[i].position += vel*db;
+        particles[i].velocity = vel;
 		get_per(particles[i].position, Nm);
 	}
 }
