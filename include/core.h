@@ -413,7 +413,8 @@ public:
     const Sim_Param &sim;
 
 	int err, step, print_every;
-	double b, b_init, b_out, db;
+    double b, b_out, db;
+    double D_init, dDda_init;
     const std::string app_str, z_suffix_const, out_dir_app;
     
     // LARGE FIELDS

@@ -149,7 +149,7 @@ void print_corr_func(const Data_x_y<double> &pwr_spec_binned, string out_dir, st
 }
 
 void print_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data_x_y<double> &pwr_spec_binned_0,
-	double b, string out_dir, string suffix)
+	double growth, string out_dir, string suffix)
 {
 	out_dir += "pwr_diff/";
 	FILE* pFile;
@@ -164,7 +164,7 @@ void print_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data_x_y
 	for (unsigned j = 0; j < pwr_spec_binned.size(); ){
 		if (pwr_spec_binned.x[j] == pwr_spec_binned_0.x[i]){
 			P_k = pwr_spec_binned.y[j];
-			P_ZA = pwr_spec_binned_0.y[i] * pow(b, 2.);
+			P_ZA = pwr_spec_binned_0.y[i] * pow(growth, 2.);
             if((P_ZA) && (P_k)) fprintf (pFile, "%e\t%f\n", pwr_spec_binned.x[j], (P_k-P_ZA)/P_ZA);
             i++;
             j++;

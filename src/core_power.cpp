@@ -241,6 +241,11 @@ double growth_factor(double a, const Pow_Spec_Param& pwr_par)
     #endif
 }
 
+double growth_factor(double a, void* parameters)
+{
+    return growth_factor(a, static_cast<growth_factor_integrand_param*>(parameters)->pwr_par);
+}
+
 double ln_growth_factor(double log_a, void* parameters)
 {
     return log(growth_factor(exp(log_a), static_cast<growth_factor_integrand_param*>(parameters)->pwr_par));
@@ -257,12 +262,19 @@ double growth_rate(double a, const Pow_Spec_Param& pwr_par)
     gsl_function F = {&ln_growth_factor, &param};
     double dDda, error;
     gsl_deriv_central(&F, log(a), 1e-6, &dDda, &error);
-
     return dDda;
     #endif
 }
 
-
+double growth_change(double a, const Pow_Spec_Param& pwr_par)
+{ // normal derivative dD/da, not logarithmic one
+    growth_factor_integrand_param param = {pwr_par};
+    gsl_function F = {&growth_factor, &param};
+    double dDda, error;
+    if (a == 0) gsl_deriv_forward(&F, a, 1e-6, &dDda, &error);
+    else gsl_deriv_central(&F, a, 1e-6, &dDda, &error);
+    return dDda;
+}
 
 double lin_pow_spec(double k, const Pow_Spec_Param& pwr_par, double a)
 {

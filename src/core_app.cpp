@@ -83,7 +83,7 @@ void set_pert_pos_w_vel(const Sim_Param &sim, const double a, Particle_v* partic
     const int Nm = sim.mesh_num;
 
     const double D = growth_factor(a, sim.power); // growth factor
-    const double dDda = D/a*growth_rate(a, sim.power); // dD / da
+    const double dDda = growth_change(a, sim.power); // dD / da
 
 	#pragma omp parallel for private(unpert_pos, velocity, pert_pos)
 	for(unsigned i=0; i< sim.par_num; i++)

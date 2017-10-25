@@ -7,6 +7,8 @@ import matplotlib.cm as cm
 # from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 from scipy import interpolate
+from scipy.integrate import quad
+from scipy.misc import derivative
 
 from . import get_files_in_traverse_dir
 
@@ -19,14 +21,31 @@ def trans_fce(k, Omega_m=1, h=0.67, q_log=2.34, q_1=3.89, q_2=16.2, q_3=5.47, q_
     tmp_pol = 1 + q_1 * q + (q_2 * q)**2 + (q_3 * q)**3 + (q_4 * q)**4
     return tmp_log * tmp_pol**(-1. / 4)
 
+def hubble_param(a, pwr):
+    Om = pwr["Omega_b"] + pwr["Omega_c"]
+    OL = 1 - Om
+    return np.sqrt(Om*abs(a)**(-3) + OL)
+
+def growth_factor(a, pwr=None):
+    if pwr is None: return a
+    if a == 0: return 0
+    f = lambda a_, pwr_: (a_*hubble_param(a_, pwr_))**(-3)
+    D, err = quad(f, 0, a, args=(pwr,))
+    if "D_norm" not in pwr:
+        pwr["D_norm"], err = quad(f, 0, 1, args=(pwr,))
+    return np.sign(a)*D*hubble_param(a, pwr)/pwr["D_norm"]
+
+def growth_change(a, pwr=None):
+    if pwr is None: return 1
+    return derivative(growth_factor, a, dx=1e-6, args=(pwr,))
 
 def pwr_spec_prim(k, A=187826, n=1):
     return A * k**n
 
-
 def pwr_spec(k, pwr, cosmo=None, z=0, q_log=2.34, q_1=3.89, q_2=16.2, q_3=5.47, q_4=6.71):
     supp = np.exp(-k*k/pwr["k2_G"]) if pwr["k2_G"] else 1
-    supp /= (z + 1.)**2
+    a = 1./(z+1.)
+    supp *= growth_factor(a, pwr)**2
     if cosmo is None:
         A = pwr["A"]
         n = pwr["ns"]
@@ -53,7 +72,7 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, ou
     ax = plt.gca()
     plt.yscale('log')
     plt.xscale('log')
-    
+
     lab_p = "Pade app."
     for i, pwr in enumerate(pwr_spec_files):
         a = 1 / (1 + zs[i])
@@ -102,6 +121,11 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, ou
         plt.plot(k, P_i, '-')
     elif pk_type == "vel":
         P_0 = [pwr_spec(k_, a_sim_info.pwr, cosmo=a_sim_info.cosmo, z=0) for k_ in k]
+        a_0 = 1./(zs[0]+1.)
+        a_i = 1./(zs[-1]+1.)
+        P_i = np.array(P_0)*growth_change(a_i, a_sim_info.pwr)**2
+        P_0 = np.array(P_0)*growth_change(a_0, a_sim_info.pwr)**2
+        plt.plot(k, P_i, '-')
         plt.plot(k, P_0, '-')
     
 

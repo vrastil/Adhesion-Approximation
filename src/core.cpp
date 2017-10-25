@@ -585,7 +585,7 @@ void Sim_Param::print_info() const
 template <class T> 
 App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
 	sim(sim), err(0), step(0), print_every(sim.print_every),
-    b(sim.b_in), b_init(1.), b_out(sim.b_out), db(sim.db),
+    b(sim.b_in), b_out(sim.b_out), db(sim.db),
     app_str(app_str), z_suffix_const("_" + app_str + "_"), out_dir_app(std_out_dir(app_str + "_run/", sim)),
 	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num), vel_pwr_spec_binned_0(sim.bin_num/2), corr_func_binned(sim.bin_num),
 	track(4, sim.mesh_num/sim.Ng),
@@ -674,10 +674,10 @@ void App_Var<T>::print()
     print_pow_spec(pwr_spec_binned, out_dir_app, "_par" + z_suffix());
     if (!is_init_pwr_spec_0){
         pwr_spec_binned_0 = pwr_spec_binned;
-        b_init = b;
+        D_init = growth_factor(b, sim.power);
         is_init_pwr_spec_0 = true;
     }
-    print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, b / b_init, out_dir_app, z_suffix());
+    print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, growth_factor(b, sim.power) / D_init, out_dir_app, z_suffix());
 
     /* Print extrapolated power spectrum */
     Extrap_Pk P_k(pwr_spec_binned, sim);
@@ -726,8 +726,9 @@ void App_Var<T>::print()
         if (!is_init_vel_pwr_spec_0){
             vel_pwr_spec_binned_0 = pwr_spec_binned;
             is_init_vel_pwr_spec_0 = true;
+            dDda_init = growth_change(b, sim.power);
         }
-        print_vel_pow_spec_diff(pwr_spec_binned, vel_pwr_spec_binned_0, 1, out_dir_app, z_suffix());
+        print_vel_pow_spec_diff(pwr_spec_binned, vel_pwr_spec_binned_0, growth_change(b, sim.power) / dDda_init, out_dir_app, z_suffix());
     }
 }
 
