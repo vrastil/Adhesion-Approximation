@@ -383,6 +383,9 @@ void Pow_Spec_Param::init()
     int status = 0;
     params = ccl_parameters_create_flat_lcdm(Omega_c, Omega_b, h, sigma8, ns, &status);
     cosmo = ccl_cosmology_create(params, config);
+
+    // PRECOMPUTED VALUES
+    D_norm = growth_factor(1, *this);
 }
 
 Pow_Spec_Param::~Pow_Spec_Param()

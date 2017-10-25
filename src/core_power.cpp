@@ -12,6 +12,129 @@
 
 using namespace std;
 
+class Integr_obj
+{
+public:
+    // CONSTRUCTOR
+    Integr_obj(double(*f) (double, void*),  const double a, const double b,
+               const double epsabs, const double epsrel, size_t limit):
+    a(a), b(b), L(b-a), epsabs(epsabs), epsrel(epsrel),  limit(limit)
+    {
+        w = gsl_integration_workspace_alloc (limit);
+        F.function = f;
+    }
+    // DESTRUCTOR
+    ~Integr_obj()
+    {
+        gsl_integration_workspace_free (w);
+    }
+    // METHODS
+    void set_a(double a_new) { a = a_new; L = a -b; }
+    void set_b(double b_new) { b = b_new; L = a -b; }
+
+protected:
+    // VARIABLES
+    double result, error;
+    double a, b, L;
+    double epsabs, epsrel;
+    size_t limit;
+    gsl_function F;
+    gsl_integration_workspace* w;
+    int gsl_errno;
+};
+
+class Integr_obj_qag : public Integr_obj
+{
+public:
+    // CONSTRUCTOR
+    Integr_obj_qag(double(*f) (double, void*),  double a, double b,
+        const double epsabs, const double epsrel, size_t limit, int key):
+    Integr_obj(f, a, b, epsabs, epsrel, limit), key(key) {}
+
+    // METHODS
+    double eval(void* params)
+    {
+        F.params = params;
+        gsl_errno = gsl_integration_qag(&F, a, b, epsabs, epsrel, limit, key, w, &result, &error);
+        if (gsl_errno) printf ("GSL integration error: %s\n", gsl_strerror (gsl_errno));
+        return result;
+    }
+protected:
+    // VARIABLES
+    int key;
+};
+
+class Integr_obj_qagiu : public Integr_obj
+{
+public:
+    // CONSTRUCTOR
+    Integr_obj_qagiu(double(*f) (double, void*),  double a,
+        const double epsabs, const double epsrel, size_t limit):
+    Integr_obj(f, a, 0, epsabs, epsrel, limit) {}
+
+    // METHODS
+    double eval(void* params)
+    {
+        F.params = params;
+        gsl_errno = gsl_integration_qagiu(&F, a, epsabs, epsrel, limit, w, &result, &error);
+        return result;
+    }
+};
+
+class Integr_obj_qawo : public Integr_obj
+{
+public:
+    // CONSTRUCTOR
+    Integr_obj_qawo(double(*f) (double, void*),  double a, double b,
+                    const double epsabs, const double epsrel, size_t limit, size_t n):
+    Integr_obj(f, a, b, epsabs, epsrel, limit)
+    {
+        wf = gsl_integration_qawo_table_alloc(1, 1, GSL_INTEG_SINE, n);
+    }
+    // DESTRUCTOR
+    ~Integr_obj_qawo()
+    {
+        gsl_integration_qawo_table_free(wf);
+    }
+    // METHODS
+    double eval(double r, void* params)
+    {
+        gsl_integration_qawo_table_set(wf, r, L, GSL_INTEG_SINE);
+        F.params = params;
+        gsl_integration_qawo(&F, a, epsabs, epsrel, limit, w, wf, &result, &error);
+        return result;
+    }
+protected:
+    gsl_integration_qawo_table* wf;
+};
+
+class Integr_obj_qawf : public Integr_obj_qawo
+{
+public:
+    // CONSTRUCTOR
+    Integr_obj_qawf(double(*f) (double, void*),  double a,
+                    const double epsabs, size_t limit, size_t n):
+    Integr_obj_qawo(f, a, 0, epsabs, 0, limit, n)
+    {
+        wc = gsl_integration_workspace_alloc (limit);
+    }
+    // DESTRUCTOR
+    ~Integr_obj_qawf()
+    {
+        gsl_integration_workspace_free (wc);
+    }
+    // METHODS
+    double eval(double r, void* params)
+    {
+        gsl_integration_qawo_table_set(wf, r, L, GSL_INTEG_SINE);
+        F.params = params;
+        gsl_integration_qawf(&F, a, epsabs, limit, w, wc, wf, &result, &error);
+        return result;
+    }
+protected:
+    gsl_integration_workspace* wc;
+};
+
 double transfer_function_2(double k, const Pow_Spec_Param& parameters)
 {
     if (k == 0) return 1.;
@@ -72,17 +195,9 @@ double power_spectrum_s8(double k, void* parameters)
 
 void norm_pwr_gsl(Pow_Spec_Param* pwr_par)
 {
-	/* Normalize the power spectrum */
-	gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
-	double result, error;
-	
-	gsl_function F;
-	F.function = &power_spectrum_s8;
-	F.params = pwr_par;
-	gsl_integration_qagiu (&F, 0, 0, 1e-7, 1000, w, &result, &error); 
-	
-	gsl_integration_workspace_free (w);
-	pwr_par->A = pwr_par->sigma8*pwr_par->sigma8/result;
+    /* Normalize the power spectrum */
+    Integr_obj_qagiu s8(&power_spectrum_s8, 0, 0, 1e-7, 1000);
+	pwr_par->A = pow(pwr_par->sigma8, 2)/s8.eval(pwr_par);
 }
 
 void norm_pwr_ccl(Pow_Spec_Param* pwr_par)
@@ -99,14 +214,36 @@ void norm_pwr(Pow_Spec_Param* pwr_par)
     else norm_pwr_ccl(pwr_par);
 }
 
+double hubble_param(double a, const Pow_Spec_Param& pwr_par)
+{
+    const double Om = pwr_par.Omega_m();
+    const double OL = pwr_par.Omega_L();
+    return sqrt(Om*pow(a, -3) + OL);
+}
+
+struct growth_factor_integrand_param { const Pow_Spec_Param& pwr_par; };
+
+double growth_factor_integrand(double a, void* parameters)
+{    
+    return pow(a*hubble_param(a, static_cast<growth_factor_integrand_param*>(parameters)->pwr_par), -3);
+}
+
 double growth_factor(double a, const Pow_Spec_Param& pwr_par)
 {
     #ifdef CCL_GROWTH
     int status = 0;
     return ccl_growth_factor(pwr_par.cosmo, a, &status);
     #else
-    return a;
+    if (a == 0) return 0;
+    Integr_obj_qag D(&growth_factor_integrand, 0, a, 0, 1e-7, 1000, GSL_INTEG_GAUSS61);
+    growth_factor_integrand_param param = {pwr_par};
+    return hubble_param(a, pwr_par)*D.eval(&param)/pwr_par.D_norm;
     #endif
+}
+
+double ln_growth_factor(double log_a, void* parameters)
+{
+    return log(growth_factor(exp(log_a), static_cast<growth_factor_integrand_param*>(parameters)->pwr_par));
 }
 
 double growth_rate(double a, const Pow_Spec_Param& pwr_par)
@@ -115,9 +252,17 @@ double growth_rate(double a, const Pow_Spec_Param& pwr_par)
     int status = 0;
     return ccl_growth_rate(pwr_par.cosmo, a, &status);
     #else
-    return 1.;
+    if (a == 0) return 1;
+    growth_factor_integrand_param param = {pwr_par};
+    gsl_function F = {&ln_growth_factor, &param};
+    double dDda, error;
+    gsl_deriv_central(&F, log(a), 1e-6, &dDda, &error);
+
+    return dDda;
     #endif
 }
+
+
 
 double lin_pow_spec(double k, const Pow_Spec_Param& pwr_par, double a)
 {
@@ -314,86 +459,6 @@ double Extrap_Pk::eval(double k) const
         #endif
     }
 }
-
-class Integr_obj
-{
-public:
-    // CONSTRUCTOR
-    Integr_obj(double(*f) (double, void*),  const double a, const double b,
-               const double epsabs, const double epsrel, size_t limit):
-    a(a), b(b), L(b-a), epsabs(epsabs), epsrel(epsrel),  limit(limit)
-    {
-        w = gsl_integration_workspace_alloc (limit);
-        F.function = f;
-    }
-    // DESTRUCTOR
-    ~Integr_obj()
-    {
-        gsl_integration_workspace_free (w);
-    }
-    // VARIABLES
-    double result, error;
-protected:
-    const double a, b, L;
-    const double epsabs, epsrel;
-    const size_t limit;
-    gsl_function F;
-    gsl_integration_workspace* w;
-};
-
-class Integr_obj_qawo : public Integr_obj
-{
-public:
-    // CONSTRUCTOR
-    Integr_obj_qawo(double(*f) (double, void*),  double a, double b,
-                    const double epsabs, const double epsrel, size_t limit, size_t n):
-    Integr_obj(f, a, b, epsabs, epsrel, limit)
-    {
-        wf = gsl_integration_qawo_table_alloc(1, 1, GSL_INTEG_SINE, n);
-    }
-    // DESTRUCTOR
-    ~Integr_obj_qawo()
-    {
-        gsl_integration_qawo_table_free(wf);
-    }
-    // METHODS
-    double eval(double r, void* params)
-    {
-        gsl_integration_qawo_table_set(wf, r, L, GSL_INTEG_SINE);
-        F.params = params;
-        gsl_integration_qawo(&F, a, epsabs, epsrel, limit, w, wf, &result, &error);
-        return result;
-    }
-protected:
-    gsl_integration_qawo_table* wf;
-};
-
-class Integr_obj_qawf : public Integr_obj_qawo
-{
-public:
-    // CONSTRUCTOR
-    Integr_obj_qawf(double(*f) (double, void*),  double a,
-                    const double epsabs, size_t limit, size_t n):
-    Integr_obj_qawo(f, a, 0, epsabs, 0, limit, n)
-    {
-        wc = gsl_integration_workspace_alloc (limit);
-    }
-    // DESTRUCTOR
-    ~Integr_obj_qawf()
-    {
-        gsl_integration_workspace_free (wc);
-    }
-    // METHODS
-    double eval(double r, void* params)
-    {
-        gsl_integration_qawo_table_set(wf, r, L, GSL_INTEG_SINE);
-        F.params = params;
-        gsl_integration_qawf(&F, a, epsabs, limit, w, wc, wf, &result, &error);
-        return result;
-    }
-protected:
-    gsl_integration_workspace* wc;
-};
 
 struct xi_integrand_param
 {

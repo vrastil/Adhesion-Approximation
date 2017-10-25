@@ -236,6 +236,10 @@ public:
     // COSMOLOGY (flat LCDM)
     double Omega_c, Omega_b, H0, h;
     inline double Omega_m() const { return Omega_c + Omega_b; }
+    inline double Omega_L() const { return 1 - Omega_c - Omega_b; }
+
+    // PRECOMPUTED VALUES
+    double D_norm = 1;
         
     // CCL VARIABLES
     ccl_configuration config;

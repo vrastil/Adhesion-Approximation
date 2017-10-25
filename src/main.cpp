@@ -20,6 +20,8 @@ int main(int argc, char* argv[]){
         */
         Sim_Param sim(argc, argv);
         sim.print_info();
+
+        growth_factor(0.5, sim.power);
 		
 		/* ZEL`DOVICH APPROXIMATION */
 		if(sim.comp_ZA)	err = zel_app(sim);
