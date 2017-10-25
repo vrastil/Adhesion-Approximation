@@ -99,6 +99,26 @@ void norm_pwr(Pow_Spec_Param* pwr_par)
     else norm_pwr_ccl(pwr_par);
 }
 
+double growth_factor(double a, const Pow_Spec_Param& pwr_par)
+{
+    #ifdef CCL_GROWTH
+    int status = 0;
+    return ccl_growth_factor(pwr_par.cosmo, a, &status);
+    #else
+    return a;
+    #endif
+}
+
+double growth_rate(double a, const Pow_Spec_Param& pwr_par)
+{
+    #ifdef CCL_GROWTH
+    int status = 0;
+    return ccl_growth_rate(pwr_par.cosmo, a, &status);
+    #else
+    return 1.;
+    #endif
+}
+
 double lin_pow_spec(double k, const Pow_Spec_Param& pwr_par, double a)
 {
     if (pwr_par.pwr_type < 4){
@@ -446,12 +466,13 @@ void gen_corr_func_binned_gsl_lin(const Sim_Param &sim, double a, Data_x_y<doubl
 
     const unsigned int N = corr_func_binned->size();
     const double lin_bin = (x_max - x_min)/N;
+    const double D2 = pow(growth_factor(a, sim.power), 2);
 	double r;
 	for(unsigned i = 0; i < N; i++){
         r = x_min + i*lin_bin;
         my_param.r = r;
         corr_func_binned->x[i] = r;
-        corr_func_binned->y[i] = a*a*xi_r->eval(r, &my_param);
+        corr_func_binned->y[i] = D2*xi_r->eval(r, &my_param);
     }
 }
 

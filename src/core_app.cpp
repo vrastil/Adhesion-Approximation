@@ -72,7 +72,7 @@ void set_pert_pos(const Sim_Param &sim, const double db, Particle_x* particles, 
 	}
 }
 
-void set_pert_pos_w_vel(const Sim_Param &sim, const double db, Particle_v* particles, const vector< Mesh> &vel_field)
+void set_pert_pos_w_vel(const Sim_Param &sim, const double a, Particle_v* particles, const vector< Mesh> &vel_field)
 {
 	Vec_3D<int> unpert_pos;
 	Vec_3D<double> velocity;
@@ -82,14 +82,17 @@ void set_pert_pos_w_vel(const Sim_Param &sim, const double db, Particle_v* parti
 	const int Ng = sim.Ng;
     const int Nm = sim.mesh_num;
 
+    const double D = growth_factor(a, sim.power); // growth factor
+    const double dDda = D/a*growth_rate(a, sim.power); // dD / da
+
 	#pragma omp parallel for private(unpert_pos, velocity, pert_pos)
 	for(unsigned i=0; i< sim.par_num; i++)
 	{
 		set_unpert_pos_one_par(unpert_pos, i, par_per_dim, Ng);
 		set_velocity_one_par(unpert_pos, velocity, vel_field);
-		pert_pos = Vec_3D<double>(unpert_pos) + velocity*db;
+		pert_pos = Vec_3D<double>(unpert_pos) + velocity*D;
 		get_per(pert_pos, Nm);
-		particles[i] = Particle_v(pert_pos, velocity);		
+		particles[i] = Particle_v(pert_pos, velocity*dDda);		
 	}
 }
 

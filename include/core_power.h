@@ -11,6 +11,8 @@
 void norm_pwr(Pow_Spec_Param* pwr_par);
 double lin_pow_spec(double k, const Pow_Spec_Param& pwr_par, double a);
 double lin_pow_spec(double k, const Pow_Spec_Param& parameters);
+double growth_factor(double a, const Pow_Spec_Param& pwr_par);
+double growth_rate(double a, const Pow_Spec_Param& pwr_par);
 double  get_max_Pk(Sim_Param* sim);
 
 /**

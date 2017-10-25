@@ -5,7 +5,7 @@ CXX = g++-6.4
 
 CXXFLAGS =-std=c++11 -pipe
 #CXXFLAGS +=-Og -g -Wall
-CXXFLAGS +=-O2 -march=native
+CXXFLAGS +=-Ofast -march=native
 CXXFLAGS +=-MMD
 CXXFLAGS +=-fopenmp
 

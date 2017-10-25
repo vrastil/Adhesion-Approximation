@@ -53,18 +53,11 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, ou
     ax = plt.gca()
     plt.yscale('log')
     plt.xscale('log')
-    a_ = 0
-
-    lab = 'init'
+    
     lab_p = "Pade app."
     for i, pwr in enumerate(pwr_spec_files):
-        a_end = 1 / (1 + zs[-1])
-        if zs[i] != 'init':
-            a = 1 / (1 + zs[i])
-            if (a < 2.4 * a_) and a != a_end:
-                continue
-            a_ = a
-            lab = 'z = ' + str(zs[i])
+        a = 1 / (1 + zs[i])
+        lab = 'z = ' + str(zs[i])
         data = np.loadtxt(pwr)
         k, P_k = data[:, 0], data[:, 1]
         plt.plot(k, P_k, 'o', ms=3, label=lab)
@@ -210,16 +203,10 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_t
         suptitle=r"Power spectrum difference $(\nabla\cdot u)$"
     fig = plt.figure(figsize=(15, 11))
     plt.xscale('log')
-    a_ = 0
 
-    lab = 'init'
     for i, pwr in enumerate(pwr_spec_diff_files):
-        if zs[i] != 'init':
-            a = 1 / (1 + zs[i])
-            if (a < 2.4 * a_) and a != 1:
-                continue
-            a_ = a
-            lab = 'z = ' + str(zs[i])
+        a = 1 / (1 + zs[i])
+        lab = 'z = ' + str(zs[i])
         data = np.loadtxt(pwr)
         k, P_k = data[:, 0], data[:, 1]
         plt.plot(k, P_k, 'o', ms=3, label=lab)
