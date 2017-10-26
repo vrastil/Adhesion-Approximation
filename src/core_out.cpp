@@ -5,6 +5,27 @@
 namespace fs = boost::filesystem;
 using namespace std;
 
+#define BUFF_SIZE 1024 * 1024 * 16 // 16 MB buffer
+
+class Ofstream : public ofstream
+{
+public:
+    Ofstream(string file_name) : ofstream(file_name), buf(new char[BUFF_SIZE])
+    {
+        if (!this->is_open())
+        {
+            cout <<  "Error while opening " << file_name << "\n";
+        }
+        this->rdbuf()->pubsetbuf(buf, sizeof(buf));
+    }
+    char* buf;
+
+    ~Ofstream()
+    {
+        delete[] buf;
+    }
+};
+
 // Get current date/time, format is YYYY-MM-DD.HH:mm:ss
 string currentDateTime()
 {
@@ -48,12 +69,7 @@ void print_par_pos_cut_small(T* particles, const Sim_Param &sim, std::string out
 {
    out_dir += "par_cut/";
    string file_name = out_dir + "par_cut" + suffix + ".dat";
-   ofstream File(file_name);
-   if (!File.is_open())
-   {
-       cout <<  "Error while opening " << file_name << "\n";
-       return;
-   }
+   Ofstream File(file_name);
    
    std::cout << "Writing small cut through the box of particles into file " << file_name << "\n";
    File << "# This file contains positions of particles in units [Mpc/h].\n";
@@ -78,12 +94,7 @@ void print_pow_spec(const Data_x_y<double> &pwr_spec_binned, string out_dir, str
 {
 	out_dir += "pwr_spec/";
 	string file_name = out_dir + "pwr_spec" + suffix + ".dat";
-	ofstream File(file_name);
-	if (!File.is_open())
-	{
-		cout << "Error while opening " << file_name << "\n";
-		return;
-	}
+	Ofstream File(file_name);
 	
 	cout << "Writing power spectrum into file " << file_name << "\n";
 	File << "# This file contains power spectrum P(k) in units [(Mpc/h)^3] depending on wavenumber k in units [h/Mpc].\n"
@@ -99,12 +110,7 @@ void print_vel_pow_spec(const Data_x_y<double> &pwr_spec_binned, string out_dir,
 {
 	out_dir += "vel_pwr_spec/";
 	string file_name = out_dir + "vel_pwr_spec" + suffix + ".dat";
-	ofstream File(file_name);
-	if (!File.is_open())
-	{
-		cout << "Error while opening " << file_name << "\n";
-		return;
-	}
+	Ofstream File(file_name);
 	
 	cout << "Writing velocity divergence power spectrum into file " << file_name << "\n";
 	File << "# This file contains velocity divergence power spectrum P(k) in units [(Mpc/h)^3] depending on wavenumber k in units [h/Mpc].\n"
@@ -120,12 +126,7 @@ void print_corr_func(const Data_x_y<double> &pwr_spec_binned, string out_dir, st
 {
 	out_dir += "corr_func/";
 	string file_name = out_dir + "corr_func" + suffix + ".dat";
-	ofstream File(file_name);
-	if (!File.is_open())
-	{
-		cout << "Error while opening " << file_name << "\n";
-		return;
-	}
+	Ofstream File(file_name);
 	
 	cout << "Writing correlation function into file " << file_name << "\n";
 	File << "# This file contains correlation function depending on distance r in units [Mpc/h].\n"
@@ -142,15 +143,11 @@ void print_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data_x_y
 {
     out_dir += "pwr_diff/";
     string file_name = out_dir + "pwr_spec_diff" + suffix + ".dat";
-	ofstream File(file_name);
-    if (!File.is_open())
-	{
-		cout << "Error while opening " << file_name << "\n";
-		return;
-	}
+    Ofstream File(file_name);
+    
 	cout << "Writing power spectrum difference into file " << file_name << "\n";
     File << "# This file contains relative difference between power spectrum P(k)\n"
-            "and lineary extrapolated power spectrum depending on wavenumber k in units [h/Mpc].\n"
+            "# and lineary extrapolated power spectrum depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 	
 	double P_k, P_ZA;
@@ -174,12 +171,8 @@ void print_vel_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data
 {
     out_dir += "vel_pwr_diff/";
     string file_name = out_dir + "vel_pwr_spec_diff" + suffix + ".dat";
-	ofstream File(file_name);
-    if (!File.is_open())
-	{
-		cout << "Error while opening " << file_name << "\n";
-		return;
-	}
+    Ofstream File(file_name);
+    
 	cout << "Writing power velocity divergence spectrum difference into file " << file_name << "\n";
     File << "# This file contains relative difference between velocity divergence power spectrum P(k)\n"
             "# and lineary extrapolated velocity divergence power spectrum depending on wavenumber k in units [h/Mpc].\n"
@@ -205,12 +198,8 @@ void print_track_par(const Tracking& track, const Sim_Param &sim, string out_dir
 {
 	out_dir += "par_cut/";
     string file_name = out_dir + "track_par_pos" + suffix + ".dat";
-    ofstream File(file_name);
-    if (!File.is_open())
-	{
-		cout << "Error while opening " << file_name << "\n";
-		return;
-	}
+    Ofstream File(file_name);
+
     double x,y,z;
     const double x_0 = sim.x_0();
 	cout << "Writing positons of " << track.num_track_par << " tracked particles into file " << file_name << "\n";
@@ -233,12 +222,7 @@ void print_rho_map(const Mesh& delta, const Sim_Param &sim, string out_dir, stri
     out_dir += "rho_map/";
     const double x_0 = sim.x_0_pwr();
     string file_name = out_dir + "rho_map" + suffix + ".dat";
-    ofstream File(file_name);
-    if (!File.is_open())
-	{
-		cout << "Error while opening " << file_name << "\n";
-		return;
-	}
+    Ofstream File(file_name);
 
 	cout << "Writing density map into file " << file_name << "\n";
 	File << "# This file contains density map delta(x).\n";
@@ -257,12 +241,8 @@ void print_projected_rho(const Mesh& delta, const Sim_Param &sim, string out_dir
     out_dir += "rho_map/";
     const double x_0 = sim.x_0_pwr();
     string file_name = out_dir + "rho_map_projected" + suffix + ".dat";
-	ofstream File(file_name);
-    if (!File.is_open())
-	{
-		cout << "Error while opening " << file_name << "\n";
-		return;
-	}
+    Ofstream File(file_name);
+    
 	cout << "Writing density map into file " << file_name << "\n";
 	File << "# This file contains density map delta(x).\n"
 	        "# x [Mpc/h]\tz [Mpc/h]\tdelta\n";
@@ -285,12 +265,8 @@ void print_projected_rho(const Mesh& delta, const Sim_Param &sim, string out_dir
 void print_dens_bin(const vector<int> &dens_binned, int mesh_num, string out_dir, string suffix){
     out_dir += "rho_bin/";
     string file_name = out_dir + "rho_bin" + suffix + ".dat";
-	ofstream File(file_name);
-    if (!File.is_open())
-	{
-		cout << "Error while opening " << file_name << "\n";
-		return;
-	}
+    Ofstream File(file_name);
+    
 	cout << "Writing binned density into file " << file_name << "\n";
 	File << "# This file contains binned density field.\n"
 	        "# dens\tbin_num\n";
