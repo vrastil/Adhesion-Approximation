@@ -326,6 +326,7 @@ public:
     double box_size;
     unsigned order = 1, bin_num = 200;
     unsigned long seed;
+    bool pair;
 
     /* TIME */
 	double z_in, z_out;

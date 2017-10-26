@@ -686,33 +686,8 @@ void App_Var<T>::print()
 
     /* Printing correlation function */
     corr_func_binned.resize(sim.bin_num);
-    switch(sim.corr_int)
-    {
-        case corr_int_type::FFT:
-            power_aux[0].reset_im(); // P(k) is a real function
-            fftw_execute_dft_c2r(p_B_pwr, power_aux[0]);
-            gen_corr_func_binned(sim, power_aux[0], &corr_func_binned);
-            print_corr_func(corr_func_binned, out_dir_app, "_fft" + z_suffix());
-            break;
-        case corr_int_type::PP:
-            gen_corr_func_binned_pp(sim, particles, &corr_func_binned);
-            print_corr_func(corr_func_binned, out_dir_app, "_pp" + z_suffix());
-            break;
-        case corr_int_type::FFTLOG:
-            break;
-        case corr_int_type::QAGI:
-            gen_corr_func_binned_gsl_qagi(sim, P_k, &corr_func_binned);
-            print_corr_func(corr_func_binned, out_dir_app, "_gsl_qagi_par" + z_suffix());
-            break;
-        case corr_int_type::QAWO:
-            gen_corr_func_binned_gsl_qawo(sim, P_k, &corr_func_binned);
-            print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawo_par" + z_suffix());
-            break;
-        case corr_int_type::QAWF:
-            gen_corr_func_binned_gsl_qawf(sim, P_k, &corr_func_binned);
-            print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_par" + z_suffix());
-            break;
-    }
+    gen_corr_func_binned_gsl_qawf(sim, P_k, &corr_func_binned);
+    print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_par" + z_suffix());
     gen_corr_func_binned_gsl_qawf_lin(sim, b, &corr_func_binned);
     print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_lin" + z_suffix());
 

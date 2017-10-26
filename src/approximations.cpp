@@ -96,6 +96,7 @@ void print_init(T& APP)
 template<class T>
 void integration(T& APP, function<void()> upd_pos)
 {
+    print_init(APP); // WARNING: power_aux[0] is modified
 	while(APP.integrate())
 	{
 		printf("\nStarting computing step with z = %.2f (b = %.3f)\n", APP.z(), APP.b);
@@ -103,7 +104,8 @@ void integration(T& APP, function<void()> upd_pos)
         APP.track.update_track_par(APP.particles);
 		if (APP.printing()) APP.print();
 		APP.upd_time();
-	}
+    }
+    APP.print_info();
 }
 
 /*****************
@@ -116,17 +118,14 @@ int zel_app(const Sim_Param &sim)
 	"************************\n"
 	"ZEL`DOVICH APPROXIMATION\n"
     "************************\n";
-
     App_Var<Particle_v> APP(sim, "ZA");
     APP.print_mem();
     standard_preparation(APP);
     init_cond_w_vel(APP); //< with velocities
-    print_init(APP); // WARNING: power_aux[0] is modified
     auto upd_pos = [&](){
         set_pert_pos_w_vel(APP.sim, APP.b, APP.particles, APP.app_field); //< ZA with velocitites
     };
     integration(APP, upd_pos);
-    APP.print_info();
 	printf("Zel`dovich approximation ended successfully.\n");
 	return APP.err;
 }
@@ -137,18 +136,15 @@ int frozen_flow(const Sim_Param &sim)
 	"*************************\n"
 	"FROZEN-FLOW APPROXIMATION\n"
 	"*************************\n";
-
     App_Var<Particle_v> APP(sim, "FF");
     APP.print_mem();
     standard_preparation(APP);
     init_cond_w_vel(APP); //< with velocities
     // init_cond_no_vel(APP); //< FF specific, no velocities
-    print_init(APP); // WARNING: power_aux[0] is modified
     auto upd_pos = [&](){
         upd_pos_first_order(APP.sim, APP.db, APP.particles, APP.app_field); //< FF specific
     };
     integration(APP, upd_pos);
-    APP.print_info();
     printf("Frozen-flow approximation ended successfully.\n");
     return APP.err;
 }
@@ -159,18 +155,15 @@ int frozen_potential(const Sim_Param &sim)
 	"******************************\n"
 	"FROZEN-POTENTIAL APPROXIMATION\n"
     "******************************\n";
-    
     App_Var<Particle_v> APP(sim, "FP");
     APP.print_mem();
     standard_preparation(APP);
     init_cond_w_vel(APP); //< FP specific, with velocities
     init_pot_w_cic(APP); //< FP specific
-    print_init(APP); // WARNING: power_aux[0] is modified
     auto upd_pos = [&](){
         upd_pos_second_order(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< FP specific
     };
     integration(APP, upd_pos);
-    APP.print_info();
     printf("Frozen-potential approximation ended successfully.\n");
     return APP.err;
 }
@@ -187,12 +180,10 @@ int mod_frozen_potential(const Sim_Param &sim)
     standard_preparation(APP);
     init_cond_w_vel(APP); //< FP_pp specific, with velocities
     init_pot_w_s2(APP); //< FP_pp specific
-    print_init(APP); // WARNING: power_aux[0] is modified
     auto upd_pos = [&](){
         upd_pos_second_order_w_short_force(APP.sim, &APP.linked_list, APP.db, APP.b, APP.particles, APP.app_field); //< FP_pp specific
     };
     integration(APP, upd_pos);
-    APP.print_info();
     printf("Modified Frozen-potential approximation ended successfully.\n");
     return APP.err;
 }
@@ -209,13 +200,11 @@ int adhesion_approximation(const Sim_Param &sim)
     standard_preparation(APP);
     init_cond_w_vel(APP); //< with velocities
     init_adhesion(APP); //< AA specific
-    print_init(APP); // WARNING: power_aux[0] is modified
     auto upd_pos = [&](){
         aa_convolution(&APP); //< AA specific
         upd_pos_first_order(APP.sim, APP.db, APP.particles, APP.app_field); //< AA specific
     };
     integration(APP, upd_pos);
-    APP.print_info();
 	printf("Adhesion approximation ended successfully.\n");
     return APP.err;
 }

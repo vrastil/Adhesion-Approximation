@@ -61,6 +61,7 @@ int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
 			("out_dir,o", po::value<string>(&sim->out_dir)->default_value("output/"), "output folder name")
             ("num_thread,t", po::value<unsigned>(&sim->nt)->default_value(0), "number of threads the program will use, set 0 for max. available")
             ("seed", po::value<unsigned long>(&sim->seed)->default_value(0), "seed to random number generator, use 0 for random")
+            ("pair", po::value<bool>(&sim->pair)->default_value(false), "if true run two simulations with opposite phases of random field")
 			;
 		
 		po::options_description config_other("Approximation`s options");
