@@ -37,14 +37,14 @@ const char *humanSize(uint64_t bytes){
  */
 
  template <typename T>
- double Vec_3D<T>::norm() const
+ double Vec_3D<T>::norm2() const
  {
      T tmp(0);
      for (const T val : vec)
      {
          tmp += val*val;
      }
-     return sqrt(tmp);
+     return tmp;
  }
  
  template <typename T>

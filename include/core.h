@@ -44,8 +44,9 @@ public:
     inline iterator end() noexcept { return vec.end(); }
     inline const_iterator cend() const noexcept { return vec.end(); }
     
-	// METHODS
-	double norm() const;
+    // METHODS
+    double norm2() const;
+	inline double norm() const { return sqrt(norm2()); }
 	inline void fill(const T& value){ vec.fill(value); }
 		
 	// OPERATORS	

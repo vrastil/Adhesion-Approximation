@@ -5,8 +5,6 @@
 #include "core_power.h"
 #include "CBRNG_Random.h"
 
-#define N_MAX 1
-
 using namespace std;
 
 static void set_unpert_pos_one_par(Vec_3D<int>& unpert_pos, const int par_index, const int par_per_dim, const int Ng)
@@ -223,6 +221,7 @@ void upd_pos_second_order_w_short_force(const Sim_Param &sim, LinkedList* linked
 	printf("Creating linked list...\n");
 	linked_list->get_linked_list(particles);
 //	double fs, fl;
+    cout << "Computing short and long range parts of the potential...\n";
 	#pragma omp parallel for private(f_half)
 	for (unsigned i = 0; i < sim.par_num; i++)
 	{
@@ -641,6 +640,7 @@ static double S2_shape(const double k2, const double a)
 
 static double CIC_opt(Vec_3D<double> k_vec, const double a)
 {
+    constexpr unsigned N_MAX = 1;
 	double k_n[3];
 	double U2, U_n, G_n, k2n;
 	

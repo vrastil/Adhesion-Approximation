@@ -74,8 +74,13 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, ou
     plt.xscale('log')
 
     lab_p = "Pade app."
+    a_end = 1 / (1 + zs[-1])
+    a_ = 0
     for i, pwr in enumerate(pwr_spec_files):
         a = 1 / (1 + zs[i])
+        if (a < 2.4 * a_) and a != a_end:
+            continue		
+        a_ = a
         lab = 'z = ' + str(zs[i])
         data = np.loadtxt(pwr)
         k, P_k = data[:, 0], data[:, 1]
@@ -228,8 +233,13 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_t
     fig = plt.figure(figsize=(15, 11))
     plt.xscale('log')
 
+    a_end = 1 / (1 + zs[-1])
+    a_ = 0
     for i, pwr in enumerate(pwr_spec_diff_files):
         a = 1 / (1 + zs[i])
+        if (a < 2.4 * a_) and a != a_end:
+            continue		
+        a_ = a
         lab = 'z = ' + str(zs[i])
         data = np.loadtxt(pwr)
         k, P_k = data[:, 0], data[:, 1]
