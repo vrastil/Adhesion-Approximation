@@ -23,6 +23,7 @@ public:
     ~Ofstream()
     {
         delete[] buf;
+        this->close();
     }
 };
 
@@ -87,7 +88,6 @@ void print_par_pos_cut_small(T* particles, const Sim_Param &sim, std::string out
            File << x*x_0 << "\t" << z*x_0 << "\t" << y*x_0 << "\n";
        }
    }
-   File.close();
 }
 
 void print_pow_spec(const Data_x_y<double> &pwr_spec_binned, string out_dir, string suffix)
@@ -103,7 +103,6 @@ void print_pow_spec(const Data_x_y<double> &pwr_spec_binned, string out_dir, str
 	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
         if (pwr_spec_binned.y[j]) File << pwr_spec_binned.x[j] << "\t" << pwr_spec_binned.y[j] << "\n";
 	}
-	File.close();
 }
 
 void print_vel_pow_spec(const Data_x_y<double> &pwr_spec_binned, string out_dir, string suffix)
@@ -119,7 +118,6 @@ void print_vel_pow_spec(const Data_x_y<double> &pwr_spec_binned, string out_dir,
 	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
 		if (pwr_spec_binned.y[j]) File << pwr_spec_binned.x[j] << "\t" << pwr_spec_binned.y[j] << "\n";
 	}
-	File.close();
 }
 
 void print_corr_func(const Data_x_y<double> &pwr_spec_binned, string out_dir, string suffix)
@@ -135,7 +133,6 @@ void print_corr_func(const Data_x_y<double> &pwr_spec_binned, string out_dir, st
 	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
 		if (pwr_spec_binned.y[j]) File << pwr_spec_binned.x[j] << "\t" << pwr_spec_binned.y[j] << "\n";
 	}
-	File.close();
 }
 
 void print_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data_x_y<double> &pwr_spec_binned_0,
@@ -163,7 +160,6 @@ void print_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data_x_y
         } else if (pwr_spec_binned.x[j] < pwr_spec_binned_0.x[i]) j++;
         else i++;
 	}
-	File.close();
 }
 
 void print_vel_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data_x_y<double> &pwr_spec_binned_0,
@@ -191,7 +187,6 @@ void print_vel_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data
         } else if (pwr_spec_binned.x[j] < pwr_spec_binned_0.x[i]) j++;
         else i++;
 	}
-	File.close();
 }
 
 void print_track_par(const Tracking& track, const Sim_Param &sim, string out_dir, string suffix)
@@ -214,7 +209,6 @@ void print_track_par(const Tracking& track, const Sim_Param &sim, string out_dir
 		}
 		File << "\n\n";
 	}
-	File.close();
 }
 
 void print_rho_map(const Mesh& delta, const Sim_Param &sim, string out_dir, string suffix)
@@ -233,7 +227,6 @@ void print_rho_map(const Mesh& delta, const Sim_Param &sim, string out_dir, stri
 		}
 		File << "\n";
 	}
-	File.close();
 }
 
 void print_projected_rho(const Mesh& delta, const Sim_Param &sim, string out_dir, string suffix)
@@ -259,7 +252,6 @@ void print_projected_rho(const Mesh& delta, const Sim_Param &sim, string out_dir
 		}
 		File << "\n";
 	}
-	File.close();
 }
 
 void print_dens_bin(const vector<int> &dens_binned, int mesh_num, string out_dir, string suffix){
@@ -276,7 +268,6 @@ void print_dens_bin(const vector<int> &dens_binned, int mesh_num, string out_dir
         dens = j*0.1-0.9;
         File << dens << "\t" << dens_binned[j] << "\n";       
 	}
-	File.close();
 }
 
 template void print_par_pos_cut_small(Particle_x* particles, const Sim_Param &sim, std::string out_dir, std::string suffix);

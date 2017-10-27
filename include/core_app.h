@@ -41,5 +41,5 @@ template<class T>
 void gen_corr_func_binned_pp(const Sim_Param &sim, T* particles, Data_x_y<double>* corr_func_binned);
 void gen_dens_binned(const Mesh& rho, std::vector<int> &dens_binned, const Sim_Param &sim);
 
-void force_short(const Sim_Param &sim, const LinkedList& linked_list, Particle_v *particles,
-				 const Vec_3D<double> &position, Vec_3D<double>* force);
+void force_short(const Sim_Param &sim, const double D, const LinkedList& linked_list, Particle_v *particles,
+				 const Vec_3D<double> position, Vec_3D<double>* force);

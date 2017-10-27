@@ -138,6 +138,8 @@ void upd_pos_second_order(const Sim_Param &sim, const double db, const double b,
     Vec_3D<double> f_half;
     const int order = sim.order;
     const int Nm = sim.mesh_num;
+    const double a_ = b-db/2.;
+    const double D = growth_factor(a_, sim.power);
 
 	#pragma omp parallel for private(f_half)
 	for (unsigned i = 0; i < sim.par_num; i++)
@@ -145,8 +147,8 @@ void upd_pos_second_order(const Sim_Param &sim, const double db, const double b,
 		particles[i].position += particles[i].velocity*(db/2.);
 		f_half.fill(0.);
 		assign_from(force_field, particles[i].position, &f_half, order);
-	//	if (i % (sim.par_num / 13) == 0) printf("particle num = %i, fl = (%f, %f, %f)\n", i, f_half[0], f_half[1], f_half[2]);
-		f_half = (particles[i].velocity - f_half)*(-3/(2.*(b-db/2.))); // <- EOM
+        f_half *= D/a_;
+		f_half = (particles[i].velocity - f_half)*(-3/(2.*a_)); // <- EOM
 		
 		particles[i].velocity += f_half*db;
 		particles[i].position += particles[i].velocity*(db/2.);
@@ -163,20 +165,19 @@ static double force_ref(const double r, const double a){
 	else return (224 * z - 224 * pow(z, 3) + 70 * pow(z, 4) + 48 * pow(z, 5) - 21 * pow(z, 7)) / (35 * a*a);
 }
 
-static double force_tot(double r){
+static double force_tot(const double r){
 	return 1 / (r*r);
 }
 
-void force_short(const Sim_Param &sim, const LinkedList& linked_list, Particle_v *particles,
+void force_short(const Sim_Param &sim, const double D, const LinkedList& linked_list, Particle_v *particles,
 				 const Vec_3D<double> position, Vec_3D<double>* force)
 {	// Calculate short range force in position, force is added
 	int p;
     Vec_3D<int> y;
 	Vec_3D<double> dr_vec;
 	double dr;
-    const double m = pow(sim.Ng, 3);
+    const double m = pow(sim.Ng, 3) / D;
     const int Nm = sim.mesh_num;
-    const int a = sim.a;
 
 	const Vec_3D<int> z =(Vec_3D<int>)(position / sim.Hc); // chain position of particle
 	for (y[0] = z[0] -1; y[0] < z[0] + 2; y[0]++)
@@ -188,13 +189,12 @@ void force_short(const Sim_Param &sim, const LinkedList& linked_list, Particle_v
 				p = linked_list.HOC(y);
 				while (p != -1){
 					dr_vec = get_sgn_distance(particles[p].position, position, Nm);
-					dr = dr_vec.norm();
-			//		dr = get_distance(particles[p].position, position, sim.mesh_num);
+                    dr = dr_vec.norm();
 					if ((dr < sim.rs) && (dr != 0)) // Short range force is set 0 for separation larger than cutoff radius
 			//		if (dr != 0) // Short range force is set 0 for separation larger than cutoff radius
-					{ 
-						(*force) += (m*(force_tot(dr) - force_ref(dr, a))/(dr*4*PI))*dr_vec;
-					}
+					{
+                        (*force) += (m*(force_tot(dr) - force_ref(dr, sim.a))/(dr*4*PI))*dr_vec;
+                    }
 					p = linked_list.LL[p];
 				}
 			}
@@ -209,6 +209,8 @@ void upd_pos_second_order_w_short_force(const Sim_Param &sim, LinkedList* linked
 	Vec_3D<double> f_half;
     const int order = sim.order;
     const int Nm = sim.mesh_num;
+    const double a_ = b-db/2.;
+    const double D = growth_factor(a_, sim.power);
 
 	// three loops to compute distances and velocities at fixed positon
 	
@@ -232,10 +234,11 @@ void upd_pos_second_order_w_short_force(const Sim_Param &sim, LinkedList* linked
 //		fl = f_half.norm();
 //		fs = fl;
 		// short range force
-		force_short(sim, *linked_list, particles, particles[i].position, &f_half);
+        force_short(sim, D, *linked_list, particles, particles[i].position, &f_half);
+        f_half *= D/a_;
 //		fs -= f_half.norm();
 //		if (i % (sim.par_num / 13) == 0) printf("particle num = %i, fl = %f, fs = %f\n",i, fl, fs);
-		f_half = (particles[i].velocity - f_half)*(-3/(2.*(b-db/2.))); // <- EOM
+		f_half = (particles[i].velocity - f_half)*(-3/(2.*a_)); // <- EOM
 		
 		particles[i].velocity += f_half*db;
 	}
