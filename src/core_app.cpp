@@ -634,19 +634,28 @@ static double S2_shape(const double k2, const double a)
 {
 	if (a == 0) return 1.;
 	
-	double t = sqrt(k2)*a / 2;
+    double t = sqrt(k2)*a / 2.;
+    if (t == 0) return 1.;
 	return 12 / pow(t, 4)*(2 - 2 * cos(t) - t*sin(t));
 }
 
 static double CIC_opt(Vec_3D<double> k_vec, const double a)
 {
-    constexpr unsigned N_MAX = 1;
+#define N_MAX 1
+#ifndef N_MAX
+    double s2 = pow(S2_shape(k_vec.norm2(), a), 2);
+    for(int j=0; j<3; j++)
+    {
+        if (k_vec[j] != 0) s2 /= pow(sin(k_vec[j] / 2.) / (k_vec[j] / 2.), 2); //W (k) for CIC (order 1)
+    }
+    return s2;
+#else
 	double k_n[3];
 	double U2, U_n, G_n, k2n;
 	
 	G_n = 0;
 	U2 = 1;
-	for (int j = 0; j < 3; j++) U2 *= 1./3.*(1+2*cos(k_vec[j]/2.));
+	for (int j = 0; j < 3; j++) U2 *= 1./3.*(1+2*pow(cos(k_vec[j]/2.), 2)); // inf sum of U_n^2 for CIC
 	for (int n1 = -N_MAX; n1 < N_MAX + 1; n1++)
 	{
 		k_n[0] = k_vec[0] + 2 * PI*n1;
@@ -662,14 +671,15 @@ static double CIC_opt(Vec_3D<double> k_vec, const double a)
 				{
 					if (k_n[j] != 0) U_n *= sin(k_n[j] / 2.) / (k_n[j] / 2.);
 					k2n += pow(k_n[j],2);
-				}
+                }
+                U_n = pow(U_n, 2.); // W(k) for CIC (order 1)
 				if (k2n != 0)
 				{
 					for(int j=0; j<3; j++)
 					{										
-						G_n += k_vec[j]* // D(k)
-						k_n[j]/k2n*pow(S2_shape(k2n, a), 2)* // R(k_n)
-						pow(U_n, 2.); // W(k) for CIC
+						G_n += k_vec[j]* // i.D(k)
+						k_n[j]/k2n*pow(S2_shape(k2n, a), 2)* // R*(k_n) /i
+						U_n; // U_n
 					}
 				}
 			}
@@ -680,7 +690,8 @@ static double CIC_opt(Vec_3D<double> k_vec, const double a)
 		printf("Gn = %f\tU2 = %f, k = (%f, %f, %f) \n", G_n, U2, k_vec[0], k_vec[1], k_vec[2]);
 		return 1.;
 	}
-	return G_n/U2;
+    return G_n/U2;
+#endif
 }
 
 void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, const double a)
@@ -710,7 +721,7 @@ void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, const double a)
         // no optimalization
         if (a == -1) opt = 1.;
         // optimalization for CIC and S2 shaped particle
-		else opt = CIC_opt(k_vec_phys, a);
+        else opt = CIC_opt(k_vec_phys, a);
 		for(unsigned j=0; j<3;j++)
 		{
 			// 2*PI/N comes from derivative WITH RESPECT to the mesh coordinates
