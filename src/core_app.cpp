@@ -114,7 +114,7 @@ void upd_pos_first_order(const Sim_Param &sim, const double db, Particle_x* part
 
 void upd_pos_first_order(const Sim_Param &sim, const double db, Particle_v* particles, const vector< Mesh> &vel_field)
 {
-	// Euler method
+	/// Leapfrog method for frozen-flow
 	
 	Vec_3D<double> vel;
 	const int order = sim.order;
@@ -123,17 +123,20 @@ void upd_pos_first_order(const Sim_Param &sim, const double db, Particle_v* part
 	#pragma omp parallel for private(vel)
 	for (unsigned i = 0; i < sim.par_num; i++)
 	{
+        particles[i].position += particles[i].velocity*(db/2.); // STREAM
+
 		vel.fill(0.);
-		assign_from(vel_field, particles[i].position, &vel, order);
-        particles[i].position += vel*db;
-        particles[i].velocity = vel;
+        assign_from(vel_field, particles[i].position, &vel, order);
+        particles[i].velocity = vel; // KICK
+
+        particles[i].position += vel*(db/2.); // STREAM
 		get_per(particles[i].position, Nm);
 	}
 }
 
 void upd_pos_second_order(const Sim_Param &sim, const double db, const double b, Particle_v* particles, const vector< Mesh> &force_field)
 {
-	// Leapfrog method for frozen-flow
+	// Leapfrog method for frozen-potential
 	
     Vec_3D<double> f_half;
     const int order = sim.order;
@@ -144,11 +147,11 @@ void upd_pos_second_order(const Sim_Param &sim, const double db, const double b,
 	#pragma omp parallel for private(f_half)
 	for (unsigned i = 0; i < sim.par_num; i++)
 	{
-		particles[i].position += particles[i].velocity*(db/2.);
+		particles[i].position += particles[i].velocity*(db/2.); // STREAN
 		f_half.fill(0.);
-		assign_from(force_field, particles[i].position, &f_half, order);
+		assign_from(force_field, particles[i].position, &f_half, order); // KICK
         f_half *= D/a_;
-		f_half = (particles[i].velocity - f_half)*(-3/(2.*a_)); // <- EOM
+		f_half = (particles[i].velocity - f_half)*(-3/(2.*a_)); // <- EOM, STREAM
 		
 		particles[i].velocity += f_half*db;
 		particles[i].position += particles[i].velocity*(db/2.);
@@ -205,7 +208,7 @@ void force_short(const Sim_Param &sim, const double D, const LinkedList& linked_
 void upd_pos_second_order_w_short_force(const Sim_Param &sim, LinkedList* linked_list, const double db,
 										const double b, Particle_v* particles, const vector< Mesh> &force_field)
 {
-	// Leapfrog method for modified frozen-flow
+	// Leapfrog method for modified frozen-potential
 	Vec_3D<double> f_half;
     const int order = sim.order;
     const int Nm = sim.mesh_num;
@@ -217,7 +220,7 @@ void upd_pos_second_order_w_short_force(const Sim_Param &sim, LinkedList* linked
 	#pragma omp parallel for private(f_half)
 	for (unsigned i = 0; i < sim.par_num; i++)
 	{
-		particles[i].position += particles[i].velocity*(db/2.);
+		particles[i].position += particles[i].velocity*(db/2.); // STREAM
 	}
 	
 	printf("Creating linked list...\n");
@@ -240,13 +243,13 @@ void upd_pos_second_order_w_short_force(const Sim_Param &sim, LinkedList* linked
 //		if (i % (sim.par_num / 13) == 0) printf("particle num = %i, fl = %f, fs = %f\n",i, fl, fs);
 		f_half = (particles[i].velocity - f_half)*(-3/(2.*a_)); // <- EOM
 		
-		particles[i].velocity += f_half*db;
+		particles[i].velocity += f_half*db; // KICK
 	}
 	
 	#pragma omp parallel for private(f_half)
 	for (unsigned i = 0; i < sim.par_num; i++)
 	{
-		particles[i].position += particles[i].velocity*(db/2.);
+		particles[i].position += particles[i].velocity*(db/2.); // STREAM
 		get_per(particles[i].position, Nm);
 	}
 }

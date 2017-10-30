@@ -140,7 +140,6 @@ int frozen_flow(const Sim_Param &sim)
     APP.print_mem();
     standard_preparation(APP);
     init_cond_w_vel(APP); //< with velocities
-    // init_cond_no_vel(APP); //< FF specific, no velocities
     auto upd_pos = [&](){
         upd_pos_first_order(APP.sim, APP.db, APP.particles, APP.app_field); //< FF specific
     };
@@ -158,7 +157,7 @@ int frozen_potential(const Sim_Param &sim)
     App_Var<Particle_v> APP(sim, "FP");
     APP.print_mem();
     standard_preparation(APP);
-    init_cond_w_vel(APP); //< FP specific, with velocities
+    init_cond_w_vel(APP); //< with velocities
     init_pot_w_cic(APP); //< FP specific
     auto upd_pos = [&](){
         upd_pos_second_order(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< FP specific
@@ -178,7 +177,7 @@ int mod_frozen_potential(const Sim_Param &sim)
     App_Var_FP_mod APP(sim, "FP_pp");
     APP.print_mem();
     standard_preparation(APP);
-    init_cond_w_vel(APP); //< FP_pp specific, with velocities
+    init_cond_w_vel(APP); //< with velocities
     init_pot_w_s2(APP); //< FP_pp specific
     auto upd_pos = [&](){
         upd_pos_second_order_w_short_force(APP.sim, &APP.linked_list, APP.db, APP.b, APP.particles, APP.app_field); //< FP_pp specific
@@ -235,9 +234,7 @@ static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu)
     // store exponent only
     // *expotential = potential; !!! <- do not use this in case potential and expotential are meshes of different size
     #pragma omp parallel for
-    for (unsigned i = 0; i < expotential->length; i++) (*expotential)[i] = potential[i];
-
-    *expotential /= -2*nu;
+    for (unsigned i = 0; i < expotential->length; i++) (*expotential)[i] = -potential[i] / (2*nu);
 }
 
 static double get_summation(const vector<double>& exp_aux)

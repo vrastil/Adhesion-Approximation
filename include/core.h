@@ -433,7 +433,7 @@ public:
 	inline double z() const{ return 1./b - 1.;}
 	inline double b_half() const { return b - db/2.; }
 	inline bool integrate() const { return (b <= b_out) && (db > 0);}
-	inline bool printing() const { return ((step % print_every) == 0) or (b == b_out); }
+	inline bool printing() const { return print_every ? ((step % print_every) == 0) or (b == b_out) : print_every ; }
     void print();
     void upd_time();
     void print_mem() const;
