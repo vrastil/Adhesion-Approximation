@@ -31,7 +31,8 @@ int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
 			("redshift,z", po::value<double>(&sim->z_in)->default_value(200.), "redshift at the start of the simulation")
 			("redshift_0,Z", po::value<double>(&sim->z_out)->default_value(10.), "redshift at the end of the simulation")
             ("time_step,a", po::value<double>(&sim->db)->default_value(0.1, "0.1"), "dimensionless time-step (scale factor)")
-            ("print_every", po::value<unsigned>(&sim->print_every)->default_value(1, "1"), "save particle positions and power spectrum every n-th step")
+            ("print_every", po::value<unsigned>(&sim->print_every)->default_value(1, "1"), "save particle positions and power spectrum "
+                                                                                           "every n-th step, set 0 for no printing")
 			;
 		
 		po::options_description config_app("Approximations");

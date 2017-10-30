@@ -85,7 +85,7 @@ void print_init(T& APP)
 {
     /* Setting initial (binned) power spectrum, WARNING: power_aux[0] is modified */
     APP.track.update_track_par(APP.particles);
-    APP.print();
+    if (APP.print_every) APP.print();
     APP.upd_time();
 }
 

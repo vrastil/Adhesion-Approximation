@@ -602,7 +602,8 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
     memory_alloc = sizeof(double)*(app_field[0].length*app_field.size()+power_aux[0].length*power_aux.size());
     
     // CREAT SUBDIR STRUCTURE
-    work_dir_over(out_dir_app);
+    if (print_every) work_dir_over(out_dir_app);
+    else create_dir(out_dir_app);
 
     // PARTICLES INITIALIZATION
     particles = new T[sim.par_num];
