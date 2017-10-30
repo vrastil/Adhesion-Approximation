@@ -20,9 +20,9 @@ int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
 		// options both on command line	and in configuration file
 		po::options_description config_mesh("Mesh configuration");
 		config_mesh.add_options()
-			("mesh_num,m", po::value<unsigned>(&sim->mesh_num)->default_value(32), "number of mesh cells in the box per dimension (potential)")
-            ("mesh_num_pwr,M", po::value<unsigned>(&sim->mesh_num_pwr)->default_value(1024), "number of mesh cells in the box per dimension (power spectrum)")
-			("par_num,p", po::value<unsigned>(&sim->Ng)->default_value(2), "ratio of mesh cells and number of particles per dimension")
+			("mesh_num,m", po::value<unsigned>(&sim->mesh_num)->default_value(32), "number of mesh cells per dimension (potential)")
+            ("mesh_num_pwr,M", po::value<unsigned>(&sim->mesh_num_pwr)->default_value(1024), "number of mesh cells per dimension (power spectrum)")
+			("par_num,p", po::value<unsigned>(&sim->par_num_1d)->default_value(2), "number of particles per dimension")
 			("box_size,L", po::value<double>(&sim->box_size)->default_value(512, "512"), "box size in units of Mpc/h")
 			;
 			

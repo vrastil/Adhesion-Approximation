@@ -61,7 +61,7 @@ class SimInfo(object):
             data = json.loads(data_file.read())
 
         self.num_g = data["Ng"]
-        self.num_p = data["par_num"]**(1./3)
+        self.num_p = data["par_num"]
         self.num_m = data["mesh_num"]
         self.num_M = data["mesh_num_pwr"]
         self.box = data["box_size"]

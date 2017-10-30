@@ -452,8 +452,9 @@ Sim_Param::Sim_Param(int ac, char* av[])
         }
 
         /* SIMULATION BOX*/
-        Ng_pwr = Ng*mesh_num_pwr/mesh_num;
-        par_num = pow(mesh_num / Ng, 3);
+        Ng = mesh_num / par_num_1d;
+        Ng_pwr = mesh_num_pwr/par_num_1d;
+        par_num = pow(par_num_1d, 3);
         a = rs / 0.735;
         M = (int)(mesh_num / rs);
         Hc = double(mesh_num) / M;
@@ -474,7 +475,7 @@ Sim_Param::Sim_Param(int ac, char* av[])
         /* RANGE : k */
         k_par.nyquist["analysis"] = PI*mesh_num_pwr / box_size;
         k_par.nyquist["potential"] = PI*mesh_num / box_size;
-        k_par.nyquist["particle"] = PI*pow(par_num, 1/3.) / box_size;
+        k_par.nyquist["particle"] = PI*par_num_1d / box_size;
         
         k_par.k_print.lower = 2*PI/box_size;
         k_par.k_print.upper = 2*PI/box_size*mesh_num_pwr;
@@ -499,7 +500,7 @@ void Sim_Param::print_info(string out, string app) const
             printf("SIMULATION PARAMETERS\n");
             printf("*********************\n");
             printf("Ng:\t\t%i\n", Ng);
-            printf("Num_par:\t%G^3\n", pow(par_num, 1/3.));
+            printf("Num_par:\t%G^3\n", par_num_1d);
             printf("Num_mesh:\t%i^3\n", mesh_num);
             printf("Num_mesh_pwr:\t%i^3\n", mesh_num_pwr);
             printf("Box size:\t%.0f Mpc/h\n", box_size);
@@ -520,7 +521,7 @@ void Sim_Param::print_info(string out, string app) const
                 {"mesh_num", mesh_num},
                 {"mesh_num_pwr", mesh_num_pwr},
                 {"Ng", Ng},
-                {"par_num", par_num},
+                {"par_num", par_num_1d},
                 {"box_size", box_size},
                 {"redshift", z_in},
                 {"redshift_0", z_out},

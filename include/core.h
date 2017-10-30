@@ -323,7 +323,7 @@ public:
     // CONSTRUCTOR
     Sim_Param(int ac, char* av[]);
     /* SIMULATION BOX*/
-    unsigned par_num, mesh_num, mesh_num_pwr, Ng, Ng_pwr, print_every;
+    unsigned par_num_1d, par_num, mesh_num, mesh_num_pwr, Ng, Ng_pwr, print_every;
     double box_size;
     unsigned order = 1, bin_num = 200;
     unsigned long seed;
