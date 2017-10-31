@@ -360,99 +360,71 @@ double Interp_obj::eval(double x) const{ return gsl_spline_eval(spline, x, acc);
  */
 
 Extrap_Pk::Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim):
-Interp_obj(data), n_s(sim.power.ns), power(sim.power)
+    Interp_obj(data), n_s(sim.power.ns), power(sim.power)
 {
     {   // LOWER RANGE -- fit A*T(k)^2*k^ns to data[m:n], T(k) BBKS
-        printf("Fitting amplitude of P(k) in lower range.\n");
         const unsigned m = get_nearest(2*PI/sim.box_size*4, data.x);
         const unsigned n = m + 5;
-        k_min = data.x[n];
-        vector<double> k, Pk;
-
-        for(unsigned i = m; i < n; i++){
-            k.push_back(pow(data.x[i], n_s)*transfer_function_2(data.x[i], power));
-            Pk.push_back(data.y[i]);
-        }
-        double A_sigma2, sumsq;
-        gsl_fit_mul(k.data(), 1, Pk.data(), 1, n-m, &A, &A_sigma2, &sumsq);
-        printf("\t[fit A = %e, sigma = %f, sumsq = %f]\n", A, sqrt(A_sigma2), sumsq);
+        fit_prim(data, m, n);
     }
-    #ifdef PADE
-    {   // UPPER RANGE -- solve Ax=b to get Pade approximant
-        printf("Computing Padé approximant of P(k) in upper range.\n");
-        unsigned order = sim.k_par.pade_order; // Pade approximant R [0/order-1]
-
-        vector<double> R_0m(order);
-        double k_min_ = sim.k_par.k_interp.lower;
-        k_max = sim.k_par.k_interp.upper;
-        
-        const unsigned m = get_nearest(k_min_, data.x);
-        const unsigned n = get_nearest(k_max, data.x);
-        const unsigned l = (n - m)/ (order - 1);
-        printf("\t[k_min = %.5e, m = %i, k[m] = %.5e]\n", k_min_, m, data.x[m]);
-        printf("\t[k_max = %.5e, n = %i, k[n] = %.5e]\n", k_max, n, data.x[n]);
-
-        vector<double> A, b;
-        double k, Pk;
-
-        // TEMPORARY!!!
-        sim.k_par.k_pade.clear();
-
-        for(unsigned i = m; i <= n; i+=l)
-        {
-            k = data.x[i]; // TEMPORARY!!! these two lines are to be other way around
-            sim.k_par.k_pade.push_back(k); // i.e. load k from simulation parameters
-
-            Pk = data.y[i];
-            A.push_back(1.); // a0
-            for(unsigned j = 1; j < order; j++)
-            {
-                A.push_back(-pow(k, j)*Pk); // b_i
-            }
-            b.push_back(Pk); // P(k)
-        }
-
-        gsl_matrix_view A_ = gsl_matrix_view_array (A.data(), order, order);
-        gsl_vector_view b_ = gsl_vector_view_array (b.data(), order);
-        gsl_vector_view x_ = gsl_vector_view_array (R_0m.data(), order);
-        gsl_permutation * p = gsl_permutation_alloc (order);
-        int s;
-    
-        gsl_linalg_LU_decomp (&A_.matrix, p, &s);
-        gsl_linalg_LU_solve (&A_.matrix, p, &b_.vector, &x_.vector);
-
-        a_m.push_back(R_0m[0]);
-        b_n = vector<double>(R_0m.begin() + 1, R_0m.end());
-        gsl_permutation_free (p);
-        printf("\t[a0 = %f", a_m[0]);
-        for(unsigned j = 0; j < b_n.size(); j++) printf(", b%i = %f", j+1, b_n[j]);
-        printf("]\n");
-        if ((b_n[0]*b_n[0] - 4*b_n[1]) > 0) printf("WARNING! Padé approximant has roots!\n");
-        if (b_n[1]*a_m[0] < 0) printf("ERROR! Padé approximant has roots in the upper range of extrapolation!\n");
-    }
-    #elif defined FIX_POWER_LAW
+    #ifdef FIX_POWER_LAW
     {   // UPPER RANGE -- fit Ak^ns to data[m,m+n]
         printf("Fitting amplitude of P(k) in upper range.\n");
         constexpr int n = 3;
         n_s_up = FIX_POWER_LAW;
-        k_max = sim.k_par.k_interp.upper;
-        const unsigned m = get_nearest(k_max, data.x) - n + 1;
-        
-        vector<double> k, Pk;
-
-        for(unsigned i = m; i < m+n; i++){
-            k.push_back(pow(data.x[i], n_s_up));
-            Pk.push_back(data.y[i]);
-        }
-        double A_sigma2, sumsq;
-        gsl_fit_mul(k.data(), 1, Pk.data(), 1, n, &A_up, &A_sigma2, &sumsq);
-        printf("\t[fit A = %e, n_s = %.3f, sigma = %f, sumsq = %f]\n", A_up, n_s_up, sqrt(A_sigma2), sumsq);
+        const unsigned m = get_nearest(sim.k_par.k_interp.upper, data.x) - n + 1;
+        fit_power_law(data, m, n);
     }
     #else
-
     #endif
 }
 
+Extrap_Pk::Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
+    const unsigned m_u, const unsigned n_u):
+    Interp_obj(data), n_s(sim.power.ns), power(sim.power)
+{
+    {   // LOWER RANGE -- fit A*T(k)^2*k^ns to data[m:n], T(k) BBKS
+        fit_prim(data, m_l, n_l);
+    }
+    #ifdef FIX_POWER_LAW
+    {   // UPPER RANGE -- fit Ak^ns to data[m,m+n]
+        n_s_up = FIX_POWER_LAW;
+        fit_power_law(data, m_u, n_u);
+    }
+    #else
+    #endif
+}
+
+void Extrap_Pk::fit_prim(const Data_x_y<double>& data, const unsigned m, const unsigned n)
+{
+    // LOWER RANGE -- fit A*T(k)^2*k^ns to data[m:n], T(k) BBKS
+    printf("Fitting amplitude of P(k) in lower range.\n");
+    k_min = data.x[n];
+    vector<double> k, Pk;
+
+    for(unsigned i = m; i < n; i++){
+        k.push_back(pow(data.x[i], n_s)*transfer_function_2(data.x[i], power));
+        Pk.push_back(data.y[i]);
+    }
+    double A_sigma2, sumsq;
+    gsl_fit_mul(k.data(), 1, Pk.data(), 1, n-m, &A, &A_sigma2, &sumsq);
+    printf("\t[fit A = %e, sigma = %f, sumsq = %f]\n", A, sqrt(A_sigma2), sumsq);
+}
+
+void Extrap_Pk::fit_power_law(const Data_x_y<double>& data, const unsigned m, const unsigned n)
+{
+    // UPPER RANGE -- fit Ak^ns to data[m,m+n]
+    printf("Fitting amplitude of P(k) in upper range.\n");
+    vector<double> k, Pk;
+    k_max =  data.x[m+n-1];
+    for(unsigned i = m; i < m+n; i++){
+        k.push_back(pow(data.x[i], n_s_up));
+        Pk.push_back(data.y[i]);
+    }
+    double A_sigma2, sumsq;
+    gsl_fit_mul(k.data(), 1, Pk.data(), 1, n, &A_up, &A_sigma2, &sumsq);
+    printf("\t[fit A = %e, n_s = %.3f, sigma = %f, sumsq = %f]\n", A_up, n_s_up, sqrt(A_sigma2), sumsq);
+}
 
 double Extrap_Pk::eval(double k) const
 {

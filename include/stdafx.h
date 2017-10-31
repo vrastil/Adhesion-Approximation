@@ -13,6 +13,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
 #include <fstream>
 #include <functional>
@@ -42,6 +43,7 @@
 #include <gsl/gsl_fit.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_linalg.h>
+#include <gsl/gsl_matrix.h>
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_spline.h>
