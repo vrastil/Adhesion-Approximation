@@ -328,6 +328,8 @@ public:
     unsigned order = 1, bin_num = 200;
     unsigned long seed;
     bool pair;
+    unsigned mlt_runs;
+    bool phase;
 
     /* TIME */
 	double z_in, z_out;
@@ -352,6 +354,7 @@ public:
 	void print_info() const;
 	inline const double x_0() const{return (double)box_size/mesh_num;}
     inline const double x_0_pwr() const{return (double)box_size/mesh_num_pwr;}
+    bool simulate();
     
 protected:
 	bool is_init = 0;

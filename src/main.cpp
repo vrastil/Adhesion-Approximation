@@ -20,21 +20,23 @@ int main(int argc, char* argv[]){
         */
         Sim_Param sim(argc, argv);
         sim.print_info();
-		
-		/* ZEL`DOVICH APPROXIMATION */
-		if(sim.comp_ZA)	err = zel_app(sim);
-		
-		/* FROZEN-FLOW APPROXIMATION */
-		if(sim.comp_FF)	err = frozen_flow(sim);
-	
-		/* FROZEN-POTENTIAL APPROXIMATION */
-		if(sim.comp_FP)	err = frozen_potential(sim);
-		
-		/* ADHESION APPROXIMATION */
-		if(sim.comp_AA)	err = adhesion_approximation(sim);
-		
-		/* MODIFIED FROZEN-POTENTIAL APPROXIMATION */
-		if(sim.comp_FP_pp)	err = mod_frozen_potential(sim);
+        
+        do{
+            /* ZEL`DOVICH APPROXIMATION */
+            if(sim.comp_ZA)	err = zel_app(sim);
+            
+            /* FROZEN-FLOW APPROXIMATION */
+            if(sim.comp_FF)	err = frozen_flow(sim);
+        
+            /* FROZEN-POTENTIAL APPROXIMATION */
+            if(sim.comp_FP)	err = frozen_potential(sim);
+            
+            /* ADHESION APPROXIMATION */
+            if(sim.comp_AA)	err = adhesion_approximation(sim);
+            
+            /* MODIFIED FROZEN-POTENTIAL APPROXIMATION */
+            if(sim.comp_FP_pp)	err = mod_frozen_potential(sim);
+        } while (sim.simulate());
 	}
 	catch(int error){
 		printf("ERROR %i!\n", error);

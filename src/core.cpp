@@ -449,7 +449,8 @@ Sim_Param::Sim_Param(int ac, char* av[])
         if (seed == 0){
             srand(time(NULL));
             seed = (static_cast<long>(rand()) << (sizeof(int) * 8)) | rand();
-        }
+        } else mlt_runs = 1;
+        phase = true;
 
         /* SIMULATION BOX*/
         Ng = mesh_num / par_num_1d;
@@ -576,6 +577,17 @@ void Sim_Param::print_info(string out, string app) const
 void Sim_Param::print_info() const
 {
 	Sim_Param::print_info("", "");
+}
+
+bool Sim_Param::simulate()
+{
+    if (!pair || !phase)
+    {
+        mlt_runs--;
+        seed = (static_cast<long>(rand()) << (sizeof(int) * 8)) | rand();
+    }
+    if (pair) phase = !phase;
+    return mlt_runs;
 }
 
 /**

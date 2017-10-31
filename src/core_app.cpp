@@ -301,19 +301,15 @@ static void gen_rho_w_pow_k(const Sim_Param &sim, Mesh* rho)
     double k;
     const double L = sim.box_size;
     const double k0 = 2.*PI/L;
+    const int phase = sim.phase ? 1 : -1;
+    const double mod = phase / (sqrt(2.) * pow(L, 3/2.)); // pair sim, Re^2 + Im^2 factor, dimension trans. Pk -> Pk*
     const int N = rho->N;
 	#pragma omp parallel for private(k)
 	for(unsigned i=0; i < rho->length / 2;i++)
 	{
         k = k0*sqrt(get_k_sq(N, i));
-        (*rho)[2*i] *= sqrt(lin_pow_spec(k, sim.power));
-        (*rho)[2*i+1] *= sqrt(lin_pow_spec(k, sim.power));
-
-        (*rho)[2*i] /= pow(L, 3/2.);
-        (*rho)[2*i+1] /= pow(L, 3/2.);
-
-        (*rho)[2*i] /= sqrt(2.);
-        (*rho)[2*i+1] /= sqrt(2.);
+        (*rho)[2*i] *= mod*sqrt(lin_pow_spec(k, sim.power));
+        (*rho)[2*i+1] *= mod*sqrt(lin_pow_spec(k, sim.power));
 	}
 }
 
