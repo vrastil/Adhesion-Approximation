@@ -26,6 +26,6 @@ typedef RNG::key_type key_type;
 const int nsize_r123 = ctr_type::static_size;
 
 void GetSlabKeys(unsigned long *keys, int x1, int numx, unsigned long seed);
-void GetRandomDoublesWhiteNoise(double &rn1, double &rn2, unsigned long ikey, unsigned long index);
+void GetRandomDoublesWhiteNoise(double &rn1, double &rn2, double &rn, unsigned long ikey, unsigned long index);
 
 #endif

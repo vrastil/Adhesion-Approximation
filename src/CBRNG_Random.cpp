@@ -107,13 +107,12 @@ void GetSlabKeys(unsigned long *keys, int x1, int numx, unsigned long seed)
 
   }
 
-void GetRandomDoublesWhiteNoise(double &rn1, double &rn2, unsigned long input_key, unsigned long input_counter)
+void GetRandomDoublesWhiteNoise(double &rn1, double &rn2, double &rn, unsigned long input_key, unsigned long input_counter)
   {
     /* Returns two random numbers in rn1 and rn2 for the construction of a white noise field in real space */
 
     RNG rng;
     ctr_type r = {{0}};
-    double rn;
 
     // Initialize the key and counter
     key_type key    = GenerateKey(input_key);

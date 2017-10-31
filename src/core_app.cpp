@@ -262,39 +262,41 @@ static void gen_gauss_white_noise(const Sim_Param &sim, Mesh* rho)
 	GetSlabKeys(slab_keys.data(), 0, rho->N1, sim.seed);
 	
 	unsigned long ikey, index;
-	double rn1, rn2, rn;
+    double rn1, rn2, rn, tmp;
+    const unsigned N1 = rho->N1, N2 = rho->N2, N3 = rho->N3;
 		
-	#pragma omp parallel for private(ikey, index, rn1, rn2, rn)
-	for(unsigned long i=0; i<rho->N1; ++i) 
+	#pragma omp parallel for private(ikey, index, rn1, rn2, rn, tmp)
+	for(unsigned long i=0; i < N1; ++i) 
 	{
 		ikey = slab_keys[i];
-		for(unsigned long j=0; j<rho->N2; ++j) 
+		for(unsigned long j=0; j < N2; ++j) 
 		{
-			for(unsigned long k=0; k<rho->N3; ++k) 
+			for(unsigned long k=0; k< N3/2; ++k) 
 			{
                 #ifdef REAL_NOISE
                 index = j*rho->N2 + k; // N2 to have the same code as HACC
                 #else
                 index = j*rho->N3 + k; // N3 to have each number unique
                 #endif
-				GetRandomDoublesWhiteNoise(rn1, rn2, ikey, index);
-
-				rn = rn1*rn1 + rn2*rn2;
-				(*rho)(i, j, k) = rn2 * sqrt(-2.0*log(rn)/rn);
+				GetRandomDoublesWhiteNoise(rn1, rn2, rn, ikey, index);
+                tmp = sqrt(-2.0*log(rn)/rn);
+                (*rho)(i, j, 2*k) = rn2 * tmp;
+                (*rho)(i, j, 2*k+1) = rn1 * tmp;
 			}
 		}
     }
-	 
+     
+    double t_mean;
 	#ifdef CORR
-	double t_mean = mean(rho->real(), rho->length);
+	t_mean = mean(rho->real(), rho->length);
 	double t_std_dev = std_dev(rho->real(), rho->length, t_mean);
 	printf("\t[mean = %.12f, stdDev = %.12f]\t-->", t_mean, t_std_dev);
 	(*rho)-=t_mean;
 	(*rho)/=t_std_dev;
 	#endif
 	
-	double tmp = mean(rho->real(), rho->length);
-    printf("\t[mean = %.12f, stdDev = %.12f]\n", tmp, std_dev(rho->real(), rho->length, tmp));
+	t_mean = mean(rho->real(), rho->length);
+    printf("\t[mean = %.12f, stdDev = %.12f]\n", t_mean, std_dev(rho->real(), rho->length, t_mean));
     printf("\t[min = %.12f, max = %.12f]\n", min(rho->real(), rho->length), max(rho->real(), rho->length));
 }
 
