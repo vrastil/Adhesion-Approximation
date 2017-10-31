@@ -273,11 +273,7 @@ static void gen_gauss_white_noise(const Sim_Param &sim, Mesh* rho)
 		{
 			for(unsigned long k=0; k< N3/2; ++k) 
 			{
-                #ifdef REAL_NOISE
-                index = j*rho->N2 + k; // N2 to have the same code as HACC
-                #else
-                index = j*rho->N3 + k; // N3 to have each number unique
-                #endif
+                index = j*rho->N3 + k; // N3 to have each number unique, differs from HACC
 				GetRandomDoublesWhiteNoise(rn1, rn2, rn, ikey, index);
                 tmp = sqrt(-2.0*log(rn)/rn);
                 (*rho)(i, j, 2*k) = rn2 * tmp;
@@ -313,24 +309,11 @@ static void gen_rho_w_pow_k(const Sim_Param &sim, Mesh* rho)
         (*rho)[2*i] *= sqrt(lin_pow_spec(k, sim.power));
         (*rho)[2*i+1] *= sqrt(lin_pow_spec(k, sim.power));
 
-        #ifndef OLD_NORM
         (*rho)[2*i] /= pow(L, 3/2.);
         (*rho)[2*i+1] /= pow(L, 3/2.);
-        #endif
 
-        #ifndef REAL_NOISE
         (*rho)[2*i] /= sqrt(2.);
         (*rho)[2*i+1] /= sqrt(2.);
-            #ifdef FFTW_SYM
-            (*rho)[2*i] *= pow(N, 3/2.);
-            (*rho)[2*i+1] *= pow(N, 3/2.);
-            #endif
-        #else
-            #ifndef FFTW_SYM
-            (*rho)[2*i] *= pow(N, 3/2.);
-            (*rho)[2*i+1] *= pow(N, 3/2.);
-            #endif
-        #endif
 	}
 }
 
@@ -343,16 +326,6 @@ void gen_rho_dist_k(const Sim_Param &sim, Mesh* rho, const fftw_plan &p_F)
 {
 	printf("Generating gaussian white noise...\n");
 	gen_gauss_white_noise(sim, rho);
-    
-    #ifdef REAL_NOISE
-	printf("Generating gaussian white noise in k-sapce...\n");
-    fftw_execute_dft_r2c(p_F, *rho);
-
-    double t_mean = mean(rho->real(), rho->length);
-	double t_std_dev = std_dev(rho->real(), rho->length, t_mean);
-    printf("\t[mean = %.12f, stdDev = %.12f]\n", t_mean, t_std_dev);
-    printf("\t[min = %.12f, max = %.12f]\n", min(rho->real(), rho->length), max(rho->real(), rho->length));
-    #endif
 
 	printf("Generating density distributions with given power spectrum...\n");
 	gen_rho_w_pow_k(sim, rho);
@@ -538,13 +511,8 @@ void gen_rqty_binned(const double x_min, const double x_max, const double x_0,
 
 void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<double>* pwr_spec_binned)
 {
-    const int L = sim.box_size;
-    #ifndef OLD_NORM
-    const double mod_pk = pow(L, 3.); // P(k) - dimensionFULL!
-    #else
-    const double mod_pk = 1.;
-    #endif
-    const double mod_k = 2.*PI/L;
+    const double mod_pk = pow(sim.box_size, 3.); // P(k) - dimensionFULL!
+    const double mod_k = 2.*PI/sim.box_size;
     printf("Computing binned power spectrum...\n");
 	gen_cqty_binned(1, sim.mesh_num_pwr, power_aux, *pwr_spec_binned, mod_pk, mod_k);
 }

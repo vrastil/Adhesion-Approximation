@@ -10,9 +10,6 @@ CXXFLAGS +=-MMD
 CXXFLAGS +=-fopenmp
 
 CXXFLAGS +=-D CORR
-#CXXFLAGS +=-D REAL_NOISE
-#CXXFLAGS +=-D FFTW_SYM
-#CXXFLAGS +=-D OLD_NORM
 
 CXXLIB_PATH +=-L/usr/local/lib/
 # -L/lib/
