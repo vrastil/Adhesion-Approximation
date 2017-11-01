@@ -55,7 +55,7 @@ public:
 private:
     void fit_prim(const Data_x_y<double>& data, const unsigned m, const unsigned n);
     void fit_power_law(const Data_x_y<double>& data, const unsigned m, const unsigned n);
-    double n_s, A; // lower range, priomordial
+    double A; // lower range, linear power
     const Pow_Spec_Param& power;
     std::vector<double> a_m, b_n; // upper range, Pade approximant
     double n_s_up, A_up; //upper range, simple power law

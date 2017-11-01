@@ -4,7 +4,7 @@
 #include "core_mesh.h"
 #include "core_power.h"
 
-#define FIX_POWER_LAW -2.2
+#define FIX_POWER_LAW -2.3
 
 #ifndef FIX_POWER_LAW
 #define PADE
@@ -360,11 +360,11 @@ double Interp_obj::eval(double x) const{ return gsl_spline_eval(spline, x, acc);
  */
 
 Extrap_Pk::Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim):
-    Interp_obj(data), n_s(sim.power.ns), power(sim.power)
+    Interp_obj(data), power(sim.power)
 {
     {   // LOWER RANGE -- fit A*T(k)^2*k^ns to data[m:n], T(k) BBKS
-        const unsigned m = get_nearest(2*PI/sim.box_size*4, data.x);
-        const unsigned n = m + 5;
+        const unsigned m = 10 + get_nearest(2*PI/sim.box_size, data.x); // discard first 10 values due to undesampling
+        const unsigned n = m + 20; // fit over 20 points
         fit_prim(data, m, n);
     }
     #ifdef FIX_POWER_LAW
@@ -380,7 +380,7 @@ Extrap_Pk::Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim):
 
 Extrap_Pk::Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
     const unsigned m_u, const unsigned n_u):
-    Interp_obj(data), n_s(sim.power.ns), power(sim.power)
+    Interp_obj(data), power(sim.power)
 {
     {   // LOWER RANGE -- fit A*T(k)^2*k^ns to data[m:n], T(k) BBKS
         fit_prim(data, m_l, n_l);
@@ -396,13 +396,13 @@ Extrap_Pk::Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim, const u
 
 void Extrap_Pk::fit_prim(const Data_x_y<double>& data, const unsigned m, const unsigned n)
 {
-    // LOWER RANGE -- fit A*T(k)^2*k^ns to data[m:n], T(k) BBKS
+    // LOWER RANGE -- fit linear power spectrum to data[m:n]
     printf("Fitting amplitude of P(k) in lower range.\n");
     k_min = data.x[n];
     vector<double> k, Pk;
 
     for(unsigned i = m; i < n; i++){
-        k.push_back(pow(data.x[i], n_s)*transfer_function_2(data.x[i], power));
+        k.push_back(lin_pow_spec(data.x[i], power));
         Pk.push_back(data.y[i]);
     }
     double A_sigma2, sumsq;
@@ -429,7 +429,7 @@ double Extrap_Pk::eval(double k) const
 {
     if (k < k_min)
     {
-        return A*pow(k, n_s)*transfer_function_2(k, power);
+        return A*lin_pow_spec(k, power);
     }
     else if (k <= k_max) return Interp_obj::eval(k);
     else

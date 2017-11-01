@@ -709,7 +709,7 @@ void App_Var<T>::print()
     /* Print emulator power spectrum */
     if (z() < 2.2){ // emulator range
         pwr_spec_binned = init_emu(sim, z());
-        Extrap_Pk P_k(pwr_spec_binned, sim, 0, 1, nmode-1, 1);
+        Extrap_Pk P_k(pwr_spec_binned, sim, 0, 5, nmode-5, 5);
         gen_pow_spec_binned_from_extrap(sim, P_k, &pwr_spec_binned);
         print_pow_spec(pwr_spec_binned, out_dir_app, "_emu" + z_suffix());
 
