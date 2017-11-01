@@ -94,44 +94,38 @@ void set_pert_pos_w_vel(const Sim_Param &sim, const double a, Particle_v* partic
 	}
 }
 
-void upd_pos_first_order(const Sim_Param &sim, const double db, Particle_x* particles, const vector< Mesh> &vel_field)
+void stream_step(const Sim_Param &sim, const double da, Particle_v* particles)
 {
-	// Euler method
-	
-	Vec_3D<double> vel;
-	const int order = sim.order;
-    const int Nm = sim.mesh_num;
-
-	#pragma omp parallel for private(vel)
+    #pragma omp parallel for
 	for (unsigned i = 0; i < sim.par_num; i++)
 	{
-		vel.fill(0.);
-		assign_from(vel_field, particles[i].position, &vel, order);
-		particles[i].position += vel*db;
-		get_per(particles[i].position, Nm);
-	}
+        particles[i].position += particles[i].velocity*da;
+    }
 }
 
-void upd_pos_first_order(const Sim_Param &sim, const double db, Particle_v* particles, const vector< Mesh> &vel_field)
+void kick_step_no_momentum(const Sim_Param &sim, const double a, Particle_v* particles, const vector< Mesh> &vel_field)
 {
-	/// Leapfrog method for frozen-flow
-	
-	Vec_3D<double> vel;
-	const int order = sim.order;
-    const int Nm = sim.mesh_num;
-
-	#pragma omp parallel for private(vel)
-	for (unsigned i = 0; i < sim.par_num; i++)
+    // no memory of previus velocity, 1st order ODE
+    Vec_3D<double> vel;
+    const int order = sim.order;
+    const double dDda = growth_change(a, sim.power); // dD / da
+    
+    #pragma omp parallel for private(vel)
+    for (unsigned i = 0; i < sim.par_num; i++)
 	{
-        particles[i].position += particles[i].velocity*(db/2.); // STREAM
-
-		vel.fill(0.);
+        vel.fill(0.);
         assign_from(vel_field, particles[i].position, &vel, order);
-        particles[i].velocity = vel; // KICK
+        particles[i].velocity = vel*dDda;
+    }
+}
 
-        particles[i].position += vel*(db/2.); // STREAM
-		get_per(particles[i].position, Nm);
-	}
+void upd_pos_first_order(const Sim_Param &sim, const double da, const double a, Particle_v* particles, const vector< Mesh> &vel_field)
+{
+    /// Leapfrog method for frozen-flow / adhesion
+    stream_step(sim, da/2., particles);
+    kick_step_no_momentum(sim, a-da/2., particles, vel_field);
+    stream_step(sim, da/2., particles);
+    get_per(particles, sim.par_num, sim.mesh_num);
 }
 
 void upd_pos_second_order(const Sim_Param &sim, const double db, const double b, Particle_v* particles, const vector< Mesh> &force_field)

@@ -141,7 +141,7 @@ int frozen_flow(const Sim_Param &sim)
     standard_preparation(APP);
     init_cond_w_vel(APP); //< with velocities
     auto upd_pos = [&](){
-        upd_pos_first_order(APP.sim, APP.db, APP.particles, APP.app_field); //< FF specific
+        upd_pos_first_order(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< FF specific
     };
     integration(APP, upd_pos);
     printf("Frozen-flow approximation ended successfully.\n");
@@ -201,7 +201,7 @@ int adhesion_approximation(const Sim_Param &sim)
     init_adhesion(APP); //< AA specific
     auto upd_pos = [&](){
         aa_convolution(&APP); //< AA specific
-        upd_pos_first_order(APP.sim, APP.db, APP.particles, APP.app_field); //< AA specific
+        upd_pos_first_order(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< AA specific
     };
     integration(APP, upd_pos);
 	printf("Adhesion approximation ended successfully.\n");

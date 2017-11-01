@@ -70,6 +70,15 @@ void get_per(Vec_3D<int> &position, int perx, int pery, int perz)
     position[2] = get_per(position[2], perz);
 }
 
+void get_per(Particle_v* particles, const unsigned par_num, const int per)
+{
+    #pragma omp parallel for
+    for (unsigned i = 0; i < par_num; i++)
+    {
+        get_per(particles[i].position, per);
+    }
+}
+
 double get_distance_1D(double x_1, double x_2, int per)
 {	
 	double d = abs(x_2 - x_1);

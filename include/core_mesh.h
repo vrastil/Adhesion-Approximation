@@ -17,6 +17,7 @@ void get_per(Vec_3D<double> &position, int per);
 void get_per(Vec_3D<int> &position, int per);
 void get_per(Vec_3D<int> &position, const Vec_3D<int> &per);
 void get_per(Vec_3D<int> &position, int perx, int pery, int perz);
+void get_per(Particle_v* particles, const unsigned par_num, const int per);
 
 double get_distance_1D(double x_1, double x_2, int per);
 double get_sgn_distance_1D(double x_from, double x_to, int per);
