@@ -318,7 +318,7 @@ Data_x_y<double> init_emu(const Sim_Param &sim, double z)
     }
 
     double xstar[9];
-    xstar[0] = sim.power.Omega_m()*pow(sim.power.h, 2); // omega_m
+    xstar[0] = sim.power.Omega_m*pow(sim.power.h, 2); // omega_m
     xstar[1] = sim.power.Omega_b*pow(sim.power.h, 2); // omega_b
     xstar[2] = sim.power.sigma8; // sigma_8
     xstar[3] = sim.power.h; // h

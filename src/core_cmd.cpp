@@ -48,7 +48,7 @@ int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
 		po::options_description config_power("Cosmological parameters");
         config_power.add_options()
             ("Omega_b,B", po::value<double>(&sim->power.Omega_b)->default_value(0.05, "0.05"), "density of baryons relative to the critical density")
-            ("Omega_c,C", po::value<double>(&sim->power.Omega_c)->default_value(0.25, "0.25"), "density of CDM relative to the critical density")
+            ("Omega_m,C", po::value<double>(&sim->power.Omega_m)->default_value(0.25, "0.25"), "density of CDM relative to the critical density")
             ("Hubble,H", po::value<double>(&sim->power.H0)->default_value(67, "67"), "Hubble constant in units of km/s/Mpc")
 			("pwr_type,P", po::value<int>(&sim->power.pwr_type_i)->default_value(0), "power spectrum type")
 			("n_s,n", po::value<double>(&sim->power.ns)->default_value(1.), "spectral index of the scale-free power spectrum")

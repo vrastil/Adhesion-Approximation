@@ -133,7 +133,7 @@ double transfer_function_2(double k, const Pow_Spec_Param& parameters)
 {
     if (k == 0) return 1.;
 
-	const double q = k / (parameters.Omega_m()*parameters.h);
+	const double q = k / (parameters.Omega_m*parameters.h);
 	double T_k =	log(1+2.34*q)/(2.34*q)*
 					pow(1 + 3.89*q + pow(16.2*q, 2.) + pow(5.47*q, 3.) + pow(6.71*q, 4.)
 					, -1./4.);
@@ -210,7 +210,7 @@ void norm_pwr(Pow_Spec_Param* pwr_par)
 
 double hubble_param(double a, const Pow_Spec_Param& pwr_par)
 {
-    const double Om = pwr_par.Omega_m();
+    const double Om = pwr_par.Omega_m;
     const double OL = pwr_par.Omega_L();
     return sqrt(Om*pow(a, -3) + OL);
 }

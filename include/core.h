@@ -235,9 +235,9 @@ public:
     int pwr_type_i;
 
     // COSMOLOGY (flat LCDM)
-    double Omega_c, Omega_b, H0, h;
-    inline double Omega_m() const { return Omega_c + Omega_b; }
-    inline double Omega_L() const { return 1 - Omega_c - Omega_b; }
+    double Omega_m, Omega_b, H0, h;
+    inline double Omega_c() const { return Omega_m - Omega_b; }
+    inline double Omega_L() const { return 1 - Omega_m; }
 
     // PRECOMPUTED VALUES
     double D_norm = 1;

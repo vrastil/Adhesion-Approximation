@@ -382,7 +382,7 @@ void Pow_Spec_Param::init()
     config.matter_power_spectrum_method = ccl_linear;
     config.mass_function_method = ccl_tinker;
     int status = 0;
-    params = ccl_parameters_create_flat_lcdm(Omega_c, Omega_b, h, sigma8, ns, &status);
+    params = ccl_parameters_create_flat_lcdm(Omega_c(), Omega_b, h, sigma8, ns, &status);
     cosmo = ccl_cosmology_create(params, config);
 
     // PRECOMPUTED VALUES
@@ -534,8 +534,9 @@ void Sim_Param::print_info(string out, string app) const
                 {"index", power.ns},
                 {"sigma8", power.sigma8},
                 {"smoothing_k", power.k2_G},
-                {"Omega_c", power.Omega_c},
+                {"Omega_c", power.Omega_c()},
                 {"Omega_b", power.Omega_b},
+                {"Omega_m", power.Omega_m},
                 {"h", power.h},
                 {"k_nyquist" ,k_par.nyquist},
                 {"viscosity", nu*pow(box_size/mesh_num, 2.)},

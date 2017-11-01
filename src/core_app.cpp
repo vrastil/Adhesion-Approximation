@@ -119,6 +119,28 @@ void kick_step_no_momentum(const Sim_Param &sim, const double a, Particle_v* par
     }
 }
 
+void kick_step_w_momentum(const Sim_Param &sim, const double a, const double da, Particle_v* particles, const vector< Mesh> &force_field)
+{
+    // no memory of previus velocity, 1st order ODE
+    Vec_3D<double> force;
+    const int order = sim.order;
+    const double D = growth_factor(a, sim.power);
+    const double OL = sim.power.Omega_L()*pow(a,3);
+    const double Om = sim.power.Omega_m;
+    // -3/2a represents usual EOM, the rest are LCDM corrections
+    const double f1 = 3/(2.*a)*(Om+2*OL)/(Om+OL);
+    const double f2 = 3/(2.*a)*Om/(Om+OL)*D/a;
+    
+    #pragma omp parallel for private(force)
+    for (unsigned i = 0; i < sim.par_num; i++)
+	{
+        force.fill(0.);
+        assign_from(force_field, particles[i].position, &force, order);
+        force = force*f2 - particles[i].velocity*f1;		
+        particles[i].velocity += force*da;
+    }
+}
+
 void upd_pos_first_order(const Sim_Param &sim, const double da, const double a, Particle_v* particles, const vector< Mesh> &vel_field)
 {
     /// Leapfrog method for frozen-flow / adhesion
@@ -128,29 +150,13 @@ void upd_pos_first_order(const Sim_Param &sim, const double da, const double a, 
     get_per(particles, sim.par_num, sim.mesh_num);
 }
 
-void upd_pos_second_order(const Sim_Param &sim, const double db, const double b, Particle_v* particles, const vector< Mesh> &force_field)
+void upd_pos_second_order(const Sim_Param &sim, const double da, const double a, Particle_v* particles, const vector< Mesh> &force_field)
 {
-	// Leapfrog method for frozen-potential
-	
-    Vec_3D<double> f_half;
-    const int order = sim.order;
-    const int Nm = sim.mesh_num;
-    const double a_ = b-db/2.;
-    const double D = growth_factor(a_, sim.power);
-
-	#pragma omp parallel for private(f_half)
-	for (unsigned i = 0; i < sim.par_num; i++)
-	{
-		particles[i].position += particles[i].velocity*(db/2.); // STREAN
-		f_half.fill(0.);
-		assign_from(force_field, particles[i].position, &f_half, order); // KICK
-        f_half *= D/a_;
-		f_half = (particles[i].velocity - f_half)*(-3/(2.*a_)); // <- EOM, STREAM
-		
-		particles[i].velocity += f_half*db;
-		particles[i].position += particles[i].velocity*(db/2.);
-		get_per(particles[i].position, Nm);
-	}
+    // Leapfrog method for frozen-potential
+    stream_step(sim, da/2., particles);
+    kick_step_w_momentum(sim, a-da/2., da, particles, force_field);
+    stream_step(sim, da/2., particles);
+    get_per(particles, sim.par_num, sim.mesh_num);
 }
 
 static double force_ref(const double r, const double a){
