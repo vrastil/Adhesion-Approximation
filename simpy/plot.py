@@ -1,3 +1,4 @@
+import math
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import animation
@@ -279,7 +280,8 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_t
 
     data = np.loadtxt(pwr_spec_diff_files[-1])
     P_k = data[:, 1]
-    ymax = 0.2
+    ymax = math.ceil(np.max(P_k) / 0.2) * 0.2
+    if ymax > 1: ymax = 1
     ymin = np.min(P_k)
     del P_k, data
     for y in np.arange(ymax - 0.2, ymin, -0.2):
