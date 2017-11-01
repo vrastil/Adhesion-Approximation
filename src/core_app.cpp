@@ -121,7 +121,7 @@ void kick_step_no_momentum(const Sim_Param &sim, const double a, Particle_v* par
 
 void kick_step_w_momentum(const Sim_Param &sim, const double a, const double da, Particle_v* particles, const vector< Mesh> &force_field)
 {
-    // no memory of previus velocity, 1st order ODE
+    // classical 2nd order ODE
     Vec_3D<double> force;
     const int order = sim.order;
     const double D = growth_factor(a, sim.power);
@@ -139,24 +139,6 @@ void kick_step_w_momentum(const Sim_Param &sim, const double a, const double da,
         force = force*f2 - particles[i].velocity*f1;		
         particles[i].velocity += force*da;
     }
-}
-
-void upd_pos_first_order(const Sim_Param &sim, const double da, const double a, Particle_v* particles, const vector< Mesh> &vel_field)
-{
-    /// Leapfrog method for frozen-flow / adhesion
-    stream_step(sim, da/2., particles);
-    kick_step_no_momentum(sim, a-da/2., particles, vel_field);
-    stream_step(sim, da/2., particles);
-    get_per(particles, sim.par_num, sim.mesh_num);
-}
-
-void upd_pos_second_order(const Sim_Param &sim, const double da, const double a, Particle_v* particles, const vector< Mesh> &force_field)
-{
-    // Leapfrog method for frozen-potential
-    stream_step(sim, da/2., particles);
-    kick_step_w_momentum(sim, a-da/2., da, particles, force_field);
-    stream_step(sim, da/2., particles);
-    get_per(particles, sim.par_num, sim.mesh_num);
 }
 
 static double force_ref(const double r, const double a){
@@ -205,53 +187,60 @@ void force_short(const Sim_Param &sim, const double D, const LinkedList& linked_
 	}
 }
 
-void upd_pos_second_order_w_short_force(const Sim_Param &sim, LinkedList* linked_list, const double db,
-										const double b, Particle_v* particles, const vector< Mesh> &force_field)
-{
-	// Leapfrog method for modified frozen-potential
-	Vec_3D<double> f_half;
+void kick_step_w_pp(const Sim_Param &sim, const double a, const double da, Particle_v* particles, const vector< Mesh> &force_field,
+                    LinkedList* linked_list)
+{    // 2nd order ODE with long & short range potential
+    Vec_3D<double> force;
     const int order = sim.order;
-    const int Nm = sim.mesh_num;
-    const double a_ = b-db/2.;
-    const double D = growth_factor(a_, sim.power);
-
-	// three loops to compute distances and velocities at fixed positon
-	
-	#pragma omp parallel for private(f_half)
-	for (unsigned i = 0; i < sim.par_num; i++)
-	{
-		particles[i].position += particles[i].velocity*(db/2.); // STREAM
-	}
-	
-	printf("Creating linked list...\n");
+    const double D = growth_factor(a, sim.power);
+    const double OL = sim.power.Omega_L()*pow(a,3);
+    const double Om = sim.power.Omega_m;
+    // -3/2a represents usual EOM, the rest are LCDM corrections
+    const double f1 = 3/(2.*a)*(Om+2*OL)/(Om+OL);
+    const double f2 = 3/(2.*a)*Om/(Om+OL)*D/a;
+    
+    printf("Creating linked list...\n");
 	linked_list->get_linked_list(particles);
-//	double fs, fl;
+
     cout << "Computing short and long range parts of the potential...\n";
-	#pragma omp parallel for private(f_half)
-	for (unsigned i = 0; i < sim.par_num; i++)
+    #pragma omp parallel for private(force)
+    for (unsigned i = 0; i < sim.par_num; i++)
 	{
-		f_half.fill(0.);
-		
-		// long-range force
-		assign_from(force_field, particles[i].position, &f_half, order);
-//		fl = f_half.norm();
-//		fs = fl;
-		// short range force
-        force_short(sim, D, *linked_list, particles, particles[i].position, &f_half);
-        f_half *= D/a_;
-//		fs -= f_half.norm();
-//		if (i % (sim.par_num / 13) == 0) printf("particle num = %i, fl = %f, fs = %f\n",i, fl, fs);
-		f_half = (particles[i].velocity - f_half)*(-3/(2.*a_)); // <- EOM
-		
-		particles[i].velocity += f_half*db; // KICK
-	}
-	
-	#pragma omp parallel for private(f_half)
-	for (unsigned i = 0; i < sim.par_num; i++)
-	{
-		particles[i].position += particles[i].velocity*(db/2.); // STREAM
-		get_per(particles[i].position, Nm);
-	}
+        force.fill(0.);
+        assign_from(force_field, particles[i].position, &force, order); // long-range force
+        force_short(sim, D, *linked_list, particles, particles[i].position, &force); // short range force
+
+        force = force*f2 - particles[i].velocity*f1;		
+        particles[i].velocity += force*da;
+    }
+}
+
+void upd_pos_first_order(const Sim_Param &sim, const double da, const double a, Particle_v* particles, const vector< Mesh> &vel_field)
+{
+    /// Leapfrog method for frozen-flow / adhesion
+    stream_step(sim, da/2., particles);
+    kick_step_no_momentum(sim, a-da/2., particles, vel_field);
+    stream_step(sim, da/2., particles);
+    get_per(particles, sim.par_num, sim.mesh_num);
+}
+
+void upd_pos_second_order(const Sim_Param &sim, const double da, const double a, Particle_v* particles, const vector< Mesh> &force_field)
+{
+    // Leapfrog method for frozen-potential
+    stream_step(sim, da/2., particles);
+    kick_step_w_momentum(sim, a-da/2., da, particles, force_field);
+    stream_step(sim, da/2., particles);
+    get_per(particles, sim.par_num, sim.mesh_num);
+}
+
+void upd_pos_second_order_w_pp(const Sim_Param &sim, const double da, const double a, Particle_v* particles, const vector< Mesh> &force_field,
+                               LinkedList* linked_list)
+{
+    // Leapfrog method for modified frozen-potential
+    stream_step(sim, da/2., particles);
+    kick_step_w_pp(sim, a-da/2., da, particles, force_field, linked_list);
+    stream_step(sim, da/2., particles);
+    get_per(particles, sim.par_num, sim.mesh_num);
 }
 
 static void gen_gauss_white_noise(const Sim_Param &sim, Mesh* rho)

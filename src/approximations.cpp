@@ -180,7 +180,7 @@ int mod_frozen_potential(const Sim_Param &sim)
     init_cond_w_vel(APP); //< with velocities
     init_pot_w_s2(APP); //< FP_pp specific
     auto upd_pos = [&](){
-        upd_pos_second_order_w_short_force(APP.sim, &APP.linked_list, APP.db, APP.b, APP.particles, APP.app_field); //< FP_pp specific
+        upd_pos_second_order_w_pp(APP.sim, APP.db, APP.b, APP.particles, APP.app_field, &APP.linked_list); //< FP_pp specific
     };
     integration(APP, upd_pos);
     printf("Modified Frozen-potential approximation ended successfully.\n");
