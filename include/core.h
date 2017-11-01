@@ -263,12 +263,6 @@ struct Wavenumber_param
 
     // Nyquist frequencies of potential mesh, analyses mesh and particle separation
     std::map<std::string,double> nyquist;
-
-    // use Padé approximant R[m=0; n=pade_order-1], i.e. pade_order of DOF
-    unsigned pade_order = 3;
-
-    // store values of k where the Padé approximant was evaluated
-    mutable std::vector<double> k_pade;
 };
 
 /**

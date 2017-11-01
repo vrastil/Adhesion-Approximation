@@ -49,16 +49,16 @@ class Extrap_Pk : public Interp_obj
 public:
     Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim);
     Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
-              const unsigned m_u, const unsigned n_u);
+              const unsigned m_u, const unsigned n_u, double n_s);
     double eval(double k) const;
 
 private:
-    void fit_prim(const Data_x_y<double>& data, const unsigned m, const unsigned n);
-    void fit_power_law(const Data_x_y<double>& data, const unsigned m, const unsigned n);
-    double A; // lower range, linear power
+    void fit_lin(const Data_x_y<double>& data, const unsigned m, const unsigned n, double& A);
+    void fit_power_law(const Data_x_y<double>& data, const unsigned m, const unsigned n, double& A);
+
+    double A_low, A_up; // amplitude of linear power
     const Pow_Spec_Param& power;
-    std::vector<double> a_m, b_n; // upper range, Pade approximant
-    double n_s_up, A_up; //upper range, simple power law
+    double n_s; // if defined simple power-law
     double k_min, k_max; // interpolation range
 };
 

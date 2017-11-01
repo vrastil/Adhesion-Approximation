@@ -502,7 +502,7 @@ void Sim_Param::print_info(string out, string app) const
             printf("SIMULATION PARAMETERS\n");
             printf("*********************\n");
             printf("Ng:\t\t%i\n", Ng);
-            printf("Num_par:\t%G^3\n", par_num_1d);
+            printf("Num_par:\t%i^3\n", par_num_1d);
             printf("Num_mesh:\t%i^3\n", mesh_num);
             printf("Num_mesh_pwr:\t%i^3\n", mesh_num_pwr);
             printf("Box size:\t%.0f Mpc/h\n", box_size);
@@ -537,7 +537,6 @@ void Sim_Param::print_info(string out, string app) const
                 {"Omega_c", power.Omega_c},
                 {"Omega_b", power.Omega_b},
                 {"h", power.h},
-                {"k_pade", k_par.k_pade},
                 {"k_nyquist" ,k_par.nyquist},
                 {"viscosity", nu*pow(box_size/mesh_num, 2.)},
                 {"cut_radius", rs},
@@ -709,7 +708,7 @@ void App_Var<T>::print()
     /* Print emulator power spectrum */
     if (z() < 2.2){ // emulator range
         pwr_spec_binned = init_emu(sim, z());
-        Extrap_Pk P_k(pwr_spec_binned, sim, 0, 5, nmode-5, 5);
+        Extrap_Pk P_k(pwr_spec_binned, sim, 0, 5, nmode-5, nmode, -2.0);
         gen_pow_spec_binned_from_extrap(sim, P_k, &pwr_spec_binned);
         print_pow_spec(pwr_spec_binned, out_dir_app, "_emu" + z_suffix());
 

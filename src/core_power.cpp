@@ -4,12 +4,6 @@
 #include "core_mesh.h"
 #include "core_power.h"
 
-#define FIX_POWER_LAW -2.3
-
-#ifndef FIX_POWER_LAW
-#define PADE
-#endif
-
 using namespace std;
 
 class Integr_obj
@@ -360,47 +354,42 @@ double Interp_obj::eval(double x) const{ return gsl_spline_eval(spline, x, acc);
  */
 
 Extrap_Pk::Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim):
-    Interp_obj(data), power(sim.power)
+    Interp_obj(data), power(sim.power), n_s(0)
 {
-    {   // LOWER RANGE -- fit A*T(k)^2*k^ns to data[m:n], T(k) BBKS
-        const unsigned m = 10 + get_nearest(2*PI/sim.box_size, data.x); // discard first 10 values due to undesampling
-        const unsigned n = m + 20; // fit over 20 points
-        fit_prim(data, m, n);
-    }
-    #ifdef FIX_POWER_LAW
-    {   // UPPER RANGE -- fit Ak^ns to data[m,m+n]
-        constexpr int n = 3;
-        n_s_up = FIX_POWER_LAW;
-        const unsigned m = get_nearest(sim.k_par.k_interp.upper, data.x) - n + 1;
-        fit_power_law(data, m, n);
-    }
-    #else
-    #endif
+    unsigned m, n;
+    // LOWER RANGE -- fit linear power spectrum to data[m:n)
+    printf("Fitting amplitude of P(k) in lower range.\n");
+    m = 10 + get_nearest(2*PI/sim.box_size, data.x); // discard first 10 values due to undersampling
+    n = m + 20; // fit over 20 points
+    k_min = data.x[n];
+    fit_lin(data, m, n, A_low);
+    // UPPER RANGE -- ffit linear power spectrum to data[m:n)
+    printf("Fitting amplitude of P(k) in upper range.\n");
+    k_max = sim.k_par.k_interp.upper;
+    n = get_nearest(k_max, data.x) + 1;
+    m = n - 5; // fit over last 5 values
+    fit_lin(data, m, n, A_up);
 }
 
 Extrap_Pk::Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
-    const unsigned m_u, const unsigned n_u):
-    Interp_obj(data), power(sim.power)
+    const unsigned m_u, const unsigned n_u, double n_s):
+    Interp_obj(data), power(sim.power), n_s(n_s)
 {
-    {   // LOWER RANGE -- fit A*T(k)^2*k^ns to data[m:n], T(k) BBKS
-        fit_prim(data, m_l, n_l);
-    }
-    #ifdef FIX_POWER_LAW
-    {   // UPPER RANGE -- fit Ak^ns to data[m,m+n]
-        n_s_up = FIX_POWER_LAW;
-        fit_power_law(data, m_u, n_u);
-    }
-    #else
-    #endif
+    // LOWER RANGE -- fit linear power spectrum to data[m:n)
+    printf("Fitting amplitude of P(k) in lower range.\n");
+    k_min = data.x[n_l-1];
+    fit_lin(data, m_l, n_l, A_low);
+
+    // UPPER RANGE -- fit Ak^ns to data[m,n)
+    printf("Fitting amplitude of P(k) in upper range.\n");
+    k_max =  data.x[n_u-1];
+    fit_power_law(data, m_u, n_u, A_up);
 }
 
-void Extrap_Pk::fit_prim(const Data_x_y<double>& data, const unsigned m, const unsigned n)
+void Extrap_Pk::fit_lin(const Data_x_y<double>& data, const unsigned m, const unsigned n, double &A)
 {
-    // LOWER RANGE -- fit linear power spectrum to data[m:n]
-    printf("Fitting amplitude of P(k) in lower range.\n");
-    k_min = data.x[n];
+    // FIT linear power spectrum to data[m:n)
     vector<double> k, Pk;
-
     for(unsigned i = m; i < n; i++){
         k.push_back(lin_pow_spec(data.x[i], power));
         Pk.push_back(data.y[i]);
@@ -410,36 +399,30 @@ void Extrap_Pk::fit_prim(const Data_x_y<double>& data, const unsigned m, const u
     printf("\t[fit A = %e, sigma = %f, sumsq = %f]\n", A, sqrt(A_sigma2), sumsq);
 }
 
-void Extrap_Pk::fit_power_law(const Data_x_y<double>& data, const unsigned m, const unsigned n)
+void Extrap_Pk::fit_power_law(const Data_x_y<double>& data, const unsigned m, const unsigned n, double &A)
 {
-    // UPPER RANGE -- fit Ak^ns to data[m,m+n]
-    printf("Fitting amplitude of P(k) in upper range.\n");
+    // FIT Ak^ns to data[m,n)
     vector<double> k, Pk;
-    k_max =  data.x[m+n-1];
-    for(unsigned i = m; i < m+n; i++){
-        k.push_back(pow(data.x[i], n_s_up));
+    for(unsigned i = m; i < n; i++){
+        k.push_back(pow(data.x[i], n_s));
         Pk.push_back(data.y[i]);
     }
     double A_sigma2, sumsq;
-    gsl_fit_mul(k.data(), 1, Pk.data(), 1, n, &A_up, &A_sigma2, &sumsq);
-    printf("\t[fit A = %e, n_s = %.3f, sigma = %f, sumsq = %f]\n", A_up, n_s_up, sqrt(A_sigma2), sumsq);
+    gsl_fit_mul(k.data(), 1, Pk.data(), 1, n-m, &A, &A_sigma2, &sumsq);
+    printf("\t[fit A = %e, n_s = %.3f, sigma = %f, sumsq = %f]\n", A, n_s, sqrt(A_sigma2), sumsq);
 }
 
 double Extrap_Pk::eval(double k) const
 {
     if (k < k_min)
     {
-        return A*lin_pow_spec(k, power);
+        return A_low*lin_pow_spec(k, power);
     }
     else if (k <= k_max) return Interp_obj::eval(k);
     else
     {
-        #ifdef PADE
-        return pade_approx(k, a_m, b_n);
-        #elif defined FIX_POWER_LAW
-        return A_up*pow(k, n_s_up);
-        #else
-        #endif
+        if (n_s == 0) return A_up*lin_pow_spec(k, power);
+        else return A_up*pow(k, n_s);
     }
 }
 
