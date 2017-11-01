@@ -59,7 +59,8 @@ def pwr_spec(k, pwr, cosmo=None, z=0, q_log=2.34, q_1=3.89, q_2=16.2, q_3=5.47, 
         import pyccl as ccl
         return supp*ccl.linear_matter_power(cosmo, k*pwr["h"], 1.)*pwr["h"]**3
 
-def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, out_dir='auto', pk_type='dens', save=True, show=False):
+def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, pwr_spec_files_emu=None,
+                  out_dir='auto', pk_type='dens', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if pk_type == "dens":
@@ -100,6 +101,12 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, ou
             k, P_k = data[:, 0], data[:, 1]
             plt.plot(k, P_k, 'k--')
             del k, P_k, data
+    
+    if pwr_spec_files_emu is not None:
+        data = np.loadtxt(pwr_spec_files_emu[-1])
+        k, P_k = data[:, 0], data[:, 1]
+        plt.plot(k, P_k, '-')
+        del k, P_k, data
 
     if a_sim_info.k_nyquist is not None:
         ls = [':', '-.', '--']
@@ -159,7 +166,7 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, ou
     plt.close(fig)
 
 
-def plot_corr_func(corr_func_files, zs, a_sim_info, corr_func_files_lin=None, out_dir='auto', save=True, show=False):
+def plot_corr_func(corr_func_files, zs, a_sim_info, corr_func_files_lin=None, corr_func_files_emu=None, out_dir='auto', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     fig = plt.figure(figsize=(15, 11))
@@ -172,13 +179,20 @@ def plot_corr_func(corr_func_files, zs, a_sim_info, corr_func_files_lin=None, ou
         data = np.loadtxt(corr_func_files_lin[-1])
         r_lin, xi_lin = data[:, 0], data[:, 1]
         del data
+    if corr_func_files_emu is not None:
+        data = np.loadtxt(corr_func_files_emu[-1])
+        r_emu, xi_emu = data[:, 0], data[:, 1]
+        del data
 
     # inter = interpolate.PchipInterpolator(r, xi)
     # xnew = np.linspace(np.min(r), np.max(r), num=10*len(r), endpoint=True)
     # ynew = inter(xnew)
 
     plt.plot(r, xi, 'o', ms=3, label=lab)
-    plt.plot(r_lin, xi_lin, '-', label=r"$\Lambda$CDM (lin)")
+    if corr_func_files_lin is not None:
+        plt.plot(r_lin, xi_lin, '-', label=r"$\Lambda$CDM (lin)")
+    if corr_func_files_emu is not None:
+        plt.plot(r_emu, xi_emu, '-', label=r"$\Lambda$CDM (emu)")
 
     fig.suptitle("Correlation function", y=0.99, size=20)
     plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
@@ -202,7 +216,10 @@ def plot_corr_func(corr_func_files, zs, a_sim_info, corr_func_files_lin=None, ou
     fig = plt.figure(figsize=(15, 11))
 
     plt.plot(r, r*r*xi, 'o', ms=3, label=lab)
-    plt.plot(r_lin, r_lin*r_lin*xi_lin, '-', label=r"$\Lambda$CDM (lin)")
+    if corr_func_files_lin is not None:
+        plt.plot(r_lin, r_lin*r_lin*xi_lin, '-', label=r"$\Lambda$CDM (lin)")
+    if corr_func_files_emu is not None:
+        plt.plot(r_emu, r_emu*r_emu*xi_emu, '-', label=r"$\Lambda$CDM (emu)")
 
     fig.suptitle("Correlation function", y=0.99, size=20)
     plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)

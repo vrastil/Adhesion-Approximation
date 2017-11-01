@@ -279,7 +279,6 @@ void emu(double *xstar, double *ystar) {
             zmatch = rs-i-1;
         }
     }
-    std::cout << "Befre writing to emu_data.y \n";
     // z doesn't match a training z, interpolate
     if(zmatch == -1) {
         for(i=0; i<nmode; i++) {
@@ -314,7 +313,9 @@ Data_x_y<double> init_emu(const Sim_Param &sim, double z)
     }
     std::cout << "Initializing emulator...\n";
     Data_x_y<double> emu_data(nmode);
-    std::copy(mode, mode + nmode, emu_data.x.begin()); // copy emulator k
+    for (unsigned i = 0; i < emu_data.size(); i++){
+        emu_data.x[i] = mode[i] / sim.power.h; // convert emulator k [1/Mpc] into [h/Mpc]
+    }
 
     double xstar[9];
     xstar[0] = sim.power.Omega_m()*pow(sim.power.h, 2); // omega_m
@@ -328,5 +329,8 @@ Data_x_y<double> init_emu(const Sim_Param &sim, double z)
     xstar[8] = z; // sigma_8
 
     emu(xstar, emu_data.y.data());// get P(k)
+    for (unsigned i = 0; i < emu_data.size(); i++){
+        emu_data.y[i] *= pow(sim.power.h, 3); // convert emulator P(k) [Mpc^3] into [(Mpc/h)^3]
+    }
     return emu_data; // move
 }

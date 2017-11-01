@@ -189,13 +189,14 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
 
     # Power spectrum
     key = "pwr_spec"
+    zs, files_emu = try_get_zs_files(a_sim_info, 'pwr_spec/', a_file='*emu*.dat')
     zs, files_extrap = try_get_zs_files(a_sim_info, 'pwr_spec/', a_file='*extrap*.dat')
     zs, files = try_get_zs_files(a_sim_info, 'pwr_spec/', a_file='*par*.dat')
     if a_sim_info.rerun(rerun, key, skip, zs):
         print 'Plotting power spectrum...'
-        plot.plot_pwr_spec(files, zs, a_sim_info, pwr_spec_files_extrap=files_extrap)
+        plot.plot_pwr_spec(files, zs, a_sim_info, pwr_spec_files_extrap=files_extrap, pwr_spec_files_emu=files_emu)
         a_sim_info.done(key)
-    del zs, files, files_extrap
+    del zs, files, files_extrap, files_emu
     # Power spectrum difference
     key = "pwr_spec_diff"
     zs, files = try_get_zs_files(a_sim_info, 'pwr_diff/')
@@ -240,11 +241,12 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
 
     # Correlation function
     key = "corr_func"
+    zs, files_emu = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*emu*.dat')
     zs, files_lin = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*lin*.dat')
     zs, files = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*par*.dat')
     if a_sim_info.rerun(rerun, key, skip, zs):
         print 'Plotting correlation function...'
-        plot.plot_corr_func(files, zs, a_sim_info, corr_func_files_lin=files_lin)
+        plot.plot_corr_func(files, zs, a_sim_info, corr_func_files_lin=files_lin, corr_func_files_emu=files_emu)
         a_sim_info.done(key)
     del zs, files, files_lin
 
