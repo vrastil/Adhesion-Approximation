@@ -10,6 +10,7 @@
 
 #include "stdafx.h"
 #include "params.h"
+#include "core.h"
 
 // Sizes of stuff
 static int m[2] = {111, 36}, neta=2808, peta[2]={7, 28}, rs=8, p=8, nmode=351;
@@ -278,7 +279,7 @@ void emu(double *xstar, double *ystar) {
             zmatch = rs-i-1;
         }
     }
-    
+    std::cout << "Befre writing to emu_data.y \n";
     // z doesn't match a training z, interpolate
     if(zmatch == -1) {
         for(i=0; i<nmode; i++) {
@@ -303,4 +304,29 @@ void emu(double *xstar, double *ystar) {
         ystar[i] = ystar[i] - 1.5*log10(mode[i]) + log10(2) + 2*log10(M_PI);
         ystar[i] = pow(10, ystar[i]);
     }
+}
+
+Data_x_y<double> init_emu(const Sim_Param &sim, double z)
+{
+    if ((z < 0) || (z>2.02)){ // emulator range
+        std::cout << "WARNING! Value of redshift outside emulator range!\n";
+        return Data_x_y<double>();
+    }
+    std::cout << "Initializing emulator...\n";
+    Data_x_y<double> emu_data(nmode);
+    std::copy(mode, mode + nmode, emu_data.x.begin()); // copy emulator k
+
+    double xstar[9];
+    xstar[0] = sim.power.Omega_m()*pow(sim.power.h, 2); // omega_m
+    xstar[1] = sim.power.Omega_b*pow(sim.power.h, 2); // omega_b
+    xstar[2] = sim.power.sigma8; // sigma_8
+    xstar[3] = sim.power.h; // h
+    xstar[4] = sim.power.ns; // n_s
+    xstar[5] = -1; // w_0
+    xstar[6] = 0; // w_a
+    xstar[7] = 0; // omega_nu
+    xstar[8] = z; // sigma_8
+
+    emu(xstar, emu_data.y.data());// get P(k)
+    return emu_data; // move
 }

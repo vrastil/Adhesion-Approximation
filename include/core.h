@@ -387,6 +387,10 @@ public:
         x.resize(n, val);
         y.resize(n, val);
     }
+    void reserve(size_t n){
+        x.reserve(n);
+        y.reserve(n);
+    }
     void erase(unsigned index){
         x.erase(x.begin() + index);
         y.erase(y.begin() + index);

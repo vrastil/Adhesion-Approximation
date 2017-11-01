@@ -10,6 +10,7 @@
 #include "core_app.h"
 #include "core_mesh.h"
 #include "core_power.h"
+#include "emu.h"
 
 using namespace std;
 using json = nlohmann::json;
@@ -704,6 +705,19 @@ void App_Var<T>::print()
     print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_par" + z_suffix());
     gen_corr_func_binned_gsl_qawf_lin(sim, b, &corr_func_binned);
     print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_lin" + z_suffix());
+
+    /* Print emulator power spectrum */
+    if (z() < 2.2){ // emulator range
+        pwr_spec_binned = init_emu(sim, z());
+        Extrap_Pk P_k(pwr_spec_binned, sim, 0, 1, nmode-1, 1);
+        gen_pow_spec_binned_from_extrap(sim, P_k, &pwr_spec_binned);
+        print_pow_spec(pwr_spec_binned, out_dir_app, "_emu" + z_suffix());
+
+    /* Printing correlation function */
+        corr_func_binned.resize(sim.bin_num);
+        gen_corr_func_binned_gsl_qawf(sim, P_k, &corr_func_binned);
+        print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_emu" + z_suffix());
+    }
 
     /* Velocity power spectrum */
     if (get_vel_from_par(particles, &power_aux, sim)){

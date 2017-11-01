@@ -369,7 +369,6 @@ Extrap_Pk::Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim):
     }
     #ifdef FIX_POWER_LAW
     {   // UPPER RANGE -- fit Ak^ns to data[m,m+n]
-        printf("Fitting amplitude of P(k) in upper range.\n");
         constexpr int n = 3;
         n_s_up = FIX_POWER_LAW;
         const unsigned m = get_nearest(sim.k_par.k_interp.upper, data.x) - n + 1;
