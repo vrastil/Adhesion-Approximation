@@ -489,6 +489,8 @@ public:
  * @brief:	class containing variables for modified Frozen-potential approximation
  */
  
+#include "core_power.h"
+
  class App_Var_FP_mod: public App_Var<Particle_v>
 {
 public:
@@ -496,5 +498,6 @@ public:
 	App_Var_FP_mod(const Sim_Param &sim, std::string app_str);
 	
 	// VARIABLES
-	LinkedList linked_list;
+    LinkedList linked_list;
+    Interp_obj fs_interp;
 };

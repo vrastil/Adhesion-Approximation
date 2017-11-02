@@ -141,7 +141,7 @@ void kick_step_w_momentum(const Sim_Param &sim, const double a, const double da,
     }
 }
 
-static double force_ref(const double r, const double a){
+double force_ref(const double r, const double a){
 	// Reference force for an S_2-shaped particle
 	double z = 2 * r / a;
 	if (z > 2) return 1 / (r*r);
@@ -150,45 +150,45 @@ static double force_ref(const double r, const double a){
 	else return (224 * z - 224 * pow(z, 3) + 70 * pow(z, 4) + 48 * pow(z, 5) - 21 * pow(z, 7)) / (35 * a*a);
 }
 
-static double force_tot(const double r){
-	return 1 / (r*r);
+double force_tot(const double r, const double e2){
+	return 1 / (r*r+e2);
 }
 
 void force_short(const Sim_Param &sim, const double D, const LinkedList& linked_list, Particle_v *particles,
-				 const Vec_3D<double> position, Vec_3D<double>* force)
+				 const Vec_3D<double> position, Vec_3D<double>* force, Interp_obj* fs_interp)
 {	// Calculate short range force in position, force is added
+    #define FORCE_SHORT_NO_INTER
 	int p;
-    Vec_3D<int> y;
 	Vec_3D<double> dr_vec;
-	double dr;
+    double dr2;
+    double dr; // <-- #ifdef FORCE_SHORT_NO_INTER
     const double m = pow(sim.Ng, 3) / D;
     const int Nm = sim.mesh_num;
+    const double rs2 = pow(sim.rs, 2);
+    const double e2 = pow(sim.Ng*0.1, 2); // <-- #ifdef FORCE_SHORT_NO_INTER
 
-	const Vec_3D<int> z =(Vec_3D<int>)(position / sim.Hc); // chain position of particle
-	for (y[0] = z[0] -1; y[0] < z[0] + 2; y[0]++)
-	{
-		for (y[1] = z[1] - 1; y[1] < z[1] + 2; y[1]++){
-		
-			for (y[2] = z[2] - 1; y[2] < z[2] + 2; y[2]++)
-			{
-				p = linked_list.HOC(y);
-				while (p != -1){
-					dr_vec = get_sgn_distance(particles[p].position, position, Nm);
-                    dr = dr_vec.norm();
-					if ((dr < sim.rs) && (dr != 0)) // Short range force is set 0 for separation larger than cutoff radius
-			//		if (dr != 0) // Short range force is set 0 for separation larger than cutoff radius
-					{
-                        (*force) += (m*(force_tot(dr) - force_ref(dr, sim.a))/(dr*4*PI))*dr_vec;
-                    }
-					p = linked_list.LL[p];
-				}
-			}
-		}
-	}
+    IT it(position, sim.Hc);
+    do{
+        p = linked_list.HOC(it.vec);
+        while (p != -1){
+            dr_vec = get_sgn_distance(particles[p].position, position, Nm);
+            dr2 = dr_vec.norm2();
+            if ((dr2 < rs2) && (dr2 != 0)) // Short range force is set 0 for separation larger than cutoff radius
+            {
+                #ifdef FORCE_SHORT_NO_INTER
+                dr = sqrt(dr2);
+                (*force) += dr_vec*(force_tot(dr, e2) - force_ref(dr, sim.a))*m/(dr*4*PI);
+                #else
+                (*force) += dr_vec*(m/sqrt(dr2)*fs_interp->eval(dr2));
+                #endif
+            }
+            p = linked_list.LL[p];
+        }
+    } while( it.iter() );
 }
 
 void kick_step_w_pp(const Sim_Param &sim, const double a, const double da, Particle_v* particles, const vector< Mesh> &force_field,
-                    LinkedList* linked_list)
+                    LinkedList* linked_list, Interp_obj* fs_interp)
 {    // 2nd order ODE with long & short range potential
     Vec_3D<double> force;
     const int order = sim.order;
@@ -208,7 +208,7 @@ void kick_step_w_pp(const Sim_Param &sim, const double a, const double da, Parti
 	{
         force.fill(0.);
         assign_from(force_field, particles[i].position, &force, order); // long-range force
-        force_short(sim, D, *linked_list, particles, particles[i].position, &force); // short range force
+        force_short(sim, D, *linked_list, particles, particles[i].position, &force, fs_interp); // short range force
 
         force = force*f2 - particles[i].velocity*f1;		
         particles[i].velocity += force*da;
@@ -234,11 +234,11 @@ void upd_pos_second_order(const Sim_Param &sim, const double da, const double a,
 }
 
 void upd_pos_second_order_w_pp(const Sim_Param &sim, const double da, const double a, Particle_v* particles, const vector< Mesh> &force_field,
-                               LinkedList* linked_list)
+                               LinkedList* linked_list, Interp_obj* fs_interp)
 {
     // Leapfrog method for modified frozen-potential
     stream_step(sim, da/2., particles);
-    kick_step_w_pp(sim, a-da/2., da, particles, force_field, linked_list);
+    kick_step_w_pp(sim, a-da/2., da, particles, force_field, linked_list, fs_interp);
     stream_step(sim, da/2., particles);
     get_per(particles, sim.par_num, sim.mesh_num);
 }

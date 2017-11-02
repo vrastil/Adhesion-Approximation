@@ -40,3 +40,16 @@ double min(double* p_data, int len);
 double max(double* p_data, int len);
 double min(const std::vector<double>& data);
 double max(const std::vector<double>& data);
+
+class IT
+{
+public:
+    IT(const Vec_3D<double> &pos, int order); // ctor for assignment scheme
+    IT(const Vec_3D<double> &pos, double Hc); // ctor for chaining mesh
+
+    int counter;
+    const int points, max_counter;
+    Vec_3D<int> vec;
+
+    bool iter();
+};

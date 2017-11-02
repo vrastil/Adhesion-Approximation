@@ -767,6 +767,22 @@ void App_Var<T>::print_info() const
     App_Var<Particle_v>(sim, app_str), linked_list(sim.par_num, sim.M, sim.Hc)
 {
     memory_alloc += sizeof(int)*(linked_list.HOC.length+linked_list.par_num);
+
+    // precompute short range force
+    size_t res = size_t(sim.rs/0.05)+1; // force resolution 5% of mesh cell
+    const double r0 = sim.rs / (res-1);
+    Data_x_y<double> data(res);
+    double r;
+    const double e2 = pow(sim.Ng*0.1, 2); // softening of 10% of average interparticle length
+
+    #pragma omp parallel for private(r)
+    for(int i = 0; i < res; i++)
+    {
+        r = i*r0;
+        data.x[i] = pow(r, 2); // store square of r
+        data.y[i] = (force_tot(r, e2) - force_ref(r, sim.a))/(4*PI);
+    }
+    fs_interp.init(data);
 }
 
 /**

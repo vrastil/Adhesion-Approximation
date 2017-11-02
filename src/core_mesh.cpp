@@ -1,6 +1,7 @@
 
 #include "stdafx.h"
 #include "core.h"
+#include "core_mesh.h"
 
 using namespace std;
 
@@ -154,37 +155,40 @@ double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num, const int o
 	return 0;
 }
 
-class IT
+/**
+ * @class:	IT
+ * @brief:	class for effective iteration of cube of mesch cells
+ */
+
+IT::IT(const Vec_3D<double> &pos, int order):
+    counter(0), points(order+1), max_counter(points*points*points)
 {
-public:
-    // CONSTRUCTORS
-    IT(const Vec_3D<double> &pos, int order):
-    counter(0), points(order+1), max_counter(points*points*points){
-        for(unsigned i = 0; i < 3; i++){
-            vec[i] = (int)(pos[i] - 0.5*(points - 2));
+    for(unsigned i = 0; i < 3; i++){
+        vec[i] = (int)(pos[i] - 0.5*(points - 2));
+    }
+}
+
+IT::IT(const Vec_3D<double> &pos, double Hc):
+    counter(0), points(3), max_counter(points*points*points)
+{
+    for(unsigned i = 0; i < 3; i++){
+        vec[i] = (int)(pos[i]/Hc) - 1;
+    }
+}
+
+bool IT::iter(){
+    if (++counter == max_counter) return false;
+    vec[2]++;
+    if ((counter % points) == 0){
+        vec[2] -= points;
+        vec[1]++;
+        if ((counter % (points*points)) == 0){
+            vec[1] -= points;
+            vec[0]++;
         }
     }
-
-    // VARIABLES
-    int counter;
-    const int points, max_counter;
-    Vec_3D<int> vec;
-
-    // METHODS
-    bool iter(){
-        if (++counter == max_counter) return false;
-        vec[2]++;
-        if ((counter % points) == 0){
-            vec[2] -= points;
-            vec[1]++;
-            if ((counter % (points*points)) == 0){
-                vec[1] -= points;
-                vec[0]++;
-            }
-        }
-        return true;
-    }
-};
+    return true;
+}
 
 void assign_to(Mesh* field, const Vec_3D<double> &position, const double value, const int order)
 {

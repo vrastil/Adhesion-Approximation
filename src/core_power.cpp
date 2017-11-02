@@ -331,17 +331,28 @@ int get_nearest(const double val, const vector<double>& vec)
  * @brief:	linear interpolation of data [x, y]
  */
 
-Interp_obj::Interp_obj(const Data_x_y<double>& data)
+Interp_obj::Interp_obj(const Data_x_y<double>& data): is_init(true)
 {
     acc = gsl_interp_accel_alloc ();
-    spline = gsl_spline_alloc (gsl_interp_linear, data.size());
+    spline = gsl_spline_alloc (gsl_interp_steffen, data.size());
+    gsl_spline_init (spline, data.x.data(), data.y.data(), data.size());
+}
+
+void Interp_obj::init(const Data_x_y<double>& data)
+{
+    is_init = true;
+    acc = gsl_interp_accel_alloc ();
+    spline = gsl_spline_alloc (gsl_interp_steffen, data.size());
     gsl_spline_init (spline, data.x.data(), data.y.data(), data.size());
 }
 
 Interp_obj::~Interp_obj()
 {
-    gsl_spline_free(spline);
-    gsl_interp_accel_free (acc);
+    if (is_init)
+    {
+        gsl_spline_free(spline);
+        gsl_interp_accel_free (acc);
+    }
 }
 
 double Interp_obj::eval(double x) const{ return gsl_spline_eval(spline, x, acc); }

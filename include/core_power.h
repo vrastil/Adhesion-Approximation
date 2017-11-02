@@ -24,11 +24,14 @@ double  get_max_Pk(Sim_Param* sim);
 class Interp_obj
 {// linear interpolation of data [x, y]
 public:
+    Interp_obj(): is_init(false) {}
     Interp_obj(const Data_x_y<double>& data);
     ~Interp_obj();
     double eval(double x) const;
+    void init(const Data_x_y<double>& data);
 
 private:
+    bool is_init;
     gsl_spline* spline;
     gsl_interp_accel* acc;
 };

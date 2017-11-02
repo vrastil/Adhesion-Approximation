@@ -17,7 +17,7 @@ void set_pert_pos_w_vel(const Sim_Param &sim, const double db, Particle_v* parti
 void upd_pos_first_order(const Sim_Param &sim, const double da, const double a, Particle_v* particles, const std::vector< Mesh> &vel_field);
 void upd_pos_second_order(const Sim_Param &sim, const double da, const double a, Particle_v* particles, const std::vector< Mesh> &force_field);
 void upd_pos_second_order_w_pp(const Sim_Param &sim, const double da, const double a, Particle_v* particles, const std::vector< Mesh> &force_field,
-                               LinkedList* linked_list);
+                               LinkedList* linked_list, Interp_obj* fs_interp);
 
 void gen_rho_dist_k(const Sim_Param &sim, Mesh* rho, const fftw_plan &p_F);
 void gen_pot_k(const Mesh& rho_k, Mesh* pot_k);
@@ -40,5 +40,7 @@ template<class T>
 void gen_corr_func_binned_pp(const Sim_Param &sim, T* particles, Data_x_y<double>* corr_func_binned);
 void gen_dens_binned(const Mesh& rho, std::vector<int> &dens_binned, const Sim_Param &sim);
 
+double force_ref(const double r, const double a);
+double force_tot(const double r, const double e2);
 void force_short(const Sim_Param &sim, const double D, const LinkedList& linked_list, Particle_v *particles,
-				 const Vec_3D<double> position, Vec_3D<double>* force);
+				 const Vec_3D<double> position, Vec_3D<double>* force, Interp_obj* fs_interp);
