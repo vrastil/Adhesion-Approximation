@@ -140,6 +140,7 @@ int frozen_flow(const Sim_Param &sim)
     APP.print_mem();
     standard_preparation(APP);
     init_cond_w_vel(APP); //< with velocities
+    init_pot_w_cic(APP); //< force interpolation corrections
     auto upd_pos = [&](){
         upd_pos_first_order(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< FF specific
     };
@@ -158,7 +159,7 @@ int frozen_potential(const Sim_Param &sim)
     APP.print_mem();
     standard_preparation(APP);
     init_cond_w_vel(APP); //< with velocities
-    init_pot_w_cic(APP); //< FP specific
+    init_pot_w_cic(APP); //< force interpolation corrections
     auto upd_pos = [&](){
         upd_pos_second_order(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< FP specific
     };
@@ -178,7 +179,7 @@ int mod_frozen_potential(const Sim_Param &sim)
     APP.print_mem();
     standard_preparation(APP);
     init_cond_w_vel(APP); //< with velocities
-    init_pot_w_s2(APP); //< FP_pp specific
+    init_pot_w_s2(APP); //< force interpolation corrections, long range potential for S2-shaped particles
     auto upd_pos = [&](){
         upd_pos_second_order_w_pp(APP.sim, APP.db, APP.b, APP.particles, APP.app_field, &APP.linked_list, &APP.fs_interp); //< FP_pp specific
     };

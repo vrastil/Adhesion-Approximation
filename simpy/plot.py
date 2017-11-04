@@ -249,10 +249,23 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_t
         out_file='vel_pwr_spec_diff.png'
         suptitle=r"Power spectrum difference $(\nabla\cdot u)$"
     fig = plt.figure(figsize=(15, 11))
+    ax = plt.gca()
     plt.xscale('log')
+
+    # SMALL / MEDIUM / LARGE SCALE VALUES
+    data = np.loadtxt(pwr_spec_diff_files[-1])
+    k = data[:, 0]
+    # 67% of nyquist wavelength, 7 subintervals
+    idx = (np.abs(k-0.67*a_sim_info.k_nyquist["particle"])).argmin() / 7
+    cmap = cm.get_cmap('gnuplot')
+    ax.axvspan(k[0*idx], k[1*idx], alpha=0.2, color=cmap(0.1))
+    ax.axvspan(k[3*idx], k[4*idx], alpha=0.3, color=cmap(0.5))
+    ax.axvspan(k[6*idx], k[7*idx], alpha=0.4, color=cmap(0.9))
+    del k, data
 
     a_end = 1 / (1 + zs[-1])
     a_ = 0
+    ymin = ymax = 0
     for i, pwr in enumerate(pwr_spec_diff_files):
         a = 1 / (1 + zs[i])
         if (a < 2.4 * a_) and a != a_end:
@@ -262,10 +275,11 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_t
         data = np.loadtxt(pwr)
         k, P_k = data[:, 0], data[:, 1]
         plt.plot(k, P_k, 'o', ms=3, label=lab)
+        ymax = max(ymax, np.max(P_k[0:7*idx]))
+        ymin = min(ymin, np.min(P_k[0:7*idx]))
         del k, P_k, data
 
     if a_sim_info.k_nyquist is not None:
-        ax = plt.gca()
         ls = [':', '-.', '--']
         ls *= (len(a_sim_info.k_nyquist) - 1) / 3 + 1
         ls = iter(ls)
@@ -278,15 +292,12 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_t
         for val, lab in val_lab.iteritems():
             ax.axvline(val, ls=next(ls), c='k', label=lab+r")")
 
-    data = np.loadtxt(pwr_spec_diff_files[-1])
-    P_k = data[:, 1]
-    ymax = math.ceil(np.max(P_k) / 0.2) * 0.2
     if ymax > 1: ymax = 1
-    ymin = np.min(P_k)
-    del P_k, data
-    for y in np.arange(ymax - 0.2, ymin, -0.2):
-        plt.axhline(y=y, color='black', lw=0.2)
+    ymax = math.ceil(ymax / 0.1) * 0.1
+    ymin = math.floor(ymin / 0.1) * 0.1
+    ax.yaxis.grid(True)
     plt.ylim(ymin=ymin, ymax=ymax)
+
     fig.suptitle(suptitle, y=0.99, size=20)
     plt.xlabel(r"$k [h/$Mpc$]$", fontsize=15)
     plt.ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$", fontsize=25)
@@ -574,7 +585,7 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir='auto', save=True):
     del ani
 
 
-def plot_supp_lms(supp_lms, a, a_sim_info, out_dir='auto', pk_type='dens', k_lms=None, suptitle='', save=True, show=False):
+def plot_supp_lms(supp_lms, a, a_sim_info, k_lms, supp_std_lms, out_dir='auto', pk_type='dens', suptitle='', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if pk_type == "dens":
@@ -585,16 +596,27 @@ def plot_supp_lms(supp_lms, a, a_sim_info, out_dir='auto', pk_type='dens', k_lms
         suptitle=r"Power spectrum suppression $(\nabla\cdot u)$"
     fig = plt.figure(figsize=(15, 11))
     supp_l, supp_m, supp_s = supp_lms
+    supp_large_std, supp_medium_std, supp_small_std = supp_std_lms
     k_l, k_m, k_s = k_lms
-    plt.plot(a, supp_l, '-o', ms=3,
+
+    cmap = cm.get_cmap('gnuplot')
+    plt.errorbar(a, supp_l, fmt='-o', yerr=supp_large_std, ms=3, color=cmap(0.1), lw=4,
              label='Large-scale:\n' r'$\langle%.2f,%.2f\rangle$' % (k_l[0], k_l[1]))
-    plt.plot(a, supp_m, '-o', ms=3,
+    plt.errorbar(a, supp_m, fmt='-o', yerr=supp_medium_std, ms=3, color=cmap(0.5), lw=2.5,
              label='Medium-scale:\n'r'$\langle%.2f,%.2f\rangle$' % (k_m[0], k_m[1]))
-    plt.plot(a, supp_s, '-o', ms=3,
+    plt.errorbar(a, supp_s, fmt='-o', yerr=supp_small_std, ms=3, color=cmap(0.9), lw=1,
              label='Small-scale:\n'r'$\langle%.2f,%.2f\rangle$' % (k_s[0], k_s[1]))
     # plt.plot(a, supp_l, '-o', ms=3, label='Large-scale:\n' r'$\langle%.2f,%.2f\rangle$ h/Mpc' % (k_l[0], k_l[1]))
     # plt.plot(a, supp_m, '-o', ms=3, label='Medium-scale:\n'r'$\langle%.2f,%.2f\rangle$ h/Mpc' % (k_m[0], k_m[1]))
     # plt.plot(a, supp_s, '-o', ms=3, label='Small-scale:\n'r'$\langle%.2f,%.2f\rangle$ h/Mpc' % (k_s[0], k_s[1]))
+
+    ax = plt.gca()
+    ax.yaxis.grid(True)
+    ymin, ymax = ax.get_ylim()
+    if ymax > 1: ymax = 1
+    ymax = math.ceil(ymax / 0.1) * 0.1
+    ymin = math.floor(ymin / 0.1) * 0.1
+    plt.ylim(ymin=ymin, ymax=ymax)
 
     fig.suptitle(suptitle, y=0.99, size=20)
     plt.xlabel(r"$a(t)$", fontsize=15)

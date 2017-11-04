@@ -147,34 +147,46 @@ class SimInfo(object):
         with open(self.file, 'w') as outfile:
             json.dump(data, outfile, indent=2)
 
-def load_k_supp(files, k_l_lim=[0,10], k_m_lim=[20,27], k_s_lim=[35,40]):
+def load_k_supp(files, k_nyquist_par):
     """
-    k_min = 2*PI / L
-    k_max = 2*PI / L * N_m
-    log_bin : 100 values between k_min and k_max (logspace)
-
-    large scale :: k = k_min * (log_bin^[0:10])
-    medium scale :: k = k_min * (log_bin^[15:25])
-    small scale :: k = k_min * (log_bin^[30:40]) """
+    Divide available k-values into 7 subinterval from
+    k_min = 2*PI / L to k_max = 67% k_nyquist_par
+    large scale :: k = 1st subinterval
+    medium scale :: k = 4rd subinterval
+    small scale :: k = 7th subinterval """
 
     supp_large = []
     supp_medium = []
     supp_small = []
 
+    supp_large_std = []
+    supp_medium_std = []
+    supp_small_std = []
+
     for a_file in files:
         data = np.loadtxt(a_file)
+        k = data[:, 0]
         P_diff = data[:, 1]
-        supp_large.append(np.mean(P_diff[k_l_lim]))
-        supp_medium.append(np.mean(P_diff[k_m_lim]))
-        supp_small.append(np.mean(P_diff[k_s_lim]))
-        del data, P_diff
+
+        idx = (np.abs(k-0.67*k_nyquist_par)).argmin() / 7
+
+        supp_large.append(np.mean(P_diff[0:idx]))
+        supp_large_std.append(np.std(P_diff[0:idx]))
+
+        supp_medium.append(np.mean(P_diff[3*idx:4*idx]))
+        supp_medium_std.append(np.std(P_diff[3*idx:4*idx]))
+
+        supp_small.append(np.mean(P_diff[6*idx:7*idx]))        
+        supp_small_std.append(np.std(P_diff[6*idx:7*idx]))
+
+        del data, k, P_diff
 
     data = np.loadtxt(files[-1])
     k = data[:, 0]
-    k_l = [k[k_l_lim[0]], k[k_l_lim[1]]]
-    k_m = [k[k_m_lim[0]], k[k_m_lim[1]]]
-    k_s = [k[k_s_lim[0]], k[k_s_lim[1]]]
-    return (supp_large, supp_medium, supp_small), (k_l, k_m, k_s)
+    k_l = [k[0*idx], k[1*idx]]
+    k_m = [k[3*idx], k[4*idx]]
+    k_s = [k[6*idx], k[7*idx]]
+    return (supp_large, supp_medium, supp_small), (supp_large_std, supp_medium_std, supp_small_std), (k_l, k_m, k_s)
 
 def analyze_run(a_sim_info, rerun=None, skip=None):
     plt.rcParams['legend.numpoints'] = 1
@@ -209,8 +221,8 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
     if a_sim_info.rerun(rerun, key, skip, zs):
         print 'Plotting power spectrum suppression...'
         a = [1./(z+1) for z in zs]
-        supp_lms, k_lms = load_k_supp(files)
-        plot.plot_supp_lms(supp_lms, a, a_sim_info, k_lms=k_lms)
+        supp_lms, supp_std_lms, k_lms = load_k_supp(files, a_sim_info.k_nyquist["particle"])
+        plot.plot_supp_lms(supp_lms, a, a_sim_info, k_lms, supp_std_lms)
         a_sim_info.done(key)
     del zs, files
 
@@ -234,8 +246,8 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
     if a_sim_info.rerun(rerun, key, skip, zs):
         print 'Plotting power spectrum suppression...'
         a = [1./(z+1) for z in zs]
-        supp_lms, k_lms = load_k_supp(files)
-        plot.plot_supp_lms(supp_lms, a, a_sim_info, k_lms=k_lms, pk_type='vel')
+        supp_lms, supp_std_lms, k_lms = load_k_supp(files, a_sim_info.k_nyquist["particle"])
+        plot.plot_supp_lms(supp_lms, a, a_sim_info, k_lms, supp_std_lms, pk_type='vel')
         a_sim_info.done(key)
     del zs, files
 
