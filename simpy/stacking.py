@@ -34,13 +34,33 @@ def insert(a_sim_info, sep_files):
     for sep_sim_infos in sep_files:
         if compare(a_sim_info, sep_sim_infos[0]):
             sep_sim_infos.append(a_sim_info)
-            return True
-    return False
+            return
+    sep_files.append([a_sim_info])
 
 
-def stack_all(out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/'):
+def stack_files(group_sim_infos, subdir, a_file):
+    """ assume data in files are x = data[:, 0], y = data[:, 1]
+    return tuple (zs, data_list) where each entry in 'data_list' corresponds to entry in 'zs' list
+    data[:, 0] = x, data[:, 1] = mean(y), data[:, 2] = std(y)
+    """
+    all_data = []
+    for a_sim_info in group_sim_infos:
+        zs, files = try_get_zs_files(a_sim_info, subdir, a_file=a_file)
+        for data_file in files:
+            data = np.loadtxt(data_file)
+
+def stack_group(group_sim_infos):
+    # Power spectrum
+    a_sim_info = group_sim_infos[0]
+    out_dir = a_sim_info.dir.replace(a_sim_info.dir.split("/")[-2] + "/", "")
+    out_dir += "STACK_%im_%ip_%iM_%ib/" % (a_sim_info.num_m, a_sim_info.num_p, a_sim_info.num_M, a_sim_info.box)
+    create_dir(out_dir)
+    zs, data_list = stack_files(group_sim_infos, 'pwr_spec/', '*par*.dat')
+
+
+def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/'):
     # get all runs
-    files = get_files_in_traverse_dir(out_dir, 'sim_param.json')
+    files = get_files_in_traverse_dir(in_dir, 'sim_param.json')
     sim_infos = []
     for args in files:
         sim_infos.append(data.SimInfo(*args))
@@ -48,8 +68,7 @@ def stack_all(out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output
     # separate files according to run parameters
     sep_files = []
     for a_sim_info in sim_infos:
-        if not insert(a_sim_info, sep_files):
-            sep_files.append([a_sim_info])
+        insert(a_sim_info, sep_files)
 
     # print info about separated files
     num_all_runs = 0
@@ -60,9 +79,18 @@ def stack_all(out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output
         if len(sep_sim_infos) > 1:
             num_sep_runs += 1
             num_all_sep_runs += len(sep_sim_infos)
-    print "There are in total %i different runs, from which %i share the same parameters, constituting %i group(s) eligible for smoothing:" % (
+    
+    # remove 1-length sep_sim_infos
+    sep_files[:] = [x for x in sep_files if len(x) != 1]
+
+    print "There are in total %i different runs, from which %i share the same parameters, constituting %i group(s) eligible for stacking:" % (
         num_all_runs, num_all_sep_runs, num_sep_runs)
     for sep_sim_infos in sep_files:
         print "\n" + sep_sim_infos[0].info_tr()
         for a_sim_info in sep_sim_infos:
-            print "\t" + a_sim_info.file
+            print "\t" + a_sim_info.dir
+
+    print "\n\n"
+    for sep_sim_infos in sep_files:
+        print "Stacking group %s..." % sep_sim_infos[0].info_tr()
+        stack_group(sep_sim_infos)

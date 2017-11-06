@@ -209,6 +209,7 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         plot.plot_pwr_spec(files, zs, a_sim_info, pwr_spec_files_extrap=files_extrap, pwr_spec_files_emu=files_emu)
         a_sim_info.done(key)
     del zs, files, files_extrap, files_emu
+    
     # Power spectrum difference
     key = "pwr_spec_diff"
     zs, files = try_get_zs_files(a_sim_info, 'pwr_diff/')
