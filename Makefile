@@ -1,31 +1,30 @@
-
-#CXX = g++
-CXX = g++-6.4
-#CXX = g++-7.2
+# all user-specific paths (headers, libraries) should be set in env. variables, i.e.
+# export CPATH=$CPATH:/path/to/non-standars/headers/include
+# export LIBRARY_PATH=/path/to/non-standars/libraries/lib
 
 CXXFLAGS =-std=c++11 -pipe
-#CXXFLAGS +=-Og -g -Wall
-CXXFLAGS +=-Ofast -march=native
 CXXFLAGS +=-MMD
 CXXFLAGS +=-fopenmp
-
-CXXFLAGS +=-D CORR
-
-CXXLIB_PATH +=-L/usr/local/lib/
-# -L/lib/
+#CXXFLAGS +=-D CORR
 
 CXXLIB +=-lboost_program_options -lboost_filesystem -lboost_system
 CXXLIB +=-lfftw3 -lfftw3_omp
 CXXLIB +=-lgsl -lgslcblas
 CXXLIB +=-lccl
 
+COMPILE.cc = $(CXX) $(CXXFLAGS) -c -I./include
+COMPILE.fin = $(CXX) $(CXXFLAGS) $(CXXLIB_PATH)
+
 OBJ_FILES = $(patsubst %.cpp,%.o,$(wildcard src/*.cpp))
 TEST_OBJ_FILES = $(patsubst src/%,tests/%, $(filter-out src/main.o,$(OBJ_FILES))) tests/test_main.o
 PCH = include/stdafx.h
 PCH_O = $(PCH).gch
 
-COMPILE.cc = $(CXX) $(CXXFLAGS) -c -I./include
-COMPILE.fin = $(CXX) $(CXXFLAGS) $(CXXLIB_PATH)
+all: CXXFLAGS +=-Ofast -march=native
+all: adh_app
+
+debug: CXXFLAGS +=-Og -g -Wall
+debug: adh_app
 
 adh_app: $(OBJ_FILES)
 	$(COMPILE.fin) -o $@ $^ $(CXXLIB)
@@ -33,20 +32,19 @@ adh_app: $(OBJ_FILES)
 src/%.o: src/%.cpp $(PCH_O)
 	$(COMPILE.cc) -o $@ $<
 
-$(PCH_O): $(PCH)
-	$(CXX) $(CXXFLAGS) -o $@ $<
-
-clean:
-	rm -f src/*.o src/*~ src/*.d tests/*.o tests/*~ tests/*.d include/*.gch include/*~ include/*.o
-
-check : test
-
-test: $(TEST_OBJ_FILES)
+check: CXXFLAGS +=-Og -g -Wall
+check: $(TEST_OBJ_FILES)
 	$(COMPILE.fin) -o tests/test $^ $(CXXLIB)
 	./tests/test
 
 tests/%.o: src/%.cpp
 	$(COMPILE.cc) -I./tests -D TEST -o $@ $<
+
+$(PCH_O): $(PCH)
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+clean:
+	rm -f src/*.o src/*~ src/*.d tests/*.o tests/*~ tests/*.d include/*.gch include/*~ include/*.o
 
 -include $(OBJ_FILES:.o=.d)
 -include $(TEST_OBJ_FILES:.o=.d)
