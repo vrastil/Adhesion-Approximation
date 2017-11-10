@@ -487,10 +487,12 @@ void gen_corr_func_binned_gsl(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x
 
     xi_integrand_param my_param = {0, &P_k};
 
-    const unsigned int N = corr_func_binned->size();
-    const double lin_bin = (x_max - x_min)/N;
+    const double lin_bin = 10./sim.bins_per_10_Mpc;
+    unsigned req_size = (unsigned)ceil((x_max - x_min)/lin_bin);
+    corr_func_binned->resize(req_size);
+
 	double r;
-	for(unsigned i = 0; i < N; i++){
+	for(unsigned i = 0; i < req_size; i++){
         r = x_min + i*lin_bin;
         my_param.r = r;
         corr_func_binned->x[i] = r;
@@ -506,11 +508,13 @@ void gen_corr_func_binned_gsl_lin(const Sim_Param &sim, double a, Data_x_y<doubl
 
     xi_integrand_param_lin my_param = {0, sim.power};
 
-    const unsigned int N = corr_func_binned->size();
-    const double lin_bin = (x_max - x_min)/N;
+    const double lin_bin = 10./sim.bins_per_10_Mpc;
+    unsigned req_size = (unsigned)ceil((x_max - x_min)/lin_bin);
+    corr_func_binned->resize(req_size);
+    
     const double D2 = pow(growth_factor(a, sim.power), 2);
 	double r;
-	for(unsigned i = 0; i < N; i++){
+	for(unsigned i = 0; i < req_size; i++){
         r = x_min + i*lin_bin;
         my_param.r = r;
         corr_func_binned->x[i] = r;

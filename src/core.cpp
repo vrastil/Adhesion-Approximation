@@ -482,8 +482,7 @@ Sim_Param::Sim_Param(int ac, char* av[])
         k_par.k_print.lower = 2*PI/box_size;
         k_par.k_print.upper = 2*PI/box_size*mesh_num_pwr;
         k_par.k_interp.lower = get_max_Pk(this);
-        k_par.k_interp.upper = k_par.nyquist["particle"]/1.1 < k_par.nyquist["analysis"]/2 ? 
-                               k_par.nyquist["particle"]/1.1 : k_par.nyquist["analysis"]/2; //< use lower of these
+        k_par.k_interp.upper = k_par.nyquist["particle"]/2.; //< trust simulation up to HALF k_nq
 
         /* CORRELATION FUNCTION */
         x_corr.lower = 1;
@@ -509,7 +508,7 @@ void Sim_Param::print_info(string out, string app) const
             printf("Redshift:\t%G--->%G\n", z_in, z_out);
             printf("Pk:\t\t[sigma_8 = %G, As = %G, ns = %G, k_smooth = %G, pwr_type = %i]\n", 
                 power.sigma8, power.A, power.ns, sqrt(power.k2_G), power.pwr_type);
-            printf("AA:\t\t[nu = %G px^2]\n", nu);
+            printf("AA:\t\t[nu = %G (Mpc/h)^2]\n", nu*pow(box_size/mesh_num, 2.));
             printf("LL:\t\t[rs = %G, a = %G, M = %i, Hc = %G]\n", rs, a, M, Hc);
             printf("num_thread:\t%i\n", nt);
             printf( "Output:\t\t'%s'\n", out_dir.c_str());
@@ -601,10 +600,9 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
 	sim(sim), err(0), step(0), print_every(sim.print_every),
     b(sim.b_in), b_out(sim.b_out), db(sim.db),
     app_str(app_str), z_suffix_const("_" + app_str + "_"), out_dir_app(std_out_dir(app_str + "_run/", sim)),
-	pwr_spec_binned(sim.bin_num), pwr_spec_binned_0(sim.bin_num), vel_pwr_spec_binned_0(sim.bin_num/2), corr_func_binned(sim.bin_num),
 	track(4, sim.mesh_num/sim.Ng),
     dens_binned(500), is_init_pwr_spec_0(false), is_init_vel_pwr_spec_0(false)
-{
+{    
     // EFFICIENTLY ALLOCATE VECTOR OF MESHES
     app_field.reserve(3);
     power_aux.reserve(3);
@@ -613,6 +611,16 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
         power_aux.emplace_back(sim.mesh_num_pwr);
     }
     memory_alloc = sizeof(double)*(app_field[0].length*app_field.size()+power_aux[0].length*power_aux.size());
+
+    // RESERVE MEMORY FOR BINNED POWER SPECTRA
+    unsigned bin_num = (unsigned)ceil(log10(sim.mesh_num_pwr)*sim.bins_per_decade);
+    pwr_spec_binned.reserve(bin_num);
+    pwr_spec_binned_0.reserve(bin_num);
+    vel_pwr_spec_binned_0.reserve(bin_num);
+
+    // RESERVE MEMORY FOR BINNED CORRELATION FUNCTION
+    bin_num = (sim.x_corr.upper - sim.x_corr.lower) / 10. * sim.bins_per_10_Mpc;
+    corr_func_binned.reserve(bin_num);
     
     // CREAT SUBDIR STRUCTURE
     if (print_every) work_dir_over(out_dir_app);
@@ -684,7 +692,6 @@ void App_Var<T>::print()
     /* Printing power spectrum */
     fftw_execute_dft_r2c(p_F_pwr, power_aux[0]);
     pwr_spec_k(sim, power_aux[0], &power_aux[0]);
-    pwr_spec_binned.resize(sim.bin_num);
     gen_pow_spec_binned(sim, power_aux[0], &pwr_spec_binned);
     print_pow_spec(pwr_spec_binned, out_dir_app, "_par" + z_suffix());
     if (!is_init_pwr_spec_0){
@@ -700,7 +707,6 @@ void App_Var<T>::print()
     print_pow_spec(pwr_spec_binned, out_dir_app, "_extrap" + z_suffix());
 
     /* Printing correlation function */
-    corr_func_binned.resize(sim.bin_num);
     gen_corr_func_binned_gsl_qawf(sim, P_k, &corr_func_binned);
     print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_par" + z_suffix());
     gen_corr_func_binned_gsl_qawf_lin(sim, b, &corr_func_binned);
@@ -714,7 +720,6 @@ void App_Var<T>::print()
         print_pow_spec(pwr_spec_binned, out_dir_app, "_emu" + z_suffix());
 
     /* Printing correlation function */
-        corr_func_binned.resize(sim.bin_num);
         gen_corr_func_binned_gsl_qawf(sim, P_k, &corr_func_binned);
         print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_emu" + z_suffix());
     }
@@ -723,7 +728,6 @@ void App_Var<T>::print()
     if (get_vel_from_par(particles, &power_aux, sim)){
         fftw_execute_dft_r2c_triple(p_F_pwr, power_aux);
         vel_pwr_spec_k(sim, power_aux, &power_aux[0]);
-        pwr_spec_binned.resize(sim.bin_num/2);
         gen_pow_spec_binned(sim, power_aux[0], &pwr_spec_binned);
         print_vel_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
         if (!is_init_vel_pwr_spec_0){
@@ -776,7 +780,7 @@ void App_Var<T>::print_info() const
     const double e2 = pow(sim.Ng*0.1, 2); // softening of 10% of average interparticle length
 
     #pragma omp parallel for private(r)
-    for(int i = 0; i < res; i++)
+    for(unsigned i = 0; i < res; i++)
     {
         r = i*r0;
         data.x[i] = pow(r, 2); // store square of r

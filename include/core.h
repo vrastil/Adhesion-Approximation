@@ -319,7 +319,7 @@ public:
     /* SIMULATION BOX*/
     unsigned par_num_1d, par_num, mesh_num, mesh_num_pwr, Ng, Ng_pwr, print_every;
     double box_size;
-    unsigned order = 1, bin_num = 200;
+    unsigned order = 1, bins_per_decade = 20;
     unsigned long seed;
     bool pair;
     unsigned mlt_runs;
@@ -340,6 +340,7 @@ public:
     /* CORRELATION FUNCTION */
     Range x_corr; ///< range in which compute the correlation function
     corr_int_type corr_int;
+    unsigned bins_per_10_Mpc = 5;
 
     bool comp_ZA, comp_FF, comp_FP, comp_AA, comp_FP_pp;
 	

@@ -76,7 +76,8 @@ void print_par_pos_cut_small(T* particles, const Sim_Param &sim, std::string out
    File << "# This file contains positions of particles in units [Mpc/h].\n";
    double x, y, z, dx;
    const double x_0 = sim.x_0();
-   for(unsigned i=0; i < sim.par_num; i++)
+   const unsigned N = sim.par_num;
+   for(unsigned i=0; i < N; i++)
    {
        x = particles[i].position[0];
        y = particles[i].position[1];
@@ -99,8 +100,9 @@ void print_pow_spec(const Data_x_y<double> &pwr_spec_binned, string out_dir, str
 	cout << "Writing power spectrum into file " << file_name << "\n";
 	File << "# This file contains power spectrum P(k) in units [(Mpc/h)^3] depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\tP(k) [(Mpc/h)^3]\n";
-	File << scientific;
-	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
+    File << scientific;
+    const unsigned N = pwr_spec_binned.size();
+	for (unsigned j = 0; j < N; j++){
         if (pwr_spec_binned.y[j]) File << pwr_spec_binned.x[j] << "\t" << pwr_spec_binned.y[j] << "\n";
 	}
 }
@@ -114,8 +116,9 @@ void print_vel_pow_spec(const Data_x_y<double> &pwr_spec_binned, string out_dir,
 	cout << "Writing velocity divergence power spectrum into file " << file_name << "\n";
 	File << "# This file contains velocity divergence power spectrum P(k) in units [(Mpc/h)^3] depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\tP(k) [(Mpc/h)^3]\n";
-	
-	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
+    
+    const unsigned N = pwr_spec_binned.size();
+	for (unsigned j = 0; j < N; j++){
 		if (pwr_spec_binned.y[j]) File << pwr_spec_binned.x[j] << "\t" << pwr_spec_binned.y[j] << "\n";
 	}
 }
@@ -129,8 +132,9 @@ void print_corr_func(const Data_x_y<double> &pwr_spec_binned, string out_dir, st
 	cout << "Writing correlation function into file " << file_name << "\n";
 	File << "# This file contains correlation function depending on distance r in units [Mpc/h].\n"
 	        "# x [Mpc/h]\txsi(r)\n";
-	
-	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
+    
+    const unsigned N = pwr_spec_binned.size();
+	for (unsigned j = 0; j < N; j++){
 		if (pwr_spec_binned.y[j]) File << pwr_spec_binned.x[j] << "\t" << pwr_spec_binned.y[j] << "\n";
 	}
 }
@@ -150,7 +154,8 @@ void print_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data_x_y
 	double P_k, P_ZA;
     
     int i = 0;
-	for (unsigned j = 0; j < pwr_spec_binned.size(); ){
+    const unsigned N = pwr_spec_binned.size();
+	for (unsigned j = 0; j < N; ){
 		if (pwr_spec_binned.x[j] == pwr_spec_binned_0.x[i]){
 			P_k = pwr_spec_binned.y[j];
 			P_ZA = pwr_spec_binned_0.y[i] * pow(growth, 2.);
@@ -177,7 +182,8 @@ void print_vel_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data
 	double P_k, P_ZA;
     
     int i = 0;
-	for (unsigned j = 0; j < pwr_spec_binned.size(); ){
+    const unsigned N = pwr_spec_binned.size();
+	for (unsigned j = 0; j < N; ){
 		if (pwr_spec_binned.x[j] == pwr_spec_binned_0.x[i]){
 			P_k = pwr_spec_binned.y[j];
             P_ZA = pwr_spec_binned_0.y[i] * pow(b, 2.);
@@ -220,9 +226,10 @@ void print_rho_map(const Mesh& delta, const Sim_Param &sim, string out_dir, stri
 
 	cout << "Writing density map into file " << file_name << "\n";
 	File << "# This file contains density map delta(x).\n";
-	File << "# x [Mpc/h]\tz [Mpc/h]\tdelta\n";
-	for (unsigned i = 0; i < sim.mesh_num_pwr; i++){
-		for (unsigned j = 0; j < sim.mesh_num_pwr; j++){
+    File << "# x [Mpc/h]\tz [Mpc/h]\tdelta\n";
+    const unsigned N = sim.mesh_num_pwr;
+	for (unsigned i = 0; i < N; i++){
+		for (unsigned j = 0; j < N; j++){
             File << i*x_0 << "\t" << j*x_0 << "\t" << delta(i, sim.mesh_num_pwr/2, j) << "\n";
 		}
 		File << "\n";
@@ -239,11 +246,12 @@ void print_projected_rho(const Mesh& delta, const Sim_Param &sim, string out_dir
 	cout << "Writing density map into file " << file_name << "\n";
 	File << "# This file contains density map delta(x).\n"
 	        "# x [Mpc/h]\tz [Mpc/h]\tdelta\n";
-	double rho, rho_tmp;
-	for (unsigned i = 0; i < sim.mesh_num_pwr; i++){
-		for (unsigned j = 0; j < sim.mesh_num_pwr; j++){
+    double rho, rho_tmp;
+    const unsigned N = sim.mesh_num_pwr;
+	for (unsigned i = 0; i < N; i++){
+		for (unsigned j = 0; j < N; j++){
 			rho = 0;
-			for (unsigned k = 0; k < sim.mesh_num_pwr; k++){
+			for (unsigned k = 0; k < N; k++){
 				rho_tmp = delta(i, k, j);
 			//	if (rho_tmp != -1) printf("Density in (%i, %i, %i) = %f\n", i, j, k, rho_tmp);
 				rho+=rho_tmp + 1;
@@ -262,8 +270,9 @@ void print_dens_bin(const vector<int> &dens_binned, int mesh_num, string out_dir
 	cout << "Writing binned density into file " << file_name << "\n";
 	File << "# This file contains binned density field.\n"
 	        "# dens\tbin_num\n";
-	double dens;
-	for (unsigned j = 0; j < dens_binned.size(); j++)
+    double dens;
+    const unsigned N = dens_binned.size();
+	for (unsigned j = 0; j < N; j++)
 	{
         dens = j*0.1-0.9;
         File << dens << "\t" << dens_binned[j] << "\n";       
