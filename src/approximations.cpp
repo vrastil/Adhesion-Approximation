@@ -40,21 +40,21 @@ template<class T>
 void init_cond_no_vel(T& APP)
 {
     printf("\nSetting initial positions of particles...\n");
-    set_pert_pos(APP.sim, APP.sim.b_in, APP.particles, APP.app_field);
+    set_pert_pos(APP.sim, APP.integ_opt.b_in, APP.particles, APP.app_field);
 }
 
 template<class T>
 void init_cond_w_vel(T& APP)
 {
     printf("\nSetting initial positions and velocitis of particles...\n");
-	set_pert_pos_w_vel(APP.sim, APP.sim.b_in, APP.particles, APP.app_field);
+	set_pert_pos_w_vel(APP.sim, APP.sim.integ_opt.b_in, APP.particles, APP.app_field);
 }
 
 template<class T>
 void init_pot_w_s2(T& APP)
 {
     /* Computing displacement in k-space with S2 shaped particles */
-	gen_displ_k_S2(&APP.app_field, APP.power_aux[0], APP.sim.a);
+	gen_displ_k_S2(&APP.app_field, APP.power_aux[0], APP.sim.app_opt.a);
     
     /* Computing force in q-space */
     printf("Computing force in q-space...\n");
@@ -77,7 +77,7 @@ void init_adhesion(T& APP)
 {
     /* Computing initial expotential */
 	fftw_execute_dft_c2r(APP.p_B, APP.power_aux[0]);
-    gen_init_expot(APP.power_aux[0], &APP.expotential, APP.sim.nu);
+    gen_init_expot(APP.power_aux[0], &APP.expotential, APP.sim.app_opt.nu);
 }
 
 template<class T>
@@ -219,9 +219,9 @@ const double log_acc = log(ACC);
 static void aa_convolution(App_Var_AA* APP)
 {
     printf("Computing potential...\n");	
-    gen_expot(&APP->app_field[0], APP->expotential, APP->sim.nu, APP->b_half());
-	// gen_expot(&APP->app_field[0], APP->expotential, sim.nu, APP->b);
-    APP->app_field[0] *= -2*APP->sim.nu;
+    gen_expot(&APP->app_field[0], APP->expotential, APP->sim.app_opt.nu, APP->b_half());
+	// gen_expot(&APP->app_field[0], APP->expotential, sim.app_opt.nu, APP->b);
+    APP->app_field[0] *= -2*APP->sim.app_opt.nu;
 				
 	printf("Computing velocity field via FFT...\n");
 	fftw_execute_dft_r2c(APP->p_F, APP->app_field[0]);

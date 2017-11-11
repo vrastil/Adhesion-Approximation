@@ -64,7 +64,7 @@ void force_test(Sim_Param& sim)
         else if (dr > sim.rs) inc = sim.rs/10.;
         else inc = sim.rs/40.;
 
-        assign_from(APP.app_field, cur_pos, &f_long, sim.order);
+        assign_from(APP.app_field, cur_pos, &f_long);
         force_short(sim, 1, APP.linked_list, APP.particles, cur_pos, &f_short);
         f_total = f_short + f_long;
 

@@ -18,58 +18,64 @@ int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
 			;
 			
 		// options both on command line	and in configuration file
-		po::options_description config_mesh("Mesh configuration");
+		po::options_description config_mesh("Simulation box options");
 		config_mesh.add_options()
-			("mesh_num,m", po::value<unsigned>(&sim->mesh_num)->default_value(128), "number of mesh cells per dimension (potential)")
-            ("mesh_num_pwr,M", po::value<unsigned>(&sim->mesh_num_pwr)->default_value(256), "number of mesh cells per dimension (power spectrum)")
-			("par_num,p", po::value<unsigned>(&sim->par_num_1d)->default_value(128), "number of particles per dimension")
-			("box_size,L", po::value<double>(&sim->box_size)->default_value(512, "512"), "box size in units of Mpc/h")
+			("mesh_num,m", po::value<unsigned>(&sim->box_opt.mesh_num)->default_value(128), "number of mesh cells per dimension (potential)")
+            ("mesh_num_pwr,M", po::value<unsigned>(&sim->box_opt.mesh_num_pwr)->default_value(256), "number of mesh cells per dimension (power spectrum)")
+			("par_num,p", po::value<unsigned>(&sim->box_opt.par_num_1d)->default_value(128), "number of particles per dimension")
+			("box_size,L", po::value<double>(&sim->box_opt.box_size)->default_value(512, "512"), "box size in units of Mpc/h")
 			;
 			
 		po::options_description config_integ("Integration options");
 		config_integ.add_options()
-			("redshift,z", po::value<double>(&sim->z_in)->default_value(200.), "redshift at the start of the simulation")
-			("redshift_0,Z", po::value<double>(&sim->z_out)->default_value(10.), "redshift at the end of the simulation")
-            ("time_step,a", po::value<double>(&sim->db)->default_value(0.1, "0.1"), "dimensionless time-step (scale factor)")
-            ("print_every", po::value<unsigned>(&sim->print_every)->default_value(1, "1"), "save particle positions and power spectrum "
-                                                                                           "every n-th step, set 0 for no printing")
-			;
+			("redshift,z", po::value<double>(&sim->integ_opt.z_in)->default_value(200.), "redshift at the start of the simulation")
+			("redshift_0,Z", po::value<double>(&sim->integ_opt.z_out)->default_value(10.), "redshift at the end of the simulation")
+            ("time_step,a", po::value<double>(&sim->integ_opt.db)->default_value(0.1, "0.1"), "dimensionless time-step (scale factor)")
+            ;
+        
+        po::options_description config_output("Output options");
+        config_integ.add_options()
+            ("print_every", po::value<unsigned>(&sim->out_opt.print_every)->default_value(1, "1"), "save particle positions and power spectrum "
+                                                                                            "every n-th step, set 0 for no printing")
+            ("pwr_bins", po::value<unsigned>(&sim->out_opt.bins_per_decade)->default_value(30), "number of bins per decade in power spectrum")
+            ("corr_pt", po::value<unsigned>(&sim->out_opt.points_per_10_Mpc)->default_value(10), "number of points per 10 Mpc in correlation function")
+            ("out_dir,o", po::value<string>(&sim->out_opt.out_dir)->default_value("output/"), "output folder name")
+            ;
 		
 		po::options_description config_app("Approximations");
 		config_app.add_options()
-			("comp_ZA", po::value<bool>(&sim->comp_ZA)->default_value(false), "compute Zeldovich approximation")
-			("comp_FF", po::value<bool>(&sim->comp_FF)->default_value(false), "compute Frozen-flow approximation")
-			("comp_FP", po::value<bool>(&sim->comp_FP)->default_value(false), "compute Frozen-potential approximation")
-			("comp_AA", po::value<bool>(&sim->comp_AA)->default_value(false), "compute Adhesion approximation")
-			("comp_FP_pp", po::value<bool>(&sim->comp_FP_pp)->default_value(false),
+			("comp_ZA", po::value<bool>(&sim->comp_app.ZA)->default_value(false), "compute Zeldovich approximation")
+			("comp_FF", po::value<bool>(&sim->comp_app.FF)->default_value(false), "compute Frozen-flow approximation")
+			("comp_FP", po::value<bool>(&sim->comp_app.FP)->default_value(false), "compute Frozen-potential approximation")
+			("comp_AA", po::value<bool>(&sim->comp_app.AA)->default_value(false), "compute Adhesion approximation")
+			("comp_FP_pp", po::value<bool>(&sim->comp_app.FP_pp)->default_value(false),
 								"compute Frozen-potential approximation (particle-particle interaction)")
 			;
 			
 		po::options_description config_power("Cosmological parameters");
         config_power.add_options()
-            ("Omega_b,B", po::value<double>(&sim->power.Omega_b)->default_value(0.05, "0.05"), "density of baryons relative to the critical density")
-            ("Omega_m,C", po::value<double>(&sim->power.Omega_m)->default_value(0.25, "0.25"), "density of CDM relative to the critical density")
-            ("Hubble,H", po::value<double>(&sim->power.H0)->default_value(67, "67"), "Hubble constant in units of km/s/Mpc")
-			("pwr_type,P", po::value<int>(&sim->power.pwr_type_i)->default_value(0), "power spectrum type")
-			("n_s,n", po::value<double>(&sim->power.ns)->default_value(1.), "spectral index of the scale-free power spectrum")
-			("sigma8,s", po::value<double>(&sim->power.sigma8)->default_value(1.), "normalization of the power spectrum at R = 8 Mpc/h")
-			("smoothing_k,k", po::value<double>(&sim->power.k2_G)->default_value(0.),
+            ("Omega_b,B", po::value<double>(&sim->cosmo.Omega_b)->default_value(0.05, "0.05"), "density of baryons relative to the critical density")
+            ("Omega_m,C", po::value<double>(&sim->cosmo.Omega_m)->default_value(0.25, "0.25"), "density of CDM relative to the critical density")
+            ("Hubble,H", po::value<double>(&sim->cosmo.H0)->default_value(67, "67"), "Hubble constant in units of km/s/Mpc")
+			("pwr_type,P", po::value<unsigned>(&sim->cosmo.pwr_type_i)->default_value(0), "power spectrum type")
+			("n_s,n", po::value<double>(&sim->cosmo.ns)->default_value(1.), "spectral index of the scale-free power spectrum")
+			("sigma8,s", po::value<double>(&sim->cosmo.sigma8)->default_value(1.), "normalization of the power spectrum at R = 8 Mpc/h")
+			("smoothing_k,k", po::value<double>(&sim->cosmo.k2_G)->default_value(0.),
 								"smoothing wavenumber of TZA in units of h/Mpc, set 0 for ZA")
 			;
 		
 		po::options_description config_run("Run options");
 		config_run.add_options()
-			("out_dir,o", po::value<string>(&sim->out_dir)->default_value("output/"), "output folder name")
-            ("num_thread,t", po::value<unsigned>(&sim->nt)->default_value(0), "number of threads the program will use, set 0 for max. available")
-            ("seed", po::value<unsigned long>(&sim->seed)->default_value(0), "seed to random number generator, use 0 for random")
-            ("pair", po::value<bool>(&sim->pair)->default_value(false), "if true run two simulations with opposite phases of random field")
-            ("mlt_runs", po::value<unsigned>(&sim->mlt_runs)->default_value(1), "how many runs should be simulated (only if seed = 0)")
+            ("num_thread,t", po::value<unsigned>(&sim->run_opt.nt)->default_value(0), "number of threads the program will use, set 0 for max. available")
+            ("seed", po::value<unsigned long>(&sim->run_opt.seed)->default_value(0), "seed to random number generator, use 0 for random")
+            ("pair", po::value<bool>(&sim->run_opt.pair)->default_value(false), "if true run two simulations with opposite phases of random field")
+            ("mlt_runs", po::value<unsigned>(&sim->run_opt.mlt_runs)->default_value(1), "how many runs should be simulated (only if seed = 0)")
 			;
 		
 		po::options_description config_other("Approximation`s options");
 		config_other.add_options()
-			("viscosity,v", po::value<double>(&sim->nu)->default_value(1.), "'viscozity' for adhesion approximation in units of pixel^2")
-            ("cut_radius,r", po::value<double>(&sim->rs)->default_value(2.7, "2.7"), "short-range force cutoff radius in units of mesh cells")
+			("viscosity,v", po::value<double>(&sim->app_opt.nu)->default_value(1.), "'viscozity' for adhesion approximation in units of pixel^2")
+            ("cut_radius,r", po::value<double>(&sim->app_opt.rs)->default_value(2.7, "2.7"), "short-range force cutoff radius in units of mesh cells")
 			;
 			
 		po::options_description cmdline_options("\nCOSMOLOGICAL APPROXIMATION");

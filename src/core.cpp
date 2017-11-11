@@ -365,18 +365,23 @@ Mesh& Mesh::operator/=(const double& rhs)
 }
 
 /**
- * @class:	Pow_Spec_Param
+ * @class:	Cosmo_Param
  * @brief:	class storing parameters for power spectrum
  */
 
-void Pow_Spec_Param::init()
+void Cosmo_Param::init()
 {
     is_init = true;
+
+    pwr_type = static_cast<e_power_spec>(pwr_type_i);
+    k2_G *= k2_G;
+    h = H0/100;
+    
     // CCL VARIABLES
     switch (pwr_type)
     {
-        case ccl_EH: config.transfer_function_method = ccl_eisenstein_hu; break;
-        case ccl_BBKS: config.transfer_function_method = ccl_bbks; break;
+        case e_power_spec::ccl_EH: config.transfer_function_method = ccl_eisenstein_hu; break;
+        case e_power_spec::ccl_BBKS: config.transfer_function_method = ccl_bbks; break;
         default: config.transfer_function_method = ccl_bbks; break;
     }
     config.matter_power_spectrum_method = ccl_linear;
@@ -387,9 +392,48 @@ void Pow_Spec_Param::init()
 
     // PRECOMPUTED VALUES
     D_norm = growth_factor(1, *this);
+
+    // normalize power spectrum
+    norm_pwr(this);
 }
 
-Pow_Spec_Param::~Pow_Spec_Param()
+void to_json(json& j, const Cosmo_Param& cosmo)
+{
+    j = json{
+        {"pwr_type", cosmo.pwr_type_i},
+        {"A", cosmo.A},
+        {"index", cosmo.ns},
+        {"sigma8", cosmo.sigma8},
+        {"smoothing_k", cosmo.k2_G},
+        {"Omega_c", cosmo.Omega_c()},
+        {"Omega_b", cosmo.Omega_b},
+        {"Omega_m", cosmo.Omega_m},
+        {"h", cosmo.h}
+    };
+    switch (cosmo.config.transfer_function_method)
+    { // convert to pyccl transfer_function_types keys
+        case ccl_emulator: j["transfer_function_method"] = "emulator"; break;
+        case ccl_eisenstein_hu: j["transfer_function_method"] = "eisenstein_hu"; break;
+        case ccl_bbks: j["transfer_function_method"] = "bbks"; break;
+        case ccl_boltzmann_class: j["transfer_function_method"] = "boltzmann_class"; break;
+        case ccl_boltzmann_camb: j["transfer_function_method"] = "boltzmann_camb"; break;
+    }
+    switch (cosmo.config.matter_power_spectrum_method)
+    { // convert to pyccl matter_power_spectrum_types keys
+        case ccl_linear: j["matter_power_spectrum_method"] = "linear"; break;
+        case ccl_halofit: j["matter_power_spectrum_method"] = "halofit"; break;
+        case ccl_halo_model: j["matter_power_spectrum_method"] = "halo_model"; break;
+    }
+    switch (cosmo.config.mass_function_method)
+    { // convert to pyccl mass_function_types keys
+        case ccl_tinker: j["mass_function_method"] = "tinker"; break;
+        case ccl_tinker10: j["mass_function_method"] = "tinker10"; break;
+        case ccl_watson: j["mass_function_method"] = "watson"; break;
+        case ccl_angulo: j["mass_function_method"] = "angulo"; break;
+    }
+}
+
+Cosmo_Param::~Cosmo_Param()
 {
     if(is_init){
         ccl_cosmology_free(cosmo);
@@ -436,59 +480,101 @@ Tracking::Tracking(int sqr_num_track_par, int par_num_per_dim):
  * @class:	Sim_Param
  * @brief:	class storing simulation parameters
  */
+
+void Sim_Param::Run_Opt::init()
+{
+    if(nt == 0) nt = omp_get_max_threads();
+    else omp_set_num_threads(nt);
+    if (seed == 0){
+        srand(time(NULL));
+        seed = (static_cast<long>(rand()) << (sizeof(int) * 8)) | rand();
+    } else mlt_runs = 1;
+    phase = true;
+}
+
+void Sim_Param::Box_Opt::init()
+{
+    Ng = mesh_num / par_num_1d;
+    Ng_pwr = mesh_num_pwr/par_num_1d;
+    par_num = pow(par_num_1d, 3);
+}
+
+void Sim_Param::Integ_Opt::init()
+{
+    b_in = 1./(z_in + 1);
+	b_out = 1./(z_out + 1);
+}
+
+void Sim_Param::App_Opt::init(const Box_Opt* box_opt)
+{
+    a = rs / 0.735;
+    M = (int)(box_opt->mesh_num / rs);
+    Hc = double(box_opt->mesh_num) / M;
+    nu_dim = nu;
+    nu /= pow(box_opt->box_size/box_opt->mesh_num, 2.); // converting to dimensionless units
+}
+
+void Sim_Param::Other_par::init(const Box_Opt* box_opt)
+{
+    double tmp = PI/box_opt->box_size;
+
+    nyquist["analysis"] = tmp*box_opt->mesh_num_pwr;
+    nyquist["potential"] = tmp*box_opt->mesh_num;
+    nyquist["particle"] = tmp*box_opt->par_num_1d;
+    k_print.lower = 2*tmp;
+    k_print.upper = 2*tmp*box_opt->mesh_num_pwr;
+    x_corr.lower = 0.1;
+    x_corr.upper = 200;
+}
  
 Sim_Param::Sim_Param(int ac, char* av[])
 {
 	if (handle_cmd_line(ac, av, this)) is_init = 0;
 	else {
-		is_init = 1;
-		/* MULTITHREADING */
-        if(nt == 0) nt = omp_get_max_threads();
-        else omp_set_num_threads(nt);
-
-        /* RANDOM NUMBER GENERATOR */
-        if (seed == 0){
-            srand(time(NULL));
-            seed = (static_cast<long>(rand()) << (sizeof(int) * 8)) | rand();
-        } else mlt_runs = 1;
-        phase = true;
-
-        /* SIMULATION BOX*/
-        Ng = mesh_num / par_num_1d;
-        Ng_pwr = mesh_num_pwr/par_num_1d;
-        par_num = pow(par_num_1d, 3);
-        a = rs / 0.735;
-        M = (int)(mesh_num / rs);
-        Hc = double(mesh_num) / M;
-
-        nu /= pow(box_size/mesh_num, 2.); // converting to dimensionless units
-
-        /* TIME */
-        b_in = 1./(z_in + 1);
-		b_out = 1./(z_out + 1);
-        
-        /* POWER SPECTRUM */
-        power.pwr_type = static_cast<e_power_spec>(power.pwr_type_i);
-        power.k2_G *= power.k2_G;
-        power.h = power.H0/100;
-        power.init();
-        norm_pwr(&power);
-
-        /* RANGE : k */
-        k_par.nyquist["analysis"] = PI*mesh_num_pwr / box_size;
-        k_par.nyquist["potential"] = PI*mesh_num / box_size;
-        k_par.nyquist["particle"] = PI*par_num_1d / box_size;
-        
-        k_par.k_print.lower = 2*PI/box_size;
-        k_par.k_print.upper = 2*PI/box_size*mesh_num_pwr;
-        k_par.k_interp.lower = get_max_Pk(this);
-        k_par.k_interp.upper = k_par.nyquist["particle"]/2.; //< trust simulation up to HALF k_nq
-
-        /* CORRELATION FUNCTION */
-        x_corr.lower = 1;
-        x_corr.upper = 200;
-        corr_int = corr_int_type::QAWF;
+        is_init = 1;
+        run_opt.init();
+        box_opt.init();
+        integ_opt.init();
+        app_opt.init(&box_opt);
+        cosmo.init();
+        other_par.init(&box_opt);
     }
+}
+
+void to_json(json& j, const Sim_Param::Box_Opt& box_opt)
+{
+    j = json{
+        {"mesh_num", box_opt.mesh_num},
+        {"mesh_num_pwr", box_opt.mesh_num_pwr},
+        {"Ng", box_opt.Ng},
+        {"par_num", box_opt.par_num_1d},
+        {"box_size", box_opt.box_size}
+    };
+}
+
+void to_json(json& j, const Sim_Param::Integ_Opt& integ_opt)
+{
+    j = json{
+        {"redshift", integ_opt.z_in},
+        {"redshift_0", integ_opt.z_out},
+        {"time_step", integ_opt.db}
+    };
+}
+
+void to_json(json& j, const Sim_Param::App_Opt& app_opt)
+{
+    j = json{
+        {"viscosity", app_opt.nu_dim},
+        {"cut_radius", app_opt.rs}
+    };
+}
+
+void to_json(json& j, const Sim_Param::Run_Opt& run_opt)
+{
+    j = json{
+        {"num_thread", run_opt.nt},
+        {"seed", run_opt.seed}
+    };
 }
 
 void Sim_Param::print_info(string out, string app) const
@@ -500,18 +586,18 @@ void Sim_Param::print_info(string out, string app) const
             printf("\n*********************\n");
             printf("SIMULATION PARAMETERS\n");
             printf("*********************\n");
-            printf("Ng:\t\t%i\n", Ng);
-            printf("Num_par:\t%i^3\n", par_num_1d);
-            printf("Num_mesh:\t%i^3\n", mesh_num);
-            printf("Num_mesh_pwr:\t%i^3\n", mesh_num_pwr);
-            printf("Box size:\t%.0f Mpc/h\n", box_size);
-            printf("Redshift:\t%G--->%G\n", z_in, z_out);
+            printf("Ng:\t\t%i\n", box_opt.Ng);
+            printf("Num_par:\t%i^3\n", box_opt.par_num_1d);
+            printf("Num_mesh:\t%i^3\n", box_opt.mesh_num);
+            printf("Num_mesh_pwr:\t%i^3\n", box_opt.mesh_num_pwr);
+            printf("Box size:\t%.0f Mpc/h\n", box_opt.box_size);
+            printf("Redshift:\t%G--->%G\n", integ_opt.z_in, integ_opt.z_out);
             printf("Pk:\t\t[sigma_8 = %G, As = %G, ns = %G, k_smooth = %G, pwr_type = %i]\n", 
-                power.sigma8, power.A, power.ns, sqrt(power.k2_G), power.pwr_type);
-            printf("AA:\t\t[nu = %G (Mpc/h)^2]\n", nu*pow(box_size/mesh_num, 2.));
-            printf("LL:\t\t[rs = %G, a = %G, M = %i, Hc = %G]\n", rs, a, M, Hc);
-            printf("num_thread:\t%i\n", nt);
-            printf( "Output:\t\t'%s'\n", out_dir.c_str());
+                cosmo.sigma8, cosmo.A, cosmo.ns, sqrt(cosmo.k2_G), cosmo.pwr_type);
+            printf("AA:\t\t[nu = %G (Mpc/h)^2]\n", app_opt.nu_dim);
+            printf("LL:\t\t[rs = %G, a = %G, M = %i, Hc = %G]\n", app_opt.rs, app_opt.a, app_opt.M, app_opt.Hc);
+            printf("num_thread:\t%i\n", run_opt.nt);
+            printf( "Output:\t\t'%s'\n", out_opt.out_dir.c_str());
         }
         else
         {
@@ -519,55 +605,16 @@ void Sim_Param::print_info(string out, string app) const
             ofstream o(file_name);
 
             json j = {
-                {"mesh_num", mesh_num},
-                {"mesh_num_pwr", mesh_num_pwr},
-                {"Ng", Ng},
-                {"par_num", par_num_1d},
-                {"box_size", box_size},
-                {"redshift", z_in},
-                {"redshift_0", z_out},
-                {"time_step", db},
-                {"app", app},
-                {"pwr_type", power.pwr_type},
-                {"A", power.A},
-                {"index", power.ns},
-                {"sigma8", power.sigma8},
-                {"smoothing_k", power.k2_G},
-                {"Omega_c", power.Omega_c()},
-                {"Omega_b", power.Omega_b},
-                {"Omega_m", power.Omega_m},
-                {"h", power.h},
-                {"k_nyquist" ,k_par.nyquist},
-                {"viscosity", nu*pow(box_size/mesh_num, 2.)},
-                {"cut_radius", rs},
-                {"num_thread", nt},
-                {"seed", seed},
-                {"out_dir", out},
-                {"results", {}}
+                {"box_opt", box_opt},
+                {"integ_opt", integ_opt},
+                {"cosmo", cosmo},
+                {"app_opt", app_opt},
+                {"run_opt", run_opt},
+                {"out_dir", out_opt.out_dir},
+                {"k_nyquist", other_par.nyquist},
+                {"results", {}},
+                {"app", app}
             };
-
-            switch (power.config.transfer_function_method)
-            { // convert to pyccl transfer_function_types keys
-                case ccl_emulator: j["transfer_function_method"] = "emulator"; break;
-                case ccl_eisenstein_hu: j["transfer_function_method"] = "eisenstein_hu"; break;
-                case ccl_bbks: j["transfer_function_method"] = "bbks"; break;
-                case ccl_boltzmann_class: j["transfer_function_method"] = "boltzmann_class"; break;
-                case ccl_boltzmann_camb: j["transfer_function_method"] = "boltzmann_camb"; break;
-            }
-            switch (power.config.matter_power_spectrum_method)
-            { // convert to pyccl matter_power_spectrum_types keys
-                case ccl_linear: j["matter_power_spectrum_method"] = "linear"; break;
-                case ccl_halofit: j["matter_power_spectrum_method"] = "halofit"; break;
-                case ccl_halo_model: j["matter_power_spectrum_method"] = "halo_model"; break;
-            }
-            switch (power.config.mass_function_method)
-            { // convert to pyccl mass_function_types keys
-                case ccl_tinker: j["mass_function_method"] = "tinker"; break;
-                case ccl_tinker10: j["mass_function_method"] = "tinker10"; break;
-                case ccl_watson: j["mass_function_method"] = "watson"; break;
-                case ccl_angulo: j["mass_function_method"] = "angulo"; break;
-            }
-
             o << setw(2) << j << endl;
         }
     } else printf("WARNING! Simulation parameters are not initialized!\n");
@@ -579,7 +626,7 @@ void Sim_Param::print_info() const
 	Sim_Param::print_info("", "");
 }
 
-bool Sim_Param::simulate()
+bool Sim_Param::Run_Opt::simulate()
 {
     if (!pair || !phase)
     {
@@ -597,29 +644,29 @@ bool Sim_Param::simulate()
  
 template <class T> 
 App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
-	sim(sim), err(0), step(0), print_every(sim.print_every),
-    b(sim.b_in), b_out(sim.b_out), db(sim.db),
+	sim(sim), err(0), step(0), print_every(sim.out_opt.print_every),
+    b(sim.integ_opt.b_in), b_out(sim.integ_opt.b_out), db(sim.integ_opt.db),
     app_str(app_str), z_suffix_const("_" + app_str + "_"), out_dir_app(std_out_dir(app_str + "_run/", sim)),
-	track(4, sim.mesh_num/sim.Ng),
+	track(4, sim.box_opt.par_num_1d),
     dens_binned(500), is_init_pwr_spec_0(false), is_init_vel_pwr_spec_0(false)
 {    
     // EFFICIENTLY ALLOCATE VECTOR OF MESHES
     app_field.reserve(3);
     power_aux.reserve(3);
     for(size_t i = 0; i < 3; i++){
-        app_field.emplace_back(sim.mesh_num);
-        power_aux.emplace_back(sim.mesh_num_pwr);
+        app_field.emplace_back(sim.box_opt.mesh_num);
+        power_aux.emplace_back(sim.box_opt.mesh_num_pwr);
     }
     memory_alloc = sizeof(double)*(app_field[0].length*app_field.size()+power_aux[0].length*power_aux.size());
 
     // RESERVE MEMORY FOR BINNED POWER SPECTRA
-    unsigned bin_num = (unsigned)ceil(log10(sim.mesh_num_pwr)*sim.bins_per_decade);
+    unsigned bin_num = (unsigned)ceil(log10(sim.box_opt.mesh_num_pwr)*sim.out_opt.bins_per_decade);
     pwr_spec_binned.reserve(bin_num);
     pwr_spec_binned_0.reserve(bin_num);
     vel_pwr_spec_binned_0.reserve(bin_num);
 
     // RESERVE MEMORY FOR BINNED CORRELATION FUNCTION
-    bin_num = (sim.x_corr.upper - sim.x_corr.lower) / 10. * sim.bins_per_10_Mpc;
+    bin_num = (sim.other_par.x_corr.upper - sim.other_par.x_corr.lower) / 10. * sim.out_opt.points_per_10_Mpc;
     corr_func_binned.reserve(bin_num);
     
     // CREAT SUBDIR STRUCTURE
@@ -627,8 +674,8 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
     else create_dir(out_dir_app);
 
     // PARTICLES INITIALIZATION
-    particles = new T[sim.par_num];
-    memory_alloc += sizeof(T)*sim.par_num;
+    particles = new T[sim.box_opt.par_num];
+    memory_alloc += sizeof(T)*sim.box_opt.par_num;
 
 	// FFTW PREPARATION
 	err = !fftw_init_threads();
@@ -636,14 +683,14 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
 		printf("Errors during multi-thread initialization!\n");
 		throw err;
 	}
-	fftw_plan_with_nthreads(sim.nt);
-	p_F = fftw_plan_dft_r2c_3d(sim.mesh_num, sim.mesh_num, sim.mesh_num, app_field[0].real(),
+	fftw_plan_with_nthreads(sim.run_opt.nt);
+	p_F = fftw_plan_dft_r2c_3d(sim.box_opt.mesh_num, sim.box_opt.mesh_num, sim.box_opt.mesh_num, app_field[0].real(),
         app_field[0].complex(), FFTW_ESTIMATE);
-	p_B = fftw_plan_dft_c2r_3d(sim.mesh_num, sim.mesh_num, sim.mesh_num, app_field[0].complex(),
+	p_B = fftw_plan_dft_c2r_3d(sim.box_opt.mesh_num, sim.box_opt.mesh_num, sim.box_opt.mesh_num, app_field[0].complex(),
         app_field[0].real(), FFTW_ESTIMATE);
-    p_F_pwr = fftw_plan_dft_r2c_3d(sim.mesh_num_pwr, sim.mesh_num_pwr, sim.mesh_num_pwr, power_aux[0].real(),
+    p_F_pwr = fftw_plan_dft_r2c_3d(sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, power_aux[0].real(),
 		power_aux[0].complex(), FFTW_ESTIMATE);
-	p_B_pwr = fftw_plan_dft_c2r_3d(sim.mesh_num_pwr, sim.mesh_num_pwr, sim.mesh_num_pwr, power_aux[0].complex(),
+	p_B_pwr = fftw_plan_dft_c2r_3d(sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, power_aux[0].complex(),
 		power_aux[0].real(), FFTW_ESTIMATE);
 }
 
@@ -687,7 +734,7 @@ void App_Var<T>::print()
     get_rho_from_par(particles, &power_aux[0], sim);
     gen_dens_binned(power_aux[0], dens_binned, sim);    
     print_rho_map(power_aux[0], sim, out_dir_app, z_suffix());
-    print_dens_bin(dens_binned, sim.mesh_num, out_dir_app, z_suffix());
+    print_dens_bin(dens_binned, sim.box_opt.mesh_num, out_dir_app, z_suffix());
 
     /* Printing power spectrum */
     fftw_execute_dft_r2c(p_F_pwr, power_aux[0]);
@@ -696,10 +743,10 @@ void App_Var<T>::print()
     print_pow_spec(pwr_spec_binned, out_dir_app, "_par" + z_suffix());
     if (!is_init_pwr_spec_0){
         pwr_spec_binned_0 = pwr_spec_binned;
-        D_init = growth_factor(b, sim.power);
+        D_init = growth_factor(b, sim.cosmo);
         is_init_pwr_spec_0 = true;
     }
-    print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, growth_factor(b, sim.power) / D_init, out_dir_app, z_suffix());
+    print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, growth_factor(b, sim.cosmo) / D_init, out_dir_app, z_suffix());
 
     /* Print extrapolated power spectrum */
     Extrap_Pk P_k(pwr_spec_binned, sim);
@@ -733,9 +780,9 @@ void App_Var<T>::print()
         if (!is_init_vel_pwr_spec_0){
             vel_pwr_spec_binned_0 = pwr_spec_binned;
             is_init_vel_pwr_spec_0 = true;
-            dDda_init = growth_change(b, sim.power);
+            dDda_init = growth_change(b, sim.cosmo);
         }
-        print_vel_pow_spec_diff(pwr_spec_binned, vel_pwr_spec_binned_0, growth_change(b, sim.power) / dDda_init, out_dir_app, z_suffix());
+        print_vel_pow_spec_diff(pwr_spec_binned, vel_pwr_spec_binned_0, growth_change(b, sim.cosmo) / dDda_init, out_dir_app, z_suffix());
     }
 }
 
@@ -757,7 +804,7 @@ void App_Var<T>::print_info() const
  */
  
  App_Var_AA::App_Var_AA(const Sim_Param &sim, string app_str):
-    App_Var<Particle_v>(sim, app_str), expotential (sim.mesh_num)
+    App_Var<Particle_v>(sim, app_str), expotential (sim.box_opt.mesh_num)
 {
     memory_alloc += sizeof(double)*expotential.length;
 }
@@ -768,23 +815,23 @@ void App_Var<T>::print_info() const
  */
  
  App_Var_FP_mod::App_Var_FP_mod(const Sim_Param &sim, string app_str):
-    App_Var<Particle_v>(sim, app_str), linked_list(sim.par_num, sim.M, sim.Hc)
+    App_Var<Particle_v>(sim, app_str), linked_list(sim.box_opt.par_num, sim.app_opt.M, sim.app_opt.Hc)
 {
     memory_alloc += sizeof(int)*(linked_list.HOC.length+linked_list.par_num);
 
     // precompute short range force
-    size_t res = size_t(sim.rs/0.05)+1; // force resolution 5% of mesh cell
-    const double r0 = sim.rs / (res-1);
+    size_t res = size_t(sim.app_opt.rs/0.05)+1; // force resolution 5% of mesh cell
+    const double r0 = sim.app_opt.rs / (res-1);
     Data_x_y<double> data(res);
     double r;
-    const double e2 = pow(sim.Ng*0.1, 2); // softening of 10% of average interparticle length
+    const double e2 = pow(sim.box_opt.Ng*0.1, 2); // softening of 10% of average interparticle length
 
     #pragma omp parallel for private(r)
     for(unsigned i = 0; i < res; i++)
     {
         r = i*r0;
         data.x[i] = pow(r, 2); // store square of r
-        data.y[i] = (force_tot(r, e2) - force_ref(r, sim.a))/(4*PI);
+        data.y[i] = (force_tot(r, e2) - force_ref(r, sim.app_opt.a))/(4*PI);
     }
     fs_interp.init(data);
 }

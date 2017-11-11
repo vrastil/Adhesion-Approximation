@@ -11,8 +11,8 @@
 void get_k_vec(int N, int index, int* k_vec);
 void get_k_vec(int N, int index, Vec_3D<int> &k_vec);
 int get_k_sq(int N, int index);
-inline int get_per(int vec, int per);
-inline double get_per(double vec, int per);
+int get_per(int vec, int per);
+double get_per(double vec, int per);
 void get_per(Vec_3D<double> &position, int per);
 void get_per(Vec_3D<int> &position, int per);
 void get_per(Vec_3D<int> &position, const Vec_3D<int> &per);
@@ -24,10 +24,10 @@ double get_sgn_distance_1D(double x_from, double x_to, int per);
 double get_distance(const Vec_3D<double> &x_1, const Vec_3D<double> &x_2, int per);
 Vec_3D<double> get_sgn_distance(const Vec_3D<double> &x_from, const Vec_3D<double> &x_to, int per);
 
-void assign_to(Mesh* field, const Vec_3D<double> &position, const double value, const int order);
-void assign_to(std::vector<Mesh>* field, const Vec_3D<double> &position, const Vec_3D<double>& value, const int order);
-void assign_from(const Mesh &field, const Vec_3D<double> &position, double* value, const int order);
-void assign_from(const std::vector<Mesh> &field, const Vec_3D<double> &position, Vec_3D<double>* value, const int order);
+void assign_to(Mesh* field, const Vec_3D<double> &position, const double value);
+void assign_to(std::vector<Mesh>* field, const Vec_3D<double> &position, const Vec_3D<double>& value);
+void assign_from(const Mesh &field, const Vec_3D<double> &position, double* value);
+void assign_from(const std::vector<Mesh> &field, const Vec_3D<double> &position, Vec_3D<double>* value);
 
 void fftw_execute_dft_r2c(const fftw_plan &p_F, Mesh& rho);
 void fftw_execute_dft_c2r(const fftw_plan &p_B, Mesh& rho);
@@ -41,15 +41,16 @@ double max(double* p_data, int len);
 double min(const std::vector<double>& data);
 double max(const std::vector<double>& data);
 
+template<unsigned points>
 class IT
 {
 public:
-    IT(const Vec_3D<double> &pos, int order); // ctor for assignment scheme
+    IT(const Vec_3D<double> &pos); // ctor for assignment scheme
     IT(const Vec_3D<double> &pos, double Hc); // ctor for chaining mesh
 
-    int counter;
-    const int points, max_counter;
+    unsigned counter;
     Vec_3D<int> vec;
 
     bool iter();
 };
+

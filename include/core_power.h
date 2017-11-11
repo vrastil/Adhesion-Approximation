@@ -8,12 +8,12 @@
 #include "core.h"
 
 
-void norm_pwr(Pow_Spec_Param* pwr_par);
-double lin_pow_spec(double k, const Pow_Spec_Param& pwr_par, double a);
-double lin_pow_spec(double k, const Pow_Spec_Param& parameters);
-double growth_factor(double a, const Pow_Spec_Param& pwr_par);
-double growth_rate(double a, const Pow_Spec_Param& pwr_par);
-double growth_change(double a, const Pow_Spec_Param& pwr_par);
+void norm_pwr(Cosmo_Param* pwr_par);
+double lin_pow_spec(double k, const Cosmo_Param& pwr_par, double a);
+double lin_pow_spec(double k, const Cosmo_Param& parameters);
+double growth_factor(double a, const Cosmo_Param& pwr_par);
+double growth_rate(double a, const Cosmo_Param& pwr_par);
+double growth_change(double a, const Cosmo_Param& pwr_par);
 double  get_max_Pk(Sim_Param* sim);
 
 /**
@@ -60,7 +60,7 @@ private:
     void fit_power_law(const Data_x_y<double>& data, const unsigned m, const unsigned n, double& A);
 
     double A_low, A_up; // amplitude of linear power
-    const Pow_Spec_Param& power;
+    const Cosmo_Param& cosmo;
     double n_s; // if defined simple power-law
     double k_min, k_max; // interpolation range
 };

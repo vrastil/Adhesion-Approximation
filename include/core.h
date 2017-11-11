@@ -32,22 +32,22 @@ public:
     std::array<T, 3> vec;
 
     // ELEMENT ACCESS
-    inline T& operator[](int i){ return vec[i]; }
-    inline const T& operator[](int i) const { return vec[i]; }
+    T& operator[](int i){ return vec[i]; }
+    const T& operator[](int i) const { return vec[i]; }
 
     // ITERATORS
     typedef typename std::array<T, 3>::iterator iterator;
     typedef typename std::array<T, 3>::const_iterator const_iterator;
 
-    inline iterator begin() noexcept { return vec.begin(); }
-    inline const_iterator cbegin() const noexcept { return vec.cbegin(); }
-    inline iterator end() noexcept { return vec.end(); }
-    inline const_iterator cend() const noexcept { return vec.end(); }
+    iterator begin() noexcept { return vec.begin(); }
+    const_iterator cbegin() const noexcept { return vec.cbegin(); }
+    iterator end() noexcept { return vec.end(); }
+    const_iterator cend() const noexcept { return vec.end(); }
     
     // METHODS
     double norm2() const;
-	inline double norm() const { return sqrt(norm2()); }
-	inline void fill(const T& value){ vec.fill(value); }
+	double norm() const { return sqrt(norm2()); }
+	void fill(const T& value){ vec.fill(value); }
 		
 	// OPERATORS	
 	Vec_3D<T>& operator+=(const Vec_3D<T>& rhs);
@@ -71,12 +71,12 @@ template <typename T> Vec_3D<T> operator-(Vec_3D<T> lhs, T rhs);
 template <typename T> Vec_3D<T> operator-(T lhs, Vec_3D<T> rhs);
 template <typename T> Vec_3D<T> operator/(Vec_3D<T> lhs, T rhs);
 
-template <typename T> inline bool operator==(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){return lhs.vec == rhs.vec; }
-template <typename T> inline bool operator!=(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec != rhs.vec; }
-template <typename T> inline bool operator<(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec < rhs.vec; }
-template <typename T> inline bool operator<=(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec <= rhs.vec; }
-template <typename T> inline bool operator>(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec > rhs.vec; }
-template <typename T> inline bool operator>=(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec >= rhs.vec; }
+template <typename T> bool operator==(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){return lhs.vec == rhs.vec; }
+template <typename T> bool operator!=(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec != rhs.vec; }
+template <typename T> bool operator<(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec < rhs.vec; }
+template <typename T> bool operator<=(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec <= rhs.vec; }
+template <typename T> bool operator>(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec > rhs.vec; }
+template <typename T> bool operator>=(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec >= rhs.vec; }
 
 /**
  * @class:	Mesh_base<T>
@@ -100,18 +100,18 @@ public:
 	unsigned N1, N2, N3, length; // acces dimensions and length of mesh
 	
 	// METHODS
-	inline T* real() const { return data;} // acces data
+	T* real() const { return data;} // acces data
 	void assign(T val);
 	
 	// OPERATORS
-	inline T &operator[](int i){ return data[i]; }
-	inline const T &operator[](int i) const{ return data[i]; }
+	T &operator[](int i){ return data[i]; }
+	const T &operator[](int i) const{ return data[i]; }
 	
-	inline T& operator()(int i, int j, int k){ return data[i*N2*N3+j*N3+k]; }
-	inline const T& operator()(int i, int j, int k) const{ return data[i*N2*N3+j*N3+k]; }
+	T& operator()(int i, int j, int k){ return data[i*N2*N3+j*N3+k]; }
+	const T& operator()(int i, int j, int k) const{ return data[i*N2*N3+j*N3+k]; }
 	
-	inline T& operator()(int i, int j){ return data[i*N3+j]; }
-	inline const T& operator()(int i, int j) const{ return data[i*N3+j]; }
+	T& operator()(int i, int j){ return data[i*N3+j]; }
+	const T& operator()(int i, int j) const{ return data[i*N3+j]; }
 	
 	T& operator()(Vec_3D<int> pos);
 	const T& operator()(Vec_3D<int> pos) const;
@@ -148,10 +148,10 @@ public:
 	unsigned N; // acces dimension of mesh
 	
 	// METHODS
-    inline fftw_complex* complex() const { return reinterpret_cast<fftw_complex*>(data);}
+    fftw_complex* complex() const { return reinterpret_cast<fftw_complex*>(data);}
     void reset_part(bool part);
-    inline void reset_re() { reset_part(0); }
-    inline void reset_im() { reset_part(1); }
+    void reset_re() { reset_part(0); }
+    void reset_im() { reset_part(1); }
     
 	// OPERATORS
 	using Mesh_base<double>::operator ();
@@ -184,8 +184,8 @@ public:
 	Vec_3D<double> position;
 	
 	// OPERATORS
-	inline double &operator[](int i){ return position[i]; }
-	inline const double& operator[](int i) const{ return position[i]; }
+	double &operator[](int i){ return position[i]; }
+	const double& operator[](int i) const{ return position[i]; }
 };
 
 /**
@@ -214,30 +214,28 @@ public:
 };
 
 /**
- * @class:	Pow_Spec_Param
+ * @class:	Cosmo_Param
  * @brief:	class storing parameters for power spectrum
  */
 
-enum e_power_spec { power_law_T = 0, power_law = 1, flat = 2, single = 3,
+enum class e_power_spec : unsigned { power_law_T = 0, power_law = 1, flat = 2, single = 3,
                     ccl_EH = 4, ccl_BBKS = 5};
 
-class Pow_Spec_Param
+class Cosmo_Param
 {
 public:
-    // CONSTRUCTOR
+    // CONSTRUCTOR, PRINT, DESTRUCTOR
     void init();
-
-    // DESTRUCTOR
-    ~Pow_Spec_Param();
+    ~Cosmo_Param();
 
 	double A = 1, ns, k2_G, sigma8;
     e_power_spec pwr_type;
-    int pwr_type_i;
+    unsigned pwr_type_i;
 
     // COSMOLOGY (flat LCDM)
     double Omega_m, Omega_b, H0, h;
-    inline double Omega_c() const { return Omega_m - Omega_b; }
-    inline double Omega_L() const { return 1 - Omega_m; }
+    double Omega_c() const { return Omega_m - Omega_b; }
+    double Omega_L() const { return 1 - Omega_m; }
 
     // PRECOMPUTED VALUES
     double D_norm = 1;
@@ -250,20 +248,7 @@ public:
 protected:
 	bool is_init = 0;
 };
-
-struct Range
-{
-    double lower, upper;
-};
-
-struct Wavenumber_param
-{
-    // k-range where to use (linear) interpolation and k-range in which print 'pwr_spec_extrap_*'
-    Range k_interp, k_print;
-
-    // Nyquist frequencies of potential mesh, analyses mesh and particle separation
-    std::map<std::string,double> nyquist;
-};
+void to_json(nlohmann::json& j, const Cosmo_Param& cosmo);
 
 /**
  * @class:	Tracking
@@ -282,7 +267,7 @@ public:
 	std::vector<std::vector<Particle_x>> par_pos;
 	
 	// METHODS
-	inline const unsigned num_step() const{return par_pos.size();};
+	const unsigned num_step() const{return par_pos.size();};
 	template <class T>  void update_track_par(T* particles);
 };
 
@@ -316,44 +301,97 @@ class Sim_Param
 public:
     // CONSTRUCTOR
     Sim_Param(int ac, char* av[]);
+
     /* SIMULATION BOX*/
-    unsigned par_num_1d, par_num, mesh_num, mesh_num_pwr, Ng, Ng_pwr, print_every;
-    double box_size;
-    unsigned order = 1, bins_per_decade = 20;
-    unsigned long seed;
-    bool pair;
-    unsigned mlt_runs;
-    bool phase;
+    struct Box_Opt {
+        void init();
+        /* cmd args */
+        unsigned par_num_1d, mesh_num, mesh_num_pwr;
+        double box_size;
+        /* derived param*/
+        unsigned par_num, Ng, Ng_pwr;
+    } box_opt;
 
-    /* TIME */
-	double z_in, z_out;
-    double b_in, b_out, db;
-    
-	double nu;
-	unsigned nt;
-	double rs, Hc, a;
-	unsigned M;
-	std::string out_dir; ///< where to save output of the simulation
-    Pow_Spec_Param power; ///< all information about our cosmology
-    Wavenumber_param k_par; ///< all the important k-values we need
 
-    /* CORRELATION FUNCTION */
-    Range x_corr; ///< range in which compute the correlation function
-    corr_int_type corr_int;
-    unsigned bins_per_10_Mpc = 5;
+    /* INTEGRATION */
+    struct Integ_Opt {
+        void init();
+        /* cmd args */
+        double z_in, z_out, db;
+        /* derived param*/
+        double b_in, b_out;
+    } integ_opt;
 
-    bool comp_ZA, comp_FF, comp_FP, comp_AA, comp_FP_pp;
-	
+
+    /* OUTPUT */
+    struct Out_Opt {
+        /* cmd args */
+        unsigned print_every, bins_per_decade, points_per_10_Mpc;
+        std::string out_dir; ///< where to save output of the simulation
+        bool print_par_pos, print_dens, print_pwr, print_extrap_pwr, print_corr, print_emu_spec, print_emu_corr, print_vel_pwr;
+    } out_opt;
+
+
+    /* APPROXIMATIONS */
+    struct Comp_App {
+        /* cmd args */
+        bool ZA, FF, FP, AA, FP_pp;
+    } comp_app;
+
+
+    /* COSMOLOGIY */
+    Cosmo_Param cosmo; ///< all information about our cosmology
+
+
+    /* APPROXIMATIONS */
+    struct App_Opt {
+        void init(const Box_Opt*);
+        /* cmd args */
+        double nu, rs;
+        /* derived param*/
+        double Hc, a, nu_dim;
+        unsigned M;
+    } app_opt;
+
+
+    /* RUN */
+    struct Run_Opt {
+        void init();
+        bool simulate();
+        /* cmd args */
+        unsigned nt, mlt_runs;
+        unsigned long seed;
+        bool pair;        
+        /* other*/
+        bool phase;
+    } run_opt;
+
+
+    /* OTHER PARAMETERS */
+    struct Other_par {
+        void init(const Box_Opt*);
+        // k-range where to use (linear) interpolation and k-range in which print 'pwr_spec_extrap_*'
+        ///range in which compute the correlation function 
+        struct { double lower, upper; } k_print, x_corr;
+        std::map<std::string,double> nyquist; //< Nyquist frequencies of potential mesh, analyses mesh and particle separation
+    } other_par;
+
+
 	// METHODS
     void print_info(std::string out, std::string app) const;
 	void print_info() const;
-	inline const double x_0() const{return (double)box_size/mesh_num;}
-    inline const double x_0_pwr() const{return (double)box_size/mesh_num_pwr;}
-    bool simulate();
+	const double x_0() const{return box_opt.box_size/box_opt.mesh_num;}
+    const double x_0_pwr() const{return box_opt.box_size/box_opt.mesh_num_pwr;}
+    bool simulate() { return run_opt.simulate(); }
     
 protected:
 	bool is_init = 0;
 };
+
+void to_json(nlohmann::json& j, const Sim_Param::Box_Opt& cosmo);
+void to_json(nlohmann::json& j, const Sim_Param::Integ_Opt& cosmo);
+void to_json(nlohmann::json& j, const Sim_Param::App_Opt& cosmo);
+void to_json(nlohmann::json& j, const Sim_Param::Run_Opt& cosmo);
 
 /**
  * @class:	Data_x_y
@@ -432,10 +470,10 @@ public:
 	std::vector<int> dens_binned;
 	
 	// METHODS
-	inline double z() const{ return 1./b - 1.;}
-	inline double b_half() const { return b - db/2.; }
-	inline bool integrate() const { return (b <= b_out) && (db > 0);}
-	inline bool printing() const { return print_every ? ((step % print_every) == 0) or (b == b_out) : print_every ; }
+	double z() const{ return 1./b - 1.;}
+	double b_half() const { return b - db/2.; }
+	bool integrate() const { return (b <= b_out) && (db > 0);}
+	bool printing() const { return print_every ? ((step % print_every) == 0) or (b == b_out) : print_every ; }
     void print();
     void upd_time();
     void print_mem() const;

@@ -42,8 +42,8 @@ string currentDateTime()
 
 string std_out_dir(string pre_subdir, const Sim_Param &sim)
 {
-    return sim.out_dir + pre_subdir + currentDateTime() + "_" + to_string(sim.mesh_num) +"m_" +
-           to_string(sim.Ng) + "p_" + to_string(sim.mesh_num_pwr) +"M_" + to_string((int)sim.box_size) + "b/";
+    return sim.out_opt.out_dir + pre_subdir + currentDateTime() + "_" + to_string(sim.box_opt.mesh_num) +"m_" +
+           to_string(sim.box_opt.Ng) + "p_" + to_string(sim.box_opt.mesh_num_pwr) +"M_" + to_string((int)sim.box_opt.box_size) + "b/";
 }
 
 void create_dir(string out_dir)
@@ -76,14 +76,14 @@ void print_par_pos_cut_small(T* particles, const Sim_Param &sim, std::string out
    File << "# This file contains positions of particles in units [Mpc/h].\n";
    double x, y, z, dx;
    const double x_0 = sim.x_0();
-   const unsigned N = sim.par_num;
+   const unsigned N = sim.box_opt.par_num;
    for(unsigned i=0; i < N; i++)
    {
        x = particles[i].position[0];
        y = particles[i].position[1];
        z = particles[i].position[2];			
-       dx = abs(y - sim.mesh_num/2.);
-       if ((dx < 0.5) && (x < sim.mesh_num/4.) && (z < sim.mesh_num/4.))
+       dx = abs(y - sim.box_opt.mesh_num/2.);
+       if ((dx < 0.5) && (x < sim.box_opt.mesh_num/4.) && (z < sim.box_opt.mesh_num/4.))
        {
            // cut (L/4 x L/4 x 0.5)
            File << x*x_0 << "\t" << z*x_0 << "\t" << y*x_0 << "\n";
@@ -227,10 +227,10 @@ void print_rho_map(const Mesh& delta, const Sim_Param &sim, string out_dir, stri
 	cout << "Writing density map into file " << file_name << "\n";
 	File << "# This file contains density map delta(x).\n";
     File << "# x [Mpc/h]\tz [Mpc/h]\tdelta\n";
-    const unsigned N = sim.mesh_num_pwr;
+    const unsigned N = sim.box_opt.mesh_num_pwr;
 	for (unsigned i = 0; i < N; i++){
 		for (unsigned j = 0; j < N; j++){
-            File << i*x_0 << "\t" << j*x_0 << "\t" << delta(i, sim.mesh_num_pwr/2, j) << "\n";
+            File << i*x_0 << "\t" << j*x_0 << "\t" << delta(i, sim.box_opt.mesh_num_pwr/2, j) << "\n";
 		}
 		File << "\n";
 	}
@@ -247,7 +247,7 @@ void print_projected_rho(const Mesh& delta, const Sim_Param &sim, string out_dir
 	File << "# This file contains density map delta(x).\n"
 	        "# x [Mpc/h]\tz [Mpc/h]\tdelta\n";
     double rho, rho_tmp;
-    const unsigned N = sim.mesh_num_pwr;
+    const unsigned N = sim.box_opt.mesh_num_pwr;
 	for (unsigned i = 0; i < N; i++){
 		for (unsigned j = 0; j < N; j++){
 			rho = 0;

@@ -314,15 +314,15 @@ Data_x_y<double> init_emu(const Sim_Param &sim, double z)
     std::cout << "Initializing emulator...\n";
     Data_x_y<double> emu_data(nmode);
     for (unsigned i = 0; i < emu_data.size(); i++){
-        emu_data.x[i] = mode[i] / sim.power.h; // convert emulator k [1/Mpc] into [h/Mpc]
+        emu_data.x[i] = mode[i] / sim.cosmo.h; // convert emulator k [1/Mpc] into [h/Mpc]
     }
 
     double xstar[9];
-    xstar[0] = sim.power.Omega_m*pow(sim.power.h, 2); // omega_m
-    xstar[1] = sim.power.Omega_b*pow(sim.power.h, 2); // omega_b
-    xstar[2] = sim.power.sigma8; // sigma_8
-    xstar[3] = sim.power.h; // h
-    xstar[4] = sim.power.ns; // n_s
+    xstar[0] = sim.cosmo.Omega_m*pow(sim.cosmo.h, 2); // omega_m
+    xstar[1] = sim.cosmo.Omega_b*pow(sim.cosmo.h, 2); // omega_b
+    xstar[2] = sim.cosmo.sigma8; // sigma_8
+    xstar[3] = sim.cosmo.h; // h
+    xstar[4] = sim.cosmo.ns; // n_s
     xstar[5] = -1; // w_0
     xstar[6] = 0; // w_a
     xstar[7] = 0; // omega_nu
@@ -330,7 +330,7 @@ Data_x_y<double> init_emu(const Sim_Param &sim, double z)
 
     emu(xstar, emu_data.y.data());// get P(k)
     for (unsigned i = 0; i < emu_data.size(); i++){
-        emu_data.y[i] *= pow(sim.power.h, 3); // convert emulator P(k) [Mpc^3] into [(Mpc/h)^3]
+        emu_data.y[i] *= pow(sim.cosmo.h, 3); // convert emulator P(k) [Mpc^3] into [(Mpc/h)^3]
     }
     return emu_data; // move
 }

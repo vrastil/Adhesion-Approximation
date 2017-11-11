@@ -129,7 +129,7 @@ protected:
     gsl_integration_workspace* wc;
 };
 
-double transfer_function_2(double k, const Pow_Spec_Param& parameters)
+double transfer_function_2(double k, const Cosmo_Param& parameters)
 {
     if (k == 0) return 1.;
 
@@ -140,41 +140,41 @@ double transfer_function_2(double k, const Pow_Spec_Param& parameters)
 	return pow(T_k, 2.);
 }
 
-double power_spectrum_T(double k, const Pow_Spec_Param& parameters)
+double power_spectrum_T(double k, const Cosmo_Param& parameters)
 {
 	if (k == 0) return 0;
 	const double ns = parameters.ns;
 	return pow(k, ns)*transfer_function_2(k, parameters);
 }
 
-double power_spectrum_scale_free(double k, const Pow_Spec_Param& parameters)
+double power_spectrum_scale_free(double k, const Cosmo_Param& parameters)
 {
 	if (k == 0) return 0;
 	const double ns = parameters.ns;
 	return pow(k, ns);
 }
 
-double flat_power_spectrum(double k, const Pow_Spec_Param& parameters)
+double flat_power_spectrum(double k, const Cosmo_Param& parameters)
 {
 	return 1;
 }
 
-double single_power_spectrum_T(double k, const Pow_Spec_Param& parameters)
+double single_power_spectrum_T(double k, const Cosmo_Param& parameters)
 {
 	if ((k > 0.01) and (k < 0.04)) return power_spectrum_T(k, parameters);
 	else return 0.;
 }
 
-double power_spectrum(double k, const Pow_Spec_Param& parameters)
+double power_spectrum(double k, const Cosmo_Param& parameters)
 {
     const double A = parameters.A;
     const double supp = parameters.k2_G ? exp(-k*k/parameters.k2_G) : 1;
 	switch (parameters.pwr_type)
 	{
-		case power_law_T: return supp*A*power_spectrum_T(k, parameters);
-		case power_law: return supp*A*power_spectrum_scale_free(k, parameters);
-		case flat: return supp*A*flat_power_spectrum(k, parameters);
-		case single: return supp*A*single_power_spectrum_T(k, parameters);
+		case e_power_spec::power_law_T: return supp*A*power_spectrum_T(k, parameters);
+		case e_power_spec::power_law: return supp*A*power_spectrum_scale_free(k, parameters);
+		case e_power_spec::flat: return supp*A*flat_power_spectrum(k, parameters);
+		case e_power_spec::single: return supp*A*single_power_spectrum_T(k, parameters);
 		default: return supp*A*power_spectrum_T(k, parameters);
 	}
 }
@@ -183,46 +183,46 @@ double power_spectrum(double k, const Pow_Spec_Param& parameters)
 double power_spectrum_s8(double k, void* parameters)
 {
 	return	k*k/(2.*PI*PI) // spherical factor
-			*power_spectrum(k, *static_cast<const Pow_Spec_Param*>(parameters)) // P(k)
+			*power_spectrum(k, *static_cast<const Cosmo_Param*>(parameters)) // P(k)
 			*pow(3.*gsl_sf_bessel_j1(k*8)/(k*8), 2.); // window function R = 8 Mpc/h
 }
 
-void norm_pwr_gsl(Pow_Spec_Param* pwr_par)
+void norm_pwr_gsl(Cosmo_Param* pwr_par)
 {
     /* Normalize the power spectrum */
     Integr_obj_qagiu s8(&power_spectrum_s8, 0, 0, 1e-7, 1000);
 	pwr_par->A = pow(pwr_par->sigma8, 2)/s8.eval(pwr_par);
 }
 
-void norm_pwr_ccl(Pow_Spec_Param* pwr_par)
+void norm_pwr_ccl(Cosmo_Param* pwr_par)
 {
     /* Normalize the power spectrum */
     int status = 0;
     ccl_sigma8(pwr_par->cosmo, &status);
 }
 
-void norm_pwr(Pow_Spec_Param* pwr_par)
+void norm_pwr(Cosmo_Param* pwr_par)
 {
     printf("Initializing given power spectrum...\n");
-    if (pwr_par->pwr_type < 4) norm_pwr_gsl(pwr_par);
+    if (pwr_par->pwr_type_i < 4) norm_pwr_gsl(pwr_par);
     else norm_pwr_ccl(pwr_par);
 }
 
-double hubble_param(double a, const Pow_Spec_Param& pwr_par)
+double hubble_param(double a, const Cosmo_Param& pwr_par)
 {
     const double Om = pwr_par.Omega_m;
     const double OL = pwr_par.Omega_L();
     return sqrt(Om*pow(a, -3) + OL);
 }
 
-struct growth_factor_integrand_param { const Pow_Spec_Param& pwr_par; };
+struct growth_factor_integrand_param { const Cosmo_Param& pwr_par; };
 
 double growth_factor_integrand(double a, void* parameters)
 {    
     return pow(a*hubble_param(a, static_cast<growth_factor_integrand_param*>(parameters)->pwr_par), -3);
 }
 
-double growth_factor(double a, const Pow_Spec_Param& pwr_par)
+double growth_factor(double a, const Cosmo_Param& pwr_par)
 {
     #ifdef CCL_GROWTH
     int status = 0;
@@ -245,7 +245,7 @@ double ln_growth_factor(double log_a, void* parameters)
     return log(growth_factor(exp(log_a), static_cast<growth_factor_integrand_param*>(parameters)->pwr_par));
 }
 
-double growth_rate(double a, const Pow_Spec_Param& pwr_par)
+double growth_rate(double a, const Cosmo_Param& pwr_par)
 {
     #ifdef CCL_GROWTH
     int status = 0;
@@ -260,7 +260,7 @@ double growth_rate(double a, const Pow_Spec_Param& pwr_par)
     #endif
 }
 
-double growth_change(double a, const Pow_Spec_Param& pwr_par)
+double growth_change(double a, const Cosmo_Param& pwr_par)
 { // normal derivative dD/da, not logarithmic one
     growth_factor_integrand_param param = {pwr_par};
     gsl_function F = {&growth_factor, &param};
@@ -270,9 +270,9 @@ double growth_change(double a, const Pow_Spec_Param& pwr_par)
     return dDda;
 }
 
-double lin_pow_spec(double k, const Pow_Spec_Param& pwr_par, double a)
+double lin_pow_spec(double k, const Cosmo_Param& pwr_par, double a)
 {
-    if (pwr_par.pwr_type < 4){
+    if (pwr_par.pwr_type_i < 4){
         return power_spectrum(k, pwr_par);
     } else {
         int status = 0;
@@ -280,14 +280,14 @@ double lin_pow_spec(double k, const Pow_Spec_Param& pwr_par, double a)
     }
 }
 
-double lin_pow_spec(double k, const Pow_Spec_Param& pwr_par)
+double lin_pow_spec(double k, const Cosmo_Param& pwr_par)
 {
     return lin_pow_spec(k, pwr_par, 1.);
 }
 
 double find_pk_max(double k, void* parameters)
 {
-    return -lin_pow_spec(k, *static_cast<Pow_Spec_Param*>(parameters));
+    return -lin_pow_spec(k, *static_cast<Cosmo_Param*>(parameters));
 }
 
 double pade_approx(double x, unsigned m, const double* a, unsigned n, const double* b)
@@ -365,26 +365,26 @@ double Interp_obj::eval(double x) const{ return gsl_spline_eval(spline, x, acc);
  */
 
 Extrap_Pk::Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim):
-    Interp_obj(data), power(sim.power), n_s(0)
+    Interp_obj(data), cosmo(sim.cosmo), n_s(0)
 {
     unsigned m, n;
     // LOWER RANGE -- fit linear power spectrum to data[m:n)
     printf("Fitting amplitude of P(k) in lower range.\n");
-    m = 10 + get_nearest(2*PI/sim.box_size, data.x); // discard first 10 values due to undersampling
-    n = m + 20; // fit over 20 points
-    k_min = data.x[n];
+    m = get_nearest(2*PI/sim.box_opt.box_size, data.x) + sim.out_opt.bins_per_decade/2; // discard half of the first decade values due to undersampling
+    n = m + sim.out_opt.bins_per_decade/2; // fit over half of a decade
+    k_min = data.x[m];
     fit_lin(data, m, n, A_low);
     // UPPER RANGE -- ffit linear power spectrum to data[m:n)
     printf("Fitting amplitude of P(k) in upper range.\n");
-    k_max = sim.k_par.k_interp.upper;
+    k_max = sim.other_par.nyquist.at("particle")/2.; //< trust simulation up to HALF k_nq
     n = get_nearest(k_max, data.x) + 1;
-    m = n - 5; // fit over last 5 values
+    m = n - sim.out_opt.bins_per_decade/2; // fit over half of the last decade
     fit_lin(data, m, n, A_up);
 }
 
 Extrap_Pk::Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
     const unsigned m_u, const unsigned n_u, double n_s):
-    Interp_obj(data), power(sim.power), n_s(n_s)
+    Interp_obj(data), cosmo(sim.cosmo), n_s(n_s)
 {
     // LOWER RANGE -- fit linear power spectrum to data[m:n)
     printf("Fitting amplitude of P(k) in lower range.\n");
@@ -402,7 +402,7 @@ void Extrap_Pk::fit_lin(const Data_x_y<double>& data, const unsigned m, const un
     // FIT linear power spectrum to data[m:n)
     vector<double> k, Pk;
     for(unsigned i = m; i < n; i++){
-        k.push_back(lin_pow_spec(data.x[i], power));
+        k.push_back(lin_pow_spec(data.x[i], cosmo));
         Pk.push_back(data.y[i]);
     }
     double A_sigma2, sumsq;
@@ -427,12 +427,12 @@ double Extrap_Pk::eval(double k) const
 {
     if (k < k_min)
     {
-        return A_low*lin_pow_spec(k, power);
+        return A_low*lin_pow_spec(k, cosmo);
     }
     else if (k <= k_max) return Interp_obj::eval(k);
     else
     {
-        if (n_s == 0) return A_up*lin_pow_spec(k, power);
+        if (n_s == 0) return A_up*lin_pow_spec(k, cosmo);
         else return A_up*pow(k, n_s);
     }
 }
@@ -446,7 +446,7 @@ struct xi_integrand_param
 struct xi_integrand_param_lin
 {
     double r;
-    const Pow_Spec_Param& pwr_par;
+    const Cosmo_Param& pwr_par;
 };
 
 /**
@@ -482,12 +482,12 @@ double xi_integrand_G(double k, void* params){
 template <class T>
 void gen_corr_func_binned_gsl(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned, T* xi_r)
 {
-    const double x_min = sim.x_corr.lower;
-    const double x_max = sim.x_corr.upper;
+    const double x_min = sim.other_par.x_corr.lower;
+    const double x_max = sim.other_par.x_corr.upper;
 
     xi_integrand_param my_param = {0, &P_k};
 
-    const double lin_bin = 10./sim.bins_per_10_Mpc;
+    const double lin_bin = 10./sim.out_opt.points_per_10_Mpc;
     unsigned req_size = (unsigned)ceil((x_max - x_min)/lin_bin);
     corr_func_binned->resize(req_size);
 
@@ -503,16 +503,16 @@ void gen_corr_func_binned_gsl(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x
 template <class T>
 void gen_corr_func_binned_gsl_lin(const Sim_Param &sim, double a, Data_x_y<double>* corr_func_binned, T* xi_r)
 {
-    const double x_min = sim.x_corr.lower;
-    const double x_max = sim.x_corr.upper;
+    const double x_min = sim.other_par.x_corr.lower;
+    const double x_max = sim.other_par.x_corr.upper;
 
-    xi_integrand_param_lin my_param = {0, sim.power};
+    xi_integrand_param_lin my_param = {0, sim.cosmo};
 
-    const double lin_bin = 10./sim.bins_per_10_Mpc;
+    const double lin_bin = 10./sim.out_opt.points_per_10_Mpc;
     unsigned req_size = (unsigned)ceil((x_max - x_min)/lin_bin);
     corr_func_binned->resize(req_size);
-    
-    const double D2 = pow(growth_factor(a, sim.power), 2);
+
+    const double D2 = pow(growth_factor(a, sim.cosmo), 2);
 	double r;
 	for(unsigned i = 0; i < req_size; i++){
         r = x_min + i*lin_bin;
@@ -562,9 +562,9 @@ double  get_max_Pk(Sim_Param* sim)
     gsl_min_fminimizer * s = gsl_min_fminimizer_alloc (T);
     gsl_function F;
     F.function = &find_pk_max;
-    F.params = &sim->power;
-    double k_l = sim->k_par.k_print.lower;
-    double k_u = sim->k_par.k_print.upper;
+    F.params = &sim->cosmo;
+    double k_l = sim->other_par.k_print.lower;
+    double k_u = sim->other_par.k_print.upper;
     double k = (k_l + k_u) / 2.;
     gsl_min_fminimizer_set(s, &F, k, k_l, k_u);
 
