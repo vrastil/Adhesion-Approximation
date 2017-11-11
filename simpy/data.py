@@ -15,35 +15,30 @@ RESULTS_KEYS = ["pwr_spec", "pwr_spec_diff", "pwr_spec_supp", "dens_hist",
                 "par_slice", "par_ani", "dens_slice", "dens_ani", "corr_func"]
 
 class SimInfo(object):
-    def __init__(self, *args):
-        self.results = False
-        if len(args) == 2 and args[0].endswith('.json'):
-            self.load_file(*args)
-        elif len(args) == 2 and  args[0].endswith('.log'):
-            self.load_file_log(*args)
+    def __init__(self, a_file):
+        if a_file.endswith('.json'):
+            self.load_file(a_file)
         else:
-            print "WARNING! Invalid simulation parameters file '%s'." % args[0]
+            print "WARNING! Invalid simulation parameters file '%s'." % a_file
 
-        self.cosmo = None
-        if hasattr(self, 'pwr'):
-            if self.pwr["pwr_type"] >= 4:
-                import pyccl as ccl
-                self.cosmo = ccl.Cosmology(
-                    Omega_c=self.pwr["Omega_c"], Omega_b=self.pwr["Omega_b"], h=self.pwr["h"],
-                    sigma8=self.pwr["sigma8"], n_s=self.pwr["ns"],
-                    transfer_function=self.ccl["transfer_function_method"],
-                    matter_power_spectrum=self.ccl["matter_power_spectrum_method"],
-                    mass_function=self.ccl["mass_function_method"])
+        if self.cosmo["pwr_type"] >= 4:
+            import pyccl as ccl
+            self.ccl_cosmo = ccl.Cosmology(
+                Omega_c=self.cosmo["Omega_c"], Omega_b=self.cosmo["Omega_b"], h=self.cosmo["h"],
+                sigma8=self.cosmo["sigma8"], n_s=self.cosmo["index"],
+                transfer_function=self.cosmo["transfer_function_method"],
+                matter_power_spectrum=self.cosmo["matter_power_spectrum_method"],
+                mass_function=self.cosmo["mass_function_method"])
 
     def info(self):
         info = ''
         info += '%s:\n' % self.app
-        info += '$N_m = %i$\n' % self.num_m
-        info += '$N_M = %i$\n' % self.num_M
-        info += '$N_p = %i^3$\n' % self.num_p
-        info += '$L = %i$ Mpc/h\n' % self.box
-        if self.app == 'AA': info += r'$\nu = %.1f$ (Mpc/h)$^2$' % self.nu
-        if self.app == 'FP_pp': info += r'$r_s = %.1f$' % self.rs
+        info += '$N_m = %i$\n' % self.box_opt["mesh_num"]
+        info += '$N_M = %i$\n' % self.box_opt["mesh_num_pwr"]
+        info += '$N_p = %i^3$\n' % self.box_opt["par_num"]
+        info += '$L = %i$ Mpc/h\n' % self.box_opt["box_size"]
+        if self.app == 'AA': info += r'$\nu = %.1f$ (Mpc/h)$^2$' % self.app_opt["viscosity"]
+        if self.app == 'FP_pp': info += r'$r_s = %.1f$' % self.app_opt["cut_radius"]
         return info
 
     def info_tr(self):
@@ -51,44 +46,18 @@ class SimInfo(object):
         return info.replace('\n', '  ')
 
     def info_supp(self):
-        info = '%s: $res = %.2f$' % (self.app, float(self.num_m) / self.box)
-        if self.app == 'AA': info += r', $\nu = %.1f$' % self.nu
-        if self.app == 'FP_pp': info += r', $r_s = %.1f$' % self.rs
+        info = '%s: $res = %.2f$' % (self.app, float(self.box_opt["mesh_num"]) / self.box_opt["box_size"])
+        if self.app == 'AA': info += r', $\nu = %.1f$' % self.app_opt["viscosity"]
+        if self.app == 'FP_pp': info += r', $r_s = %.1f$' % self.app_opt["cut_radius"]
         return info
 
-    def load_file(self, a_file, run_date):
+    def load_file(self, a_file):
         with open(a_file) as data_file:
             data = json.loads(data_file.read())
 
-        self.num_g = data["Ng"]
-        self.num_p = data["par_num"]
-        self.num_m = data["mesh_num"]
-        self.num_M = data["mesh_num_pwr"]
-        self.box = data["box_size"]
-        self.nu = data["viscosity"]
-        self.rs = data["cut_radius"]
-        self.app = data["app"]
-        self.pwr = {}
-        self.pwr["A"] = data["A"]
-        self.pwr["ns"] = data["index"]
-        self.pwr["k2_G"] = data["smoothing_k"]
-        self.pwr["sigma8"] = data["sigma8"]
-        self.pwr["Omega_c"] = data["Omega_c"]
-        self.pwr["Omega_b"] = data["Omega_b"]
-        self.pwr["h"] = data["h"]
-        self.pwr["pwr_type"] = data["pwr_type"]
-        if "k_pade" in data: self.k_pade = data["k_pade"]
-        else: self.k_pade = None
-        if "k_nyquist" in data: self.k_nyquist = data["k_nyquist"]
-        else: self.k_nyquist = None
-        if "seed" in data:
-            self.seed = data["seed"]
-        self.ccl = {}
-        self.ccl["transfer_function_method"] = data["transfer_function_method"]
-        self.ccl["matter_power_spectrum_method"] = data["matter_power_spectrum_method"]
-        self.ccl["mass_function_method"] = data["mass_function_method"]
+        for key in data:
+            setattr(self, key, data[key])
 
-        self.results = data["results"]
         if self.results is None:
             self.results = {}
         for key in RESULTS_KEYS:
@@ -97,34 +66,6 @@ class SimInfo(object):
 
         self.file = a_file
         self.dir = a_file.replace(a_file.split("/")[-1], '')
-        self.res_dir = self.dir + 'results/'
-        create_dir(self.res_dir)
-
-    def load_file_log(self, a_file, run_date):
-        with open(a_file, 'r') as f:
-            content = f.readlines()
-
-        for line in content:
-            if line.startswith('Ng'):
-                self.num_g = int(line.replace('Ng:\t\t', '').rstrip())
-            elif line.startswith('Num_par'):
-                self.num_p = int(line.replace('Num_par:\t', '').rstrip()[:-2])
-            elif line.startswith('Num_mesh'):
-                self.num_m = int(line.replace('Num_mesh:\t', '').rstrip()[:-2])
-            elif line.startswith('Box size'):
-                self.box = int(line.replace('Box size:\t', '').rstrip()[:-6])
-            elif 'nu = ' in line:
-                self.nu = float(line[line.index('nu =') + 5:-6])
-            elif 'rs = ' in line:
-                self.rs = float(line[line.index('rs =') + 5:line.index(',')])
-            elif line.startswith('Results: Done'):
-                self.results = True
-
-        self.num_M = self.num_m
-        self.file = a_file
-        self.app = run_date.split('/')[0][:-4]
-        self.date = datetime.strptime(run_date.split('/')[1], '%Y_%m_%d.%H:%M:%S')
-        self.dir = a_file.replace('sim_param.log', '')
         self.res_dir = self.dir + 'results/'
         create_dir(self.res_dir)
 
@@ -316,8 +257,8 @@ def analyze_all(out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/outp
                 rerun=None, skip=None, only=None):
     files = get_files_in_traverse_dir(out_dir, 'sim_param.json')
     sim_infos = []
-    for args in files:
-        sim_infos.append(SimInfo(*args))
+    for a_file, subdir in files:
+        sim_infos.append(SimInfo(a_file))
 
     if only is not None:
         sim_infos = sim_infos[only]

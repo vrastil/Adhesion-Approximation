@@ -22,43 +22,40 @@ def trans_fce(k, Omega_m=1, h=0.67, q_log=2.34, q_1=3.89, q_2=16.2, q_3=5.47, q_
     tmp_pol = 1 + q_1 * q + (q_2 * q)**2 + (q_3 * q)**3 + (q_4 * q)**4
     return tmp_log * tmp_pol**(-1. / 4)
 
-def hubble_param(a, pwr):
-    Om = pwr["Omega_b"] + pwr["Omega_c"]
+def hubble_param(a, cosmo):
+    Om = cosmo["Omega_b"] + cosmo["Omega_c"]
     OL = 1 - Om
     return np.sqrt(Om*abs(a)**(-3) + OL)
 
-def growth_factor(a, pwr=None):
-    if pwr is None: return a
+def growth_factor(a, cosmo=None):
+    if cosmo is None: return a
     if a == 0: return 0
-    f = lambda a_, pwr_: (a_*hubble_param(a_, pwr_))**(-3)
-    D, err = quad(f, 0, a, args=(pwr,))
-    if "D_norm" not in pwr:
-        pwr["D_norm"], err = quad(f, 0, 1, args=(pwr,))
-    return np.sign(a)*D*hubble_param(a, pwr)/pwr["D_norm"]
+    f = lambda a_, cosmo_: (a_*hubble_param(a_, cosmo_))**(-3)
+    D, err = quad(f, 0, a, args=(cosmo,))
+    if "D_norm" not in cosmo:
+        cosmo["D_norm"], err = quad(f, 0, 1, args=(cosmo,))
+    return np.sign(a)*D*hubble_param(a, cosmo)/cosmo["D_norm"]
 
-def growth_change(a, pwr=None):
-    if pwr is None: return 1
-    return derivative(growth_factor, a, dx=1e-6, args=(pwr,))
+def growth_change(a, cosmo=None):
+    if cosmo is None: return 1
+    return derivative(growth_factor, a, dx=1e-6, args=(cosmo,))
 
 def pwr_spec_prim(k, A=187826, n=1):
     return A * k**n
 
-def pwr_spec(k, pwr, cosmo=None, z=0, q_log=2.34, q_1=3.89, q_2=16.2, q_3=5.47, q_4=6.71):
-    supp = np.exp(-k*k/pwr["k2_G"]) if pwr["k2_G"] else 1
+def pwr_spec(k, cosmo, ccl_cosmo=None, z=0, q_log=2.34, q_1=3.89, q_2=16.2, q_3=5.47, q_4=6.71):
+    supp = np.exp(-k*k/cosmo["smoothing_k"]) if cosmo["smoothing_k"] else 1
     a = 1./(z+1.)
-    supp *= growth_factor(a, pwr)**2
-    if cosmo is None:
-        A = pwr["A"]
-        n = pwr["ns"]
-        Omega_m = pwr["Omega_b"] + pwr["Omega_c"]
-        h = pwr["h"]
+    supp *= growth_factor(a, cosmo)**2
+    if ccl_cosmo is None:
+        A, n, Omega_m, h = cosmo["A"], cosmo["index"], cosmo["Omega_m"], cosmo["h"]
         P_prim = pwr_spec_prim(k, A=A, n=n)
         T_k = trans_fce(k, Omega_m=Omega_m, h=h, q_log=q_log,
                         q_1=q_1, q_2=q_2, q_3=q_3, q_4=q_4)
         return supp*P_prim * T_k**2
     else:
         import pyccl as ccl
-        return supp*ccl.linear_matter_power(cosmo, k*pwr["h"], 1.)*pwr["h"]**3
+        return supp*ccl.linear_matter_power(ccl_cosmo, k*cosmo["h"], 1.)*cosmo["h"]**3
 
 def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, pwr_spec_files_emu=None,
                   out_dir='auto', pk_type='dens', save=True, show=False):
@@ -75,7 +72,6 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, pw
     plt.yscale('log')
     plt.xscale('log')
 
-    lab_p = "Pade app."
     a_end = 1 / (1 + zs[-1])
     a_ = 0
     for i, pwr in enumerate(pwr_spec_files):
@@ -87,14 +83,6 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, pw
         data = np.loadtxt(pwr)
         k, P_k = data[:, 0], data[:, 1]
         plt.plot(k, P_k, 'o', ms=3, label=lab)
-
-        if a_sim_info.k_pade is not None:
-            for k_pade in a_sim_info.k_pade:
-                Pk_pade = P_k[np.where(np.isclose(k, k_pade))[0][0]]
-                plt.plot(k_pade, Pk_pade, 'kx', ms=9, label=lab_p)
-                if lab_p is not None:
-                    lab_p = None
-
         del k, P_k, data
 
         if pwr_spec_files_extrap is not None:
@@ -128,16 +116,16 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, pw
     del data
 
     if pk_type == "dens":
-        P_0 = [pwr_spec(k_, a_sim_info.pwr, cosmo=a_sim_info.cosmo, z=zs[-1]) for k_ in k]
-        P_i = [pwr_spec(k_, a_sim_info.pwr, cosmo=a_sim_info.cosmo, z=zs[0]) for k_ in k]
+        P_0 = [pwr_spec(k_, a_sim_info.cosmo, ccl_cosmo=a_sim_info.ccl_cosmo, z=zs[-1]) for k_ in k]
+        P_i = [pwr_spec(k_, a_sim_info.cosmo, ccl_cosmo=a_sim_info.ccl_cosmo, z=zs[0]) for k_ in k]
         plt.plot(k, P_0, '-')
         plt.plot(k, P_i, '-')
     elif pk_type == "vel":
-        P_0 = [pwr_spec(k_, a_sim_info.pwr, cosmo=a_sim_info.cosmo, z=0) for k_ in k]
+        P_0 = [pwr_spec(k_, a_sim_info.cosmo, ccl_cosmo=a_sim_info.ccl_cosmo, z=0) for k_ in k]
         a_0 = 1./(zs[0]+1.)
         a_i = 1./(zs[-1]+1.)
-        P_i = np.array(P_0)*growth_change(a_i, a_sim_info.pwr)**2
-        P_0 = np.array(P_0)*growth_change(a_0, a_sim_info.pwr)**2
+        P_i = np.array(P_0)*growth_change(a_i, a_sim_info.cosmo)**2
+        P_0 = np.array(P_0)*growth_change(a_0, a_sim_info.cosmo)**2
         plt.plot(k, P_i, '-')
         plt.plot(k, P_0, '-')
     
@@ -166,6 +154,103 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, pw
         plt.show()
     plt.close(fig)
 
+def plot_pwr_spec_stacked(data_list, zs, a_sim_info, data_list_extrap=None, pwr_spec_files_emu=None,
+                  out_dir='auto', pk_type='dens', save=True, show=False):
+    if out_dir == 'auto':
+        out_dir = a_sim_info.res_dir
+    if pk_type == "dens":
+        out_file='pwr_spec.png'
+        suptitle="Power spectrum"
+    elif pk_type == "vel":
+        out_file='vel_pwr_spec.png'
+        suptitle=r"Power spectrum $(\nabla\cdot u)$"
+    fig = plt.figure(figsize=(15, 11))
+    ax = plt.gca()
+    plt.yscale('log')
+    plt.xscale('log')
+
+    a_end = 1 / (1 + zs[-1])
+    a_ = 0
+    for i, data in enumerate(data_list):
+        a = 1 / (1 + zs[i])
+        if (a < 2.4 * a_) and a != a_end:
+            continue		
+        a_ = a
+        lab = 'z = ' + str(zs[i])
+        k, P_k, P_k_std = data[0], data[1], data[2]
+        # plt.errorbar(k, P_k, yerr=P_k_std, fmt='o', ms=3, label=lab)
+        plt.plot(k, P_k, 'o', ms=3, label=lab)
+        plt.fill_between(k, P_k-P_k_std, P_k+P_k_std, facecolor='lightgrey')
+        del k, P_k, P_k_std, data
+
+        if data_list_extrap is not None:
+            data = data_list_extrap[i]
+            k, P_k = data[0], data[1]
+            plt.plot(k, P_k, 'k--')
+            del k, P_k, data
+    
+    if pwr_spec_files_emu is not None:
+        data = np.loadtxt(pwr_spec_files_emu[-1])
+        k, P_k = data[:, 0], data[:, 1]
+        plt.plot(k, P_k, '-')
+        del k, P_k, data
+
+    if a_sim_info.k_nyquist is not None:
+        ls = [':', '-.', '--']
+        ls *= (len(a_sim_info.k_nyquist) - 1) / 3 + 1
+        ls = iter(ls)
+        val_lab = {}
+        for key, val in a_sim_info.k_nyquist.iteritems():
+            if val in val_lab:
+               val_lab[val] +=",\n" + " "*8 + key
+            else:
+                val_lab[val] = r"$k_{Nq}$ (" + key
+        for val, lab in val_lab.iteritems():
+            ax.axvline(val, ls=next(ls), c='k', label=lab+r")")
+
+    data = data_list[-1]
+    k = data[0]
+    k = np.logspace(np.log10(k[0]), np.log10(k[-1]), num=50)
+    del data
+
+    if pk_type == "dens":
+        P_0 = [pwr_spec(k_, a_sim_info.cosmo, ccl_cosmo=a_sim_info.ccl_cosmo, z=zs[-1]) for k_ in k]
+        P_i = [pwr_spec(k_, a_sim_info.cosmo, ccl_cosmo=a_sim_info.ccl_cosmo, z=zs[0]) for k_ in k]
+        plt.plot(k, P_0, '-')
+        plt.plot(k, P_i, '-')
+    elif pk_type == "vel":
+        P_0 = [pwr_spec(k_, a_sim_info.cosmo, ccl_cosmo=a_sim_info.ccl_cosmo, z=0) for k_ in k]
+        a_0 = 1./(zs[0]+1.)
+        a_i = 1./(zs[-1]+1.)
+        P_i = np.array(P_0)*growth_change(a_i, a_sim_info.cosmo)**2
+        P_0 = np.array(P_0)*growth_change(a_0, a_sim_info.cosmo)**2
+        plt.plot(k, P_i, '-')
+        plt.plot(k, P_0, '-')
+    
+
+    fig.suptitle(suptitle, y=0.99, size=20)
+    plt.xlabel(r"$k [h/$Mpc$]$", fontsize=15)
+    plt.ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=15)
+
+    # LEGEND manipulation
+    handles, labels = ax.get_legend_handles_labels()
+    hl = sorted(zip(handles, labels), key=lambda x: x[1], reverse=True)
+    handles, labels = zip(*hl)
+    # pade_lab_index = labels.index("Pade app.")
+    # labels.insert(-1, labels.pop(pade_lab_index))
+    # handles.insert(-1, handles.pop(pade_lab_index))
+    plt.legend(handles, labels, loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
+
+    plt.draw()
+    plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
+                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
+    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
+    
+    if save:
+        plt.savefig(out_dir + out_file)
+    if show:
+        plt.show()
+    plt.close(fig)
 
 def plot_corr_func(corr_func_files, zs, a_sim_info, corr_func_files_lin=None, corr_func_files_emu=None, out_dir='auto', save=True, show=False):
     if out_dir == 'auto':
@@ -523,7 +608,7 @@ def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=Fals
     im = ax.imshow(rho, interpolation='bicubic', cmap='gnuplot',
                    norm=SymLogNorm(linthresh=1.0, linscale=1,
                                    vmin=-1, vmax=100), aspect='auto',
-                   extent=[0, a_sim_info.box, 0, a_sim_info.box])
+                   extent=[0, a_sim_info.box_opt["box_size"], 0, a_sim_info.box_opt["box_size"]])
     fig.suptitle("Slice through simulation box (overdensity), z = %.2f" %
                  z, y=0.99, size=20)
     cbar = fig.colorbar(im, cax=cbar_ax, ticks=[-1,0,1,10,100])
@@ -569,7 +654,7 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir='auto', save=True):
         im = ax.imshow(rho, interpolation='bicubic', cmap='gnuplot', animated=True,
                        norm=SymLogNorm(
                            linthresh=1.0, linscale=1, vmin=-1, vmax=100), aspect='auto',
-                       extent=[0, a_sim_info.box, 0, a_sim_info.box])
+                       extent=[0, a_sim_info.box_opt["box_size"], 0, a_sim_info.box_opt["box_size"]])
         fig.suptitle(
             "Slice through simulation box (overdensity), z = %.2f" % zs[i], y=0.99, size=20)
         cbar = fig.colorbar(im, cax=cbar_ax, ticks=[-1,0,1,10,100])
