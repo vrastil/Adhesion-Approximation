@@ -40,6 +40,14 @@ int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
             ("pwr_bins", po::value<unsigned>(&sim->out_opt.bins_per_decade)->default_value(30), "number of bins per decade in power spectrum")
             ("corr_pt", po::value<unsigned>(&sim->out_opt.points_per_10_Mpc)->default_value(10), "number of points per 10 Mpc in correlation function")
             ("out_dir,o", po::value<string>(&sim->out_opt.out_dir)->default_value("output/"), "output folder name")
+            ("print_par_pos", po::value<bool>(&sim->out_opt.print_par_pos)->default_value(false), "print particles positions")
+            ("print_dens", po::value<bool>(&sim->out_opt.print_dens)->default_value(false), "print density map and histogram")
+            ("print_pwr", po::value<bool>(&sim->out_opt.print_pwr)->default_value(false), "print power spectrum")
+            ("print_extrap_pwr", po::value<bool>(&sim->out_opt.print_extrap_pwr)->default_value(false), "print extrapolated power spectrum")
+            ("print_corr", po::value<bool>(&sim->out_opt.print_corr)->default_value(false), "print correlation function")
+            ("print_emu_spec", po::value<bool>(&sim->out_opt.print_emu_spec)->default_value(false), "print emulator power spectrum")
+            ("print_emu_corr", po::value<bool>(&sim->out_opt.print_emu_corr)->default_value(false), "print emulator correlation function")
+            ("print_vel_pwr", po::value<bool>(&sim->out_opt.print_vel_pwr)->default_value(false), "print velocity power spectrum")
             ;
 		
 		po::options_description config_app("Approximations");

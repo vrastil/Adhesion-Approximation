@@ -325,10 +325,13 @@ public:
 
     /* OUTPUT */
     struct Out_Opt {
+        void init();
         /* cmd args */
         unsigned print_every, bins_per_decade, points_per_10_Mpc;
         std::string out_dir; ///< where to save output of the simulation
         bool print_par_pos, print_dens, print_pwr, print_extrap_pwr, print_corr, print_emu_spec, print_emu_corr, print_vel_pwr;
+        /* derived param*/
+        bool get_rho, get_pwr, get_pk_extrap, get_emu_extrap;
     } out_opt;
 
 
