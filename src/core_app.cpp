@@ -418,7 +418,7 @@ void vel_pwr_spec_k(const Sim_Param &sim, const vector<Mesh> &vel_field, Mesh* p
 }
 
 void gen_cqty_binned(const double x_min, const double x_max, unsigned bins_per_decade,
-                    const Mesh &qty_mesh, Data_x_y<double>& qty_binned, const double mod_q, const double mod_x)
+                    const Mesh &qty_mesh, Data_Vec<double, 2>& qty_binned, const double mod_q, const double mod_x)
 {
     /* bin some complex quantity on mesh in logarithmic bins, assuming:
        Q(x) = mod_q*qty_mesh[2*i]
@@ -441,18 +441,18 @@ void gen_cqty_binned(const double x_min, const double x_max, unsigned bins_per_d
         if ((x <x_max) && (x>=x_min)){
             bin = (int)((log10(x) - log10(x_min)) * bins_per_decade);
             #pragma omp atomic
-            qty_binned.y[bin] += qty_mesh[2*i];
+            qty_binned[1][bin] += qty_mesh[2*i];
             #pragma omp atomic
-            qty_binned.x[bin]++;
+            qty_binned[0][bin]++;
         }
     }
     const double x_min_ = mod_x*x_min*exp10(log_bin/2.);
     unsigned i = 0;
     for (unsigned j = 0; j < qty_binned.size(); ){
-        if (qty_binned.x[j]){
-            qty_binned.y[j] *= mod_q / qty_binned.x[j];
+        if (qty_binned[0][j]){
+            qty_binned[1][j] *= mod_q / qty_binned[0][j];
             x = x_min_*exp10(i*log_bin);
-            qty_binned.x[j] = x;
+            qty_binned[0][j] = x;
             j++;
         }else{
             qty_binned.erase(j);
@@ -462,7 +462,7 @@ void gen_cqty_binned(const double x_min, const double x_max, unsigned bins_per_d
 }
 
 void gen_rqty_binned(const double x_min, const double x_max, const double x_0,
-    const Mesh &qty_mesh, Data_x_y<double>& qty_binned, const double mod_q)
+    const Mesh &qty_mesh, Data_Vec<double, 2>& qty_binned, const double mod_q)
 {
 /* bin some real quantity on mesh in linear bins
    x_min and x_max are in [Mpc/h], transformation from mesh distances to Mpc/h assumed to be x_0
@@ -485,9 +485,9 @@ void gen_rqty_binned(const double x_min, const double x_max, const double x_0,
                 if ((x <x_max) && (x>=x_min)){
                     bin = (int)((x-x_min)/lin_bin);
                     #pragma omp atomic
-                    qty_binned.y[bin] += qty_mesh(i,j,k);
+                    qty_binned[1][bin] += qty_mesh(i,j,k);
                     #pragma omp atomic
-                    qty_binned.x[bin]++;
+                    qty_binned[0][bin]++;
                 }
             }
         }
@@ -495,10 +495,10 @@ void gen_rqty_binned(const double x_min, const double x_max, const double x_0,
     const double x_min_ = x_min+lin_bin/2;
     unsigned i = 0;
     for (unsigned j = 0; j < qty_binned.size(); ){
-        if (qty_binned.x[j]){
-            qty_binned.y[j] *= mod_q / qty_binned.x[j];
+        if (qty_binned[0][j]){
+            qty_binned[1][j] *= mod_q / qty_binned[0][j];
             x = x_min_ + lin_bin*i;
-            qty_binned.x[j] = x;
+            qty_binned[0][j] = x;
             j++;
         }else{
             qty_binned.erase(j);
@@ -507,7 +507,7 @@ void gen_rqty_binned(const double x_min, const double x_max, const double x_0,
     }
 }
 
-void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<double>* pwr_spec_binned)
+void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_Vec<double, 2>* pwr_spec_binned)
 {
     const double mod_pk = pow(sim.box_opt.box_size, 3.); // P(k) -> dimensionFULL!
     const double mod_k = 2.*PI/sim.box_opt.box_size;
@@ -515,7 +515,7 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<d
 	gen_cqty_binned(1, sim.box_opt.mesh_num_pwr,  sim.out_opt.bins_per_decade, power_aux, *pwr_spec_binned, mod_pk, mod_k);
 }
 
-void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const Extrap_Pk &P_k, Data_x_y<double>* pwr_spec_binned)
+void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const Extrap_Pk &P_k, Data_Vec<double, 2>* pwr_spec_binned)
 {
     const double k_max = sim.other_par.k_print.upper;
     const double k_min = sim.other_par.k_print.lower;
@@ -527,12 +527,12 @@ void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const Extrap_Pk &P_k,
     #pragma omp parallel for private(k)
 	for (unsigned j = 0; j < pwr_spec_binned->size(); j++){
         k = k_min*exp10(j*log_bin);
-		pwr_spec_binned->x[j] = k;
-        pwr_spec_binned->y[j] = P_k.eval(k);
+		(*pwr_spec_binned)[0][j] = k;
+        (*pwr_spec_binned)[1][j] = P_k.eval(k);
     }
 }
 
-void gen_corr_func_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<double>* corr_func_binned)
+void gen_corr_func_binned(const Sim_Param &sim, const Mesh &power_aux, Data_Vec<double, 2>* corr_func_binned)
 {
     printf("Computing correlation function via FFT of power spectrum on a mesh...\n");
 	gen_rqty_binned(1, 200, sim.x_0_pwr(), power_aux, *corr_func_binned, 1);

@@ -33,11 +33,11 @@ int get_vel_from_par(Particle_x* particles, std::vector<Mesh>* vel_field, const 
 
 void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux);
 void vel_pwr_spec_k(const Sim_Param &sim, const std::vector<Mesh> &vel_field, Mesh* power_aux);
-void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<double>* pwr_spec_binned);
-void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const Extrap_Pk &P_k, Data_x_y<double>* pwr_spec_binned);
-void gen_corr_func_binned(const Sim_Param &sim, const Mesh &power_aux, Data_x_y<double>* corr_func_binned);
+void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_Vec<double, 2>* pwr_spec_binned);
+void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const Extrap_Pk &P_k, Data_Vec<double, 2>* pwr_spec_binned);
+void gen_corr_func_binned(const Sim_Param &sim, const Mesh &power_aux, Data_Vec<double, 2>* corr_func_binned);
 template<class T>
-void gen_corr_func_binned_pp(const Sim_Param &sim, T* particles, Data_x_y<double>* corr_func_binned);
+void gen_corr_func_binned_pp(const Sim_Param &sim, T* particles, Data_Vec<double, 2>* corr_func_binned);
 void gen_dens_binned(const Mesh& rho, std::vector<int> &dens_binned, const Sim_Param &sim);
 
 double force_ref(const double r, const double a);

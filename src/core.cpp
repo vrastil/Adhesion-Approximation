@@ -855,7 +855,7 @@ void App_Var<T>::print_info() const
     // precompute short range force
     size_t res = size_t(sim.app_opt.rs/0.05)+1; // force resolution 5% of mesh cell
     const double r0 = sim.app_opt.rs / (res-1);
-    Data_x_y<double> data(res);
+    Data_Vec<double, 2> data(res);
     double r;
     const double e2 = pow(sim.box_opt.Ng*0.1, 2); // softening of 10% of average interparticle length
 
@@ -863,8 +863,8 @@ void App_Var<T>::print_info() const
     for(unsigned i = 0; i < res; i++)
     {
         r = i*r0;
-        data.x[i] = pow(r, 2); // store square of r
-        data.y[i] = (force_tot(r, e2) - force_ref(r, sim.app_opt.a))/(4*PI);
+        data[0][i] = pow(r, 2); // store square of r
+        data[1][i] = (force_tot(r, e2) - force_ref(r, sim.app_opt.a))/(4*PI);
     }
     fs_interp.init(data);
 }

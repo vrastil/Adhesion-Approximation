@@ -397,47 +397,45 @@ void to_json(nlohmann::json& j, const Sim_Param::App_Opt& cosmo);
 void to_json(nlohmann::json& j, const Sim_Param::Run_Opt& cosmo);
 
 /**
- * @class:	Data_x_y
- * @brief:	class containing data [x, y(x)]
+ * @class:	Data_Vec
+ * @brief:	class containing data [x, y,...]
  */
 
-template <typename T>
-class Data_x_y
-{
+ template <typename T, unsigned N>
+ class Data_Vec
+ {
 public:
-	// CONSTRUCTORS
-    Data_x_y(){};
-    Data_x_y(size_t size) : x(size), y(size) {;}
-    
+    // CONSTRUCTORS
+    Data_Vec() = default;
+    Data_Vec(size_t size) { data.fill(std::vector<T>(size)); }
+
     // VARIABLES
-    std::vector<T> x;
-    std::vector<T> y;
+    std::array<std::vector<T>, N> data;
+
+    // ELEMENT ACCESS
+    std::vector<T>& operator[](int i){ return data[i]; }
+    const std::vector<T>& operator[](int i) const { return data[i]; }
 
     // CAPACITY
-    size_t size() const noexcept{ return x.size(); }
+    size_t dim() const noexcept{ return data.size(); }
+    size_t size() const noexcept{ return data[0].size(); }
     void resize (size_t n){
-        x.resize(n);
-        y.resize(n);
+        for (auto &vec : data) vec.resize(n);
     }
     void resize (size_t n, double val){
-        x.resize(n, val);
-        y.resize(n, val);
+        for (auto &vec : data) vec.resize(n, val);
     }
     void reserve(size_t n){
-        x.reserve(n);
-        y.reserve(n);
+        for (auto &vec : data) vec.reserve(n);
     }
     void erase(unsigned index){
-        x.erase(x.begin() + index);
-        y.erase(y.begin() + index);
+        for (auto &vec : data) vec.erase(vec.begin() + index);
     }
-
     // MODIFIERS
     void fill(const T& val){
-        std::fill(x.begin(), x.end(), val);
-        std::fill(y.begin(), y.end(), val);
+        for (auto &vec : data) std::fill(vec.begin(), vec.end(), val);
     }
-};
+ };
 
 /**
  * @class:	App_Var
@@ -467,7 +465,7 @@ public:
     std::vector<Mesh> power_aux;
     T* particles;
 
-	Data_x_y<double> pwr_spec_binned, pwr_spec_binned_0, vel_pwr_spec_binned_0, corr_func_binned;
+	Data_Vec<double, 2> pwr_spec_binned, pwr_spec_binned_0, vel_pwr_spec_binned_0, corr_func_binned;
 	fftw_plan p_F, p_B, p_F_pwr, p_B_pwr;
 	Tracking track;
 	std::vector<int> dens_binned;

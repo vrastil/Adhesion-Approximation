@@ -331,19 +331,19 @@ int get_nearest(const double val, const vector<double>& vec)
  * @brief:	linear interpolation of data [x, y]
  */
 
-Interp_obj::Interp_obj(const Data_x_y<double>& data): is_init(true)
+Interp_obj::Interp_obj(const Data_Vec<double, 2>& data): is_init(true)
 {
     acc = gsl_interp_accel_alloc ();
     spline = gsl_spline_alloc (gsl_interp_steffen, data.size());
-    gsl_spline_init (spline, data.x.data(), data.y.data(), data.size());
+    gsl_spline_init (spline, data[0].data(), data[1].data(), data.size());
 }
 
-void Interp_obj::init(const Data_x_y<double>& data)
+void Interp_obj::init(const Data_Vec<double, 2>& data)
 {
     is_init = true;
     acc = gsl_interp_accel_alloc ();
     spline = gsl_spline_alloc (gsl_interp_steffen, data.size());
-    gsl_spline_init (spline, data.x.data(), data.y.data(), data.size());
+    gsl_spline_init (spline, data[0].data(), data[1].data(), data.size());
 }
 
 Interp_obj::~Interp_obj()
@@ -364,59 +364,59 @@ double Interp_obj::eval(double x) const{ return gsl_spline_eval(spline, x, acc);
             fit to Padé approximant R [0/3] above the 'useful' range
  */
 
-Extrap_Pk::Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim):
+Extrap_Pk::Extrap_Pk(const Data_Vec<double, 2>& data, const Sim_Param& sim):
     Interp_obj(data), cosmo(sim.cosmo), n_s(0)
 {
     unsigned m, n;
     // LOWER RANGE -- fit linear power spectrum to data[m:n)
     printf("Fitting amplitude of P(k) in lower range.\n");
-    m = get_nearest(2*PI/sim.box_opt.box_size, data.x) + sim.out_opt.bins_per_decade/2; // discard half of the first decade values due to undersampling
+    m = get_nearest(2*PI/sim.box_opt.box_size, data[0]) + sim.out_opt.bins_per_decade/2; // discard half of the first decade values due to undersampling
     n = m + sim.out_opt.bins_per_decade/2; // fit over half of a decade
-    k_min = data.x[m];
+    k_min = data[0][m];
     fit_lin(data, m, n, A_low);
     // UPPER RANGE -- ffit linear power spectrum to data[m:n)
     printf("Fitting amplitude of P(k) in upper range.\n");
     k_max = sim.other_par.nyquist.at("particle")/2.; //< trust simulation up to HALF k_nq
-    n = get_nearest(k_max, data.x) + 1;
+    n = get_nearest(k_max, data[0]) + 1;
     m = n - sim.out_opt.bins_per_decade/2; // fit over half of the last decade
     fit_lin(data, m, n, A_up);
 }
 
-Extrap_Pk::Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
+Extrap_Pk::Extrap_Pk(const Data_Vec<double, 2>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
     const unsigned m_u, const unsigned n_u, double n_s):
     Interp_obj(data), cosmo(sim.cosmo), n_s(n_s)
 {
     // LOWER RANGE -- fit linear power spectrum to data[m:n)
     printf("Fitting amplitude of P(k) in lower range.\n");
-    k_min = data.x[n_l-1];
+    k_min = data[0][n_l-1];
     fit_lin(data, m_l, n_l, A_low);
 
     // UPPER RANGE -- fit Ak^ns to data[m,n)
     printf("Fitting amplitude of P(k) in upper range.\n");
-    k_max =  data.x[n_u-1];
+    k_max =  data[0][n_u-1];
     fit_power_law(data, m_u, n_u, A_up);
 }
 
-void Extrap_Pk::fit_lin(const Data_x_y<double>& data, const unsigned m, const unsigned n, double &A)
+void Extrap_Pk::fit_lin(const Data_Vec<double, 2>& data, const unsigned m, const unsigned n, double &A)
 {
     // FIT linear power spectrum to data[m:n)
     vector<double> k, Pk;
     for(unsigned i = m; i < n; i++){
-        k.push_back(lin_pow_spec(data.x[i], cosmo));
-        Pk.push_back(data.y[i]);
+        k.push_back(lin_pow_spec(data[0][i], cosmo));
+        Pk.push_back(data[1][i]);
     }
     double A_sigma2, sumsq;
     gsl_fit_mul(k.data(), 1, Pk.data(), 1, n-m, &A, &A_sigma2, &sumsq);
     printf("\t[fit A = %e, sigma = %f, sumsq = %f]\n", A, sqrt(A_sigma2), sumsq);
 }
 
-void Extrap_Pk::fit_power_law(const Data_x_y<double>& data, const unsigned m, const unsigned n, double &A)
+void Extrap_Pk::fit_power_law(const Data_Vec<double, 2>& data, const unsigned m, const unsigned n, double &A)
 {
     // FIT Ak^ns to data[m,n)
     vector<double> k, Pk;
     for(unsigned i = m; i < n; i++){
-        k.push_back(pow(data.x[i], n_s));
-        Pk.push_back(data.y[i]);
+        k.push_back(pow(data[0][i], n_s));
+        Pk.push_back(data[1][i]);
     }
     double A_sigma2, sumsq;
     gsl_fit_mul(k.data(), 1, Pk.data(), 1, n-m, &A, &A_sigma2, &sumsq);
@@ -480,7 +480,7 @@ double xi_integrand_G(double k, void* params){
 };
 
 template <class T>
-void gen_corr_func_binned_gsl(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned, T* xi_r)
+void gen_corr_func_binned_gsl(const Sim_Param &sim, const Extrap_Pk& P_k, Data_Vec<double, 2>* corr_func_binned, T* xi_r)
 {
     const double x_min = sim.other_par.x_corr.lower;
     const double x_max = sim.other_par.x_corr.upper;
@@ -495,13 +495,13 @@ void gen_corr_func_binned_gsl(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x
 	for(unsigned i = 0; i < req_size; i++){
         r = x_min + i*lin_bin;
         my_param.r = r;
-        corr_func_binned->x[i] = r;
-        corr_func_binned->y[i] = xi_r->eval(r, &my_param);
+        (*corr_func_binned)[0][i] = r;
+        (*corr_func_binned)[1][i] = xi_r->eval(r, &my_param);
     }
 }
 
 template <class T>
-void gen_corr_func_binned_gsl_lin(const Sim_Param &sim, double a, Data_x_y<double>* corr_func_binned, T* xi_r)
+void gen_corr_func_binned_gsl_lin(const Sim_Param &sim, double a, Data_Vec<double, 2>* corr_func_binned, T* xi_r)
 {
     const double x_min = sim.other_par.x_corr.lower;
     const double x_max = sim.other_par.x_corr.upper;
@@ -517,21 +517,21 @@ void gen_corr_func_binned_gsl_lin(const Sim_Param &sim, double a, Data_x_y<doubl
 	for(unsigned i = 0; i < req_size; i++){
         r = x_min + i*lin_bin;
         my_param.r = r;
-        corr_func_binned->x[i] = r;
-        corr_func_binned->y[i] = D2*xi_r->eval(r, &my_param);
+        (*corr_func_binned)[0][i] = r;
+        (*corr_func_binned)[1][i] = xi_r->eval(r, &my_param);
     }
 }
 
 #define EPSABS 1e-7
 #define EPSREL 1e-4
 
-void gen_corr_func_binned_gsl_qagi(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned)
+void gen_corr_func_binned_gsl_qagi(const Sim_Param &sim, const Extrap_Pk& P_k, Data_Vec<double, 2>* corr_func_binned)
 {
     printf("Computing correlation function via GSL integration QAGI of extrapolated power spectrum...\n");
     
 }
 
-void gen_corr_func_binned_gsl_qawo(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned)
+void gen_corr_func_binned_gsl_qawo(const Sim_Param &sim, const Extrap_Pk& P_k, Data_Vec<double, 2>* corr_func_binned)
 {
     printf("Computing correlation function via GSL integration QAWO of extrapolated power spectrum...\n");
     const double k_min = 3e-3;
@@ -540,7 +540,7 @@ void gen_corr_func_binned_gsl_qawo(const Sim_Param &sim, const Extrap_Pk& P_k, D
     gen_corr_func_binned_gsl(sim, P_k, corr_func_binned, &xi_r);
 }
 
-void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned)
+void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const Extrap_Pk& P_k, Data_Vec<double, 2>* corr_func_binned)
 {
     printf("Computing correlation function via GSL integration QAWF of extrapolated power spectrum...\n");
 
@@ -548,7 +548,7 @@ void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const Extrap_Pk& P_k, D
     gen_corr_func_binned_gsl(sim, P_k, corr_func_binned, &xi_r);
 }
 
-void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, double a, Data_x_y<double>* corr_func_binned)
+void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, double a, Data_Vec<double, 2>* corr_func_binned)
 {
     printf("Computing correlation function via GSL integration QAWF of linear power spectrum...\n");
 

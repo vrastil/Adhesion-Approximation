@@ -91,7 +91,7 @@ void print_par_pos_cut_small(T* particles, const Sim_Param &sim, std::string out
    }
 }
 
-void print_pow_spec(const Data_x_y<double> &pwr_spec_binned, string out_dir, string suffix)
+void print_pow_spec(const Data_Vec<double, 2> &pwr_spec_binned, string out_dir, string suffix)
 {
 	out_dir += "pwr_spec/";
 	string file_name = out_dir + "pwr_spec" + suffix + ".dat";
@@ -103,11 +103,11 @@ void print_pow_spec(const Data_x_y<double> &pwr_spec_binned, string out_dir, str
     File << scientific;
     const unsigned N = pwr_spec_binned.size();
 	for (unsigned j = 0; j < N; j++){
-        if (pwr_spec_binned.y[j]) File << pwr_spec_binned.x[j] << "\t" << pwr_spec_binned.y[j] << "\n";
+        if (pwr_spec_binned[1][j]) File << pwr_spec_binned[0][j] << "\t" << pwr_spec_binned[1][j] << "\n";
 	}
 }
 
-void print_vel_pow_spec(const Data_x_y<double> &pwr_spec_binned, string out_dir, string suffix)
+void print_vel_pow_spec(const Data_Vec<double, 2> &pwr_spec_binned, string out_dir, string suffix)
 {
 	out_dir += "vel_pwr_spec/";
 	string file_name = out_dir + "vel_pwr_spec" + suffix + ".dat";
@@ -119,11 +119,11 @@ void print_vel_pow_spec(const Data_x_y<double> &pwr_spec_binned, string out_dir,
     
     const unsigned N = pwr_spec_binned.size();
 	for (unsigned j = 0; j < N; j++){
-		if (pwr_spec_binned.y[j]) File << pwr_spec_binned.x[j] << "\t" << pwr_spec_binned.y[j] << "\n";
+		if (pwr_spec_binned[1][j]) File << pwr_spec_binned[0][j] << "\t" << pwr_spec_binned[1][j] << "\n";
 	}
 }
 
-void print_corr_func(const Data_x_y<double> &pwr_spec_binned, string out_dir, string suffix)
+void print_corr_func(const Data_Vec<double, 2> &pwr_spec_binned, string out_dir, string suffix)
 {
 	out_dir += "corr_func/";
 	string file_name = out_dir + "corr_func" + suffix + ".dat";
@@ -135,11 +135,11 @@ void print_corr_func(const Data_x_y<double> &pwr_spec_binned, string out_dir, st
     
     const unsigned N = pwr_spec_binned.size();
 	for (unsigned j = 0; j < N; j++){
-		if (pwr_spec_binned.y[j]) File << pwr_spec_binned.x[j] << "\t" << pwr_spec_binned.y[j] << "\n";
+		if (pwr_spec_binned[1][j]) File << pwr_spec_binned[0][j] << "\t" << pwr_spec_binned[1][j] << "\n";
 	}
 }
 
-void print_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data_x_y<double> &pwr_spec_binned_0,
+void print_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Data_Vec<double, 2> &pwr_spec_binned_0,
 	double growth, string out_dir, string suffix)
 {
     out_dir += "pwr_diff/";
@@ -156,18 +156,18 @@ void print_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data_x_y
     int i = 0;
     const unsigned N = pwr_spec_binned.size();
 	for (unsigned j = 0; j < N; ){
-		if (pwr_spec_binned.x[j] == pwr_spec_binned_0.x[i]){
-			P_k = pwr_spec_binned.y[j];
-			P_ZA = pwr_spec_binned_0.y[i] * pow(growth, 2.);
-            if((P_ZA) && (P_k)) File << scientific << pwr_spec_binned.x[j] << "\t" << fixed << (P_k-P_ZA)/P_ZA << "\n";
+		if (pwr_spec_binned[0][j] == pwr_spec_binned_0[0][i]){
+			P_k = pwr_spec_binned[1][j];
+			P_ZA = pwr_spec_binned_0[1][i] * pow(growth, 2.);
+            if((P_ZA) && (P_k)) File << scientific << pwr_spec_binned[0][j] << "\t" << fixed << (P_k-P_ZA)/P_ZA << "\n";
             i++;
             j++;
-        } else if (pwr_spec_binned.x[j] < pwr_spec_binned_0.x[i]) j++;
+        } else if (pwr_spec_binned[0][j] < pwr_spec_binned_0[0][i]) j++;
         else i++;
 	}
 }
 
-void print_vel_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data_x_y<double> &pwr_spec_binned_0,
+void print_vel_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Data_Vec<double, 2> &pwr_spec_binned_0,
 	double b, string out_dir, string suffix)
 {
     out_dir += "vel_pwr_diff/";
@@ -184,13 +184,13 @@ void print_vel_pow_spec_diff(const Data_x_y<double> &pwr_spec_binned, const Data
     int i = 0;
     const unsigned N = pwr_spec_binned.size();
 	for (unsigned j = 0; j < N; ){
-		if (pwr_spec_binned.x[j] == pwr_spec_binned_0.x[i]){
-			P_k = pwr_spec_binned.y[j];
-            P_ZA = pwr_spec_binned_0.y[i] * pow(b, 2.);
-            if((P_ZA) && (P_k)) File << scientific << pwr_spec_binned.x[j] << "\t" << fixed << (P_k-P_ZA)/P_ZA << "\n";
+		if (pwr_spec_binned[0][j] == pwr_spec_binned_0[0][i]){
+			P_k = pwr_spec_binned[1][j];
+            P_ZA = pwr_spec_binned_0[1][i] * pow(b, 2.);
+            if((P_ZA) && (P_k)) File << scientific << pwr_spec_binned[0][j] << "\t" << fixed << (P_k-P_ZA)/P_ZA << "\n";
             i++;
             j++;
-        } else if (pwr_spec_binned.x[j] < pwr_spec_binned_0.x[i]) j++;
+        } else if (pwr_spec_binned[0][j] < pwr_spec_binned_0[0][i]) j++;
         else i++;
 	}
 }

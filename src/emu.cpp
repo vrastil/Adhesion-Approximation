@@ -305,16 +305,16 @@ void emu(double *xstar, double *ystar) {
     }
 }
 
-Data_x_y<double> init_emu(const Sim_Param &sim, double z)
+Data_Vec<double, 2> init_emu(const Sim_Param &sim, double z)
 {
     if ((z < 0) || (z>2.02)){ // emulator range
         std::cout << "WARNING! Value of redshift outside emulator range!\n";
-        return Data_x_y<double>();
+        return Data_Vec<double, 2>();
     }
     std::cout << "Initializing emulator...\n";
-    Data_x_y<double> emu_data(nmode);
+    Data_Vec<double, 2> emu_data(nmode);
     for (unsigned i = 0; i < emu_data.size(); i++){
-        emu_data.x[i] = mode[i] / sim.cosmo.h; // convert emulator k [1/Mpc] into [h/Mpc]
+        emu_data[0][i] = mode[i] / sim.cosmo.h; // convert emulator k [1/Mpc] into [h/Mpc]
     }
 
     double xstar[9];
@@ -328,9 +328,9 @@ Data_x_y<double> init_emu(const Sim_Param &sim, double z)
     xstar[7] = 0; // omega_nu
     xstar[8] = z; // sigma_8
 
-    emu(xstar, emu_data.y.data());// get P(k)
+    emu(xstar, emu_data[1].data());// get P(k)
     for (unsigned i = 0; i < emu_data.size(); i++){
-        emu_data.y[i] *= pow(sim.cosmo.h, 3); // convert emulator P(k) [Mpc^3] into [(Mpc/h)^3]
+        emu_data[1][i] *= pow(sim.cosmo.h, 3); // convert emulator P(k) [Mpc^3] into [(Mpc/h)^3]
     }
     return emu_data; // move
 }

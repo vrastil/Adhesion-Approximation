@@ -25,10 +25,10 @@ class Interp_obj
 {// linear interpolation of data [x, y]
 public:
     Interp_obj(): is_init(false) {}
-    Interp_obj(const Data_x_y<double>& data);
+    Interp_obj(const Data_Vec<double, 2>& data);
     ~Interp_obj();
     double eval(double x) const;
-    void init(const Data_x_y<double>& data);
+    void init(const Data_Vec<double, 2>& data);
 
 private:
     bool is_init;
@@ -50,14 +50,14 @@ class Extrap_Pk : public Interp_obj
     fit to Padé approximant R [0/3] above the 'useful' range
 */
 public:
-    Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim);
-    Extrap_Pk(const Data_x_y<double>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
+    Extrap_Pk(const Data_Vec<double, 2>& data, const Sim_Param& sim);
+    Extrap_Pk(const Data_Vec<double, 2>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
               const unsigned m_u, const unsigned n_u, double n_s);
     double eval(double k) const;
 
 private:
-    void fit_lin(const Data_x_y<double>& data, const unsigned m, const unsigned n, double& A);
-    void fit_power_law(const Data_x_y<double>& data, const unsigned m, const unsigned n, double& A);
+    void fit_lin(const Data_Vec<double, 2>& data, const unsigned m, const unsigned n, double& A);
+    void fit_power_law(const Data_Vec<double, 2>& data, const unsigned m, const unsigned n, double& A);
 
     double A_low, A_up; // amplitude of linear power
     const Cosmo_Param& cosmo;
@@ -65,7 +65,7 @@ private:
     double k_min, k_max; // interpolation range
 };
 
-void gen_corr_func_binned_gsl_qagi(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned);
-void gen_corr_func_binned_gsl_qawo(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned);
-void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const Extrap_Pk& P_k, Data_x_y<double>* corr_func_binned);
-void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, double a, Data_x_y<double>* corr_func_binned);
+void gen_corr_func_binned_gsl_qagi(const Sim_Param &sim, const Extrap_Pk& P_k, Data_Vec<double, 2>* corr_func_binned);
+void gen_corr_func_binned_gsl_qawo(const Sim_Param &sim, const Extrap_Pk& P_k, Data_Vec<double, 2>* corr_func_binned);
+void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const Extrap_Pk& P_k, Data_Vec<double, 2>* corr_func_binned);
+void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, double a, Data_Vec<double, 2>* corr_func_binned);
