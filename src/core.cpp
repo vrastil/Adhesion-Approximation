@@ -602,7 +602,7 @@ void Sim_Param::print_info(string out, string app) const
             printf("Box size:\t%.0f Mpc/h\n", box_opt.box_size);
             printf("Redshift:\t%G--->%G\n", integ_opt.z_in, integ_opt.z_out);
             printf("Pk:\t\t[sigma_8 = %G, As = %G, ns = %G, k_smooth = %G, pwr_type = %i]\n", 
-                cosmo.sigma8, cosmo.A, cosmo.ns, sqrt(cosmo.k2_G), cosmo.pwr_type);
+                cosmo.sigma8, cosmo.A, cosmo.ns, sqrt(cosmo.k2_G), cosmo.pwr_type_i);
             printf("AA:\t\t[nu = %G (Mpc/h)^2]\n", app_opt.nu_dim);
             printf("LL:\t\t[rs = %G, a = %G, M = %i, Hc = %G]\n", app_opt.rs, app_opt.a, app_opt.M, app_opt.Hc);
             printf("num_thread:\t%i\n", run_opt.nt);
@@ -749,7 +749,7 @@ void App_Var<T>::print()
     if (sim.out_opt.print_dens){
         gen_dens_binned(power_aux[0], dens_binned, sim);    
         print_rho_map(power_aux[0], sim, out_dir_app, z_suffix());
-        print_dens_bin(dens_binned, sim.box_opt.mesh_num, out_dir_app, z_suffix());
+        print_dens_bin(dens_binned, out_dir_app, z_suffix());
     }
 
     /* Compute power spectrum and bin it */
@@ -790,12 +790,12 @@ void App_Var<T>::print()
     
     /* Get power spectrum from emulator and extrapolate */
     if (sim.out_opt.get_emu_extrap &&  (z() < 2.2)){ // emulator range
-        pwr_spec_binned = init_emu(sim, z());
-        Extrap_Pk P_k(pwr_spec_binned, sim, 0, 5, nmode-5, nmode, -2.0);
+        corr_func_binned = init_emu(sim, z());
+        Extrap_Pk P_k(corr_func_binned, sim, 0, 5, nmode-5, nmode, -2.0);
     /* Print emulator power spectrum */
         if (sim.out_opt.print_emu_spec){
-            gen_pow_spec_binned_from_extrap(sim, P_k, &pwr_spec_binned);
-            print_pow_spec(pwr_spec_binned, out_dir_app, "_emu" + z_suffix());
+            gen_pow_spec_binned_from_extrap(sim, P_k, &corr_func_binned);
+            print_pow_spec(corr_func_binned, out_dir_app, "_emu" + z_suffix());
         }
     /* Printing correlation function */
         if (sim.out_opt.print_emu_corr){

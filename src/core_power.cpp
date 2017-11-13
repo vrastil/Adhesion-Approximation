@@ -331,14 +331,16 @@ int get_nearest(const double val, const vector<double>& vec)
  * @brief:	linear interpolation of data [x, y]
  */
 
-Interp_obj::Interp_obj(const Data_Vec<double, 2>& data): is_init(true)
+template<unsigned N>
+Interp_obj::Interp_obj(const Data_Vec<double, N>& data): is_init(true)
 {
     acc = gsl_interp_accel_alloc ();
     spline = gsl_spline_alloc (gsl_interp_steffen, data.size());
     gsl_spline_init (spline, data[0].data(), data[1].data(), data.size());
 }
 
-void Interp_obj::init(const Data_Vec<double, 2>& data)
+template<unsigned N>
+void Interp_obj::init(const Data_Vec<double, N>& data)
 {
     is_init = true;
     acc = gsl_interp_accel_alloc ();
@@ -364,7 +366,8 @@ double Interp_obj::eval(double x) const{ return gsl_spline_eval(spline, x, acc);
             fit to Padé approximant R [0/3] above the 'useful' range
  */
 
-Extrap_Pk::Extrap_Pk(const Data_Vec<double, 2>& data, const Sim_Param& sim):
+template<unsigned N>
+Extrap_Pk::Extrap_Pk(const Data_Vec<double, N>& data, const Sim_Param& sim):
     Interp_obj(data), cosmo(sim.cosmo), n_s(0)
 {
     unsigned m, n;
@@ -382,7 +385,8 @@ Extrap_Pk::Extrap_Pk(const Data_Vec<double, 2>& data, const Sim_Param& sim):
     fit_lin(data, m, n, A_up);
 }
 
-Extrap_Pk::Extrap_Pk(const Data_Vec<double, 2>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
+template<unsigned N>
+Extrap_Pk::Extrap_Pk(const Data_Vec<double, N>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
     const unsigned m_u, const unsigned n_u, double n_s):
     Interp_obj(data), cosmo(sim.cosmo), n_s(n_s)
 {
@@ -397,7 +401,8 @@ Extrap_Pk::Extrap_Pk(const Data_Vec<double, 2>& data, const Sim_Param& sim, cons
     fit_power_law(data, m_u, n_u, A_up);
 }
 
-void Extrap_Pk::fit_lin(const Data_Vec<double, 2>& data, const unsigned m, const unsigned n, double &A)
+template<unsigned N>
+void Extrap_Pk::fit_lin(const Data_Vec<double, N>& data, const unsigned m, const unsigned n, double &A)
 {
     // FIT linear power spectrum to data[m:n)
     vector<double> k, Pk;
@@ -410,7 +415,8 @@ void Extrap_Pk::fit_lin(const Data_Vec<double, 2>& data, const unsigned m, const
     printf("\t[fit A = %e, sigma = %f, sumsq = %f]\n", A, sqrt(A_sigma2), sumsq);
 }
 
-void Extrap_Pk::fit_power_law(const Data_Vec<double, 2>& data, const unsigned m, const unsigned n, double &A)
+template<unsigned N>
+void Extrap_Pk::fit_power_law(const Data_Vec<double, N>& data, const unsigned m, const unsigned n, double &A)
 {
     // FIT Ak^ns to data[m,n)
     vector<double> k, Pk;
@@ -518,27 +524,12 @@ void gen_corr_func_binned_gsl_lin(const Sim_Param &sim, double a, Data_Vec<doubl
         r = x_min + i*lin_bin;
         my_param.r = r;
         (*corr_func_binned)[0][i] = r;
-        (*corr_func_binned)[1][i] = xi_r->eval(r, &my_param);
+        (*corr_func_binned)[1][i] = D2*xi_r->eval(r, &my_param);
     }
 }
 
 #define EPSABS 1e-7
 #define EPSREL 1e-4
-
-void gen_corr_func_binned_gsl_qagi(const Sim_Param &sim, const Extrap_Pk& P_k, Data_Vec<double, 2>* corr_func_binned)
-{
-    printf("Computing correlation function via GSL integration QAGI of extrapolated power spectrum...\n");
-    
-}
-
-void gen_corr_func_binned_gsl_qawo(const Sim_Param &sim, const Extrap_Pk& P_k, Data_Vec<double, 2>* corr_func_binned)
-{
-    printf("Computing correlation function via GSL integration QAWO of extrapolated power spectrum...\n");
-    const double k_min = 3e-3;
-    const double k_max = 1e-1;
-    Integr_obj_qawo xi_r(&xi_integrand_W, k_min, k_max, EPSABS, EPSREL,  4000, 50);
-    gen_corr_func_binned_gsl(sim, P_k, corr_func_binned, &xi_r);
-}
 
 void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const Extrap_Pk& P_k, Data_Vec<double, 2>* corr_func_binned)
 {
@@ -585,3 +576,19 @@ double  get_max_Pk(Sim_Param* sim)
     gsl_min_fminimizer_free(s);
     return k;
 }
+
+// maybe replace function templates by class template? better to maintain, less variability
+template Interp_obj::Interp_obj(const Data_Vec<double, 2>& data);
+template Interp_obj::Interp_obj(const Data_Vec<double, 3>& data);
+template void Interp_obj::init(const Data_Vec<double, 2>& data);
+template void Interp_obj::init(const Data_Vec<double, 3>& data);
+template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 2>& data, const Sim_Param& sim);
+template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 3>& data, const Sim_Param& sim);
+template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 2>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
+              const unsigned m_u, const unsigned n_u, double n_s);
+template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 3>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
+              const unsigned m_u, const unsigned n_u, double n_s);
+template void Extrap_Pk::fit_lin(const Data_Vec<double, 2>& data, const unsigned m, const unsigned n, double& A);
+template void Extrap_Pk::fit_lin(const Data_Vec<double, 3>& data, const unsigned m, const unsigned n, double& A);
+template void Extrap_Pk::fit_power_law(const Data_Vec<double, 2>& data, const unsigned m, const unsigned n, double& A);
+template void Extrap_Pk::fit_power_law(const Data_Vec<double, 3>& data, const unsigned m, const unsigned n, double& A);

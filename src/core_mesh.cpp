@@ -27,7 +27,7 @@ void get_k_vec(int N, int index, Vec_3D<int> &k_vec)
 	for (int i =0; i<2; i++) k_vec[i] = ((k_vec[i]<=N/2.) ? k_vec[i] : k_vec[i] - N); // k_vec[2] is ALWAYS less or equal than N/2 (real FFTW)
 }
 
-int get_k_sq(int N, int index)
+double get_k_sq(int N, int index)
 {
 	int k_vec[3];
 	double tmp = 0;

@@ -19,7 +19,7 @@ template<class T>
 void standard_preparation(T& APP)
 {
     /* Generating the right density distribution in k-space */	
-    gen_rho_dist_k(APP.sim, &APP.app_field[0], APP.p_F);
+    gen_rho_dist_k(APP.sim, &APP.app_field[0]);
     
 	/* Computing initial potential in k-space */
 	gen_pot_k(APP.app_field[0], &APP.power_aux[0]);

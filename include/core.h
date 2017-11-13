@@ -465,7 +465,8 @@ public:
     std::vector<Mesh> power_aux;
     T* particles;
 
-	Data_Vec<double, 2> pwr_spec_binned, pwr_spec_binned_0, vel_pwr_spec_binned_0, corr_func_binned;
+    Data_Vec<double, 3> pwr_spec_binned, pwr_spec_binned_0, vel_pwr_spec_binned_0;
+    Data_Vec<double, 2> corr_func_binned;
 	fftw_plan p_F, p_B, p_F_pwr, p_B_pwr;
 	Tracking track;
 	std::vector<int> dens_binned;
