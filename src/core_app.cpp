@@ -302,8 +302,9 @@ static void gen_rho_w_pow_k(const Sim_Param &sim, Mesh* rho)
     const int phase = sim.run_opt.phase ? 1 : -1;
     const double mod = phase / (sqrt(2.) * pow(L, 3/2.)); // pair sim, Re^2 + Im^2 factor, dimension trans. Pk -> Pk*
     const unsigned N = rho->N;
+    const unsigned len = rho->length / 2;
 	#pragma omp parallel for private(k)
-	for(unsigned i=0; i < rho->length / 2;i++)
+	for(unsigned i=0; i < len; i++)
 	{
         k = k0*sqrt(get_k_sq(N, i));
         (*rho)[2*i] *= mod*sqrt(lin_pow_spec(k, sim.cosmo));
@@ -381,7 +382,7 @@ void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux)
 	{
 		w_k = 1.;
 		get_k_vec(NM, i, k_vec);
-		for (int j = 0; j < 3; j++) if (k_vec[j] != 0) w_k *= pow(sin(PI*k_vec[j]/NM)/(PI*k_vec[j]/NM), ORDER + 1);
+		for (int j = 0; j < 3; j++) if (k_vec[j] != 0) w_k *= pow(sin(k_vec[j]*PI/NM)/(k_vec[j]*PI/NM), ORDER + 1);
         (*power_aux)[2*i] = (rho_k[2*i]*rho_k[2*i] + rho_k[2*i+1]*rho_k[2*i+1])/(w_k*w_k);
 		(*power_aux)[2*i+1] = k_vec.norm();
 	}
@@ -406,7 +407,7 @@ void vel_pwr_spec_k(const Sim_Param &sim, const vector<Mesh> &vel_field, Mesh* p
         vel_div_re = vel_div_im = 0;
 		get_k_vec(NM, i, k_vec);
         for (int j = 0; j < 3; j++){
-            k = 2*PI*k_vec[j] / NM;
+            k = k_vec[j]*2*PI / NM;
             if (k != 0) w_k *= pow(sin(k/2.)/(k/2.), ORDER + 1);
             vel_div_re += vel_field[j][2*i]*k; // do not care about Re <-> Im in 2*PI*i/N, norm only
             vel_div_im += vel_field[j][2*i+1]*k;

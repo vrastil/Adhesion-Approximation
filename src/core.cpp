@@ -38,7 +38,7 @@ const char *humanSize(uint64_t bytes){
  */
 
  template <typename T>
- double Vec_3D<T>::norm2() const
+ T Vec_3D<T>::norm2() const
  {
      T tmp(0);
      for (const T val : vec)
@@ -496,7 +496,7 @@ void Sim_Param::Box_Opt::init()
 {
     Ng = mesh_num / par_num_1d;
     Ng_pwr = mesh_num_pwr/par_num_1d;
-    par_num = pow(par_num_1d, 3);
+    par_num = par_num_1d*par_num_1d*par_num_1d;
 }
 
 void Sim_Param::Integ_Opt::init()
@@ -675,7 +675,7 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
     vel_pwr_spec_binned_0.reserve(bin_num);
 
     // RESERVE MEMORY FOR BINNED CORRELATION FUNCTION
-    bin_num = (sim.other_par.x_corr.upper - sim.other_par.x_corr.lower) / 10. * sim.out_opt.points_per_10_Mpc;
+    bin_num =  (unsigned)ceil((sim.other_par.x_corr.upper - sim.other_par.x_corr.lower)/ 10. * sim.out_opt.points_per_10_Mpc);
     corr_func_binned.reserve(bin_num);
     
     // CREAT SUBDIR STRUCTURE

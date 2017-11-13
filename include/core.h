@@ -45,7 +45,7 @@ public:
     const_iterator cend() const noexcept { return vec.end(); }
     
     // METHODS
-    double norm2() const;
+    T norm2() const;
 	double norm() const { return sqrt(norm2()); }
 	void fill(const T& value){ vec.fill(value); }
 		
