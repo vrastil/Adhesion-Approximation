@@ -109,7 +109,7 @@ def load_k_supp(files, k_nyquist_par):
         k = data[:, 0]
         P_diff = data[:, 1]
 
-        idx = (np.abs(k-0.67*k_nyquist_par)).argmin() / 7
+        idx = (np.abs(k-0.5*k_nyquist_par)).argmin() / 7
 
         supp_large.append(np.mean(P_diff[0:idx]))
         supp_large_std.append(np.std(P_diff[0:idx]))
