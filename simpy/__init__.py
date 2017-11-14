@@ -44,7 +44,7 @@ def slice_zs_files(zs, files, a_slice=2.4):
 
 def create_dir(out_dir):
     if not os.path.exists(out_dir):
-        print "Creating outdir '%s'" % out_dir
+        # print "Creating outdir '%s'" % out_dir
         os.makedirs(out_dir)
 
 def try_get_zs_files(a_sim_info, subdir, a_file='*.dat'):

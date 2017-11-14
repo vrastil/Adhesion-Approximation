@@ -154,7 +154,7 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, pw
         plt.show()
     plt.close(fig)
 
-def plot_pwr_spec_stacked(data_list, zs, a_sim_info, data_list_extrap=None, pwr_spec_files_emu=None,
+def plot_pwr_spec_stacked(data_list, zs, a_sim_info, Pk_list_extrap=None, pwr_spec_files_emu=None,
                   out_dir='auto', pk_type='dens', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
@@ -181,13 +181,11 @@ def plot_pwr_spec_stacked(data_list, zs, a_sim_info, data_list_extrap=None, pwr_
         # plt.errorbar(k, P_k, yerr=P_k_std, fmt='o', ms=3, label=lab)
         plt.plot(k, P_k, 'o', ms=3, label=lab)
         plt.fill_between(k, P_k-P_k_std, P_k+P_k_std, facecolor='lightgrey')
-        del k, P_k, P_k_std, data
+        
+        if Pk_list_extrap is not None:
+            plt.plot(k, Pk_list_extrap[i].eval_list(k), 'k--')
 
-        if data_list_extrap is not None:
-            data = data_list_extrap[i]
-            k, P_k = data[0], data[1]
-            plt.plot(k, P_k, 'k--')
-            del k, P_k, data
+        del k, P_k, P_k_std, data
     
     if pwr_spec_files_emu is not None:
         data = np.loadtxt(pwr_spec_files_emu[-1])
@@ -252,40 +250,34 @@ def plot_pwr_spec_stacked(data_list, zs, a_sim_info, data_list_extrap=None, pwr_
         plt.show()
     plt.close(fig)
 
-def plot_corr_func(corr_func_files, zs, a_sim_info, corr_func_files_lin=None, corr_func_files_emu=None, out_dir='auto', save=True, show=False):
+def plot_corr_func_from_data(corr_data, zs, a_sim_info, corr_func_files_lin=None, corr_func_files_emu=None, out_dir='auto', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     fig = plt.figure(figsize=(15, 11))
-
     lab = 'z = ' + str(zs[-1])
-    data = np.loadtxt(corr_func_files[-1])
-    r, xi = data[:, 0], data[:, 1]
-    del data
+
+    r, xi = corr_data[0], corr_data[1]
+    plt.plot(r, xi, 'o', ms=3, label=lab)
+
     if corr_func_files_lin is not None:
         data = np.loadtxt(corr_func_files_lin[-1])
-        r_lin, xi_lin = data[:, 0], data[:, 1]
-        del data
+        corr_data_lin = np.transpose(data)
+        r_lin, xi_lin = corr_data_lin[0], corr_data_lin[1]
+        plt.plot(r_lin, xi_lin, '-', label=r"$\Lambda$CDM (lin)")
+        del data, corr_data_lin
+
     if corr_func_files_emu is not None:
         data = np.loadtxt(corr_func_files_emu[-1])
-        r_emu, xi_emu = data[:, 0], data[:, 1]
-        del data
-
-    # inter = interpolate.PchipInterpolator(r, xi)
-    # xnew = np.linspace(np.min(r), np.max(r), num=10*len(r), endpoint=True)
-    # ynew = inter(xnew)
-
-    plt.plot(r, xi, 'o', ms=3, label=lab)
-    if corr_func_files_lin is not None:
-        plt.plot(r_lin, xi_lin, '-', label=r"$\Lambda$CDM (lin)")
-    if corr_func_files_emu is not None:
+        corr_data_emu = np.transpose(data)
+        r_emu, xi_emu = corr_data_emu[0], corr_data_emu[1]
         plt.plot(r_emu, xi_emu, '-', label=r"$\Lambda$CDM (emu)")
-
+        del data, corr_data_emu
+        
+        
     fig.suptitle("Correlation function", y=0.99, size=20)
     plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
     plt.ylabel(r"$\xi(r)$", fontsize=15)
     plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
-    linthreshy=1e-3
-    # plt.yscale("symlog", linthreshy=linthreshy, linscaley=4)
     plt.yscale("log")
     plt.xscale("log")
     plt.draw()
@@ -323,6 +315,13 @@ def plot_corr_func(corr_func_files, zs, a_sim_info, corr_func_files_lin=None, co
         plt.show()
     plt.close(fig)
 
+
+def plot_corr_func(corr_func_files, zs, a_sim_info, corr_func_files_lin=None, corr_func_files_emu=None, out_dir='auto', save=True, show=False):
+    data = np.loadtxt(corr_func_files[-1])
+    corr_data = np.transpose(data)
+    del data
+    plot_corr_func_from_data(corr_data, zs, a_sim_info, corr_func_files_lin, corr_func_files_emu, out_dir, save, show)
+    
 
 def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_type='dens', save=True, show=False):
     if out_dir == 'auto':

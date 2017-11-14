@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import PchipInterpolator
 from scipy.optimize import curve_fit
+from scipy.integrate import quad
 import json
 
 from . import *
@@ -103,8 +104,6 @@ class Extrap_Pk(Interp_obj):
                                sigma=dPk[ind - decade / 2:ind])  # fit over a half of a decade
         self.A_upper = popt
         self.k_upper = k[ind]
-        print "k < %e, A = %e; k > %e, A = %e" % (self.k_lower, self.A_lower, self.k_upper, self.A_upper)
-        del k, Pk, dPk, f
 
     def eval(self, k):
         if k < self.k_lower:
@@ -120,48 +119,88 @@ class Extrap_Pk(Interp_obj):
             Pk_list.append(self.eval(k))
         return Pk_list
 
-
-def stack_group(group_sim_infos):
-    # Power spectrum
-    a_sim_info = group_sim_infos[0]
-    out_dir = a_sim_info.dir.replace(a_sim_info.dir.split("/")[-2] + "/", "")
-    out_dir += "STACK_%im_%ip_%iM_%ib/" % (
-        a_sim_info.box_opt["mesh_num"], a_sim_info.box_opt["par_num"],
-        a_sim_info.box_opt["mesh_num_pwr"], a_sim_info.box_opt["box_size"])
-    create_dir(out_dir)
-    create_dir(out_dir + "pwr_spec/")
-    create_dir(out_dir + "results/")
-
-    print "\tLoading data to stack..."
-    zs, data_list = stack_files(group_sim_infos, 'pwr_spec/', '*par*.dat')
+def save_all(**kwargs):
+    zs = kwargs["zs"]
+    data_list = kwargs["data_list"]
+    Pk_list = kwargs["Pk_list"]
+    app = kwargs["app"]
+    out_dir = kwargs["out_dir"]
+    xi_list = kwargs["xi_list"]
     print "\tSaving stacked data..."
     for i in xrange(len(zs)):
+        # Power spectrum
         fname = out_dir + \
-            "pwr_spec/pwr_spec_par_%s_z%.2f" % (a_sim_info.app, zs[i])
+            "pwr_spec/pwr_spec_par_%s_z%.2f" % (app, zs[i])
         header = ("# This file contains power spectrum P(k) in units [(Mpc/h)^3] "
                   "depending on wavenumber k in units [h/Mpc] with standard deviation in units [h/Mpc].\n"
                   "# k [h/Mpc]\tP(k) [(Mpc/h)^3]\tstd [(Mpc/h)^3]")
         np.savetxt(fname, np.transpose(
             data_list[i]), fmt='%.6e', header=header)
         
-        Pk = Extrap_Pk(data_list[i], a_sim_info.cosmo,
-                       a_sim_info.ccl_cosmo, a_sim_info.k_nyquist["particle"])
+        # Extrapolated power spectrum
         fname = out_dir + \
-            "pwr_spec/pwr_spec_extrap_%s_z%.2f" % (a_sim_info.app, zs[i])
+            "pwr_spec/pwr_spec_extrap_%s_z%.2f" % (app, zs[i])
         header = ("# This file contains extra/intra-polated power spectrum P(k) in units [(Mpc/h)^3] "
                   "depending on wavenumber k in units [h/Mpc].\n"
                   "# k [h/Mpc]\tP(k) [(Mpc/h)^3]")
         np.savetxt(fname, np.transpose([
-            data_list[i][0], Pk.eval_list(data_list[i][0])]), fmt='%.6e', header=header)
-    
-        for k in np.logspace(-3, 1, num=10):
-            print "A = [%e, %e]\tk = %e\tP(k) = %e\tP_lin(k) = %e" % (Pk.A_lower, Pk.A_upper, k, Pk.eval(k),
-                plot.pwr_spec(k, a_sim_info.cosmo, a_sim_info.ccl_cosmo, z=zs[i]))
-        del Pk
+            data_list[i][0], Pk_list[i].eval_list(data_list[i][0])]), fmt='%.6e', header=header)
 
+        # Correlation function
+        fname = out_dir + \
+            "corr_func/corr_func_scipy_qawf_par_%s_z%.2f" % (app, zs[i])
+        header = ("# This file contains correlation function depending on distance r in units [Mpc/h]."
+                  "# r [Mpc/h]\txsi(r)")
+        np.savetxt(fname, np.transpose(xi_list[i]), fmt='%.6e', header=header)
+
+
+def corr_func_r(r, Pk):
+    f = lambda k : 1./(2.*np.pi**2)*k/r*Pk.eval(k)
+    sys.stdout.write('\tr = %f\r' % r)
+    sys.stdout.flush()
+    xi, err = quad(f, 0, np.inf, weight='sin', wvar=r)
+    return xi
+
+def corr_func(Pk, r_min=1, r_max=200, num=50):
+    r_range = np.linspace(r_min, r_max, num=num)
+    print "\tComputing correlation function..."
+    corr = [corr_func_r(r, Pk) for r in r_range]
+    print "\n\tDone!"
+    return [r_range, corr]
+
+def stack_group(group_sim_infos):
+    # Power spectrum
+    a_sim_info = group_sim_infos[-1]
+    out_dir = a_sim_info.dir.replace(a_sim_info.dir.split("/")[-2] + "/", "")
+    out_dir += "STACK_%im_%ip_%iM_%ib/" % (
+        a_sim_info.box_opt["mesh_num"], a_sim_info.box_opt["par_num"],
+        a_sim_info.box_opt["mesh_num_pwr"], a_sim_info.box_opt["box_size"])
+    create_dir(out_dir)
+    create_dir(out_dir + "pwr_spec/")
+    create_dir(out_dir + "corr_func/")
+    create_dir(out_dir + "results/")
+
+    print "\tLoading data to stack..."
+    # stack all files, get mean of k and Pk, compute std of Pk
+    zs, data_list = stack_files(group_sim_infos, 'pwr_spec/', '*par*.dat')
+    # for each entry in data_list compute its extra/inter-polated version
+    Pk_list = [Extrap_Pk(data, a_sim_info.cosmo, a_sim_info.ccl_cosmo, a_sim_info.k_nyquist["particle"]) for data in data_list]
+    # for each Pk in Pk_list compute correlation function
+    xi_list = [corr_func(Pk) for Pk in Pk_list]
+    # save all data
+    save_all(zs=zs, data_list=data_list, Pk_list=Pk_list, app=a_sim_info.app, xi_list=xi_list, out_dir=out_dir)
+    
     print '\tPlotting power spectrum...'
     plot.plot_pwr_spec_stacked(
-        data_list, zs, a_sim_info, out_dir=out_dir + "results/")
+        data_list, zs, a_sim_info, Pk_list, out_dir=out_dir + "results/")
+
+    print '\tPlotting correlation function...'
+    files_emu = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*emu*.dat')[1]
+    files_lin = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*lin*.dat')[1]
+
+    plot.plot_corr_func_from_data(
+       xi_list[-1], zs, a_sim_info, files_lin,
+       files_emu, out_dir=out_dir + "results/")
 
 
 def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/'):
