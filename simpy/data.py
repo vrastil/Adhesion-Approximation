@@ -195,14 +195,15 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
 
     # Correlation function
     key = "corr_func"
-    zs, files_emu = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*emu*.dat')
+    zs_emu, files_emu = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*emu*.dat')
+    print 'zs_emu = ', zs_emu
     zs, files_lin = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*lin*.dat')
     zs, files = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*par*.dat')
     if a_sim_info.rerun(rerun, key, skip, zs):
         print 'Plotting correlation function...'
-        plot.plot_corr_func(files, zs, a_sim_info, corr_func_files_lin=files_lin, corr_func_files_emu=files_emu)
+        plot.plot_corr_func(files, zs, a_sim_info, corr_func_files_lin=files_lin, corr_func_files_emu=files_emu, zs_emu=zs_emu)
         a_sim_info.done(key)
-    del zs, files, files_lin
+    del zs, zs_emu, files, files_lin
 
     # Density distribution
     key = "dens_hist"

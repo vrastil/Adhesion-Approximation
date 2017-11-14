@@ -250,30 +250,25 @@ def plot_pwr_spec_stacked(data_list, zs, a_sim_info, Pk_list_extrap=None, pwr_sp
         plt.show()
     plt.close(fig)
 
-def plot_corr_func_from_data(corr_data, zs, a_sim_info, corr_func_files_lin=None, corr_func_files_emu=None, out_dir='auto', save=True, show=False):
+def plot_corr_func_from_data_single(corr_data, z, a_sim_info, corr_data_lin=None, corr_data_emu=None, out_dir='auto', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
-    fig = plt.figure(figsize=(15, 11))
-    lab = 'z = ' + str(zs[-1])
 
+    # *****************
+    # first plot, xi(r)
+    # *****************
+    fig = plt.figure(figsize=(15, 11))
+    lab = 'z = ' + str(z)
+    # load all data, plot xi(r)
     r, xi = corr_data[0], corr_data[1]
     plt.plot(r, xi, 'o', ms=3, label=lab)
-
-    if corr_func_files_lin is not None:
-        data = np.loadtxt(corr_func_files_lin[-1])
-        corr_data_lin = np.transpose(data)
+    if corr_data_lin is not None:
         r_lin, xi_lin = corr_data_lin[0], corr_data_lin[1]
         plt.plot(r_lin, xi_lin, '-', label=r"$\Lambda$CDM (lin)")
-        del data, corr_data_lin
-
-    if corr_func_files_emu is not None:
-        data = np.loadtxt(corr_func_files_emu[-1])
-        corr_data_emu = np.transpose(data)
+    if corr_data_emu is not None:
         r_emu, xi_emu = corr_data_emu[0], corr_data_emu[1]
-        plt.plot(r_emu, xi_emu, '-', label=r"$\Lambda$CDM (emu)")
-        del data, corr_data_emu
-        
-        
+        plt.plot(r_emu, xi_emu, '-', label=r"$\Lambda$CDM (emu)")    
+    # adjust figure, labels
     fig.suptitle("Correlation function", y=0.99, size=20)
     plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
     plt.ylabel(r"$\xi(r)$", fontsize=15)
@@ -284,21 +279,24 @@ def plot_corr_func_from_data(corr_data, zs, a_sim_info, corr_func_files_lin=None
     plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
-
+    # save & show (in jupyter)
     if save:
-        plt.savefig(out_dir + 'corr_func.png')
+        plt.savefig(out_dir + 'corr_func_z%.2f.png' % z)
     if show:
         plt.show()
     plt.close(fig)
 
+    # **********************
+    # second plot, r*r*xi(r)
+    # **********************
     fig = plt.figure(figsize=(15, 11))
-
+    # plot r*r*xi(r)
     plt.plot(r, r*r*xi, 'o', ms=3, label=lab)
-    if corr_func_files_lin is not None:
+    if corr_data_lin is not None:
         plt.plot(r_lin, r_lin*r_lin*xi_lin, '-', label=r"$\Lambda$CDM (lin)")
-    if corr_func_files_emu is not None:
+    if corr_data_emu is not None:
         plt.plot(r_emu, r_emu*r_emu*xi_emu, '-', label=r"$\Lambda$CDM (emu)")
-
+    # adjust figure, labels
     fig.suptitle("Correlation function", y=0.99, size=20)
     plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
     plt.ylabel(r"$r^2\xi(r)$", fontsize=15)
@@ -308,20 +306,54 @@ def plot_corr_func_from_data(corr_data, zs, a_sim_info, corr_func_files_lin=None
     plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
-    
+    # save & show (in jupyter)
     if save:
-        plt.savefig(out_dir + 'corr_r2_func.png')
+        plt.savefig(out_dir + 'corr_r2_func_z%.2f.png' % z)
     if show:
         plt.show()
     plt.close(fig)
 
 
-def plot_corr_func(corr_func_files, zs, a_sim_info, corr_func_files_lin=None, corr_func_files_emu=None, out_dir='auto', save=True, show=False):
-    data = np.loadtxt(corr_func_files[-1])
-    corr_data = np.transpose(data)
-    del data
-    plot_corr_func_from_data(corr_data, zs, a_sim_info, corr_func_files_lin, corr_func_files_emu, out_dir, save, show)
+# correlation function stacked data, linear and emu corr. func in files
+def plot_corr_func_from_data(corr_data_list, zs, a_sim_info, corr_func_files_lin=None, corr_func_files_emu=None, zs_emu=None, out_dir='auto', save=True, show=False):
+    # check number of files
+    if corr_func_files_lin is not None and len(corr_data_list) != len(corr_func_files_lin):
+        print "\tWARNING! Different number of correlation data from particles and linear prediction! Not plotting linear correlation function."
+        corr_func_files_lin = None
+    if zs_emu is not None and len(zs_emu) != len(corr_func_files_emu):
+        print "\tWARNING! Correlation data from emulator do not correspond to their redshifts! Not plotting emulator correlation function."
+        corr_func_files_emu = None
     
+    a_end = 1 / (1 + zs[-1])
+    a_ = 0
+    j= 0
+    for i, z in enumerate(zs):
+        # load emulator correlation BEFORE disregarding the plot
+        if corr_func_files_emu is not None and z == zs_emu[j]:
+            corr_data_emu = np.transpose(np.loadtxt(corr_func_files_emu[j]))
+            j += 1
+        else:
+            corr_data_emu = None
+        
+        a = 1 / (1 + z)
+        if (a < 2.4 * a_) and a != a_end: # no need to plot EVERY correlation function
+            continue	
+        a_ = a
+        corr_data = corr_data_list[i]
+        if corr_func_files_lin is not None:
+            corr_data_lin = np.transpose(np.loadtxt(corr_func_files_lin[i]))
+        else:
+            corr_data_lin = None
+        
+        plot_corr_func_from_data_single(corr_data, z, a_sim_info, corr_data_lin, corr_data_emu, out_dir, save, show)
+        del corr_data, corr_data_lin, corr_data_emu
+
+
+# correlation function directly from siulation, no stacking, all data in files
+def plot_corr_func(corr_func_files, zs, a_sim_info, corr_func_files_lin=None, corr_func_files_emu=None, zs_emu=None, out_dir='auto', save=True, show=False):
+    corr_data_list = [np.transpose(np.loadtxt(corr_func_files[i])) for i in xrange(len(zs))]
+    plot_corr_func_from_data(corr_data_list, zs, a_sim_info, corr_func_files_lin, corr_func_files_emu, zs_emu, out_dir, save, show)
+
 
 def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_type='dens', save=True, show=False):
     if out_dir == 'auto':

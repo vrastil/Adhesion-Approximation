@@ -120,12 +120,14 @@ class Extrap_Pk(Interp_obj):
         return Pk_list
 
 def save_all(**kwargs):
+    # extract argument dictionary for convenience
     zs = kwargs["zs"]
     data_list = kwargs["data_list"]
     Pk_list = kwargs["Pk_list"]
     app = kwargs["app"]
     out_dir = kwargs["out_dir"]
     xi_list = kwargs["xi_list"]
+
     print "\tSaving stacked data..."
     for i in xrange(len(zs)):
         # Power spectrum
@@ -170,7 +172,7 @@ def corr_func(Pk, r_min=1, r_max=200, num=50):
 
 def stack_group(group_sim_infos):
     # Power spectrum
-    a_sim_info = group_sim_infos[-1]
+    a_sim_info = group_sim_infos[-1] # use last a_sim_info of SORTED list, i.e. the last run (if need to add info, e.g. coorelation data)
     out_dir = a_sim_info.dir.replace(a_sim_info.dir.split("/")[-2] + "/", "")
     out_dir += "STACK_%im_%ip_%iM_%ib/" % (
         a_sim_info.box_opt["mesh_num"], a_sim_info.box_opt["par_num"],
@@ -195,12 +197,12 @@ def stack_group(group_sim_infos):
         data_list, zs, a_sim_info, Pk_list, out_dir=out_dir + "results/")
 
     print '\tPlotting correlation function...'
-    files_emu = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*emu*.dat')[1]
+    zs_emu,files_emu = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*emu*.dat')
     files_lin = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*lin*.dat')[1]
 
     plot.plot_corr_func_from_data(
-       xi_list[-1], zs, a_sim_info, files_lin,
-       files_emu, out_dir=out_dir + "results/")
+       xi_list, zs, a_sim_info, files_lin,
+       files_emu, zs_emu, out_dir=out_dir + "results/")
 
 
 def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/'):
@@ -227,6 +229,11 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
 
     # remove 1-length sep_sim_infos
     sep_files[:] = [x for x in sep_files if len(x) != 1]
+
+    # sort sim_infos
+    for sep_sim_infos in sep_files:
+        sep_sim_infos.sort(key = lambda x : x.dir)
+
 
     print "There are in total %i different runs, from which %i share the same parameters, constituting %i group(s) eligible for stacking:" % (
         num_all_runs, num_all_sep_runs, num_sep_runs)
