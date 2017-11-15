@@ -60,9 +60,7 @@ class SimInfo(object):
 
         if self.results is None:
             self.results = {}
-        for key in RESULTS_KEYS:
-            if key not in self.results:
-                self.results[key] = False
+        
 
         self.file = a_file
         self.dir = a_file.replace(a_file.split("/")[-1], '')

@@ -75,12 +75,11 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, pw
     a_end = 1 / (1 + zs[-1])
     a_ = 0
     lab = 'init'
-
     init_idx_cor = 0 # if there is pwr_spec file 'init', extrap files have one file less
     for i, pwr in enumerate(pwr_spec_files):
         if zs[i] != 'init':
             a = 1 / (1 + zs[i])
-            if (a < 2.4 * a_) and a != a_end:
+            if ((a < 2 * a_) or (2 * a > a_end)) and a != a_end:
                 continue		
             a_ = a
             lab = 'z = ' + str(zs[i])
@@ -178,22 +177,23 @@ def plot_pwr_spec_stacked(data_list, zs, a_sim_info, Pk_list_extrap=None, pwr_sp
 
     a_end = 1 / (1 + zs[-1])
     a_ = 0
-    init_idx_cor = 0 # if there is pwr_spec file 'init', extrap files have one file less
+    lab = 'init'
     for i, data in enumerate(data_list):
         if zs[i] != 'init':
             a = 1 / (1 + zs[i])
-            if (a < 2.4 * a_) and a != a_end:
+            if ((a < 2 * a_) or (2 * a > a_end)) and a != a_end:
                 continue		
             a_ = a
             lab = 'z = ' + str(zs[i])
-        else:
-            init_idx_cor += 1
 
-		
         k, P_k, P_k_std = data[0], data[1], data[2]
         # plt.errorbar(k, P_k, yerr=P_k_std, fmt='o', ms=3, label=lab)
         plt.plot(k, P_k, 'o', ms=3, label=lab)
-        plt.fill_between(k, P_k-P_k_std, P_k+P_k_std, facecolor='lightgrey')
+        if lab != 'init':
+            facecolor = 'darkgrey'
+        else:
+             facecolor = 'darkgrey'
+        plt.fill_between(k, P_k-P_k_std, P_k+P_k_std, facecolor=facecolor, alpha=0.5)
         
         if Pk_list_extrap is not None:
             plt.plot(k, Pk_list_extrap[i].eval_list(k), 'k--')
@@ -225,8 +225,9 @@ def plot_pwr_spec_stacked(data_list, zs, a_sim_info, Pk_list_extrap=None, pwr_sp
     del data
 
     if pk_type == "dens":
+        z0 = zs[0] if zs[0] != "init" else zs[1]
         P_0 = [pwr_spec(k_, a_sim_info.cosmo, ccl_cosmo=a_sim_info.ccl_cosmo, z=zs[-1]) for k_ in k]
-        P_i = [pwr_spec(k_, a_sim_info.cosmo, ccl_cosmo=a_sim_info.ccl_cosmo, z=zs[0]) for k_ in k]
+        P_i = [pwr_spec(k_, a_sim_info.cosmo, ccl_cosmo=a_sim_info.ccl_cosmo, z=z0) for k_ in k]
         plt.plot(k, P_0, '-')
         plt.plot(k, P_i, '-')
     elif pk_type == "vel":
@@ -271,7 +272,12 @@ def plot_corr_func_from_data_single(corr_data, z, a_sim_info, corr_data_lin=None
     # first plot, xi(r)
     # *****************
     fig = plt.figure(figsize=(15, 11))
-    lab = 'z = ' + str(z)
+    if z == 'init':
+        lab = z
+        z_out = z
+    else:
+        lab = 'z = ' + str(z)
+        z_out = 'z%.2f' % z
     # load all data, plot xi(r)
     r, xi = corr_data[0], corr_data[1]
     plt.plot(r, xi, 'o', ms=3, label=lab)
@@ -294,7 +300,7 @@ def plot_corr_func_from_data_single(corr_data, z, a_sim_info, corr_data_lin=None
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
     # save & show (in jupyter)
     if save:
-        plt.savefig(out_dir + 'corr_func_z%.2f.png' % z)
+        plt.savefig(out_dir + 'corr_func_%s.png' % z_out)
     if show:
         plt.show()
     plt.close(fig)
@@ -321,7 +327,7 @@ def plot_corr_func_from_data_single(corr_data, z, a_sim_info, corr_data_lin=None
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
     # save & show (in jupyter)
     if save:
-        plt.savefig(out_dir + 'corr_r2_func_z%.2f.png' % z)
+        plt.savefig(out_dir + 'corr_r2_func_%s.png' % z_out)
     if show:
         plt.show()
     plt.close(fig)
@@ -329,19 +335,17 @@ def plot_corr_func_from_data_single(corr_data, z, a_sim_info, corr_data_lin=None
 
 # correlation function stacked data, linear and emu corr. func in files
 def plot_corr_func_from_data(corr_data_list, zs, a_sim_info, corr_func_files_lin=None, corr_func_files_emu=None, zs_emu=None, out_dir='auto', save=True, show=False):
-    # check number of files
-    if corr_func_files_lin is not None and len(corr_data_list) != len(corr_func_files_lin):
-        print "\tWARNING! Different number of correlation data from particles and linear prediction! Not plotting linear correlation function."
-        corr_func_files_lin = None
-    if zs_emu is not None and len(zs_emu) != len(corr_func_files_emu):
-        print "\tWARNING! Correlation data from emulator do not correspond to their redshifts! Not plotting emulator correlation function."
-        corr_func_files_emu = None
     
     a_end = 1 / (1 + zs[-1])
     a_ = 0
-    j= 0
+    j = 0
+    init_idx_cor = 0 # if there is pwr_spec file 'init', extrap files have one file less
     for i, z in enumerate(zs):
-        # load emulator correlation BEFORE disregarding the plot
+        # input correlation function handled separately
+        if z == "init":
+            init_idx_cor += 1
+            continue
+        # load emulator correlation BEFORE disregarding the plot (near times), still need to update j in this case
         if corr_func_files_emu is not None and z == zs_emu[j]:
             corr_data_emu = np.transpose(np.loadtxt(corr_func_files_emu[j]))
             j += 1
@@ -349,17 +353,23 @@ def plot_corr_func_from_data(corr_data_list, zs, a_sim_info, corr_func_files_lin
             corr_data_emu = None
         
         a = 1 / (1 + z)
-        if (a < 2.4 * a_) and a != a_end: # no need to plot EVERY correlation function
+        if ((a < 2 * a_) or (2 * a > a_end)) and a != a_end: # no need to plot EVERY correlation function
             continue	
         a_ = a
         corr_data = corr_data_list[i]
         if corr_func_files_lin is not None:
-            corr_data_lin = np.transpose(np.loadtxt(corr_func_files_lin[i]))
+            corr_data_lin = np.transpose(np.loadtxt(corr_func_files_lin[i-init_idx_cor]))
         else:
             corr_data_lin = None
         
         plot_corr_func_from_data_single(corr_data, z, a_sim_info, corr_data_lin, corr_data_emu, out_dir, save, show)
         del corr_data, corr_data_lin, corr_data_emu
+    # input correlation function
+    if zs[0] == "init" and zs_emu[-1] == 0:
+        corr_data_emu = np.transpose(np.loadtxt(corr_func_files_emu[-1]))
+        corr_data_lin = np.transpose(np.loadtxt(corr_func_files_lin[-1]))
+        corr_data = corr_data_list[0]
+        plot_corr_func_from_data_single(corr_data, zs[0], a_sim_info, corr_data_lin, corr_data_emu, out_dir, save, show)
 
 
 # correlation function directly from siulation, no stacking, all data in files
@@ -410,7 +420,7 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_t
     ymin = ymax = 0
     for i, pwr in enumerate(pwr_spec_diff_files):
         a = 1 / (1 + zs[i])
-        if (a < 2.4 * a_) and a != a_end:
+        if ((a < 2 * a_) or (2 * a > a_end)) and a != a_end:
             continue		
         a_ = a
         lab = 'z = ' + str(zs[i])
