@@ -367,18 +367,22 @@ int get_vel_from_par(Particle_x* particles, vector<Mesh>* vel_field, const Sim_P
     return 0;
 }
 
-void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux)
+void pwr_spec_k(const Mesh &rho_k, Mesh* power_aux)
 {
     /* Computing the power spectrum P(k)/L^3 -- dimensionLESS!
-    in real part of power_aux is stored pk, in imaginary dimensionLESS k
-	 Preserve values in rho_k */
+
+    > in real part [even] of power_aux is stored pk, in imaginary [odd] dimensionLESS k
+	> preserve values in rho_k
+    > as power_aux can be Mesh of different (bigger) size than rho_k, all sizes / lengths are taken from rho_k
+    */
 	
 	double w_k;
     Vec_3D<int> k_vec;
-    const unsigned NM = sim.box_opt.mesh_num_pwr;
+    const unsigned NM = rho_k.N;
+    const unsigned half_length = rho_k.length / 2;
 
 	#pragma omp parallel for private(w_k, k_vec)
-	for(unsigned i=0; i < rho_k.length/2;i++)
+	for(unsigned i=0; i < half_length;i++)
 	{
 		w_k = 1.;
 		get_k_vec(NM, i, k_vec);
@@ -388,20 +392,42 @@ void pwr_spec_k(const Sim_Param &sim, const Mesh &rho_k, Mesh* power_aux)
 	}
 }
 
-void vel_pwr_spec_k(const Sim_Param &sim, const vector<Mesh> &vel_field, Mesh* power_aux)
+void pwr_spec_k_init(const Mesh &rho_k, Mesh* power_aux)
 {
-    /* Computing the velocity power spectrum P(k)/L^3 -- dimensionLESS!
-    in real part of power_aux is stored pk, in imaginary dimensionLESS k
-	 Preserve values in rho_k */
+    /* same as above but now there is NO w_k correction */
+
+    Vec_3D<int> k_vec;
+    const unsigned NM = rho_k.N;
+    const unsigned half_length = rho_k.length / 2;
+
+	#pragma omp parallel for private(k_vec)
+	for(unsigned i=0; i < half_length;i++)
+	{
+		get_k_vec(NM, i, k_vec);
+        (*power_aux)[2*i] = rho_k[2*i]*rho_k[2*i] + rho_k[2*i+1]*rho_k[2*i+1];
+		(*power_aux)[2*i+1] = k_vec.norm();
+	}
+}
+
+void vel_pwr_spec_k(const vector<Mesh> &vel_field, Mesh* power_aux)
+{
+    /* Computing the velocity power spectrum divergence P(k)/L^3 -- dimensionLESS!
+
+    > in real part [even] of power_aux is stored pk, in imaginary [odd] dimensionLESS k
+	> preserve values in rho_k
+    > as power_aux can be Mesh of different (bigger) size than rho_k, all sizes / lengths are taken from rho_k
+    */
 	
 	double w_k;
     Vec_3D<int> k_vec;
-    const unsigned NM = sim.box_opt.mesh_num_pwr;
 
-    double vel_div_re, vel_div_im, k;
+    const unsigned NM = vel_field[0].N;
+    const unsigned half_length = vel_field[0].length / 2;
+
+    double vel_div_re, vel_div_im, k; // temporary store of Pk in case vel_field[0] = power_aux
 
 	#pragma omp parallel for private(w_k, k_vec, k, vel_div_re, vel_div_im)
-	for(unsigned i=0; i < power_aux->length/2;i++)
+	for(unsigned i=0; i < half_length; i++)
 	{
         w_k = 1.;
         vel_div_re = vel_div_im = 0;
@@ -418,8 +444,8 @@ void vel_pwr_spec_k(const Sim_Param &sim, const vector<Mesh> &vel_field, Mesh* p
 	}
 }
 
-void gen_cqty_binned(const double x_min, const double x_max, unsigned bins_per_decade,
-                    const Mesh &qty_mesh, Data_Vec<double, 3>& qty_binned, const double mod_q, const double mod_x)
+void gen_cqty_binned(const double x_min, const double x_max, const unsigned bins_per_decade,
+                    const Mesh &qty_mesh, const unsigned half_length, Data_Vec<double,3>& qty_binned, const double mod_q, const double mod_x)
 {
     /* bin some complex quantity on mesh in logarithmic bins, assuming:
        Q(x) = mod_q*qty_mesh[2*i]
@@ -427,6 +453,9 @@ void gen_cqty_binned(const double x_min, const double x_max, unsigned bins_per_d
        [mesh[2*i+1]] = [x_min] = [x_max]
 
        return binned data in qty_binned {x, <Q(x)>, std<Q(x)>}
+
+       Note: passing length of the array for case when my mesh is bigger than data stored in there
+             overloaded function exists when this is not the case
     */
 
     unsigned req_size = (unsigned)ceil(bins_per_decade*log10(x_max/x_min));
@@ -436,9 +465,10 @@ void gen_cqty_binned(const double x_min, const double x_max, unsigned bins_per_d
 
     double x;
     int bin;
+    
     /* compute sum x, Q(x), Q^2(x) in bins */
     #pragma omp parallel for private(x, bin)
-    for (unsigned i = 0; i < qty_mesh.length / 2; i++){
+    for (unsigned i = 0; i < half_length; i++){
         x = qty_mesh[2*i+1];
         if ((x <x_max) && (x>=x_min)){
             bin = (int)((log10(x) - log10(x_min)) * bins_per_decade);
@@ -473,6 +503,12 @@ void gen_cqty_binned(const double x_min, const double x_max, unsigned bins_per_d
 	}
 }
 
+
+void gen_cqty_binned(const double x_min, const double x_max, const unsigned bins_per_decade,
+                    const Mesh &qty_mesh, Data_Vec<double, 3>& qty_binned, const double mod_q, const double mod_x)
+{
+    gen_cqty_binned(x_min, x_max, bins_per_decade, qty_mesh, qty_mesh.length / 2, qty_binned, mod_q, mod_x);
+}
 /*
 void gen_rqty_binned(const double x_min, const double x_max, const double x_0,
     const Mesh &qty_mesh, Data_Vec<double, 2>& qty_binned, const double mod_q)
@@ -529,6 +565,15 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_Vec<d
 	gen_cqty_binned(1, sim.box_opt.mesh_num_pwr,  sim.out_opt.bins_per_decade, power_aux, *pwr_spec_binned, mod_pk, mod_k);
 }
 
+void gen_pow_spec_binned_init(const Sim_Param &sim, const Mesh &power_aux, const unsigned half_length, Data_Vec<double, 3>* pwr_spec_binned)
+{
+    /* same as above but now  power_aux is storing only data [0...mesh_num], NOT mesh_num_pwr */
+    const double mod_pk = pow(sim.box_opt.box_size, 3.); // P(k) -> dimensionFULL!
+    const double mod_k = 2.*PI/sim.box_opt.box_size;
+    printf("Computing binned initial power spectrum...\n");
+	gen_cqty_binned(1, sim.box_opt.mesh_num,  sim.out_opt.bins_per_decade, power_aux, half_length, *pwr_spec_binned, mod_pk, mod_k);
+}
+
 template <unsigned N>
 void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const Extrap_Pk &P_k, Data_Vec<double, N>* pwr_spec_binned)
 {
@@ -556,6 +601,7 @@ void gen_pot_k(const Mesh& rho_k, Mesh* pot_k)
 	printf("Computing potential in k-space...\n");
     double k2;
     const unsigned N = rho_k.N; // for case when pot_k is different mesh than vel_field
+    const double d2_k = pow(2.*PI/N, 2.); // factor from second derivative with respect to the mesh coordinates
     const unsigned l_half = rho_k.length/2;
 
 	#pragma omp parallel for private(k2)
@@ -565,8 +611,8 @@ void gen_pot_k(const Mesh& rho_k, Mesh* pot_k)
 			(*pot_k)[2*i] = 0;
 			(*pot_k)[2*i+1] = 0;
 		} else{
-			(*pot_k)[2*i] = -rho_k[2*i]/(k2*pow(2.*PI/N, 2.));
-			(*pot_k)[2*i+1] = -rho_k[2*i+1]/(k2*pow(2.*PI/N, 2.));
+			(*pot_k)[2*i] = -rho_k[2*i]/(k2*d2_k);
+			(*pot_k)[2*i+1] = -rho_k[2*i+1]/(k2*d2_k);
 		}
 	}
 }
@@ -652,6 +698,7 @@ void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, const double a)
     double potential_tmp[2];
     
     const unsigned N = (*vel_field)[0].N; // for case when pot_k is different mesh than vel_field
+    const double d_k = 2.*PI/N;  // 2*PI/N comes from derivative WITH RESPECT to the mesh coordinates
     const unsigned l_half = (*vel_field)[0].length/2;
 	
 	#pragma omp parallel for private(opt, k_vec, k_vec_phys, potential_tmp)
@@ -660,14 +707,13 @@ void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, const double a)
 		potential_tmp[0] = pot_k[2*i]; // prevent overwriting if vel_field[0] == pot_k
         potential_tmp[1] = pot_k[2*i+1]; // prevent overwriting if vel_field[0] == pot_k
         get_k_vec(N, i, k_vec);
-        k_vec_phys = Vec_3D<double>(k_vec)*(2.*PI/N);	
+        k_vec_phys = Vec_3D<double>(k_vec)*d_k;	
         // no optimalization
         if (a == -1) opt = 1.;
         // optimalization for CIC and S2 shaped particle
         else opt = CIC_opt(k_vec_phys, a);
 		for(unsigned j=0; j<3;j++)
 		{
-			// 2*PI/N comes from derivative WITH RESPECT to the mesh coordinates
 			(*vel_field)[j][2*i] = k_vec_phys[j]*potential_tmp[1]*opt;
 			(*vel_field)[j][2*i+1] = -k_vec_phys[j]*potential_tmp[0]*opt;
 		}

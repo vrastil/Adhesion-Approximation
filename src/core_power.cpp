@@ -328,7 +328,7 @@ int get_nearest(const double val, const vector<double>& vec)
 
 /**
  * @class:	Interp_obj
- * @brief:	linear interpolation of data [x, y]
+ * @brief:	Steffen interpolation of data [x, y]
  */
 
 template<unsigned N>
@@ -337,6 +337,9 @@ Interp_obj::Interp_obj(const Data_Vec<double, N>& data): is_init(true)
     acc = gsl_interp_accel_alloc ();
     spline = gsl_spline_alloc (gsl_interp_steffen, data.size());
     gsl_spline_init (spline, data[0].data(), data[1].data(), data.size());
+
+    x_min = data[0].front();
+    x_max = data[0].back();
 }
 
 template<unsigned N>
@@ -346,6 +349,9 @@ void Interp_obj::init(const Data_Vec<double, N>& data)
     acc = gsl_interp_accel_alloc ();
     spline = gsl_spline_alloc (gsl_interp_steffen, data.size());
     gsl_spline_init (spline, data[0].data(), data[1].data(), data.size());
+
+    x_min = data[0].front();
+    x_max = data[0].back();
 }
 
 Interp_obj::~Interp_obj()

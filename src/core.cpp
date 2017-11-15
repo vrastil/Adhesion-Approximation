@@ -755,7 +755,7 @@ void App_Var<T>::print()
     /* Compute power spectrum and bin it */
     if (sim.out_opt.get_pwr){
         fftw_execute_dft_r2c(p_F_pwr, power_aux[0]);
-        pwr_spec_k(sim, power_aux[0], &power_aux[0]);
+        pwr_spec_k(power_aux[0], &power_aux[0]);
         gen_pow_spec_binned(sim, power_aux[0], &pwr_spec_binned);
     }
 
@@ -767,7 +767,11 @@ void App_Var<T>::print()
             D_init = growth_factor(b, sim.cosmo);
             is_init_pwr_spec_0 = true;
         }
-        print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, growth_factor(b, sim.cosmo) / D_init, out_dir_app, z_suffix());
+        double D_now = growth_factor(b, sim.cosmo);
+        print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, D_now / D_init, out_dir_app, "_par" + z_suffix());
+        print_pow_spec_diff(pwr_spec_binned, pwr_spec_input, D_now, out_dir_app, "_input" + z_suffix());
+        print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, pwr_spec_input, D_now, D_init,
+                            out_dir_app, "_hybrid" + z_suffix());
     }
 
     /* Extrapolate power spectrum beyond range of simulation box */
@@ -807,7 +811,7 @@ void App_Var<T>::print()
     /* Velocity power spectrum */
     if (sim.out_opt.print_vel_pwr && get_vel_from_par(particles, &power_aux, sim)){
         fftw_execute_dft_r2c_triple(p_F_pwr, power_aux);
-        vel_pwr_spec_k(sim, power_aux, &power_aux[0]);
+        vel_pwr_spec_k(power_aux, &power_aux[0]);
         gen_pow_spec_binned(sim, power_aux[0], &pwr_spec_binned);
         print_vel_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
         if (!is_init_vel_pwr_spec_0){

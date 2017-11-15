@@ -6,7 +6,6 @@
 #pragma once
 
 #include "stdafx.h"
-#include <ccl.h>
 
 constexpr double PI = M_PI;
 /**
@@ -436,6 +435,8 @@ public:
         for (auto &vec : data) std::fill(vec.begin(), vec.end(), val);
     }
  };
+ 
+#include "core_power.h"
 
 /**
  * @class:	App_Var
@@ -465,8 +466,10 @@ public:
     std::vector<Mesh> power_aux;
     T* particles;
 
+    // OTHER VARIABLES
     Data_Vec<double, 3> pwr_spec_binned, pwr_spec_binned_0, vel_pwr_spec_binned_0;
     Data_Vec<double, 2> corr_func_binned;
+    Interp_obj pwr_spec_input;
 	fftw_plan p_F, p_B, p_F_pwr, p_B_pwr;
 	Tracking track;
 	std::vector<int> dens_binned;
@@ -479,13 +482,11 @@ public:
     void print();
     void upd_time();
     void print_mem() const;
-    void print_info() const;
-	
+    void print_info() const;	
 	std::string z_suffix();
-	
+	bool is_init_pwr_spec_0, is_init_vel_pwr_spec_0; //< be careful about setting these to true
 protected:	
     std::stringstream z_suffix_num;
-    bool is_init_pwr_spec_0, is_init_vel_pwr_spec_0;
     uint64_t memory_alloc; // only the largest chunks
 };
 
@@ -529,8 +530,6 @@ public:
  * @class:	App_Var_FP_mod
  * @brief:	class containing variables for modified Frozen-potential approximation
  */
- 
-#include "core_power.h"
 
  class App_Var_FP_mod: public App_Var<Particle_v>
 {

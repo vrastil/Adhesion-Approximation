@@ -19,11 +19,19 @@ void print_pow_spec(const Data_Vec<double, N> &pwr_spec_binned, std::string out_
 template <unsigned N>
 void print_vel_pow_spec(const Data_Vec<double, N> &pwr_spec_binned, std::string out_dir, std::string suffix);
 void print_corr_func(const Data_Vec<double, 2> &pwr_spec_binned, std::string out_dir, std::string suffix);
+
 template <unsigned N>
-void print_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Data_Vec<double, N> &pwr_spec_binned_0, 
-    double b, std::string out_dir, std::string suffix);
+void print_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Data_Vec<double, N> &pwr_spec_binned_0,
+    double growth, std::string out_dir, std::string suffix);
 template <unsigned N>
-void print_vel_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Data_Vec<double, N> &pwr_spec_binned_0, 
+void print_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Interp_obj &pwr_spec_input,
+    double growth, std::string out_dir, std::string suffix);
+template <unsigned N>
+void print_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Data_Vec<double, N> &pwr_spec_binned_0,
+    const Interp_obj &pwr_spec_input, double growth_now, double growth_init, std::string out_dir, std::string suffix);
+
+template <unsigned N>
+void print_vel_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Data_Vec<double, N> &pwr_spec_binned_0,
     double b, std::string out_dir, std::string suffix);
 
 template <class T>

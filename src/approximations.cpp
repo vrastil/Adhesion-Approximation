@@ -4,33 +4,13 @@
 
 #include "core_app.h"
 #include "core_mesh.h"
+#include "core_out.h"
 
 using namespace std;
 
 static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu);
 static void gen_expot(Mesh* potential,  const Mesh& expotential, double nu, double b);
 static void aa_convolution(App_Var_AA* APP);
-
-/***************************************
-* STANDARD PREPARATION FOR INTEGRATIOM *
-***************************************/
-
-template<class T>
-void standard_preparation(T& APP)
-{
-    /* Generating the right density distribution in k-space */	
-    gen_rho_dist_k(APP.sim, &APP.app_field[0]);
-    
-	/* Computing initial potential in k-space */
-	gen_pot_k(APP.app_field[0], &APP.power_aux[0]);
-	
-	/* Computing displacement in k-space */
-	gen_displ_k(&APP.app_field, APP.power_aux[0]);
-    
-    /* Computing displacement in q-space */
-    printf("Computing displacement in q-space...\n");
-    fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
-}
 
 /*********************
 * INITIAL CONDITIONS *
@@ -87,6 +67,40 @@ void print_init(T& APP)
     APP.track.update_track_par(APP.particles);
     if (APP.print_every) APP.print();
     APP.upd_time();
+}
+
+template<class T>
+void print_input_realisation(T& APP)
+{
+    /* Print input power spectrum (one realisation), before Zel`dovich push */
+    pwr_spec_k_init(APP.app_field[0], &APP.power_aux[0]);
+    gen_pow_spec_binned_init(APP.sim, APP.power_aux[0], APP.app_field[0].length/2, &APP.pwr_spec_binned_0);
+    APP.pwr_spec_input.init(APP.pwr_spec_binned_0);
+    print_pow_spec(APP.pwr_spec_binned_0, APP.out_dir_app, APP.z_suffix_const + "init");
+}
+
+/***************************************
+* STANDARD PREPARATION FOR INTEGRATIOM *
+***************************************/
+
+template<class T>
+void standard_preparation(T& APP)
+{
+    /* Generating the right density distribution in k-space */	
+    gen_rho_dist_k(APP.sim, &APP.app_field[0]);
+
+    /* Print input power spectrum (one realisation), before Zel`dovich push */
+    print_input_realisation(APP);
+    
+	/* Computing initial potential in k-space */
+	gen_pot_k(APP.app_field[0], &APP.power_aux[0]);
+	
+	/* Computing displacement in k-space */
+	gen_displ_k(&APP.app_field, APP.power_aux[0]);
+    
+    /* Computing displacement in q-space */
+    printf("Computing displacement in q-space...\n");
+    fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
 }
 
 /**************

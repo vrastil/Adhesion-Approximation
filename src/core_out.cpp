@@ -66,7 +66,7 @@ void work_dir_over(string out_dir)
 }
 
 template <class T>
-void print_par_pos_cut_small(T* particles, const Sim_Param &sim, std::string out_dir, std::string suffix)
+void print_par_pos_cut_small(T* particles, const Sim_Param &sim, string out_dir, string suffix)
 {
    out_dir += "par_cut/";
    string file_name = out_dir + "par_cut" + suffix + ".dat";
@@ -169,21 +169,81 @@ void print_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Data_
     
 	cout << "Writing power spectrum difference into file " << file_name << "\n";
     File << "# This file contains relative difference between power spectrum P(k)\n"
-            "# and lineary extrapolated power spectrum depending on wavenumber k in units [h/Mpc].\n"
+            "# and lineary extrapolated power spectrum of initial position of particles\n"
+            "# depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 
-	double P_k, P_ZA;
+	double P_k, P_lin;
     cout.precision(15);
     const unsigned size = pwr_spec_binned.size();
 	for (unsigned j = 0; j < size; j++){
         if (close_enough(pwr_spec_binned[0][j], pwr_spec_binned_0[0][j])){
             P_k = pwr_spec_binned[1][j];
-			P_ZA = pwr_spec_binned_0[1][j] * pow(growth, 2.);
-            File << scientific << pwr_spec_binned[0][j] << "\t" << fixed << (P_k-P_ZA)/P_ZA << "\n";
+			P_lin = pwr_spec_binned_0[1][j] * pow(growth, 2.);
+            File << scientific << pwr_spec_binned[0][j] << "\t" << fixed << (P_k-P_lin)/P_lin << "\n";
         }
         else{
             cout << "WARNING! Different values of k in bin " << j << "! k = "
                 << pwr_spec_binned[0][j] << ", k_0 = " << pwr_spec_binned_0[0][j] <<  "\n";
+        }
+	}
+}
+
+template <unsigned N>
+void print_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Interp_obj &pwr_spec_input,
+	double growth, string out_dir, string suffix)
+{
+    out_dir += "pwr_diff/";
+    string file_name = out_dir + "pwr_spec_diff" + suffix + ".dat";
+    Ofstream File(file_name);
+    
+	cout << "Writing power spectrum difference into file " << file_name << "\n";
+    File << "# This file contains relative difference between power spectrum P(k)\n"
+            "# and lineary extrapolated power spectrum of input power spectrum\n"
+            "# depending on wavenumber k in units [h/Mpc].\n"
+	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
+
+	double k, P_k, P_lin;
+    const unsigned size = pwr_spec_binned.size();
+	for (unsigned j = 0; j < size; j++){
+        k = pwr_spec_binned[0][j];
+        if (k < pwr_spec_input.x_min) continue;
+        else if(k > pwr_spec_input.x_max) break;
+        else
+        {
+            P_k = pwr_spec_binned[1][j];
+            P_lin = pwr_spec_input.eval(k) * pow(growth, 2.);
+            File << scientific << k << "\t" << fixed << (P_k-P_lin)/P_lin << "\n";
+        }
+	}
+}
+
+template <unsigned N>
+void print_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Data_Vec<double, N> &pwr_spec_binned_0,
+    const Interp_obj &pwr_spec_input, double growth_now, double growth_init, string out_dir, string suffix)
+{
+    out_dir += "pwr_diff/";
+    string file_name = out_dir + "pwr_spec_diff" + suffix + ".dat";
+    Ofstream File(file_name);
+    
+	cout << "Writing power spectrum difference into file " << file_name << "\n";
+    File << "# This file contains relative difference between power spectrum P(k)\n"
+            "# and lineary extrapolated power spectrum of 'hybrid' power spectrum\n"
+            "# depending on wavenumber k in units [h/Mpc].\n"
+	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
+
+	double k, P_k, P_input, P_par;
+    const unsigned size = pwr_spec_binned.size();
+	for (unsigned j = 0; j < size; j++){
+        k = pwr_spec_binned[0][j];
+        if (k < pwr_spec_input.x_min) continue;
+        else if(k > pwr_spec_input.x_max) break;
+        else
+        {
+            P_k = pwr_spec_binned[1][j];
+            P_input = pwr_spec_input.eval(k) * pow(growth_now, 2.);
+            P_par = pwr_spec_binned_0[1][j] * pow(growth_now / growth_init, 2.);
+            File << scientific << k << "\t" << fixed << P_k/P_input - P_k/P_par << "\n";
         }
 	}
 }
@@ -301,17 +361,21 @@ void print_dens_bin(const vector<int> &dens_binned, string out_dir, string suffi
 	}
 }
 
-template void print_par_pos_cut_small(Particle_x* particles, const Sim_Param &sim, std::string out_dir, std::string suffix);
-template void print_par_pos_cut_small(Particle_v* particles, const Sim_Param &sim, std::string out_dir, std::string suffix);
-template void print_pow_spec(const Data_Vec<double, 2> &pwr_spec_binned, std::string out_dir, std::string suffix);
-template void print_pow_spec(const Data_Vec<double, 3> &pwr_spec_binned, std::string out_dir, std::string suffix);
-template void print_vel_pow_spec(const Data_Vec<double, 2> &pwr_spec_binned, std::string out_dir, std::string suffix);
-template void print_vel_pow_spec(const Data_Vec<double, 3> &pwr_spec_binned, std::string out_dir, std::string suffix);
-template void print_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Data_Vec<double, 2> &pwr_spec_binned_0, 
-    double b, std::string out_dir, std::string suffix);
-template void print_pow_spec_diff(const Data_Vec<double, 3> &pwr_spec_binned, const Data_Vec<double, 3> &pwr_spec_binned_0, 
-    double b, std::string out_dir, std::string suffix);
-template void print_vel_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Data_Vec<double, 2> &pwr_spec_binned_0, 
-    double b, std::string out_dir, std::string suffix);
-template void print_vel_pow_spec_diff(const Data_Vec<double, 3> &pwr_spec_binned, const Data_Vec<double, 3> &pwr_spec_binned_0, 
-    double b, std::string out_dir, std::string suffix);
+template void print_par_pos_cut_small(Particle_x*, const Sim_Param&, string, string);
+template void print_par_pos_cut_small(Particle_v*, const Sim_Param&, string, string);
+template void print_pow_spec(const Data_Vec<double, 2>&, string, string);
+template void print_pow_spec(const Data_Vec<double, 3>&, string, string);
+template void print_vel_pow_spec(const Data_Vec<double, 2>&, string, string);
+template void print_vel_pow_spec(const Data_Vec<double, 3>&, string, string);
+
+template void print_pow_spec_diff(const Data_Vec<double, 2>&, const Data_Vec<double, 2>&, double, string, string);
+template void print_pow_spec_diff(const Data_Vec<double, 3>&, const Data_Vec<double, 3>&, double, string, string);
+template void print_pow_spec_diff(const Data_Vec<double, 2>&, const Interp_obj&, double, string, string);
+template void print_pow_spec_diff(const Data_Vec<double, 3>&, const Interp_obj&, double, string, string);
+template void print_pow_spec_diff(const Data_Vec<double, 2>&, const Data_Vec<double, 2>&,
+                const Interp_obj&, double, double, string, string);
+template void print_pow_spec_diff(const Data_Vec<double, 3>&, const Data_Vec<double, 3>&,
+                const Interp_obj&, double, double, string, string);
+
+template void print_vel_pow_spec_diff(const Data_Vec<double, 2>&, const Data_Vec<double, 2>&, double, string, string);
+template void print_vel_pow_spec_diff(const Data_Vec<double, 3>&, const Data_Vec<double, 3>&, double, string, string);

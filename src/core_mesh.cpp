@@ -15,7 +15,7 @@ void get_k_vec(int N, int index, int* k_vec)
 	k_vec[1] = (index / (N/2 + 1)) % N;
 	k_vec[2] = index % (N/2 + 1);
 	
-	for (int i =0; i<2; i++) if (k_vec[i] > N/2.) k_vec[i] -= N; // k_vec[2] is ALWAYS less or equal than N/2 (real FFTW)
+	for (int i =0; i<2; i++) if (k_vec[i] > N/2) k_vec[i] -= N; // k_vec[2] is ALWAYS less or equal than N/2 (real FFTW)
 }
 
 void get_k_vec(int N, int index, Vec_3D<int> &k_vec)
@@ -24,7 +24,7 @@ void get_k_vec(int N, int index, Vec_3D<int> &k_vec)
 	k_vec[1] = (index / (N/2 + 1)) % N;
 	k_vec[2] = index % (N/2 + 1);
 	
-	for (int i =0; i<2; i++) if (k_vec[i] > N/2.) k_vec[i] -= N; // k_vec[2] is ALWAYS less or equal than N/2 (real FFTW)
+	for (int i =0; i<2; i++) if (k_vec[i] > N/2) k_vec[i] -= N; // k_vec[2] is ALWAYS less or equal than N/2 (real FFTW)
 }
 
 double get_k_sq(int N, int index)
@@ -32,7 +32,7 @@ double get_k_sq(int N, int index)
 	int k_vec[3];
 	double tmp = 0;
 	get_k_vec(N, index, k_vec);
-	for (int i =0; i<3; i++) tmp += pow(k_vec[i],2);
+	for (int i =0; i<3; i++) tmp += pow(k_vec[i],2.);
 	return tmp;
 }
 

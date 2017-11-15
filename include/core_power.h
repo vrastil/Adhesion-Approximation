@@ -22,7 +22,7 @@ double  get_max_Pk(Sim_Param* sim);
  */
 
 class Interp_obj
-{// linear interpolation of data [x, y]
+{// Steffen interpolation of data [x, y]
 public:
     Interp_obj(): is_init(false) {}
     template<unsigned N>
@@ -31,6 +31,8 @@ public:
     double eval(double x) const;
     template<unsigned N>
     void init(const Data_Vec<double, N>& data);
+
+    double x_min, x_max;
 
 private:
     bool is_init;
