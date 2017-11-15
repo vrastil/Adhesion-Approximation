@@ -111,8 +111,8 @@ def load_k_supp(files, k_nyquist_par):
 
         idx = (np.abs(k-0.5*k_nyquist_par)).argmin() / 7
 
-        supp_large.append(np.mean(P_diff[0:idx]))
-        supp_large_std.append(np.std(P_diff[0:idx]))
+        supp_large.append(np.mean(P_diff[0*idx:1*idx]))
+        supp_large_std.append(np.std(P_diff[0*idx:1*idx]))
 
         supp_medium.append(np.mean(P_diff[3*idx:4*idx]))
         supp_medium_std.append(np.std(P_diff[3*idx:4*idx]))
@@ -145,18 +145,33 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
     zs, files_emu = try_get_zs_files(a_sim_info, 'pwr_spec/', a_file='*emu*.dat')
     zs, files_extrap = try_get_zs_files(a_sim_info, 'pwr_spec/', a_file='*extrap*.dat')
     zs, files = try_get_zs_files(a_sim_info, 'pwr_spec/', a_file='*par*.dat')
+    zs_init, file_init = try_get_zs_files(a_sim_info, 'pwr_spec/', a_file='*init*.dat')
     if a_sim_info.rerun(rerun, key, skip, zs):
+        if zs_init is not None:
+            # insert at the begginnig -- important for iteration
+            zs.insert(0, zs_init[0])
+            files.insert(0, file_init[0])
         print 'Plotting power spectrum...'
         plot.plot_pwr_spec(files, zs, a_sim_info, pwr_spec_files_extrap=files_extrap, pwr_spec_files_emu=files_emu)
         a_sim_info.done(key)
-    del zs, files, files_extrap, files_emu
+    del zs, zs_init, files, files_extrap, files_emu, file_init
     
-    # Power spectrum difference
+    # Power spectrum difference -- input
     key = "pwr_spec_diff"
-    zs, files = try_get_zs_files(a_sim_info, 'pwr_diff/')
+    print 'Plotting power spectrum difference...'
+    zs, files = try_get_zs_files(a_sim_info, 'pwr_diff/', a_file='*input*')
     if a_sim_info.rerun(rerun, key, skip, zs):
-        print 'Plotting power spectrum difference...'
-        plot.plot_pwr_spec_diff(files, zs, a_sim_info)
+        plot.plot_pwr_spec_diff(files, zs, a_sim_info, ext_title='input')
+        a_sim_info.done(key)
+    # Power spectrum difference -- hybrid
+    zs, files = try_get_zs_files(a_sim_info, 'pwr_diff/', a_file='*hybrid*')
+    if a_sim_info.rerun(rerun, key, skip, zs):
+        plot.plot_pwr_spec_diff(files, zs, a_sim_info, ext_title='hybrid')
+        a_sim_info.done(key)
+    # Power spectrum difference -- input
+    zs, files = try_get_zs_files(a_sim_info, 'pwr_diff/', a_file='*par*')
+    if a_sim_info.rerun(rerun, key, skip, zs):
+        plot.plot_pwr_spec_diff(files, zs, a_sim_info, ext_title='par')
         a_sim_info.done(key)
     # Power spectrum suppression
     key = "pwr_spec_supp"
@@ -196,7 +211,6 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
     # Correlation function
     key = "corr_func"
     zs_emu, files_emu = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*emu*.dat')
-    print 'zs_emu = ', zs_emu
     zs, files_lin = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*lin*.dat')
     zs, files = try_get_zs_files(a_sim_info, 'corr_func/', a_file='*gsl*par*.dat')
     if a_sim_info.rerun(rerun, key, skip, zs):

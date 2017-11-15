@@ -54,4 +54,4 @@ def try_get_zs_files(a_sim_info, subdir, a_file='*.dat'):
         print "WARNING! Missing data in '%s'. Skipping step." % (a_sim_info.dir + subdir)
         return None, None
     else:
-        return zs, files
+        return list(zs), list(files)

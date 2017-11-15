@@ -74,19 +74,26 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, pw
 
     a_end = 1 / (1 + zs[-1])
     a_ = 0
+    lab = 'init'
+
+    init_idx_cor = 0 # if there is pwr_spec file 'init', extrap files have one file less
     for i, pwr in enumerate(pwr_spec_files):
-        a = 1 / (1 + zs[i])
-        if (a < 2.4 * a_) and a != a_end:
-            continue		
-        a_ = a
-        lab = 'z = ' + str(zs[i])
+        if zs[i] != 'init':
+            a = 1 / (1 + zs[i])
+            if (a < 2.4 * a_) and a != a_end:
+                continue		
+            a_ = a
+            lab = 'z = ' + str(zs[i])
+        else:
+            init_idx_cor += 1
+        
         data = np.loadtxt(pwr)
         k, P_k = data[:, 0], data[:, 1]
         plt.plot(k, P_k, 'o', ms=3, label=lab)
         del k, P_k, data
 
-        if pwr_spec_files_extrap is not None:
-            data = np.loadtxt(pwr_spec_files_extrap[i])
+        if pwr_spec_files_extrap is not None and zs[i] != 'init':
+            data = np.loadtxt(pwr_spec_files_extrap[i-init_idx_cor])
             k, P_k = data[:, 0], data[:, 1]
             plt.plot(k, P_k, 'k--')
             del k, P_k, data
@@ -117,12 +124,12 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, pw
 
     if pk_type == "dens":
         P_0 = [pwr_spec(k_, a_sim_info.cosmo, ccl_cosmo=a_sim_info.ccl_cosmo, z=zs[-1]) for k_ in k]
-        P_i = [pwr_spec(k_, a_sim_info.cosmo, ccl_cosmo=a_sim_info.ccl_cosmo, z=zs[0]) for k_ in k]
+        P_i = [pwr_spec(k_, a_sim_info.cosmo, ccl_cosmo=a_sim_info.ccl_cosmo, z=zs[init_idx_cor]) for k_ in k]
         plt.plot(k, P_0, '-')
         plt.plot(k, P_i, '-')
     elif pk_type == "vel":
         P_0 = [pwr_spec(k_, a_sim_info.cosmo, ccl_cosmo=a_sim_info.ccl_cosmo, z=0) for k_ in k]
-        a_0 = 1./(zs[0]+1.)
+        a_0 = 1./(zs[init_idx_cor]+1.)
         a_i = 1./(zs[-1]+1.)
         P_i = np.array(P_0)*growth_change(a_i, a_sim_info.cosmo)**2
         P_0 = np.array(P_0)*growth_change(a_0, a_sim_info.cosmo)**2
@@ -171,12 +178,18 @@ def plot_pwr_spec_stacked(data_list, zs, a_sim_info, Pk_list_extrap=None, pwr_sp
 
     a_end = 1 / (1 + zs[-1])
     a_ = 0
+    init_idx_cor = 0 # if there is pwr_spec file 'init', extrap files have one file less
     for i, data in enumerate(data_list):
-        a = 1 / (1 + zs[i])
-        if (a < 2.4 * a_) and a != a_end:
-            continue		
-        a_ = a
-        lab = 'z = ' + str(zs[i])
+        if zs[i] != 'init':
+            a = 1 / (1 + zs[i])
+            if (a < 2.4 * a_) and a != a_end:
+                continue		
+            a_ = a
+            lab = 'z = ' + str(zs[i])
+        else:
+            init_idx_cor += 1
+
+		
         k, P_k, P_k_std = data[0], data[1], data[2]
         # plt.errorbar(k, P_k, yerr=P_k_std, fmt='o', ms=3, label=lab)
         plt.plot(k, P_k, 'o', ms=3, label=lab)
@@ -355,15 +368,28 @@ def plot_corr_func(corr_func_files, zs, a_sim_info, corr_func_files_lin=None, co
     plot_corr_func_from_data(corr_data_list, zs, a_sim_info, corr_func_files_lin, corr_func_files_emu, zs_emu, out_dir, save, show)
 
 
-def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_type='dens', save=True, show=False):
+def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title ='', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if pk_type == "dens":
-        out_file='pwr_spec_diff.png'
+        out_file='pwr_spec_diff'
         suptitle = "Power spectrum difference"
     elif pk_type == "vel":
-        out_file='vel_pwr_spec_diff.png'
+        out_file='vel_pwr_spec_diff'
         suptitle=r"Power spectrum difference $(\nabla\cdot u)$"
+
+    if ext_title == 'input':
+        ext_title = ' (ref: input)'
+        out_file += '_input'
+    if ext_title == 'hybrid':
+        ext_title = ' (ref: hybrid)'
+        out_file += '_hybrid'
+    if ext_title == 'par':
+        ext_title = ' (ref: particle)'
+        out_file += '_par'
+    out_file += '.png'
+    suptitle += ext_title
+
     fig = plt.figure(figsize=(15, 11))
     ax = plt.gca()
     plt.xscale('log')
@@ -371,8 +397,8 @@ def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_t
     # SMALL / MEDIUM / LARGE SCALE VALUES
     data = np.loadtxt(pwr_spec_diff_files[-1])
     k = data[:, 0]
-    # 67% of nyquist wavelength, 7 subintervals
-    idx = (np.abs(k-0.67*a_sim_info.k_nyquist["particle"])).argmin() / 7
+    # half of nyquist wavelength, 7 subintervals
+    idx = (np.abs(k-0.5*a_sim_info.k_nyquist["particle"])).argmin() / 7
     cmap = cm.get_cmap('gnuplot')
     ax.axvspan(k[0*idx], k[1*idx], alpha=0.2, color=cmap(0.1))
     ax.axvspan(k[3*idx], k[4*idx], alpha=0.3, color=cmap(0.5))
