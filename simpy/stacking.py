@@ -14,11 +14,11 @@ import json
 from . import *
 from . import plot
 from .data import SimInfo
-from .data import RESULTS_KEYS as ORIG_RESULTS_KEYS
+from .data import RESULTS_KEYS
 
 RESULTS_KEYS_FILES = ["corr_files", "pwr_spec_files",
                       "pwr_spec_extra_files", "pwr_spec_diff_files"]
-RESULTS_KEYS = ORIG_RESULTS_KEYS + RESULTS_KEYS_FILES
+RESULTS_KEYS_STACK = RESULTS_KEYS + RESULTS_KEYS_FILES
 
 
 class StackInfo(SimInfo):
@@ -26,6 +26,8 @@ class StackInfo(SimInfo):
         # use last SimInfo of SORTED list, i.e. the last run (if need to add
         # info, e.g. coorelation data)
         SimInfo.__init__(self, group_sim_infos[-1].file)
+        if hasattr(self, 'ccl_cosmo'):
+            print "I too have ccl_cosmo!!!!"
         self.last = group_sim_infos[-1]
         self.dir = self.dir.replace(self.dir.split("/")[-2] + "/", "")
         self.dir += "STACK_%im_%ip_%iM_%ib/" % (
@@ -55,12 +57,12 @@ class StackInfo(SimInfo):
         else:  # save new StackInfo
             self.results = {}
             data = vars(self)
-            for key in ('ccl_cosmo', 'run_opt', 'out_dir'):
+            for key in ('ccl_cosmo', 'run_opt', 'out_dir', 'last'):
                 data.pop(key, None)
             with open(self.file, 'w') as outfile:
                 json.dump(data, outfile, indent=2)
 
-        for key in RESULTS_KEYS:
+        for key in RESULTS_KEYS_STACK:
             if key not in self.results:
                 self.results[key] = False
 

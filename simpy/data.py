@@ -29,6 +29,8 @@ class SimInfo(object):
                 transfer_function=self.cosmo["transfer_function_method"],
                 matter_power_spectrum=self.cosmo["matter_power_spectrum_method"],
                 mass_function=self.cosmo["mass_function_method"])
+        if hasattr(self, 'ccl_cosmo'):
+            print "I have ccl_cosmo!!!!"
 
     def info(self):
         info = ''
@@ -61,6 +63,9 @@ class SimInfo(object):
         if self.results is None:
             self.results = {}
         
+        for key in RESULTS_KEYS:
+            if key not in self.results:
+                self.results[key] = False
 
         self.file = a_file
         self.dir = a_file.replace(a_file.split("/")[-1], '')

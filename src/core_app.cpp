@@ -272,7 +272,7 @@ static void gen_gauss_white_noise(const Sim_Param &sim, Mesh* rho)
             #ifndef NOISE_HALF
 			for(unsigned long k=0; k< N; ++k)
 			{
-                index = j*N + k; // N2 to have the same code as HACC
+                index = j*N + k; 
 				GetRandomDoublesWhiteNoise(rn1, rn2, rn, ikey, index);
                 tmp = sqrt(-2.0*log(rn)/rn);
                 (*rho)(i, j, k) = rn2 * tmp;
@@ -280,7 +280,7 @@ static void gen_gauss_white_noise(const Sim_Param &sim, Mesh* rho)
             #else
             for(unsigned long k=0; k < N/2; ++k) // go over half, use both random numbers
 			{
-                index = j*N + k; // N2 to have the same code as HACC
+                index = j*N + k;
 				GetRandomDoublesWhiteNoise(rn1, rn2, rn, ikey, index);
                 tmp = sqrt(-2.0*log(rn)/rn);
                 (*rho)(i, j, 2*k) = rn2 * tmp;
