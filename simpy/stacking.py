@@ -16,12 +16,15 @@ from . import plot
 from .data import SimInfo
 from .data import RESULTS_KEYS as ORIG_RESULTS_KEYS
 
-RESULTS_KEYS_FILES = ["corr_files", "pwr_spec_files", "pwr_spec_extra_files"]
+RESULTS_KEYS_FILES = ["corr_files", "pwr_spec_files",
+                      "pwr_spec_extra_files", "pwr_spec_diff_files"]
 RESULTS_KEYS = ORIG_RESULTS_KEYS + RESULTS_KEYS_FILES
+
 
 class StackInfo(SimInfo):
     def __init__(self, group_sim_infos):
-        # use last SimInfo of SORTED list, i.e. the last run (if need to add info, e.g. coorelation data)
+        # use last SimInfo of SORTED list, i.e. the last run (if need to add
+        # info, e.g. coorelation data)
         SimInfo.__init__(self, group_sim_infos[-1].file)
         self.last = group_sim_infos[-1]
         self.dir = self.dir.replace(self.dir.split("/")[-2] + "/", "")
@@ -30,24 +33,26 @@ class StackInfo(SimInfo):
             self.box_opt["mesh_num_pwr"], self.box_opt["box_size"])
         self.file = self.dir + 'stack_info.json'
         self.pwr_dir = self.dir + "pwr_spec/"
+        self.pwr_diff_dir = self.dir + "pwr_diff/"
         self.corr_dir = self.dir + "corr_func/"
         self.res_dir = self.dir + 'results/'
 
         create_dir(self.dir)
         create_dir(self.pwr_dir)
+        create_dir(self.pwr_diff_dir)
         create_dir(self.corr_dir)
         create_dir(self.res_dir)
 
         self.seeds = [SI.run_opt["seed"] for SI in group_sim_infos]
 
-        if os.path.isfile(self.file): # there is already save StackInfo
+        if os.path.isfile(self.file):  # there is already save StackInfo
             with open(self.file) as data_file:
                 data = json.loads(data_file.read())
                 self.results = data["results"]
                 if len(self.seeds) != len(data["seeds"]):
                     print "Loaded stack info but number of files does not seem right. Disregarding any saved data."
                     self.results = {}
-        else: # save new StackInfo
+        else:  # save new StackInfo
             self.results = {}
             data = vars(self)
             for key in ('ccl_cosmo', 'run_opt', 'out_dir'):
@@ -58,8 +63,6 @@ class StackInfo(SimInfo):
         for key in RESULTS_KEYS:
             if key not in self.results:
                 self.results[key] = False
-        
-
 
 
 def compare(sim_info_1, sim_info_2):
@@ -141,7 +144,8 @@ class Extrap_Pk(Interp_obj):
         self.cosmo = cosmo
         self.ccl_cosmo = ccl_cosmo
 
-        f = lambda k_, A_: A_ * plot.pwr_spec(k_, self.cosmo, self.ccl_cosmo)
+        def f(k_, A_): return A_ * \
+            plot.pwr_spec(k_, self.cosmo, self.ccl_cosmo)
         popt, pcov = curve_fit(
             f, k[0:decade], Pk[0:decade], sigma=dPk[0:decade])  # fit over a decade
         self.A_lower = popt
@@ -154,11 +158,11 @@ class Extrap_Pk(Interp_obj):
 
     def eval(self, k):
         if k < self.k_lower:
-            return self.A_lower*plot.pwr_spec(k, self.cosmo, self.ccl_cosmo)
+            return self.A_lower * plot.pwr_spec(k, self.cosmo, self.ccl_cosmo)
         elif k < self.k_upper:
             return self.interpolate(k)
         else:
-            return self.A_upper*plot.pwr_spec(k, self.cosmo, self.ccl_cosmo)
+            return self.A_upper * plot.pwr_spec(k, self.cosmo, self.ccl_cosmo)
 
     def eval_list(self, k_list):
         Pk_list = []
@@ -166,57 +170,87 @@ class Extrap_Pk(Interp_obj):
             Pk_list.append(self.eval(k))
         return Pk_list
 
+
 def save_pwr(zs, data_list, out_dir, app):
     for i in xrange(len(zs)):
         z_str = 'init.dat' if zs[i] == 'init' else 'z%.2f.dat' % zs[i]
         fname = out_dir + \
             "pwr_spec_par_%s_%s" % (app, z_str)
-        header = ("# This file contains power spectrum P(k) in units [(Mpc/h)^3] "
+        header = ("This file contains power spectrum P(k) in units [(Mpc/h)^3] "
                   "depending on wavenumber k in units [h/Mpc] with standard deviation in units [h/Mpc].\n"
-                  "# k [h/Mpc]\tP(k) [(Mpc/h)^3]\tstd [(Mpc/h)^3]")
+                  "k [h/Mpc]\tP(k) [(Mpc/h)^3]\tstd [(Mpc/h)^3]")
         np.savetxt(fname, np.transpose(
             data_list[i]), fmt='%.6e', header=header)
 
-def load_pwr(stack_info):
-    zs, files = try_get_zs_files(stack_info, 'pwr_spec/', a_file='pwr_spec_par*.dat')
+
+def save_pwr_diff(zs, data_list_diff, diff_type, out_dir, app):
+    for i in xrange(len(zs)):
+        z_str = 'init.dat' if zs[i] == 'init' else 'z%.2f.dat' % zs[i]
+        fname = out_dir + \
+            "pwr_spec_diff_%s_%s_%s" % (diff_type, app, z_str)
+
+        header = ("This file contains relative difference between power spectrum P(k)\n"
+                  "and lineary extrapolated ")
+        if diff_type == "par":
+            header += "power spectrum of initial particle position\n"
+        elif diff_type == "input":
+            header += "'hybrid' power spectrum\n"
+        elif diff_type == "hybrid":
+            header += "input power spectrum\n"
+
+        header += ("depending on wavenumber k in units [h/Mpc] with standard deviation in units [h/Mpc].\n"
+                   "k [h/Mpc]\tP(k) [(Mpc/h)^3]\tstd [(Mpc/h)^3]")
+        np.savetxt(fname, np.transpose(
+            data_list_diff[diff_type][i]), fmt='%.6e', header=header)
+
+
+def load_pwr(stack_info, subdir='pwr_spec/', a_file='pwr_spec_par*.dat'):
+    zs, files = try_get_zs_files(
+        stack_info, subdir, a_file=a_file)
     data_list = []
     for a_file in files:
         data_list.append(np.transpose(np.loadtxt(a_file)))
     return zs, data_list
+
 
 def save_extra_pwr(zs, data_list, Pk_list, out_dir, app):
     for i in xrange(len(zs)):
         z_str = 'init.dat' if zs[i] == 'init' else 'z%.2f.dat' % zs[i]
         fname = out_dir + \
             "pwr_spec_extrap_%s_%s" % (app, z_str)
-        header = ("# This file contains extra/intra-polated power spectrum P(k) in units [(Mpc/h)^3] "
+        header = ("This file contains extra/intra-polated power spectrum P(k) in units [(Mpc/h)^3] "
                   "depending on wavenumber k in units [h/Mpc].\n"
-                  "# k [h/Mpc]\tP(k) [(Mpc/h)^3]")
+                  "k [h/Mpc]\tP(k) [(Mpc/h)^3]")
         np.savetxt(fname, np.transpose([
             data_list[i][0], Pk_list[i].eval_list(data_list[i][0])]), fmt='%.6e', header=header)
+
 
 def save_corr(zs, data_list, xi_list, out_dir, app):
     for i in xrange(len(zs)):
         z_str = 'init.dat' if zs[i] == 'init' else 'z%.2f.dat' % zs[i]
         fname = out_dir + \
             "corr_func_scipy_qawf_par_%s_%s" % (app, z_str)
-        header = ("# This file contains correlation function depending on distance r in units [Mpc/h]."
-                  "# r [Mpc/h]\txsi(r)")
+        header = ("This file contains correlation function depending on distance r in units [Mpc/h]."
+                  "r [Mpc/h]\txsi(r)")
         np.savetxt(fname, np.transpose(xi_list[i]), fmt='%.6e', header=header)
 
+
 def load_corr(stack_info):
-    zs, files = try_get_zs_files(stack_info, 'corr_func/', a_file='corr_func_scipy_qawf_par_*.dat')
+    zs, files = try_get_zs_files(
+        stack_info, 'corr_func/', a_file='corr_func_scipy_qawf_par_*.dat')
     xi_list = []
     for a_file in files:
         xi_list.append(np.transpose(np.loadtxt(a_file)))
     return xi_list
 
+
 def corr_func_r(r, Pk):
-    f = lambda k : 1./(2.*np.pi**2)*k/r*Pk.eval(k)
+    def f(k): return 1. / (2. * np.pi**2) * k / r * Pk.eval(k)
     sys.stdout.write('\tr = %f\r' % r)
     sys.stdout.flush()
     xi, err = quad(f, 0, np.inf, weight='sin', wvar=r)
     return xi
+
 
 def corr_func(Pk, r_min=1, r_max=200, num=50):
     r_range = np.linspace(r_min, r_max, num=num)
@@ -225,60 +259,75 @@ def corr_func(Pk, r_min=1, r_max=200, num=50):
     print "\n\tDone!"
     return [r_range, corr]
 
+
 def stack_group(group_sim_infos):
     # load & save all info about stack
     stack_info = StackInfo(group_sim_infos)
+    print "\tLoad & save data to stack..."
 
-    print "\tLoading data to stack..."
-    # stack all pwr_spec files, get mean of k and Pk, compute std of Pk
     key = "pwr_spec_files"
     if not stack_info.results[key]:
+        # stack all pwr_spec files, get mean of k and Pk, compute std of Pk
         zs, data_list = stack_files(group_sim_infos, 'pwr_spec/', '*par*.dat')
-        zs_in, data_in = stack_files(group_sim_infos, 'pwr_spec/', '*init*.dat')
-        # insert input data at the beggining, there should be only one init file
-        zs.insert(0, zs_in[0])
-        data_list.insert(0, data_in[0])
+        zs_in, data_in = stack_files(
+            group_sim_infos, 'pwr_spec/', '*init*.dat')
+        zs.insert(0, zs_in[0])  # insert input data at the beggining
+        data_list.insert(0, data_in[0])  # there should be only one init file
+        save_pwr(zs, data_list, stack_info.pwr_dir, stack_info.app)
+        stack_info.done(key)
     else:
         zs, data_list = load_pwr(stack_info)
 
+    key = "pwr_spec_diff_files"
+    data_list_diff = {}
+    for diff_type in ("par", "input", "hybrid"):
+        if not stack_info.results[key]:
+            # stack all pwr_spec_diff files, get mean of k and Pk, compute std
+            # of Pk
+            zs_diff, data_list_diff[diff_type] = stack_files(
+                group_sim_infos, 'pwr_diff/', '*%s*.dat' % diff_type)
+            save_pwr_diff(zs_diff, data_list_diff, diff_type,
+                          stack_info.pwr_diff_dir, stack_info.app)
+        else:
+            zs_diff, data_list_diff[diff_type] = load_pwr(
+                stack_info, subdir='pwr_diff/', a_file='*%s*.dat' % diff_type)
+    stack_info.done(key)
+
     # for each entry in data_list compute its extra/inter-polated version
-    Pk_list = [Extrap_Pk(data, stack_info.cosmo, stack_info.ccl_cosmo, stack_info.k_nyquist["particle"]) for data in data_list]
-    # for each Pk in Pk_list compute correlation function
-    key = "corr_files"
-    if not stack_info.results[key]:
-        xi_list = [corr_func(Pk) for Pk in Pk_list]    
-    else:
-        xi_list = load_corr(stack_info)
-
-    # save all data
-    print "\tSaving stacked data..."
-
-    key = "pwr_spec_files"
-    if not stack_info.results[key]:
-        save_pwr(zs, data_list, stack_info.pwr_dir, stack_info.app)
-        stack_info.done(key)
-
+    Pk_list = [Extrap_Pk(data, stack_info.cosmo, stack_info.ccl_cosmo,
+                         stack_info.k_nyquist["particle"]) for data in data_list]
     key = "pwr_spec_extra_files"
     if not stack_info.results[key]:
-        save_extra_pwr(zs, data_list, Pk_list, stack_info.pwr_dir, stack_info.app)
+        save_extra_pwr(zs, data_list, Pk_list,
+                       stack_info.pwr_dir, stack_info.app)
         stack_info.done(key)
-    
+
     key = "corr_files"
     if not stack_info.results[key]:
+        # for each Pk in Pk_list compute correlation function
+        xi_list = [corr_func(Pk) for Pk in Pk_list]
         save_corr(zs, data_list, xi_list, stack_info.corr_dir, stack_info.app)
         stack_info.done(key)
+    else:
+        xi_list = load_corr(stack_info)
 
     print '\tPlotting power spectrum...'
     plot.plot_pwr_spec_stacked(
         data_list, zs, stack_info, Pk_list)
 
-    print '\tPlotting correlation function...'
-    zs_emu,files_emu = try_get_zs_files(stack_info.last, 'corr_func/', a_file='*gsl*emu*.dat')
-    files_lin = try_get_zs_files(stack_info.last, 'corr_func/', a_file='*gsl*lin*.dat')[1]
+    print '\tPlotting power spectrum difference...'
+    for diff_type in ("par", "input", "hybrid"):
+        plot.plot_pwr_spec_diff_from_data(
+            data_list_diff[diff_type], zs_diff, stack_info, ext_title=diff_type)
 
+    print '\tPlotting correlation function...'
+    zs_emu, files_emu = try_get_zs_files(
+        stack_info.last, 'corr_func/', a_file='*gsl*emu*.dat')
+    files_lin = try_get_zs_files(
+        stack_info.last, 'corr_func/', a_file='*gsl*lin*.dat')[1]
     plot.plot_corr_func_from_data(
-       xi_list, zs, stack_info, files_lin,
-       files_emu, zs_emu)
+        xi_list, zs, stack_info, files_lin,
+        files_emu, zs_emu)
 
 
 def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/'):
@@ -308,8 +357,7 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
 
     # sort sim_infos
     for sep_sim_infos in sep_files:
-        sep_sim_infos.sort(key = lambda x : x.dir)
-
+        sep_sim_infos.sort(key=lambda x: x.dir)
 
     print "There are in total %i different runs, from which %i share the same parameters, constituting %i group(s) eligible for stacking:" % (
         num_all_runs, num_all_sep_runs, num_sep_runs)

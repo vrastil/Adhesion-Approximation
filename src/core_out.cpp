@@ -199,7 +199,7 @@ void print_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Inter
     
 	cout << "Writing power spectrum difference into file " << file_name << "\n";
     File << "# This file contains relative difference between power spectrum P(k)\n"
-            "# and lineary extrapolated power spectrum of input power spectrum\n"
+            "# and lineary extrapolated input power spectrum\n"
             "# depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 
@@ -228,7 +228,7 @@ void print_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Data_
     
 	cout << "Writing power spectrum difference into file " << file_name << "\n";
     File << "# This file contains relative difference between power spectrum P(k)\n"
-            "# and lineary extrapolated power spectrum of 'hybrid' power spectrum\n"
+            "# and lineary extrapolated 'hybrid' power spectrum\n"
             "# depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 
