@@ -261,25 +261,34 @@ static void gen_gauss_white_noise(const Sim_Param &sim, Mesh* rho)
 	
 	unsigned long ikey, index;
     double rn1, rn2, rn, tmp;
-    const unsigned N1 = rho->N1, N2 = rho->N2, N3 = rho->N3;
+    const unsigned N = rho->N;
 		
 	#pragma omp parallel for private(ikey, index, rn1, rn2, rn, tmp)
-	for(unsigned long i=0; i < N1; ++i) 
+	for(unsigned long i=0; i < N; ++i)
 	{
 		ikey = slab_keys[i];
-		for(unsigned long j=0; j < N2; ++j) 
+		for(unsigned long j=0; j < N; ++j) 
 		{
-			for(unsigned long k=0; k< N3/2; ++k) 
+            #ifndef NOISE_HALF
+			for(unsigned long k=0; k< N; ++k)
 			{
-                index = j*rho->N3 + k; // N3 to have each number unique, differs from HACC
+                index = j*N + k; // N2 to have the same code as HACC
+				GetRandomDoublesWhiteNoise(rn1, rn2, rn, ikey, index);
+                tmp = sqrt(-2.0*log(rn)/rn);
+                (*rho)(i, j, k) = rn2 * tmp;
+            }
+            #else
+            for(unsigned long k=0; k < N/2; ++k) // go over half, use both random numbers
+			{
+                index = j*N + k; // N2 to have the same code as HACC
 				GetRandomDoublesWhiteNoise(rn1, rn2, rn, ikey, index);
                 tmp = sqrt(-2.0*log(rn)/rn);
                 (*rho)(i, j, 2*k) = rn2 * tmp;
                 (*rho)(i, j, 2*k+1) = rn1 * tmp;
-			}
+            }
+            #endif
 		}
-    }
-     
+    }     
     double t_mean;
 	#ifdef CORR
 	t_mean = mean(rho->real(), rho->length);
@@ -300,9 +309,10 @@ static void gen_rho_w_pow_k(const Sim_Param &sim, Mesh* rho)
     const double L = sim.box_opt.box_size;
     const double k0 = 2.*PI/L;
     const int phase = sim.run_opt.phase ? 1 : -1;
-    const double mod = phase / (sqrt(2.) * pow(L, 3/2.)); // pair sim, Re^2 + Im^2 factor, dimension trans. Pk -> Pk*
     const unsigned N = rho->N;
     const unsigned len = rho->length / 2;
+    const double mod = phase * pow(N / L, 3/2.); // pair sim, gaussian real -> fourier factor, dimension trans. Pk -> Pk*
+    
 	#pragma omp parallel for private(k)
 	for(unsigned i=0; i < len; i++)
 	{
@@ -312,7 +322,7 @@ static void gen_rho_w_pow_k(const Sim_Param &sim, Mesh* rho)
 	}
 }
 
-void gen_rho_dist_k(const Sim_Param &sim, Mesh* rho)
+void gen_rho_dist_k(const Sim_Param &sim, Mesh* rho, const fftw_plan &p_F)
 	/**
 	Generate density distributions \rho(k) in k-space.
 	At first, a gaussian white noise (mean = 0, stdDev = 1) is generated,
@@ -321,6 +331,18 @@ void gen_rho_dist_k(const Sim_Param &sim, Mesh* rho)
 {
 	printf("Generating gaussian white noise...\n");
 	gen_gauss_white_noise(sim, rho);
+
+    printf("Generating gaussian white noise in k-sapce...\n");
+    fftw_execute_dft_r2c(p_F, *rho);
+
+    int k_vec[3];
+    for (unsigned i = 0; i < rho->length/2; i++)
+    {
+        if ((*rho)[2*i+1] == 0){
+            get_k_vec(rho->N, i, k_vec);
+            cout << "\t k = " << k_vec[0] << ", " << k_vec[1] << ", " << k_vec[2] << ", " << "\n";
+        }
+    }
 
 	printf("Generating density distributions with given power spectrum...\n");
 	gen_rho_w_pow_k(sim, rho);

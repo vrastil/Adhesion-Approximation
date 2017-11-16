@@ -6,6 +6,7 @@ CXXFLAGS =-std=c++11 -pipe
 CXXFLAGS +=-MMD
 CXXFLAGS +=-fopenmp
 #CXXFLAGS +=-D CORR
+CXXFLAGS +=-D NOISE_HALF
 
 CXXLIB +=-lboost_program_options -lboost_filesystem -lboost_system
 CXXLIB +=-lfftw3 -lfftw3_omp

@@ -87,7 +87,7 @@ template<class T>
 void standard_preparation(T& APP)
 {
     /* Generating the right density distribution in k-space */	
-    gen_rho_dist_k(APP.sim, &APP.app_field[0]);
+    gen_rho_dist_k(APP.sim, &APP.app_field[0], APP.p_F);
 
     /* Print input power spectrum (one realisation), before Zel`dovich push */
     print_input_realisation(APP);
