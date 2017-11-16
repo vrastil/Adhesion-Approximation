@@ -29,8 +29,6 @@ class SimInfo(object):
                 transfer_function=self.cosmo["transfer_function_method"],
                 matter_power_spectrum=self.cosmo["matter_power_spectrum_method"],
                 mass_function=self.cosmo["mass_function_method"])
-        if hasattr(self, 'ccl_cosmo'):
-            print "I have ccl_cosmo!!!!"
 
     def info(self):
         info = ''

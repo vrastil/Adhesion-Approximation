@@ -331,18 +331,7 @@ void gen_rho_dist_k(const Sim_Param &sim, Mesh* rho, const fftw_plan &p_F)
 {
 	printf("Generating gaussian white noise...\n");
 	gen_gauss_white_noise(sim, rho);
-
-    printf("Generating gaussian white noise in k-sapce...\n");
     fftw_execute_dft_r2c(p_F, *rho);
-
-    int k_vec[3];
-    for (unsigned i = 0; i < rho->length/2; i++)
-    {
-        if ((*rho)[2*i+1] == 0){
-            get_k_vec(rho->N, i, k_vec);
-            cout << "\t k = " << k_vec[0] << ", " << k_vec[1] << ", " << k_vec[2] << ", " << "\n";
-        }
-    }
 
 	printf("Generating density distributions with given power spectrum...\n");
 	gen_rho_w_pow_k(sim, rho);

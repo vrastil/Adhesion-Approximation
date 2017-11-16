@@ -26,8 +26,6 @@ class StackInfo(SimInfo):
         # use last SimInfo of SORTED list, i.e. the last run (if need to add
         # info, e.g. coorelation data)
         SimInfo.__init__(self, group_sim_infos[-1].file)
-        if hasattr(self, 'ccl_cosmo'):
-            print "I too have ccl_cosmo!!!!"
         self.last = group_sim_infos[-1]
         self.dir = self.dir.replace(self.dir.split("/")[-2] + "/", "")
         self.dir += "STACK_%im_%ip_%iM_%ib/" % (
@@ -52,19 +50,24 @@ class StackInfo(SimInfo):
                 data = json.loads(data_file.read())
                 self.results = data["results"]
                 if len(self.seeds) != len(data["seeds"]):
-                    print "Loaded stack info but number of files does not seem right. Disregarding any saved data."
+                    print "\tFound stack info but number of files does not seem right. Disregarding any saved data."
                     self.results = {}
+                    self.save()
         else:  # save new StackInfo
             self.results = {}
-            data = vars(self)
-            for key in ('ccl_cosmo', 'run_opt', 'out_dir', 'last'):
-                data.pop(key, None)
-            with open(self.file, 'w') as outfile:
-                json.dump(data, outfile, indent=2)
+            self.save()
 
         for key in RESULTS_KEYS_STACK:
             if key not in self.results:
                 self.results[key] = False
+
+    def save(self):
+        data = self.__dict__.copy()
+        for key in ('ccl_cosmo', 'run_opt', 'out_dir', 'last'):
+            data.pop(key, None)
+        # overriding
+        with open(self.file, 'w') as outfile:
+            json.dump(data, outfile, indent=2)
 
 
 def compare(sim_info_1, sim_info_2):
