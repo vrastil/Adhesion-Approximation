@@ -106,20 +106,53 @@ def stack_files(group_sim_infos, subdir, a_file):
     return tuple (zs, data_list) where each entry in 'data_list' corresponds to entry in 'zs' list
     data[:, 0] = x, data[:, 1] = mean(y), data[:, 2] = std(y)
     """
+    # load everything
     all_data_k = None
     all_data_Pk = None
     for a_sim_info in group_sim_infos:
+        # load files for ONE run
         zs, files = try_get_zs_files(a_sim_info, subdir, a_file=a_file)
+
+        # create lists, only for the first run (the rest are assumed to have the same output)
         if all_data_k is None:
             all_data_k = [[] for x in xrange(len(zs))]
         if all_data_Pk is None:
             all_data_Pk = [[] for x in xrange(len(zs))]
+
+        # load k, Pk
         for i, data_file in enumerate(files):
             data = np.loadtxt(data_file)
             k, P_k = data[:, 0], data[:, 1]
-            all_data_k[i].append(k)
-            all_data_Pk[i].append(P_k)
+            all_data_k[i].append(k.tolist())
+            all_data_Pk[i].append(P_k.tolist())
 
+    # chceck lengths of lists, delete excess (in case outputs of simulations encountered any errors)
+    for i, data_k in enumerate(all_data_k):
+        del_num = 0
+        j = 0
+        while True:
+            k_row = [k_vec[j] for k_vec in  data_k]
+            k_max = np.max(k_row)
+            for ik, k in  enumerate(k_row):
+                k_ = k
+                while not np.isclose(k_, k_max, rtol=1.e-5, atol=1.e-5):
+                    # remove k, Pk if not the same, look for first close
+                    del_num += 1
+                    del all_data_k[i][ik][j]
+                    del all_data_Pk[i][ik][j]
+                    # look at the next k
+                    k_ = all_data_k[i][ik][j]
+            j += 1
+            # check if j is length of ALL arrays
+            for x in all_data_k[i]:
+                if len(x) != j:
+                    break
+            else:
+                break
+        if del_num:
+            print "\tSome values in files %s for z = %s did not match each other. Deleted %i excess values." % (subdir+a_file, str(zs[i]), del_num)
+
+    # compute means, std
     data_list = []
     for i in xrange(len(all_data_k)):
         data_list.append([])
@@ -307,14 +340,14 @@ def stack_group(group_sim_infos):
                        stack_info.pwr_dir, stack_info.app)
         stack_info.done(key)
 
-    key = "corr_files"
-    if not stack_info.results[key]:
-        # for each Pk in Pk_list compute correlation function
-        xi_list = [corr_func(Pk) for Pk in Pk_list]
-        save_corr(zs, data_list, xi_list, stack_info.corr_dir, stack_info.app)
-        stack_info.done(key)
-    else:
-        xi_list = load_corr(stack_info)
+    # key = "corr_files"
+    # if not stack_info.results[key]:
+    #     # for each Pk in Pk_list compute correlation function
+    #     xi_list = [corr_func(Pk) for Pk in Pk_list]
+    #     save_corr(zs, data_list, xi_list, stack_info.corr_dir, stack_info.app)
+    #     stack_info.done(key)
+    # else:
+    #     xi_list = load_corr(stack_info)
 
     print '\tPlotting power spectrum...'
     plot.plot_pwr_spec_stacked(
@@ -325,14 +358,14 @@ def stack_group(group_sim_infos):
         plot.plot_pwr_spec_diff_from_data(
             data_list_diff[diff_type], zs_diff, stack_info, ext_title=diff_type)
 
-    print '\tPlotting correlation function...'
-    zs_emu, files_emu = try_get_zs_files(
-        stack_info.last, 'corr_func/', a_file='*gsl*emu*.dat')
-    files_lin = try_get_zs_files(
-        stack_info.last, 'corr_func/', a_file='*gsl*lin*.dat')[1]
-    plot.plot_corr_func_from_data(
-        xi_list, zs, stack_info, files_lin,
-        files_emu, zs_emu)
+    # print '\tPlotting correlation function...'
+    # zs_emu, files_emu = try_get_zs_files(
+    #     stack_info.last, 'corr_func/', a_file='*gsl*emu*.dat')
+    # files_lin = try_get_zs_files(
+    #     stack_info.last, 'corr_func/', a_file='*gsl*lin*.dat')[1]
+    # plot.plot_corr_func_from_data(
+    #     xi_list, zs, stack_info, files_lin,
+    #     files_emu, zs_emu)
 
 
 def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/'):
@@ -376,4 +409,8 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
 
     for sep_sim_infos in sep_files:
         print "\nStacking group %s" % sep_sim_infos[0].info_tr()
-        stack_group(sep_sim_infos)
+        try:
+            stack_group(sep_sim_infos)
+        except:
+            print("Unexpected error:", sys.exc_info()[0])
+            print("Continuing with next group")

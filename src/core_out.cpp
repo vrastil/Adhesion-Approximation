@@ -153,10 +153,9 @@ void print_corr_func(const Data_Vec<double, 2> &pwr_spec_binned, string out_dir,
 	}
 }
 
-bool close_enough(double a, double b)
+double rel_error(double a, double b)
 {
-    constexpr double eps = 1e-12; // absolute error
-    return fabs(a-b) < eps;
+    return a ? fabs((a-b)/a) : fabs(a-b);
 }
 
 template <unsigned N>
@@ -173,19 +172,19 @@ void print_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Data_
             "# depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 
-	double P_k, P_lin;
+	double P_k, P_lin, err;
     cout.precision(15);
     const unsigned size = pwr_spec_binned.size();
 	for (unsigned j = 0; j < size; j++){
-        if (close_enough(pwr_spec_binned[0][j], pwr_spec_binned_0[0][j])){
-            P_k = pwr_spec_binned[1][j];
-			P_lin = pwr_spec_binned_0[1][j] * pow(growth, 2.);
-            File << scientific << pwr_spec_binned[0][j] << "\t" << fixed << (P_k-P_lin)/P_lin << "\n";
+        err = rel_error(pwr_spec_binned[0][j], pwr_spec_binned_0[0][j]);
+        if (err > 1e-6){
+            cout << "ERROR! Different values of k in bin " << j << "! Relative error = " << err << "\n";
+            continue;
         }
-        else{
-            cout << "WARNING! Different values of k in bin " << j << "! k = "
-                << pwr_spec_binned[0][j] << ", k_0 = " << pwr_spec_binned_0[0][j] <<  "\n";
-        }
+        else if (err > 1e-12) cout << "WARNING! Different values of k in bin " << j << "! Relative error = " << err << "\n";
+        P_k = pwr_spec_binned[1][j];
+        P_lin = pwr_spec_binned_0[1][j] * pow(growth, 2.);
+        File << scientific << pwr_spec_binned_0[0][j] << "\t" << fixed << (P_k-P_lin)/P_lin << "\n";
 	}
 }
 
