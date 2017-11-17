@@ -186,13 +186,14 @@ def make_qsub(job):
              "export CPATH=$CPATH:$MYDIR/local/include:/software/fftw-3.3/amd64_linux26.double/include/\n"
              "export LIBRARY_PATH=$LIBRARY_PATH:$MYDIR/local/lib\n"
              "cd $SCRATCH\n"
-             "cp $MYDIR/Adhesion-Approximation/include ./\n"
-             "cp $MYDIR/Adhesion-Approximation/src ./\n"
+             "cp -r $MYDIR/Adhesion-Approximation/include ./\n"
+             "cp -r $MYDIR/Adhesion-Approximation/src ./\n"
+             "cp $MYDIR/Adhesion-Approximation/Makefile ./\n"
              "make clean\n"
              "make -j $PBS_NUM_PPN\n\n"
              )
     qsub += "time ./adh_app -c $MYDIR/Adhesion-Approximation/input/generic_input.cfg %s" % job.sim_opt
-    qsub += "\n\nrm -rg ./"
+    qsub += "\n\nrm -rf ./*"
     return qsub
 
 
