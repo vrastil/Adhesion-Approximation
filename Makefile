@@ -6,6 +6,7 @@ CXXFLAGS =-std=c++11 -pipe
 CXXFLAGS +=-MMD
 CXXFLAGS +=-fopenmp
 #CXXFLAGS +=-D CORR
+CXXFLAGS +=-D NOISE_HALF
 
 CXXLIB +=-lboost_program_options -lboost_filesystem -lboost_system
 CXXLIB +=-lfftw3 -lfftw3_omp
@@ -23,7 +24,7 @@ PCH_O = $(PCH).gch
 all: CXXFLAGS +=-Ofast -march=native
 all: adh_app
 
-debug: CXXFLAGS +=-Og -g -Wall
+debug: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -Wfloat-conversion
 debug: adh_app
 
 adh_app: $(OBJ_FILES)

@@ -1,0 +1,230 @@
+#!/usr/bin/env python
+import math
+
+class Job_Param(object):
+    def __init__(self, app, mem, cpus, n_cpus):
+        mem, h, m = get_safe_mem_wall_time(mem, cpus, n_cpus)
+        self.app = app
+        self.mem = mem
+        self.n_cpus = n_cpus
+        self.wall_time_h = h
+        self.wall_time_m = m
+        self.sim_opt = ""
+
+    def add_sim_opt(self, sim_opt):
+        self.sim_opt += sim_opt
+
+    def add_std_opt(self, sim_param):
+        self.add_sim_opt("--mesh_num %i " % sim_param.Nm)
+        self.add_sim_opt("--mesh_num_pwr %i " % sim_param.NM)
+        self.add_sim_opt("--par_num %i " % sim_param.Np)
+        self.add_sim_opt("--box_size %f " % sim_param.box)
+        self.add_sim_opt("--redshift %f " % sim_param.z)
+        self.add_sim_opt("--redshift_0 %f " % sim_param.z0)
+        self.add_sim_opt("--time_step %f " % sim_param.da)
+        self.add_sim_opt("--print_every %i " % sim_param.print_every)
+        self.add_sim_opt("--mlt_runs %i " % sim_param.mlt_runs)
+
+
+class Sim_Param(object):
+    def __init__(self, Nm, NM, Np, box, z, z0, da, print_every):
+        self.Nm = Nm
+        self.NM = NM
+        self.Np = Np
+        self.num_m = pow(Nm, 3)
+        self.num_M = pow(NM, 3)
+        self.num_p = pow(Np, 3)        
+        self.box = box
+        self.z = z
+        self.z0 = z0
+        self.da = da
+        self.print_every = print_every
+        self.n_steps = int(math.ceil((1./(1.+z0) - 1./(1.+z))/da))
+        self.n_print = int(math.ceil(self.n_steps / float(print_every))) + 1 if print_every else 0
+        self.rs = 0
+        self.mlt_runs = 1
+
+def memory_base(sim_param):
+    mem = 0
+    mem += sim_param.num_m * 3 * 8  # app_field
+    mem += sim_param.num_M * 3 * 8  # power_aux
+    mem += sim_param.num_p * 3 * 2 * 8  # particles with velocities
+    return mem
+
+
+def memory_za(sim_param):
+    return memory_base(sim_param) / float(1024 * 1024 * 1024)  # convert to GB
+
+
+def memory_aa(sim_param):
+    mem = memory_base(sim_param)
+    mem += sim_param.num_M * 8  # expotential
+    return mem / float(1024 * 1024 * 1024)  # convert to GB
+
+
+def memory_fp_pp(sim_param):
+    mem = memory_base(sim_param)
+    mem += sim_param.num_p * 4  # linked list
+    M = (int)(sim_param.Nm / float(sim_param.rs))
+    mem += pow(M, 3) * 4  # linked list
+    return mem / float(1024 * 1024 * 1024)  # convert to GB
+
+
+def get_input():
+    Nm = input("Enter number of potential mesh points per dimenson: ")
+    NM = input("Enter number of analysis mesh points per dimenson: ")
+    Np = input("Enter number of particles per dimenson: ")
+    box = input("Enter size of the simulation box: ")
+    z = input("Enter initial redshift of the simulation: ")
+    z0 = input("Enter final redshift of the simulation: ")
+    da = input("Enter value of time-step: ")
+    print_every = input("Enter how often there will be printing: ")
+
+    sim_param = Sim_Param(Nm, NM, Np, box, z, z0, da, print_every)
+    sim_param.rs = input("Enter value of short-range cutof: ")
+    sim_param.mlt_runs = input("Enter number of runs: ")
+    return sim_param
+
+
+def cpu_base(sim_param, prep_Nm, prep_Np, integ_np_nsteps, print_np, print_NM):
+    cpus = 0
+    cpus += prep_Nm * pow(sim_param.Nm / 128., 3)  # preparation
+    cpus += prep_Np * pow(sim_param.Np / 128., 3)  # preparation
+    cpus += integ_np_nsteps * sim_param.n_steps * \
+        pow(sim_param.Np / 128., 3)  # integration
+    cpus += print_np * sim_param.n_print * pow(sim_param.Np / 128., 3)  # printing
+    cpus += print_NM * sim_param.n_print * pow(sim_param.NM / 128., 3)  # printing
+    return cpus
+
+
+def cpu_pp(sim_param, prep_Nm, prep_Np, integ_np_nsteps, print_np, print_NM, integ_np_nsteps_extra):
+    cpus = cpu_base(sim_param, prep_Nm, prep_Np, integ_np_nsteps, print_np, print_NM)
+    cpus += integ_np_nsteps_extra * sim_param.n_steps * \
+        pow(sim_param.Np / 128., 3) * pow(sim_param.rs / 2.7, 3)
+    return cpus
+
+
+def convert_s2hms(seconds):
+    h = int(seconds) / (60 * 60)
+    m = (int(seconds) / 60) % 60
+    s = int(seconds) % 60
+    return h, m, s
+
+
+def time_2string(h, m ,s):
+    time = "%i:" % h
+    if m < 10:
+        time += "0%i:" % m
+    else:
+        time += "%i:" % m
+    if s < 10:
+        time += "0%i" % s
+    else:
+        time += "%i" % s    
+    return time
+
+def print_n_cpus_t(cpus, n_cpus):
+    h, m, s = convert_s2hms(cpus / n_cpus)
+    time = time_2string(h, m ,s) 
+    print "\tOn %i cores the simulation will take %s of Wall time." % (n_cpus, time)
+
+
+def get_n_cpus(cpus, mem, approx_str):
+    h, m, s = convert_s2hms(cpus)
+    time = time_2string(h, m ,s) 
+    print "\n%s will need approximately %.1f GB of memory and shouldn`t take more than %s of CPU time." % (approx_str, mem, time)
+
+    print_n_cpus_t(cpus, 4)
+    if h > 1:
+        print_n_cpus_t(cpus, 8)
+    if h > 2:
+        print_n_cpus_t(cpus, 16)
+    if h > 24:
+        print_n_cpus_t(cpus, 32)
+        print_n_cpus_t(cpus, 64)
+    return input("Enter number of cores: ")
+
+def get_safe_mem_wall_time(mem, cpus, n_cpus):
+    mem = int(math.ceil((mem + 0.3) * 1.03))  # extra 0.3 GB and 3%
+    h, m, s = convert_s2hms(cpus * 2.0 / n_cpus)  # extra 100% of Wall time
+    if (h + m) < 1: m = 1
+    return mem, h, m # seconds are ambiguous
+
+def make_qsub(job):
+    qsub =  "#!/bin/bash\n"
+    qsub += "#PBS -l select=1:ncpus=%i:mem=%igb\n" % (job.n_cpus, job.mem)
+    if job.wall_time_m < 10:
+        qsub += "#PBS -l walltime=%i:0%i:00\n" % (job.wall_time_h, job.wall_time_m)
+    else:
+        qsub += "#PBS -l walltime=%i:%i:00\n" % (job.wall_time_h, job.wall_time_m)
+
+    #qsub += "#PBS -q default@wagap-pro.cerit-sc.cz\n"
+    qsub += "#PBS -N cosmo_sim_%s\n" % job.app
+    qsub +=("#PBS -j oe\n"
+            "#PBS -o logs/\n"
+            "#PBS -e logs/\n\n\n"
+            "export OMP_NUM_THREADS=$PBS_NUM_PPN\n"
+            "export MYDIR=/storage/brno2/home/vrastilm\n"
+            "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MYDIR/local/lib\n"
+            "cd $MYDIR/Adhesion-Approximation\n\n"
+            )
+    qsub += "time ./adh_app -c ./input/generic_input.cfg %s" % job.sim_opt
+    return qsub
+
+def save_to_qsub(qsub, qsub_file):
+    with open(qsub_file, 'w') as file:
+        file.write(qsub)
+
+# already quite safe values
+PREP_PAR = 0.4
+PRINT_PAR = 3.0
+PRINT_NM = 1.7
+
+
+def qsub_ZA(sim_param):
+    cpu_param = 2.0, PREP_PAR, 0.25, PRINT_PAR, PRINT_NM
+    cpus = sim_param.mlt_runs*cpu_base(sim_param, *cpu_param)
+    mem = memory_za(sim_param)
+    n_cpus = get_n_cpus(cpus, mem, "Zel`dovich approximation")
+    ZA = Job_Param('ZA', mem, cpus, n_cpus)
+    ZA.add_std_opt(sim_param)
+    ZA.add_sim_opt("--comp_ZA 1 ")
+    save_to_qsub(make_qsub(ZA), "scripts/ZA_qsub.sh")
+
+def qsub_FF(sim_param):
+    cpu_param = 1.7, PREP_PAR, 2.0, PRINT_PAR, PRINT_NM
+    cpus = sim_param.mlt_runs*cpu_base(sim_param, *cpu_param)
+    mem = memory_za(sim_param)
+    n_cpus = get_n_cpus(cpus, mem, "Frozen-flow approximation")
+    FF = Job_Param('FF', mem, cpus, n_cpus)
+    FF.add_std_opt(sim_param)
+    FF.add_sim_opt("--comp_FF 1 ")
+    save_to_qsub(make_qsub(FF), "scripts/FF_qsub.sh")
+
+def qsub_FP(sim_param):
+    cpu_param = 7.0, PREP_PAR, 2.1, PRINT_PAR, PRINT_NM
+    cpus = sim_param.mlt_runs*cpu_base(sim_param, *cpu_param)
+    mem = memory_za(sim_param)
+    n_cpus = get_n_cpus(cpus, mem, "Frozen-potential approximation")
+    FP = Job_Param('FP', mem, cpus, n_cpus)
+    FP.add_std_opt(sim_param)
+    FP.add_sim_opt("--comp_FP 1 ")
+    save_to_qsub(make_qsub(FP), "scripts/FP_qsub.sh")
+
+def qsub_FP_pp(sim_param):
+    cpu_param = 16.0, PREP_PAR, 44.0, PRINT_PAR, PRINT_NM, 0
+    cpus = sim_param.mlt_runs*cpu_pp(sim_param, *cpu_param)
+    mem = memory_fp_pp(sim_param)
+    n_cpus = get_n_cpus(cpus, mem, "Frozen-potential particle-particle approximation")
+    FP_pp = Job_Param('FP_pp', mem, cpus, n_cpus)
+    FP_pp.add_std_opt(sim_param)
+    FP_pp.add_sim_opt("--cut_radius %f " % sim_param.rs)
+    FP_pp.add_sim_opt("--comp_FP_pp 1 ")
+    save_to_qsub(make_qsub(FP_pp), "scripts/FP_pp_qsub.sh")
+
+if __name__ == "__main__":
+    sim_param = get_input()
+    qsub_ZA(sim_param)
+    qsub_FF(sim_param)
+    qsub_FP(sim_param)
+    qsub_FP_pp(sim_param)

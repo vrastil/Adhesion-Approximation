@@ -8,4 +8,4 @@
 
 const int nmode = 351;
 void emu(double *xstar, double *ystar);
-Data_x_y<double> init_emu(const Sim_Param &sim, double z);
+Data_Vec<double, 2> init_emu(const Sim_Param &sim, double z);

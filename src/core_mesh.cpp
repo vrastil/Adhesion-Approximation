@@ -3,6 +3,10 @@
 #include "core.h"
 #include "core_mesh.h"
 
+#ifndef ORDER
+#define ORDER 1
+#endif
+
 using namespace std;
 
 void get_k_vec(int N, int index, int* k_vec)
@@ -11,7 +15,7 @@ void get_k_vec(int N, int index, int* k_vec)
 	k_vec[1] = (index / (N/2 + 1)) % N;
 	k_vec[2] = index % (N/2 + 1);
 	
-	for (int i =0; i<2; i++) k_vec[i] = ((k_vec[i]<=N/2.) ? k_vec[i] : k_vec[i] - N); // k_vec[2] is ALWAYS less or equal than N/2 (real FFTW)
+	for (int i =0; i<2; i++) if (k_vec[i] > N/2) k_vec[i] -= N; // k_vec[2] is ALWAYS less or equal than N/2 (real FFTW)
 }
 
 void get_k_vec(int N, int index, Vec_3D<int> &k_vec)
@@ -20,24 +24,24 @@ void get_k_vec(int N, int index, Vec_3D<int> &k_vec)
 	k_vec[1] = (index / (N/2 + 1)) % N;
 	k_vec[2] = index % (N/2 + 1);
 	
-	for (int i =0; i<2; i++) k_vec[i] = ((k_vec[i]<=N/2.) ? k_vec[i] : k_vec[i] - N); // k_vec[2] is ALWAYS less or equal than N/2 (real FFTW)
+	for (int i =0; i<2; i++) if (k_vec[i] > N/2) k_vec[i] -= N; // k_vec[2] is ALWAYS less or equal than N/2 (real FFTW)
 }
 
-int get_k_sq(int N, int index)
+double get_k_sq(int N, int index)
 {
 	int k_vec[3];
 	double tmp = 0;
 	get_k_vec(N, index, k_vec);
-	for (int i =0; i<3; i++) tmp += pow(k_vec[i],2);
+	for (int i =0; i<3; i++) tmp += pow(k_vec[i],2.);
 	return tmp;
 }
 
-inline double get_per(double vec, int per)
+double get_per(double vec, int per)
 {
     return ((vec >= per) || (vec < 0) ) ? vec - per * floor( vec / per ) : vec;
 }
 
-inline int get_per(int vec, int per)
+int get_per(int vec, int per)
 {
     if ((vec >= per) || (vec < 0) ){
         vec %= per;
@@ -115,44 +119,46 @@ Vec_3D<double> get_sgn_distance(const Vec_3D<double> &x_from, const Vec_3D<doubl
 	return dst;
 }
 
-double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num, const int order)
-{
-	// The weighting scheme used to assign values to the mesh points or vice versa
+template<unsigned N> double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num);
+
+template<> double wgh_sch<0>(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num)
+{ // NGP: Nearest grid point
+    get_per(y, mesh_num);
+    for (int i = 0; i < 3; i++) if ((int)x[i] != y[i]) return 0;
+    return 1;
+}
+
+template<> double wgh_sch<1>(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num)
+{ // CIC: Cloud in cells
+    double dx, w = 1;
+    get_per(y, mesh_num);
+    for (int i = 0; i < 3; i++)
+    {
+        dx = get_distance_1D(x[i], y[i], mesh_num);
+        if (dx > 1) return 0;
+        else w *= 1 - dx;
+    }
+    return w;
+}
+
+template<> double wgh_sch<2>(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num)
+{ // TSC: Triangular shaped clouds
+    double dx, w = 1;
+    get_per(y, mesh_num);
+    for (int i = 0; i < 3; i++)
+    {
+        dx = get_distance_1D(x[i], y[i], mesh_num);
+        if (dx > 1.5) return 0;
+        else if (dx > 0.5) w *= (1.5 - dx)*(1.5 - dx) / 2.0;
+        else w *= 3 / 4.0 - dx*dx;
+    }
+    return w;
+}
+
+double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num)
+{	// The weighting scheme used to assign values to the mesh points or vice versa
 	// Return value of assigment function on mesh point y from particle in x
-	double dx, w = 1;
-	get_per(y, mesh_num);
-	
-	switch (order){
-	case 0: {	// NGP: Nearest grid point
-				for (int i = 0; i < 3; i++)
-				{
-					if ((int)x[i] != y[i]) return 0;
-				}
-				return 1;
-	}
-	case 1: {	// CIC: Cloud in cells
-				for (int i = 0; i < 3; i++)
-				{
-				//	dx = fmin(fmin(abs(x[i] - y[i]), x[i] + mesh_num - y[i]), y[i] + mesh_num - x[i]);
-					dx = get_distance_1D(x[i], y[i], mesh_num);
-					if (dx > 1) return 0;
-					else w *= 1 - dx;
-				}
-				return w;
-	}
-	case 2: {	// TSC: Triangular shaped clouds
-				for (int i = 0; i < 3; i++)
-				{
-				//	dx = fmin(fmin(abs(x[i] - y[i]), x[i] + mesh_num - y[i]), y[i] + mesh_num - x[i]);
-					dx = get_distance_1D(x[i], y[i], mesh_num);
-					if (dx > 1.5) return 0;
-					else if (dx > 0.5) w *= (1.5 - dx)*(1.5 - dx) / 2.0;
-					else w *= 3 / 4.0 - dx*dx;
-				}
-				return w;
-	}
-	}
-	return 0;
+    return wgh_sch<ORDER>(x, y, mesh_num);
 }
 
 /**
@@ -160,24 +166,25 @@ double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num, const int o
  * @brief:	class for effective iteration of cube of mesch cells
  */
 
-IT::IT(const Vec_3D<double> &pos, int order):
-    counter(0), points(order+1), max_counter(points*points*points)
+template<unsigned points>
+IT<points>::IT(const Vec_3D<double> &pos): counter(0)
 {
     for(unsigned i = 0; i < 3; i++){
         vec[i] = (int)(pos[i] - 0.5*(points - 2));
     }
 }
 
-IT::IT(const Vec_3D<double> &pos, double Hc):
-    counter(0), points(3), max_counter(points*points*points)
+template<unsigned points>
+IT<points>::IT(const Vec_3D<double> &pos, double Hc): counter(0)
 {
     for(unsigned i = 0; i < 3; i++){
         vec[i] = (int)(pos[i]/Hc) - 1;
     }
 }
 
-bool IT::iter(){
-    if (++counter == max_counter) return false;
+template<unsigned points>
+bool IT<points>::iter(){
+    if (++counter == (points*points*points)) return false;
     vec[2]++;
     if ((counter % points) == 0){
         vec[2] -= points;
@@ -190,21 +197,21 @@ bool IT::iter(){
     return true;
 }
 
-void assign_to(Mesh* field, const Vec_3D<double> &position, const double value, const int order)
+void assign_to(Mesh* field, const Vec_3D<double> &position, const double value)
 {
-    IT it(position, order);
+    IT<ORDER+1> it(position);
     do{
         #pragma omp atomic
-        (*field)(it.vec) += value * wgh_sch(position, it.vec, field->N, order);
+        (*field)(it.vec) += value * wgh_sch(position, it.vec, field->N);
     } while( it.iter() );
 }
 
-void assign_to(vector<Mesh>* field, const Vec_3D<double> &position, const Vec_3D<double>& value, const int order)
+void assign_to(vector<Mesh>* field, const Vec_3D<double> &position, const Vec_3D<double>& value)
 {
-    IT it(position, order);
+    IT<ORDER+1> it(position);
     double w;
     do{
-        w = wgh_sch(position, it.vec, (*field)[0].N, order); //< resuse the same weigh for every field in vector
+        w = wgh_sch(position, it.vec, (*field)[0].N); //< resuse the same weigh for every field in vector
         for (int i = 0; i < 3; i++)
         {
             #pragma omp atomic
@@ -213,21 +220,21 @@ void assign_to(vector<Mesh>* field, const Vec_3D<double> &position, const Vec_3D
 	} while( it.iter() );
 }
 
-void assign_from(const Mesh &field, const Vec_3D<double> &position, double* value, const int order)
+void assign_from(const Mesh &field, const Vec_3D<double> &position, double* value)
 {
-	IT it(position, order);
+	IT<ORDER+1> it(position);
     do{
         #pragma omp atomic
-        *value += field(it.vec) * wgh_sch(position, it.vec, field.N, order);
+        *value += field(it.vec) * wgh_sch(position, it.vec, field.N);
 	} while( it.iter() );
 }
 
-void assign_from(const vector<Mesh> &field, const Vec_3D<double> &position, Vec_3D<double>* value, const int order)
+void assign_from(const vector<Mesh> &field, const Vec_3D<double> &position, Vec_3D<double>* value)
 {
-    IT it(position, order);
+    IT<ORDER+1> it(position);
     double w;
     do{
-        w = wgh_sch(position, it.vec, field[0].N, order); //< resuse the same weigh for every field in vector
+        w = wgh_sch(position, it.vec, field[0].N); //< resuse the same weigh for every field in vector
         for (int i = 0; i < 3; i++)
         {
             #pragma omp atomic
@@ -236,12 +243,12 @@ void assign_from(const vector<Mesh> &field, const Vec_3D<double> &position, Vec_
 	} while( it.iter() );
 }
 
-static inline void normalize_FFT_FORWARD(Mesh& rho)
+void normalize_FFT_FORWARD(Mesh& rho)
 {
     rho /= pow(rho.N, 3.);
 }
 
-static inline void normalize_FFT_BACKWARD(Mesh& rho)
+void normalize_FFT_BACKWARD(Mesh& rho)
 {
 }
 
@@ -306,6 +313,9 @@ double max(const vector<double>& data)
 {
     return *std::max_element(data.begin(), data.end());
 }
+
+template class IT<ORDER+1>;
+template class IT<3>;
 
 #ifdef TEST
 #include "test_core_mesh.cpp"
