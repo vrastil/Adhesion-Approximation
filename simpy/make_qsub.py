@@ -159,7 +159,7 @@ def make_qsub(job):
         qsub += "#PBS -l walltime=%i:%i:00\n" % (job.wall_time_h, job.wall_time_m)
 
     #qsub += "#PBS -q default@wagap-pro.cerit-sc.cz\n"
-    qsub += "#PBS -N cosmo_sim_%s\n" % job.app
+    qsub += "#PBS -N cosmo_sim_%s_$NUM/$NUM_ALL\n" % job.app
     qsub +=("#PBS -j oe\n"
             "#PBS -o logs/\n"
             "#PBS -e logs/\n\n\n"
@@ -174,6 +174,18 @@ def make_qsub(job):
 def save_to_qsub(qsub, qsub_file):
     with open(qsub_file, 'w') as file:
         file.write(qsub)
+
+def make_submit():
+    submit = "#!/bin/bash\n"
+             "NUM_ALL = $1\n"
+             "for NUM in `seq $NUM_ALL`; do\n"
+             "    qsub -v NUM=$NUM,NUM_ALL=$NUM_ALL ZA_qsub.sh\n"
+             "    qsub -v NUM=$NUM,NUM_ALL=$NUM_ALL FF_qsub.sh\n"
+             "    qsub -v NUM=$NUM,NUM_ALL=$NUM_ALL FP_qsub.sh\n"
+             "    qsub -v NUM=$NUM,NUM_ALL=$NUM_ALL FP_pp_qsub.sh\n"
+             "done\n"
+    return submit
+
 
 # already quite safe values
 PREP_PAR = 0.4
@@ -228,3 +240,4 @@ if __name__ == "__main__":
     qsub_FF(sim_param)
     qsub_FP(sim_param)
     qsub_FP_pp(sim_param)
+    save_to_qsub(make_submit(), "scripts/submit_mlt.sh")
