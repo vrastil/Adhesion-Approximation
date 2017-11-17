@@ -45,7 +45,7 @@ $(PCH_O): $(PCH)
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
 clean:
-	rm -f src/*.o src/*~ src/*.d tests/*.o tests/*~ tests/*.d include/*.gch include/*~ include/*.o
+	rm -f src/*.o src/*~ src/*.d tests/*.o tests/*~ tests/*.d include/*.gch include/*~ include/*.o include/*.d
 
 -include $(OBJ_FILES:.o=.d)
 -include $(TEST_OBJ_FILES:.o=.d)

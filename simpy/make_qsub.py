@@ -177,12 +177,22 @@ def make_qsub(job):
     qsub += ("#PBS -j oe\n"
              "#PBS -o logs/\n"
              "#PBS -e logs/\n\n\n"
+             "source /software/modules/init\n"
+             "module add fftw-3.3double\n"
+             "module add fftw-3.3ompdouble\n"
              "export OMP_NUM_THREADS=$PBS_NUM_PPN\n"
              "export MYDIR=/storage/brno2/home/vrastilm\n"
              "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MYDIR/local/lib\n"
-             "cd $MYDIR/Adhesion-Approximation\n\n"
+             "export CPATH=$CPATH:$MYDIR/local/include:/software/fftw-3.3/amd64_linux26.double/include/\n"
+             "export LIBRARY_PATH=$LIBRARY_PATH:$MYDIR/local/lib\n"
+             "cd $SCRATCH\n"
+             "cp $MYDIR/Adhesion-Approximation/include ./\n"
+             "cp $MYDIR/Adhesion-Approximation/src ./\n"
+             "make clean\n"
+             "make -j $PBS_NUM_PPN\n\n"
              )
-    qsub += "time ./adh_app -c ./input/generic_input.cfg %s" % job.sim_opt
+    qsub += "time ./adh_app -c $MYDIR/Adhesion-Approximation/input/generic_input.cfg %s" % job.sim_opt
+    qsub += "\n\nrm -rg ./"
     return qsub
 
 
