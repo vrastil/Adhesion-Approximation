@@ -164,7 +164,7 @@ def get_safe_mem_wall_time(mem, cpus, n_cpus):
 
 def make_qsub(job):
     qsub = "#!/bin/bash\n"
-    qsub += "#PBS -l select=1:ncpus=%i:mem=%igb\n" % (job.n_cpus, job.mem)
+    qsub += "#PBS -l select=1:ncpus=%i:mem=%igb:scratch_local=400mb\n" % (job.n_cpus, job.mem)
     if job.wall_time_m < 10:
         qsub += "#PBS -l walltime=%i:0%i:00\n" % (
             job.wall_time_h, job.wall_time_m)
@@ -173,10 +173,11 @@ def make_qsub(job):
             job.wall_time_h, job.wall_time_m)
 
     # qsub += "#PBS -q default@wagap-pro.cerit-sc.cz\n"
-    qsub += "#PBS -N cosmo_sim_%s_$NUM/$NUM_ALL\n" % job.app
+    qsub += "#PBS -N cosmo_sim_%s\n" % job.app
     qsub += ("#PBS -j oe\n"
              "#PBS -o logs/\n"
              "#PBS -e logs/\n\n\n"
+             "trap 'clean_scratch' TERM EXIT\n"
              "source /software/modules/init\n"
              "module add fftw-3.3double\n"
              "module add fftw-3.3ompdouble\n"
@@ -185,7 +186,7 @@ def make_qsub(job):
              "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MYDIR/local/lib\n"
              "export CPATH=$CPATH:$MYDIR/local/include:/software/fftw-3.3/amd64_linux26.double/include/\n"
              "export LIBRARY_PATH=$LIBRARY_PATH:$MYDIR/local/lib\n"
-             "cd $SCRATCH\n"
+             "cd $SCRATCHDIR\n"
              "cp -r $MYDIR/Adhesion-Approximation/include ./\n"
              "cp -r $MYDIR/Adhesion-Approximation/src ./\n"
              "cp $MYDIR/Adhesion-Approximation/Makefile ./\n"
@@ -193,7 +194,6 @@ def make_qsub(job):
              "make -j $PBS_NUM_PPN\n\n"
              )
     qsub += "time ./adh_app -c $MYDIR/Adhesion-Approximation/input/generic_input.cfg %s" % job.sim_opt
-    qsub += "\n\nrm -rf ./*"
     return qsub
 
 
@@ -204,12 +204,12 @@ def save_to_qsub(qsub, qsub_file):
 
 def make_submit():
     submit = ("#!/bin/bash\n"
-              "NUM_ALL = $1\n"
+              "NUM_ALL=$1\n"
               "for NUM in `seq $NUM_ALL`; do\n"
-              "    qsub -v NUM=$NUM,NUM_ALL=$NUM_ALL scripts/ZA_qsub.sh\n"
-              "    qsub -v NUM=$NUM,NUM_ALL=$NUM_ALL scripts/FF_qsub.sh\n"
-              "    qsub -v NUM=$NUM,NUM_ALL=$NUM_ALL scripts/FP_qsub.sh\n"
-              "    qsub -v NUM=$NUM,NUM_ALL=$NUM_ALL scripts/FP_pp_qsub.sh\n"
+              "    qsub scripts/ZA_qsub.sh\n"
+              "    qsub scripts/FF_qsub.sh\n"
+              "    qsub scripts/FP_qsub.sh\n"
+              "    qsub scripts/FP_pp_qsub.sh\n"
               "done\n")
     return submit
 
