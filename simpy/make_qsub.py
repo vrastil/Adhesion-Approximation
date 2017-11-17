@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 import math
+import os
+import stat
+
 
 class Job_Param(object):
     def __init__(self, app, mem, cpus, n_cpus):
@@ -33,16 +36,18 @@ class Sim_Param(object):
         self.Np = Np
         self.num_m = pow(Nm, 3)
         self.num_M = pow(NM, 3)
-        self.num_p = pow(Np, 3)        
+        self.num_p = pow(Np, 3)
         self.box = box
         self.z = z
         self.z0 = z0
         self.da = da
         self.print_every = print_every
-        self.n_steps = int(math.ceil((1./(1.+z0) - 1./(1.+z))/da))
-        self.n_print = int(math.ceil(self.n_steps / float(print_every))) + 1 if print_every else 0
+        self.n_steps = int(math.ceil((1. / (1. + z0) - 1. / (1. + z)) / da))
+        self.n_print = int(
+            math.ceil(self.n_steps / float(print_every))) + 1 if print_every else 0
         self.rs = 0
         self.mlt_runs = 1
+
 
 def memory_base(sim_param):
     mem = 0
@@ -92,13 +97,16 @@ def cpu_base(sim_param, prep_Nm, prep_Np, integ_np_nsteps, print_np, print_NM):
     cpus += prep_Np * pow(sim_param.Np / 128., 3)  # preparation
     cpus += integ_np_nsteps * sim_param.n_steps * \
         pow(sim_param.Np / 128., 3)  # integration
-    cpus += print_np * sim_param.n_print * pow(sim_param.Np / 128., 3)  # printing
-    cpus += print_NM * sim_param.n_print * pow(sim_param.NM / 128., 3)  # printing
+    cpus += print_np * sim_param.n_print * \
+        pow(sim_param.Np / 128., 3)  # printing
+    cpus += print_NM * sim_param.n_print * \
+        pow(sim_param.NM / 128., 3)  # printing
     return cpus
 
 
 def cpu_pp(sim_param, prep_Nm, prep_Np, integ_np_nsteps, print_np, print_NM, integ_np_nsteps_extra):
-    cpus = cpu_base(sim_param, prep_Nm, prep_Np, integ_np_nsteps, print_np, print_NM)
+    cpus = cpu_base(sim_param, prep_Nm, prep_Np,
+                    integ_np_nsteps, print_np, print_NM)
     cpus += integ_np_nsteps_extra * sim_param.n_steps * \
         pow(sim_param.Np / 128., 3) * pow(sim_param.rs / 2.7, 3)
     return cpus
@@ -111,7 +119,7 @@ def convert_s2hms(seconds):
     return h, m, s
 
 
-def time_2string(h, m ,s):
+def time_2string(h, m, s):
     time = "%i:" % h
     if m < 10:
         time += "0%i:" % m
@@ -120,18 +128,19 @@ def time_2string(h, m ,s):
     if s < 10:
         time += "0%i" % s
     else:
-        time += "%i" % s    
+        time += "%i" % s
     return time
+
 
 def print_n_cpus_t(cpus, n_cpus):
     h, m, s = convert_s2hms(cpus / n_cpus)
-    time = time_2string(h, m ,s) 
+    time = time_2string(h, m, s)
     print "\tOn %i cores the simulation will take %s of Wall time." % (n_cpus, time)
 
 
 def get_n_cpus(cpus, mem, approx_str):
     h, m, s = convert_s2hms(cpus)
-    time = time_2string(h, m ,s) 
+    time = time_2string(h, m, s)
     print "\n%s will need approximately %.1f GB of memory and shouldn`t take more than %s of CPU time." % (approx_str, mem, time)
 
     print_n_cpus_t(cpus, 4)
@@ -144,46 +153,53 @@ def get_n_cpus(cpus, mem, approx_str):
         print_n_cpus_t(cpus, 64)
     return input("Enter number of cores: ")
 
+
 def get_safe_mem_wall_time(mem, cpus, n_cpus):
     mem = int(math.ceil((mem + 0.3) * 1.03))  # extra 0.3 GB and 3%
     h, m, s = convert_s2hms(cpus * 2.0 / n_cpus)  # extra 100% of Wall time
-    if (h + m) < 1: m = 1
-    return mem, h, m # seconds are ambiguous
+    if (h + m) < 1:
+        m = 1
+    return mem, h, m  # seconds are ambiguous
+
 
 def make_qsub(job):
-    qsub =  "#!/bin/bash\n"
+    qsub = "#!/bin/bash\n"
     qsub += "#PBS -l select=1:ncpus=%i:mem=%igb\n" % (job.n_cpus, job.mem)
     if job.wall_time_m < 10:
-        qsub += "#PBS -l walltime=%i:0%i:00\n" % (job.wall_time_h, job.wall_time_m)
+        qsub += "#PBS -l walltime=%i:0%i:00\n" % (
+            job.wall_time_h, job.wall_time_m)
     else:
-        qsub += "#PBS -l walltime=%i:%i:00\n" % (job.wall_time_h, job.wall_time_m)
+        qsub += "#PBS -l walltime=%i:%i:00\n" % (
+            job.wall_time_h, job.wall_time_m)
 
-    #qsub += "#PBS -q default@wagap-pro.cerit-sc.cz\n"
+    # qsub += "#PBS -q default@wagap-pro.cerit-sc.cz\n"
     qsub += "#PBS -N cosmo_sim_%s_$NUM/$NUM_ALL\n" % job.app
-    qsub +=("#PBS -j oe\n"
-            "#PBS -o logs/\n"
-            "#PBS -e logs/\n\n\n"
-            "export OMP_NUM_THREADS=$PBS_NUM_PPN\n"
-            "export MYDIR=/storage/brno2/home/vrastilm\n"
-            "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MYDIR/local/lib\n"
-            "cd $MYDIR/Adhesion-Approximation\n\n"
-            )
+    qsub += ("#PBS -j oe\n"
+             "#PBS -o logs/\n"
+             "#PBS -e logs/\n\n\n"
+             "export OMP_NUM_THREADS=$PBS_NUM_PPN\n"
+             "export MYDIR=/storage/brno2/home/vrastilm\n"
+             "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MYDIR/local/lib\n"
+             "cd $MYDIR/Adhesion-Approximation\n\n"
+             )
     qsub += "time ./adh_app -c ./input/generic_input.cfg %s" % job.sim_opt
     return qsub
+
 
 def save_to_qsub(qsub, qsub_file):
     with open(qsub_file, 'w') as file:
         file.write(qsub)
 
+
 def make_submit():
-    submit = "#!/bin/bash\n"
-             "NUM_ALL = $1\n"
-             "for NUM in `seq $NUM_ALL`; do\n"
-             "    qsub -v NUM=$NUM,NUM_ALL=$NUM_ALL ZA_qsub.sh\n"
-             "    qsub -v NUM=$NUM,NUM_ALL=$NUM_ALL FF_qsub.sh\n"
-             "    qsub -v NUM=$NUM,NUM_ALL=$NUM_ALL FP_qsub.sh\n"
-             "    qsub -v NUM=$NUM,NUM_ALL=$NUM_ALL FP_pp_qsub.sh\n"
-             "done\n"
+    submit = ("#!/bin/bash\n"
+              "NUM_ALL = $1\n"
+              "for NUM in `seq $NUM_ALL`; do\n"
+              "    qsub -v NUM=$NUM,NUM_ALL=$NUM_ALL scripts/ZA_qsub.sh\n"
+              "    qsub -v NUM=$NUM,NUM_ALL=$NUM_ALL scripts/FF_qsub.sh\n"
+              "    qsub -v NUM=$NUM,NUM_ALL=$NUM_ALL scripts/FP_qsub.sh\n"
+              "    qsub -v NUM=$NUM,NUM_ALL=$NUM_ALL scripts/FP_pp_qsub.sh\n"
+              "done\n")
     return submit
 
 
@@ -195,7 +211,7 @@ PRINT_NM = 1.7
 
 def qsub_ZA(sim_param):
     cpu_param = 2.0, PREP_PAR, 0.25, PRINT_PAR, PRINT_NM
-    cpus = sim_param.mlt_runs*cpu_base(sim_param, *cpu_param)
+    cpus = sim_param.mlt_runs * cpu_base(sim_param, *cpu_param)
     mem = memory_za(sim_param)
     n_cpus = get_n_cpus(cpus, mem, "Zel`dovich approximation")
     ZA = Job_Param('ZA', mem, cpus, n_cpus)
@@ -203,9 +219,10 @@ def qsub_ZA(sim_param):
     ZA.add_sim_opt("--comp_ZA 1 ")
     save_to_qsub(make_qsub(ZA), "scripts/ZA_qsub.sh")
 
+
 def qsub_FF(sim_param):
     cpu_param = 1.7, PREP_PAR, 2.0, PRINT_PAR, PRINT_NM
-    cpus = sim_param.mlt_runs*cpu_base(sim_param, *cpu_param)
+    cpus = sim_param.mlt_runs * cpu_base(sim_param, *cpu_param)
     mem = memory_za(sim_param)
     n_cpus = get_n_cpus(cpus, mem, "Frozen-flow approximation")
     FF = Job_Param('FF', mem, cpus, n_cpus)
@@ -213,9 +230,10 @@ def qsub_FF(sim_param):
     FF.add_sim_opt("--comp_FF 1 ")
     save_to_qsub(make_qsub(FF), "scripts/FF_qsub.sh")
 
+
 def qsub_FP(sim_param):
     cpu_param = 7.0, PREP_PAR, 2.1, PRINT_PAR, PRINT_NM
-    cpus = sim_param.mlt_runs*cpu_base(sim_param, *cpu_param)
+    cpus = sim_param.mlt_runs * cpu_base(sim_param, *cpu_param)
     mem = memory_za(sim_param)
     n_cpus = get_n_cpus(cpus, mem, "Frozen-potential approximation")
     FP = Job_Param('FP', mem, cpus, n_cpus)
@@ -223,16 +241,19 @@ def qsub_FP(sim_param):
     FP.add_sim_opt("--comp_FP 1 ")
     save_to_qsub(make_qsub(FP), "scripts/FP_qsub.sh")
 
+
 def qsub_FP_pp(sim_param):
     cpu_param = 16.0, PREP_PAR, 44.0, PRINT_PAR, PRINT_NM, 0
-    cpus = sim_param.mlt_runs*cpu_pp(sim_param, *cpu_param)
+    cpus = sim_param.mlt_runs * cpu_pp(sim_param, *cpu_param)
     mem = memory_fp_pp(sim_param)
-    n_cpus = get_n_cpus(cpus, mem, "Frozen-potential particle-particle approximation")
+    n_cpus = get_n_cpus(
+        cpus, mem, "Frozen-potential particle-particle approximation")
     FP_pp = Job_Param('FP_pp', mem, cpus, n_cpus)
     FP_pp.add_std_opt(sim_param)
     FP_pp.add_sim_opt("--cut_radius %f " % sim_param.rs)
     FP_pp.add_sim_opt("--comp_FP_pp 1 ")
     save_to_qsub(make_qsub(FP_pp), "scripts/FP_pp_qsub.sh")
+
 
 if __name__ == "__main__":
     sim_param = get_input()
@@ -240,4 +261,7 @@ if __name__ == "__main__":
     qsub_FF(sim_param)
     qsub_FP(sim_param)
     qsub_FP_pp(sim_param)
+
     save_to_qsub(make_submit(), "scripts/submit_mlt.sh")
+    st = os.stat('scripts/submit_mlt.sh')
+    os.chmod('scripts/submit_mlt.sh', st.st_mode | stat.S_IEXEC)
