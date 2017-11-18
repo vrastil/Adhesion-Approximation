@@ -344,14 +344,14 @@ def stack_group(group_sim_infos):
                        stack_info.pwr_dir, stack_info.app)
         stack_info.done(key)
 
-    # key = "corr_files"
-    # if not stack_info.results[key]:
-    #     # for each Pk in Pk_list compute correlation function
-    #     xi_list = [corr_func(Pk) for Pk in Pk_list]
-    #     save_corr(zs, data_list, xi_list, stack_info.corr_dir, stack_info.app)
-    #     stack_info.done(key)
-    # else:
-    #     xi_list = load_corr(stack_info)
+    key = "corr_files"
+    if not stack_info.results[key]:
+        # for each Pk in Pk_list compute correlation function
+        xi_list = [corr_func(Pk) for Pk in Pk_list]
+        save_corr(zs, data_list, xi_list, stack_info.corr_dir, stack_info.app)
+        stack_info.done(key)
+    else:
+        xi_list = load_corr(stack_info)
 
     print '\tPlotting power spectrum...'
     plot.plot_pwr_spec_stacked(
@@ -362,14 +362,14 @@ def stack_group(group_sim_infos):
         plot.plot_pwr_spec_diff_from_data(
             data_list_diff[diff_type], zs_diff, stack_info, ext_title=diff_type)
 
-    # print '\tPlotting correlation function...'
-    # zs_emu, files_emu = try_get_zs_files(
-    #     stack_info.last, 'corr_func/', a_file='*gsl*emu*.dat')
-    # files_lin = try_get_zs_files(
-    #     stack_info.last, 'corr_func/', a_file='*gsl*lin*.dat')[1]
-    # plot.plot_corr_func_from_data(
-    #     xi_list, zs, stack_info, files_lin,
-    #     files_emu, zs_emu)
+    print '\tPlotting correlation function...'
+    zs_emu, files_emu = try_get_zs_files(
+        stack_info.last, 'corr_func/', a_file='*gsl*emu*.dat')
+    files_lin = try_get_zs_files(
+        stack_info.last, 'corr_func/', a_file='*gsl*lin*.dat')[1]
+    plot.plot_corr_func_from_data(
+        xi_list, zs, stack_info, files_lin,
+        files_emu, zs_emu)
 
 
 def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/'):
