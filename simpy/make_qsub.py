@@ -206,13 +206,31 @@ def make_submit():
     submit = ("#!/bin/bash\n"
               "NUM_ALL=$1\n"
               "for NUM in `seq $NUM_ALL`; do\n"
-              "    qsub scripts/ZA_qsub.sh\n"
-              "    qsub scripts/FF_qsub.sh\n"
-              "    qsub scripts/FP_qsub.sh\n"
-              "    qsub scripts/FP_pp_qsub.sh\n"
+              "    qsub scripts/ZA_qsub.pbs\n"
+              "    qsub scripts/FF_qsub.pbs\n"
+              "    qsub scripts/FP_qsub.pbs\n"
+              "    qsub scripts/FP_pp_qsub.pbs\n"
               "done\n")
     return submit
 
+def make_stack_qsub():
+    qsub = ("#!/bin/bash\n"
+            "#PBS -l select=1:ncpus=1:mem=400mb\n"
+            "#PBS -l walltime=0:30:00\n"
+            "#PBS -j oe\n"
+            "#PBS -N cosmo_stack\n"
+            "#PBS -o logs/\n"
+            "#PBS -e logs/\n\n\n"
+            "source /software/modules/init\n"
+            "module add python27-modules-intel\n"
+            "export PYTHONPATH=$PYTHONPATH:/storage/brno2/home/vrastilm/Adhesion-Approximation:/storage/brno2/home/vrastilm/CCL\n"
+            "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/storage/brno2/home/vrastilm/local/lib\n\n"
+            "COM+=\"from simpy.stacking import stack_all; \"\n"
+            "COM+=\"out_dir='/storage/brno2/home/vrastilm/Adhesion-Approximation/output/'; \"\n"
+            "COM+=\"stack_all(out_dir)\"\n\n"
+            "python -c \"$COM\"\n"
+            )
+    return qsub
 
 # already quite safe values
 PREP_PAR = 0.4
@@ -228,7 +246,7 @@ def qsub_ZA(sim_param):
     ZA = Job_Param('ZA', mem, cpus, n_cpus)
     ZA.add_std_opt(sim_param)
     ZA.add_sim_opt("--comp_ZA 1 ")
-    save_to_qsub(make_qsub(ZA), "scripts/ZA_qsub.sh")
+    save_to_qsub(make_qsub(ZA), "scripts/ZA_qsub.pbs")
 
 
 def qsub_FF(sim_param):
@@ -239,7 +257,7 @@ def qsub_FF(sim_param):
     FF = Job_Param('FF', mem, cpus, n_cpus)
     FF.add_std_opt(sim_param)
     FF.add_sim_opt("--comp_FF 1 ")
-    save_to_qsub(make_qsub(FF), "scripts/FF_qsub.sh")
+    save_to_qsub(make_qsub(FF), "scripts/FF_qsub.pbs")
 
 
 def qsub_FP(sim_param):
@@ -250,7 +268,7 @@ def qsub_FP(sim_param):
     FP = Job_Param('FP', mem, cpus, n_cpus)
     FP.add_std_opt(sim_param)
     FP.add_sim_opt("--comp_FP 1 ")
-    save_to_qsub(make_qsub(FP), "scripts/FP_qsub.sh")
+    save_to_qsub(make_qsub(FP), "scripts/FP_qsub.pbs")
 
 
 def qsub_FP_pp(sim_param):
@@ -263,7 +281,7 @@ def qsub_FP_pp(sim_param):
     FP_pp.add_std_opt(sim_param)
     FP_pp.add_sim_opt("--cut_radius %f " % sim_param.rs)
     FP_pp.add_sim_opt("--comp_FP_pp 1 ")
-    save_to_qsub(make_qsub(FP_pp), "scripts/FP_pp_qsub.sh")
+    save_to_qsub(make_qsub(FP_pp), "scripts/FP_pp_qsub.pbs")
 
 
 if __name__ == "__main__":
@@ -276,3 +294,5 @@ if __name__ == "__main__":
     save_to_qsub(make_submit(), "scripts/submit_mlt.sh")
     st = os.stat('scripts/submit_mlt.sh')
     os.chmod('scripts/submit_mlt.sh', st.st_mode | stat.S_IEXEC)
+
+    save_to_qsub(make_stack_qsub(), "scripts/stack_qsub.pbs")

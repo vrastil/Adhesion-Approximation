@@ -130,18 +130,22 @@ def stack_files(group_sim_infos, subdir, a_file):
     for i, data_k in enumerate(all_data_k):
         del_num = 0
         j = 0
+        print "\n\tz = ", zs[i]
         while True:
             k_row = [k_vec[j] for k_vec in  data_k]
             k_max = np.max(k_row)
             for ik, k in  enumerate(k_row):
                 k_ = k
-                while not np.isclose(k_, k_max, rtol=1.e-5, atol=1.e-5):
+                while not np.isclose(k_, k_max, rtol=1.e-5, atol=1.e-5) and k_ < k_max :
                     # remove k, Pk if not the same, look for first close
+                    if j == len(all_data_k[i][ik]):
+                        break
                     del_num += 1
                     del all_data_k[i][ik][j]
                     del all_data_Pk[i][ik][j]
                     # look at the next k
                     k_ = all_data_k[i][ik][j]
+            
             j += 1
             # check if j is length of ALL arrays
             for x in all_data_k[i]:
