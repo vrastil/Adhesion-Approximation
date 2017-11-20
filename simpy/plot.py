@@ -495,6 +495,63 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
     plt.close(fig)
 
 
+def plot_pwr_spec_diff_map_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='', save=True, show=False):
+    if out_dir == 'auto':
+        out_dir = a_sim_info.res_dir
+    if pk_type == "dens":
+        out_file = 'pwr_spec_diff'
+        suptitle = "Power spectrum difference"
+    elif pk_type == "vel":
+        out_file = 'vel_pwr_spec_diff'
+        suptitle = r"Power spectrum difference $(\nabla\cdot u)$"
+
+    if ext_title == 'input':
+        ext_title = ' (ref: input)'
+        out_file += '_input'
+    if ext_title == 'hybrid':
+        ext_title = ' (ref: hybrid)'
+        out_file += '_hybrid'
+    if ext_title == 'par':
+        ext_title = ' (ref: particle)'
+        out_file += '_par'
+    out_file += '_map.png'
+    suptitle += ext_title
+
+    fig = plt.figure(figsize=(10, 10))
+    gs = gridspec.GridSpec(1, 15, wspace=0.5)
+    ax = plt.subplot(gs[0, : -1])
+    cbar_ax = plt.subplot(gs[0, -1])
+    ax.set_xscale('log')
+
+    a = [1 / (1 + z) for z in zs]
+    supp = np.array(data_list)[:,1,:] # extract Pk, shape = (zs, k)
+    k = np.array(data_list[0][0])
+
+    im = ax.pcolor(k, a, supp, cmap='seismic', vmin=-0.2, vmax=0.2)
+    cbar = fig.colorbar(im, cax=cbar_ax)
+
+    if a_sim_info.k_nyquist is not None:
+        ls = [':', '-.', '--']
+        ls *= (len(a_sim_info.k_nyquist) - 1) / 3 + 1
+        ls = iter(ls)
+        val_set = set(a_sim_info.k_nyquist.itervalues())
+        for val in val_set:
+            ax.axvline(val, ls=next(ls), c='k')
+
+    fig.suptitle(suptitle, y=0.99, size=20)
+    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=15)
+    ax.set_ylabel(r"$a(t)$", fontsize=15)
+    plt.draw()
+    plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
+                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
+    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
+    if save:
+        plt.savefig(out_dir + out_file)
+    if show:
+        plt.show()
+    plt.close(fig)
+
+
 def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='', save=True, show=False):
     data_list = [np.transpose(np.loadtxt(a_file))
                  for a_file in pwr_spec_diff_files]
@@ -693,21 +750,14 @@ def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=Fals
         out_dir = a_sim_info.res_dir
     from matplotlib.colors import SymLogNorm
     fig = plt.figure(figsize=(10, 10))
-    # fig, ax = plt.subplots(figsize=(10, 10))
     gs = gridspec.GridSpec(1, 15, wspace=0.5)
     ax = plt.subplot(gs[0, : -1])
     cbar_ax = plt.subplot(gs[0, -1])
-    gs = gridspec.GridSpec(1, 1)
-    # ax = plt.subplot(gs[0])
-    # divider = make_axes_locatable(ax)
-    # cbar_ax = divider.append_axes("right", size="5%", pad=0.1)
 
     plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=13)
     ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=13)
-    # cbar_ax = fig.add_axes([0.85, 0.155, 0.05, 0.695])
-    # fig.subplots_adjust(right=0.82)
     L = int(np.sqrt(rho.shape[0]))
     rho.shape = L, L
     im = ax.imshow(rho, interpolation='bicubic', cmap='gnuplot',

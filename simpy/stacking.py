@@ -1,6 +1,7 @@
 from datetime import datetime
 import os.path
 import sys
+import traceback
 import gc
 import matplotlib
 matplotlib.use('Agg')
@@ -367,6 +368,9 @@ def stack_group(group_sim_infos):
     supp_lms, supp_std_lms, k_lms = load_k_supp_from_data(data_list_diff["par"], stack_info.k_nyquist["particle"])
     plot.plot_supp_lms(supp_lms, a, stack_info, k_lms, supp_std_lms)
 
+    print '\tPlotting power spectrum suppression (map)...'
+    plot.plot_pwr_spec_diff_map_from_data(data_list_diff["par"], zs_diff, stack_info, ext_title="par")
+
     print '\tPlotting correlation function...'
     zs_emu, files_emu = try_get_zs_files(
         stack_info.last, 'corr_func/', a_file='*gsl*emu*.dat')
@@ -421,5 +425,6 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
         try:
             stack_group(sep_sim_infos)
         except:
-            print("Unexpected error:", sys.exc_info()[0])
+            print "Unexpected error:"
+            traceback.print_exc()
             print("Continuing with next group")
