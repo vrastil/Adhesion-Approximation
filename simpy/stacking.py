@@ -13,8 +13,7 @@ import json
 
 from . import *
 from . import plot
-from .data import SimInfo
-from .data import RESULTS_KEYS
+from .data import SimInfo, RESULTS_KEYS, load_k_supp_from_data
 
 RESULTS_KEYS_FILES = ["corr_files", "pwr_spec_files",
                       "pwr_spec_extra_files", "pwr_spec_diff_files"]
@@ -354,13 +353,19 @@ def stack_group(group_sim_infos):
         xi_list = load_corr(stack_info)
 
     print '\tPlotting power spectrum...'
+    files_emu = try_get_zs_files(stack_info.last, 'pwr_spec/', a_file='*emu*.dat')[1]
     plot.plot_pwr_spec_stacked(
-        data_list, zs, stack_info, Pk_list)
+        data_list, zs, stack_info, Pk_list, files_emu)
 
     print '\tPlotting power spectrum difference...'
     for diff_type in ("par", "input", "hybrid"):
         plot.plot_pwr_spec_diff_from_data(
             data_list_diff[diff_type], zs_diff, stack_info, ext_title=diff_type)
+
+    print '\tPlotting power spectrum suppression...'
+    a = [1./(z+1) for z in zs_diff]
+    supp_lms, supp_std_lms, k_lms = load_k_supp_from_data(data_list_diff["par"], stack_info.k_nyquist["particle"])
+    plot.plot_supp_lms(supp_lms, a, stack_info, k_lms, supp_std_lms)
 
     print '\tPlotting correlation function...'
     zs_emu, files_emu = try_get_zs_files(

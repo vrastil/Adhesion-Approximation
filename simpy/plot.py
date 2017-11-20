@@ -89,7 +89,7 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, pw
     for i, pwr in enumerate(pwr_spec_files):
         if zs[i] != 'init':
             a = 1 / (1 + zs[i])
-            if ((a < 2 * a_) or (2 * a > a_end)) and a != a_end:
+            if ((a < 1.5 * a_) or (1.5 * a > a_end)) and a != a_end:
                 continue
             a_ = a
             lab = 'z = ' + str(zs[i])
@@ -195,7 +195,7 @@ def plot_pwr_spec_stacked(data_list, zs, a_sim_info, Pk_list_extrap=None, pwr_sp
     for i, data in enumerate(data_list):
         if zs[i] != 'init':
             a = 1 / (1 + zs[i])
-            if ((a < 2 * a_) or (2 * a > a_end)) and a != a_end:
+            if ((a < 1.5 * a_) or (1.5 * a > a_end)) and a != a_end:
                 continue
             a_ = a
             lab = 'z = ' + str(zs[i])
@@ -372,7 +372,7 @@ def plot_corr_func_from_data(corr_data_list, zs, a_sim_info, corr_func_files_lin
 
         a = 1 / (1 + z)
         # no need to plot EVERY correlation function
-        if ((a < 2 * a_) or (2 * a > a_end)) and a != a_end:
+        if a < 2 * a_ and z > 1 and a != a_end:
             continue
         a_ = a
         corr_data = corr_data_list[i]
@@ -443,7 +443,7 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
     ymin = ymax = 0
     for i, data in enumerate(data_list):
         a = 1 / (1 + zs[i])
-        if ((a < 2 * a_) or (2 * a > a_end)) and a != a_end:
+        if ((a < 1.5 * a_) or (1.5 * a > a_end)) and a != a_end:
             continue
         a_ = a
         lab = 'z = ' + str(zs[i])

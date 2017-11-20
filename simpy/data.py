@@ -89,7 +89,7 @@ class SimInfo(object):
         with open(self.file, 'w') as outfile:
             json.dump(data, outfile, indent=2)
 
-def load_k_supp(files, k_nyquist_par):
+def load_k_supp_from_data(supp_list, k_nyquist_par):
     """
     Divide available k-values into 7 subinterval from
     k_min = 2*PI / L to k_max = 67% k_nyquist_par
@@ -105,10 +105,9 @@ def load_k_supp(files, k_nyquist_par):
     supp_medium_std = []
     supp_small_std = []
 
-    for a_file in files:
-        data = np.loadtxt(a_file)
-        k = data[:, 0]
-        P_diff = data[:, 1]
+    for data in supp_list:
+        k = data[0]
+        P_diff = data[1]
 
         idx = (np.abs(k-0.5*k_nyquist_par)).argmin() / 7
 
@@ -121,14 +120,14 @@ def load_k_supp(files, k_nyquist_par):
         supp_small.append(np.mean(P_diff[6*idx:7*idx]))        
         supp_small_std.append(np.std(P_diff[6*idx:7*idx]))
 
-        del data, k, P_diff
-
-    data = np.loadtxt(files[-1])
-    k = data[:, 0]
     k_l = [k[0*idx], k[1*idx]]
     k_m = [k[3*idx], k[4*idx]]
     k_s = [k[6*idx], k[7*idx]]
     return (supp_large, supp_medium, supp_small), (supp_large_std, supp_medium_std, supp_small_std), (k_l, k_m, k_s)
+
+def load_k_supp(files, k_nyquist_par):
+    supp_list = [np.transpose(np.loadtxt(a_file)) for a_file in files]
+    return load_k_supp_from_data(supp_list, k_nyquist_par)
 
 def analyze_run(a_sim_info, rerun=None, skip=None):
     plt.rcParams['legend.numpoints'] = 1
