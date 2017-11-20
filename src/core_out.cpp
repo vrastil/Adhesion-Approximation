@@ -231,10 +231,17 @@ void print_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Data_
             "# depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 
-	double k, P_k, P_input, P_par;
+	double k, P_k, P_input, P_par, err;
+    cout.precision(15);
     const unsigned size = pwr_spec_binned.size();
 	for (unsigned j = 0; j < size; j++){
-        k = pwr_spec_binned[0][j];
+        err = rel_error(pwr_spec_binned[0][j], pwr_spec_binned_0[0][j]);
+        if (err > 1e-6){
+            cout << "ERROR! Different values of k in bin " << j << "! Relative error = " << err << "\n";
+            continue;
+        }
+        else if (err > 1e-12) cout << "WARNING! Different values of k in bin " << j << "! Relative error = " << err << "\n";
+        k = pwr_spec_binned_0[0][j];
         if (k < pwr_spec_input.x_min) continue;
         else if(k > pwr_spec_input.x_max) break;
         else
@@ -260,19 +267,19 @@ void print_vel_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const D
             "# and lineary extrapolated velocity divergence power spectrum depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 	
-	double P_k, P_ZA;
+	double P_k, P_ZA, err;
     cout.precision(15);
     const unsigned size = pwr_spec_binned.size();
 	for (unsigned j = 0; j < size; j++){
-        if (close_enough(pwr_spec_binned[0][j], pwr_spec_binned_0[0][j])){
-            P_k = pwr_spec_binned[1][j];
-			P_ZA = pwr_spec_binned_0[1][j] * pow(dDda, 2.);
-            File << scientific << pwr_spec_binned[0][j] << "\t" << fixed << (P_k-P_ZA)/P_ZA << "\n";
+        err = rel_error(pwr_spec_binned[0][j], pwr_spec_binned_0[0][j]);
+        if (err > 1e-6){
+            cout << "ERROR! Different values of k in bin " << j << "! Relative error = " << err << "\n";
+            continue;
         }
-        else{
-            cout << "WARNING! Different values of k in bin " << j << "! k = "
-                << pwr_spec_binned[0][j] << ", k_0 = " << pwr_spec_binned_0[0][j] <<  "\n";
-        }
+        else if (err > 1e-12) cout << "WARNING! Different values of k in bin " << j << "! Relative error = " << err << "\n";
+        P_k = pwr_spec_binned[1][j];
+        P_ZA = pwr_spec_binned_0[1][j] * pow(dDda, 2.);
+        File << scientific << pwr_spec_binned_0[0][j] << "\t" << fixed << (P_k-P_ZA)/P_ZA << "\n";
 	}
 }
 
