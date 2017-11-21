@@ -130,7 +130,6 @@ def stack_files(group_sim_infos, subdir, a_file):
     for i, data_k in enumerate(all_data_k):
         del_num = 0
         j = 0
-        print "\n\tz = ", zs[i]
         while True:
             k_row = [k_vec[j] for k_vec in  data_k]
             k_max = np.max(k_row)
@@ -426,5 +425,5 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
             stack_group(sep_sim_infos)
         except:
             print "Unexpected error:"
-            traceback.print_exc()
+            traceback.print_exc(file=sys.stdout)
             print("Continuing with next group")

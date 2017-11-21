@@ -528,14 +528,50 @@ def plot_pwr_spec_diff_map_from_data(data_list, zs, a_sim_info, out_dir='auto', 
     # hack around pcolormesh plotting edges
     da = (a[-1] - a[0]) / (len(a) - 1)
     a = np.array([a[0]-da/2] + [1 / (1 + z) + da/2 for z in zs])
-    data_list = np.array(data_list)
-    k = data_list[0][0]
+    # check if all zs have the same lengths
+    try:
+        data_array = np.array(data_list)
+    except ValueError:
+        print '\t\tData in data_list have probaly different shapes. Trying to cut...'
+        del_num = 0
+        j = 0
+        while True:
+            k_row = [data[0][j] for data in  data_list]
+            k_max = np.max(k_row)
+            for ik, k in  enumerate(k_row):
+                k_ = k
+                while not np.isclose(k_, k_max, rtol=1.e-5, atol=1.e-5) and k_ < k_max :
+                    # remove k, Pk if not the same, look for first close
+                    if j == len(data_list[ik][0]):
+                        break
+                    del_num += 1
+                    del data_list[ik][0][j]
+                    del data_list[ik][1][j]
+                    try:
+                        del data_list[ik][2][j]
+                    except IndexError:
+                        pass
+                    # look at the next k
+                    k_ = data_list[ik][0][j]
+            
+            j += 1
+            # check if j is length of ALL arrays
+            for x in data_list:
+                if len(x[0]) != j:
+                    break
+            else:
+                break
+        if del_num:
+            print "\t\tDeleted %i excess values." % (del_num)
+        data_array = np.array(data_list)
+
+    k = data_array[0][0]
 
     print '\t\ta.shape (with extra dim) = ', a.shape
-    print '\t\tdata_list.shape = ', data_list.shape
+    print '\t\tdata_array.shape = ', data_array.shape
     print '\t\tk.shape = ', k.shape
 
-    supp = data_list[:, 1, :] # extract Pk, shape = (zs, k)
+    supp = data_array[:, 1, :] # extract Pk, shape = (zs, k)
 
     print '\t\tsupp.shape = ', supp.shape
 
@@ -565,7 +601,7 @@ def plot_pwr_spec_diff_map_from_data(data_list, zs, a_sim_info, out_dir='auto', 
     if show:
         plt.show()
     plt.close(fig)
-    del supp, k, a, im, cbar, ax
+    del supp, k, a, im, cbar, ax, data_array
 
 
 def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='', save=True, show=False):
