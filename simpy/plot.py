@@ -5,6 +5,7 @@ from matplotlib import animation
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.cm as cm
+from matplotlib.colors import SymLogNorm
 # from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 from scipy import interpolate
@@ -521,14 +522,28 @@ def plot_pwr_spec_diff_map_from_data(data_list, zs, a_sim_info, out_dir='auto', 
     gs = gridspec.GridSpec(1, 15, wspace=0.5)
     ax = plt.subplot(gs[0, : -1])
     cbar_ax = plt.subplot(gs[0, -1])
+
     ax.set_xscale('log')
-
     a = [1 / (1 + z) for z in zs]
-    supp = np.array(data_list)[:,1,:] # extract Pk, shape = (zs, k)
-    k = np.array(data_list[0][0])
+    # hack around pcolormesh plotting edges
+    da = (a[-1] - a[0]) / (len(a) - 1)
+    a = np.array([a[0]-da/2] + [1 / (1 + z) + da/2 for z in zs])
+    data_list = np.array(data_list)
+    k = data_list[0][0]
 
-    im = ax.pcolor(k, a, supp, cmap='seismic', vmin=-0.2, vmax=0.2)
-    cbar = fig.colorbar(im, cax=cbar_ax)
+    print '\t\ta.shape (with extra dim) = ', a.shape
+    print '\t\tdata_list.shape = ', data_list.shape
+    print '\t\tk.shape = ', k.shape
+
+    supp = data_list[:, 1, :] # extract Pk, shape = (zs, k)
+
+    print '\t\tsupp.shape = ', supp.shape
+
+    im = ax.pcolormesh(k, a, supp, cmap='seismic', norm=SymLogNorm(linthresh=0.1, linscale=1.5,
+                                   vmin=-1, vmax=1))
+    #im = ax.imshow(supp, cmap='seismic', aspect='auto', origin="lower", vmin=-0.2, vmax=0.2, extent=[k[0], k[-1], a[0], a[-1]])
+    cbar = fig.colorbar(im, cax=cbar_ax, ticks=[-1, -0.1, 0, 0.1, 1])
+    cbar.ax.set_yticklabels(['-1', '-0.1', '0', '0.1', '> 1'])
 
     if a_sim_info.k_nyquist is not None:
         ls = [':', '-.', '--']
@@ -550,6 +565,7 @@ def plot_pwr_spec_diff_map_from_data(data_list, zs, a_sim_info, out_dir='auto', 
     if show:
         plt.show()
     plt.close(fig)
+    del supp, k, a, im, cbar, ax
 
 
 def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='', save=True, show=False):
@@ -748,7 +764,6 @@ def plot_par_evol(files, files_t, zs, a_sim_info, out_dir='auto', save=True):
 def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
-    from matplotlib.colors import SymLogNorm
     fig = plt.figure(figsize=(10, 10))
     gs = gridspec.GridSpec(1, 15, wspace=0.5)
     ax = plt.subplot(gs[0, : -1])
@@ -789,7 +804,6 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir='auto', save=True):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
 
-    from matplotlib.colors import SymLogNorm
     num = len(zs)
     fig = plt.figure(figsize=(10, 10))
     gs = gridspec.GridSpec(1, 15, wspace=0.5)
