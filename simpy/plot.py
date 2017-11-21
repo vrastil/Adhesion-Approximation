@@ -568,20 +568,12 @@ def plot_pwr_spec_diff_map_from_data(data_list, zs, a_sim_info, out_dir='auto', 
         data_array = np.array(data_list)
 
     k = data_array[0][0]
-
-    print '\t\ta.shape (with extra dim) = ', a.shape
-    print '\t\tdata_array.shape = ', data_array.shape
-    print '\t\tk.shape = ', k.shape
-
     supp = data_array[:, 1, :] # extract Pk, shape = (zs, k)
-
-    print '\t\tsupp.shape = ', supp.shape
-
-    im = ax.pcolormesh(k, a, supp, cmap='seismic', norm=SymLogNorm(linthresh=0.1, linscale=1.5,
+    im = ax.pcolormesh(k, a, supp, cmap='seismic', norm=SymLogNorm(linthresh=0.2, linscale=1.0,
                                    vmin=-1, vmax=1))
     #im = ax.imshow(supp, cmap='seismic', aspect='auto', origin="lower", vmin=-0.2, vmax=0.2, extent=[k[0], k[-1], a[0], a[-1]])
-    cbar = fig.colorbar(im, cax=cbar_ax, ticks=[-1, -0.1, 0, 0.1, 1])
-    cbar.ax.set_yticklabels(['-1', '-0.1', '0', '0.1', '> 1'])
+    cbar = fig.colorbar(im, cax=cbar_ax, ticks=[-1, -0.2, 0, 0.2, 1])
+    cbar.ax.set_yticklabels(['-1', '-0.2', '0', '0.2', '> 1'])
 
     if a_sim_info.k_nyquist is not None:
         ls = [':', '-.', '--']
