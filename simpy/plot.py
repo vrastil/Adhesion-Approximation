@@ -532,7 +532,9 @@ def plot_pwr_spec_diff_map_from_data(data_list, zs, a_sim_info, out_dir='auto', 
     try:
         data_array = np.array(data_list)
     except ValueError:
-        print '\t\tData in data_list have probaly different shapes. Trying to cut...'
+        print '\t\tData in data_list have different shapes. Trying to cut...'
+        # convert to list so elements can be deleted
+        data_list = [np.array(data).tolist() for data in data_list]
         del_num = 0
         j = 0
         while True:
@@ -601,7 +603,6 @@ def plot_pwr_spec_diff_map_from_data(data_list, zs, a_sim_info, out_dir='auto', 
     if show:
         plt.show()
     plt.close(fig)
-    del supp, k, a, im, cbar, ax, data_array
 
 
 def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='', save=True, show=False):
