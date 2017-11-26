@@ -91,7 +91,7 @@ public:
 	Mesh_base(unsigned n1, unsigned n2, unsigned n3);
     Mesh_base(const Mesh_base& that);
     Mesh_base(Mesh_base<T>&& that) noexcept;
-    Mesh_base& operator=(Mesh_base that) &;
+    Mesh_base& operator=(Mesh_base that);
     template <class U> friend void swap(Mesh_base<U>& first, Mesh_base<U>& second);
 	~Mesh_base();
 	
@@ -140,7 +140,7 @@ public:
     // default constructors / assignemnts belowe
     // Mesh(const Mesh& that);
     // Mesh(Mesh&& that) noexcept;
-    // Mesh& operator=(Mesh that) &;
+    // Mesh& operator=(Mesh that);
     // friend void swap(Mesh& first, Mesh& second);
 	
 	// VARIABLES
@@ -290,6 +290,81 @@ C - Cauchy principal value
 */
 enum class corr_int_type { QAGI, QAWO, QAWF, FFT, FFTLOG, PP };
 
+/* SIMULATION BOX*/
+struct Box_Opt {
+    void init();
+    /* cmd args */
+    unsigned par_num_1d, mesh_num, mesh_num_pwr;
+    double box_size;
+    /* derived param*/
+    unsigned par_num, Ng, Ng_pwr;
+};
+
+
+/* INTEGRATION */
+struct Integ_Opt {
+    void init();
+    /* cmd args */
+    double z_in, z_out, db;
+    /* derived param*/
+    double b_in, b_out;
+};
+
+
+/* OUTPUT */
+struct Out_Opt {
+    void init();
+    /* cmd args */
+    unsigned print_every, bins_per_decade, points_per_10_Mpc;
+    std::string out_dir; ///< where to save output of the simulation
+    bool print_par_pos, print_dens, print_pwr, print_extrap_pwr, print_corr, print_emu_spec, print_emu_corr, print_vel_pwr;
+    /* derived param*/
+    bool get_rho, get_pwr, get_pk_extrap, get_emu_extrap;
+};
+
+
+/* APPROXIMATIONS */
+struct Comp_App {
+    /* cmd args */
+    bool ZA, FF, FP, AA, FP_pp;
+};
+
+
+/* APPROXIMATIONS */
+struct App_Opt {
+    void init(const Box_Opt&);
+    /* cmd args */
+    double nu, rs;
+    /* derived param*/
+    double Hc, a, nu_dim;
+    unsigned M;
+};
+
+
+/* RUN */
+struct Run_Opt {
+    void init();
+    bool simulate();
+    /* cmd args */
+    unsigned nt, mlt_runs;
+    unsigned long seed;
+    bool pair;        
+    /* other*/
+    bool phase;
+};
+
+// define Range outside because of SWIG
+struct Range { double lower, upper; };
+
+/* OTHER PARAMETERS */
+struct Other_par {
+    void init(const Box_Opt&);
+    // k-range where to use (linear) interpolation and k-range in which print 'pwr_spec_extrap_*'
+    ///range in which compute the correlation function 
+    Range k_print, x_corr;
+    std::map<std::string,double> nyquist; //< Nyquist frequencies of potential mesh, analyses mesh and particle separation
+};
+
 /**
  * @class:	Sim_Param
  * @brief:	class storing simulation parameters
@@ -301,83 +376,15 @@ public:
     // CONSTRUCTOR
     Sim_Param(int ac, char* av[]);
 
-    /* SIMULATION BOX*/
-    struct Box_Opt {
-        void init();
-        /* cmd args */
-        unsigned par_num_1d, mesh_num, mesh_num_pwr;
-        double box_size;
-        /* derived param*/
-        unsigned par_num, Ng, Ng_pwr;
-    } box_opt;
-
-
-    /* INTEGRATION */
-    struct Integ_Opt {
-        void init();
-        /* cmd args */
-        double z_in, z_out, db;
-        /* derived param*/
-        double b_in, b_out;
-    } integ_opt;
-
-
-    /* OUTPUT */
-    struct Out_Opt {
-        void init();
-        /* cmd args */
-        unsigned print_every, bins_per_decade, points_per_10_Mpc;
-        std::string out_dir; ///< where to save output of the simulation
-        bool print_par_pos, print_dens, print_pwr, print_extrap_pwr, print_corr, print_emu_spec, print_emu_corr, print_vel_pwr;
-        /* derived param*/
-        bool get_rho, get_pwr, get_pk_extrap, get_emu_extrap;
-    } out_opt;
-
-
-    /* APPROXIMATIONS */
-    struct Comp_App {
-        /* cmd args */
-        bool ZA, FF, FP, AA, FP_pp;
-    } comp_app;
-
-
-    /* COSMOLOGIY */
-    Cosmo_Param cosmo; ///< all information about our cosmology
-
-
-    /* APPROXIMATIONS */
-    struct App_Opt {
-        void init(const Box_Opt*);
-        /* cmd args */
-        double nu, rs;
-        /* derived param*/
-        double Hc, a, nu_dim;
-        unsigned M;
-    } app_opt;
-
-
-    /* RUN */
-    struct Run_Opt {
-        void init();
-        bool simulate();
-        /* cmd args */
-        unsigned nt, mlt_runs;
-        unsigned long seed;
-        bool pair;        
-        /* other*/
-        bool phase;
-    } run_opt;
-
-
-    /* OTHER PARAMETERS */
-    struct Other_par {
-        void init(const Box_Opt*);
-        // k-range where to use (linear) interpolation and k-range in which print 'pwr_spec_extrap_*'
-        ///range in which compute the correlation function 
-        struct { double lower, upper; } k_print, x_corr;
-        std::map<std::string,double> nyquist; //< Nyquist frequencies of potential mesh, analyses mesh and particle separation
-    } other_par;
-
+    // VARIABLES
+    Box_Opt box_opt;
+    Integ_Opt integ_opt;
+    Out_Opt out_opt;
+    Comp_App comp_app;
+    Cosmo_Param cosmo;
+    App_Opt app_opt;
+    Run_Opt run_opt;
+    Other_par other_par;
 
 	// METHODS
     void print_info(std::string out, std::string app) const;
@@ -390,10 +397,10 @@ protected:
 	bool is_init = 0;
 };
 
-void to_json(nlohmann::json& j, const Sim_Param::Box_Opt& cosmo);
-void to_json(nlohmann::json& j, const Sim_Param::Integ_Opt& cosmo);
-void to_json(nlohmann::json& j, const Sim_Param::App_Opt& cosmo);
-void to_json(nlohmann::json& j, const Sim_Param::Run_Opt& cosmo);
+void to_json(nlohmann::json& j, const Box_Opt& cosmo);
+void to_json(nlohmann::json& j, const Integ_Opt& cosmo);
+void to_json(nlohmann::json& j, const App_Opt& cosmo);
+void to_json(nlohmann::json& j, const Run_Opt& cosmo);
 
 /**
  * @class:	Data_Vec

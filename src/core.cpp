@@ -229,7 +229,7 @@ const char *humanSize(uint64_t bytes){
  }
  
  template <class T>
- Mesh_base<T>& Mesh_base<T>::operator=(Mesh_base<T> that) &
+ Mesh_base<T>& Mesh_base<T>::operator=(Mesh_base<T> that)
  {
     #ifdef TEST
     printf("Copy or move assignemnt: %p <-- %p\n", this, &that);
@@ -306,7 +306,7 @@ Mesh::Mesh(unsigned n): Mesh_base(n, n, n+2), N(n) {}
 
 // Mesh::Mesh(Mesh&& that) noexcept: Mesh_base(that), N(that.N) {}
 
-// Mesh& Mesh::operator=(Mesh that) &
+// Mesh& Mesh::operator=(Mesh that)
 // {
 //     printf("Copy or move assignemnt: %p <-- %p\n", this, &that);
 //     swap(*this, that);
@@ -476,12 +476,7 @@ Tracking::Tracking(int sqr_num_track_par, int par_num_per_dim):
      par_pos.push_back(par_pos_step);
  }
 
-/**
- * @class:	Sim_Param
- * @brief:	class storing simulation parameters
- */
-
-void Sim_Param::Run_Opt::init()
+void Run_Opt::init()
 {
     if(nt == 0) nt = omp_get_max_threads();
     else omp_set_num_threads(nt);
@@ -492,20 +487,20 @@ void Sim_Param::Run_Opt::init()
     phase = true;
 }
 
-void Sim_Param::Box_Opt::init()
+void Box_Opt::init()
 {
     Ng = mesh_num / par_num_1d;
     Ng_pwr = mesh_num_pwr/par_num_1d;
     par_num = par_num_1d*par_num_1d*par_num_1d;
 }
 
-void Sim_Param::Integ_Opt::init()
+void Integ_Opt::init()
 {
     b_in = 1./(z_in + 1);
 	b_out = 1./(z_out + 1);
 }
 
-void Sim_Param::Out_Opt::init()
+void Out_Opt::init()
 {
     get_pk_extrap = print_corr|| print_extrap_pwr;
     get_pwr = get_pk_extrap || print_pwr;
@@ -513,28 +508,33 @@ void Sim_Param::Out_Opt::init()
     get_emu_extrap = print_emu_spec || print_emu_corr;
 }
 
-void Sim_Param::App_Opt::init(const Box_Opt* box_opt)
+void App_Opt::init(const Box_Opt& box_opt)
 {
     a = rs / 0.735;
-    M = (int)(box_opt->mesh_num / rs);
-    Hc = double(box_opt->mesh_num) / M;
+    M = (int)(box_opt.mesh_num / rs);
+    Hc = double(box_opt.mesh_num) / M;
     nu_dim = nu;
-    nu /= pow(box_opt->box_size/box_opt->mesh_num, 2.); // converting to dimensionless units
+    nu /= pow(box_opt.box_size/box_opt.mesh_num, 2.); // converting to dimensionless units
 }
 
-void Sim_Param::Other_par::init(const Box_Opt* box_opt)
+void Other_par::init(const Box_Opt& box_opt)
 {
-    double tmp = PI/box_opt->box_size;
+    double tmp = PI/box_opt.box_size;
 
-    nyquist["analysis"] = tmp*box_opt->mesh_num_pwr;
-    nyquist["potential"] = tmp*box_opt->mesh_num;
-    nyquist["particle"] = tmp*box_opt->par_num_1d;
+    nyquist["analysis"] = tmp*box_opt.mesh_num_pwr;
+    nyquist["potential"] = tmp*box_opt.mesh_num;
+    nyquist["particle"] = tmp*box_opt.par_num_1d;
     k_print.lower = 2*tmp;
-    k_print.upper = 2*tmp*box_opt->mesh_num_pwr;
+    k_print.upper = 2*tmp*box_opt.mesh_num_pwr;
     x_corr.lower = 0.1;
     x_corr.upper = 200;
 }
- 
+
+/**
+ * @class:	Sim_Param
+ * @brief:	class storing simulation parameters
+ */
+
 Sim_Param::Sim_Param(int ac, char* av[])
 {
 	if (handle_cmd_line(ac, av, this)) is_init = 0;
@@ -544,13 +544,13 @@ Sim_Param::Sim_Param(int ac, char* av[])
         box_opt.init();
         integ_opt.init();
         out_opt.init();
-        app_opt.init(&box_opt);
+        app_opt.init(box_opt);
         cosmo.init();
-        other_par.init(&box_opt);
+        other_par.init(box_opt);
     }
 }
 
-void to_json(json& j, const Sim_Param::Box_Opt& box_opt)
+void to_json(json& j, const Box_Opt& box_opt)
 {
     j = json{
         {"mesh_num", box_opt.mesh_num},
@@ -561,7 +561,7 @@ void to_json(json& j, const Sim_Param::Box_Opt& box_opt)
     };
 }
 
-void to_json(json& j, const Sim_Param::Integ_Opt& integ_opt)
+void to_json(json& j, const Integ_Opt& integ_opt)
 {
     j = json{
         {"redshift", integ_opt.z_in},
@@ -570,7 +570,7 @@ void to_json(json& j, const Sim_Param::Integ_Opt& integ_opt)
     };
 }
 
-void to_json(json& j, const Sim_Param::App_Opt& app_opt)
+void to_json(json& j, const App_Opt& app_opt)
 {
     j = json{
         {"viscosity", app_opt.nu_dim},
@@ -578,7 +578,7 @@ void to_json(json& j, const Sim_Param::App_Opt& app_opt)
     };
 }
 
-void to_json(json& j, const Sim_Param::Run_Opt& run_opt)
+void to_json(json& j, const Run_Opt& run_opt)
 {
     j = json{
         {"num_thread", run_opt.nt},
@@ -635,7 +635,7 @@ void Sim_Param::print_info() const
 	Sim_Param::print_info("", "");
 }
 
-bool Sim_Param::Run_Opt::simulate()
+bool Run_Opt::simulate()
 {
     if (!pair || !phase)
     {

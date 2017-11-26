@@ -3,15 +3,22 @@
 output/
 report/
 
-# program, object files, depedency files, scripts
+# program, object files, libraries, depedency files, scripts
 adh_app
 tests/test
 *.o
 *.d
+*.a
+*.so
 *.gch
 *.sh
 *.ipynb
 *.pyc
+
+# swig files
+swig/*.cxx
+swig/*.py
+simpy/fastsim.py # ignore symlink
 
 # other files
 *.gcda
