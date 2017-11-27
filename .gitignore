@@ -15,10 +15,10 @@ tests/test
 *.ipynb
 *.pyc
 
-# swig files
+# swig files, created symlinks
 swig/*.cxx
 swig/*.py
-simpy/fastsim.py # ignore symlink
+simpy/fastsim.py
 
 # other files
 *.gcda

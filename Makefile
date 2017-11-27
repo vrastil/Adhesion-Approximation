@@ -31,13 +31,13 @@ debug: $(LIB)
 	$(COMPILE.fin) -o $@ $^ $(CXXLIB)
 
 swig: CXXFLAGS +=-Ofast -march=native
-swig: $(LIB)
+swig: $(LIB) swig/swig.i
 	swig -python -c++ -I./include swig/swig.i
 	$(COMPILE.cc) -c -I/usr/include/python2.7 -o swig/swig_wrap.o swig/swig_wrap.cxx
-	$(COMPILE.fin) -shared -o swig/_fastsim.so swig/swig_wrap.o $^ $(CXXLIB)
-	ln -sf $(pwd)/swig/_fastsim.so simpy/
-	ln -sf $(pwd)/swig/_fastsim.so lib/
-	ln -sf $(pwd)/swig/fastsim.py simpy/
+	$(COMPILE.fin) -shared -o swig/_fastsim.so swig/swig_wrap.o $(LIB) $(CXXLIB)
+	ln -sf ${CURDIR}/swig/_fastsim.so simpy/
+	ln -sf ${CURDIR}/swig/_fastsim.so lib/
+	ln -sf ${CURDIR}/swig/fastsim.py simpy/
 
 $(LIB): $(OBJ_FILES)
 	gcc-ar rcs $@ $^

@@ -244,10 +244,10 @@ public:
     ccl_parameters params;
     ccl_cosmology* cosmo;
 
-protected:
 	bool is_init = 0;
 };
-void to_json(nlohmann::json& j, const Cosmo_Param& cosmo);
+void to_json(nlohmann::json&, const Cosmo_Param&);
+void from_json(const nlohmann::json&, Cosmo_Param&);
 
 /**
  * @class:	Tracking
@@ -374,7 +374,8 @@ class Sim_Param
 {
 public:
     // CONSTRUCTOR
-    Sim_Param(int ac, char* av[]);
+    Sim_Param(int ac, char* av[]); //< load from command line arguments
+    Sim_Param(std::string file_name); //< load from sim_param.json file
 
     // VARIABLES
     Box_Opt box_opt;
@@ -386,21 +387,25 @@ public:
     Run_Opt run_opt;
     Other_par other_par;
 
+    bool is_init = 0;
+
 	// METHODS
     void print_info(std::string out, std::string app) const;
 	void print_info() const;
 	const double x_0() const{return box_opt.box_size/box_opt.mesh_num;}
     const double x_0_pwr() const{return box_opt.box_size/box_opt.mesh_num_pwr;}
     bool simulate() { return run_opt.simulate(); }
-    
-protected:
-	bool is_init = 0;
 };
 
-void to_json(nlohmann::json& j, const Box_Opt& cosmo);
-void to_json(nlohmann::json& j, const Integ_Opt& cosmo);
-void to_json(nlohmann::json& j, const App_Opt& cosmo);
-void to_json(nlohmann::json& j, const Run_Opt& cosmo);
+void to_json(nlohmann::json&, const Box_Opt&);
+void to_json(nlohmann::json&, const Integ_Opt&);
+void to_json(nlohmann::json&, const App_Opt&);
+void to_json(nlohmann::json&, const Run_Opt&);
+
+void from_json(const nlohmann::json&, Box_Opt&);
+void from_json(const nlohmann::json&, Integ_Opt&);
+void from_json(const nlohmann::json&, App_Opt&);
+void from_json(const nlohmann::json&, Run_Opt&);
 
 /**
  * @class:	Data_Vec

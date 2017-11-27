@@ -371,8 +371,6 @@ Mesh& Mesh::operator/=(const double& rhs)
 
 void Cosmo_Param::init()
 {
-    is_init = true;
-
     pwr_type = static_cast<e_power_spec>(pwr_type_i);
     k2_G *= k2_G;
     h = H0/100;
@@ -395,6 +393,8 @@ void Cosmo_Param::init()
 
     // normalize power spectrum
     norm_pwr(this);
+
+    is_init = true;
 }
 
 void to_json(json& j, const Cosmo_Param& cosmo)
@@ -431,6 +431,51 @@ void to_json(json& j, const Cosmo_Param& cosmo)
         case ccl_watson: j["mass_function_method"] = "watson"; break;
         case ccl_angulo: j["mass_function_method"] = "angulo"; break;
     }
+}
+
+void from_json(const json& j, Cosmo_Param& cosmo)
+{
+    cosmo.pwr_type_i = j.at("pwr_type").get<int>();
+    cosmo.pwr_type = static_cast<e_power_spec>(cosmo.pwr_type_i);
+    cosmo.A = j.at("A").get<double>();
+    cosmo.ns = j.at("index").get<double>();
+    cosmo.sigma8 = j.at("sigma8").get<double>();
+    cosmo.k2_G = j.at("smoothing_k").get<double>();
+    cosmo.k2_G *= cosmo.k2_G;
+    cosmo.Omega_b = j.at("Omega_b").get<double>();
+    cosmo.Omega_m = j.at("Omega_m").get<double>();
+    cosmo.h = j.at("h").get<double>();
+    cosmo.H0 = cosmo.h * 100;
+
+    string tmp;
+    tmp = j.at("transfer_function_method").get<string>();
+    // convert from pyccl transfer_function_types keys
+    if (tmp == "emulator") cosmo.config.transfer_function_method = ccl_emulator;
+    else if (tmp == "eisenstein_hu") cosmo.config.transfer_function_method = ccl_eisenstein_hu;
+    else if (tmp == "bbks") cosmo.config.transfer_function_method = ccl_bbks;
+    else if (tmp == "boltzmann_class") cosmo.config.transfer_function_method = ccl_boltzmann_class;
+    else if (tmp == "boltzmann_camb") cosmo.config.transfer_function_method = ccl_boltzmann_camb;
+    
+    tmp = j.at("matter_power_spectrum_method").get<string>();
+    // convert from pyccl matter_power_spectrum_types keys
+    if (tmp == "linear") cosmo.config.matter_power_spectrum_method = ccl_linear;
+    else if (tmp == "halofit") cosmo.config.matter_power_spectrum_method = ccl_halofit;
+    else if (tmp == "halo_model") cosmo.config.matter_power_spectrum_method = ccl_halo_model;
+    
+    tmp = j.at("mass_function_method").get<string>();
+    // convert from pyccl mass_function_types keys
+    if (tmp == "tinker") cosmo.config.mass_function_method = ccl_tinker;
+    else if (tmp == "tinker10") cosmo.config.mass_function_method = ccl_tinker10;
+    else if (tmp == "watson") cosmo.config.mass_function_method = ccl_watson;
+    else if (tmp == "angulo") cosmo.config.mass_function_method = ccl_angulo;
+
+    int status = 0;
+    cosmo.params = ccl_parameters_create_flat_lcdm(cosmo.Omega_c(), cosmo.Omega_b, cosmo.h, cosmo.sigma8, cosmo.ns, &status);
+    cosmo.cosmo = ccl_cosmology_create(cosmo.params, cosmo.config);
+    cosmo.D_norm = growth_factor(1, cosmo);
+    norm_pwr(&cosmo);
+
+    cosmo.is_init = true;
 }
 
 Cosmo_Param::~Cosmo_Param()
@@ -539,7 +584,6 @@ Sim_Param::Sim_Param(int ac, char* av[])
 {
 	if (handle_cmd_line(ac, av, this)) is_init = 0;
 	else {
-        is_init = 1;
         run_opt.init();
         box_opt.init();
         integ_opt.init();
@@ -547,7 +591,27 @@ Sim_Param::Sim_Param(int ac, char* av[])
         app_opt.init(box_opt);
         cosmo.init();
         other_par.init(box_opt);
+        is_init = 1;
     }
+}
+
+Sim_Param::Sim_Param(string file_name)
+{
+    ifstream i(file_name);
+    json j;
+    i >> j;
+    box_opt = j["box_opt"];
+    integ_opt = j["integ_opt"];
+    cosmo = j["cosmo"];
+    app_opt = j["app_opt"];
+    app_opt.init(box_opt);
+    run_opt = j["run_opt"];
+    out_opt.out_dir = j["out_dir"];
+    other_par.init(box_opt);
+
+
+    is_init = 1;
+    i.close();
 }
 
 void to_json(json& j, const Box_Opt& box_opt)
@@ -561,6 +625,16 @@ void to_json(json& j, const Box_Opt& box_opt)
     };
 }
 
+void from_json(const json& j, Box_Opt& box_opt)
+{
+    box_opt.mesh_num = j.at("mesh_num").get<unsigned>();
+    box_opt.mesh_num_pwr = j.at("mesh_num_pwr").get<unsigned>();
+    box_opt.par_num_1d = j.at("par_num").get<unsigned>();
+    box_opt.box_size = j.at("box_size").get<double>();
+
+    box_opt.init();
+}
+
 void to_json(json& j, const Integ_Opt& integ_opt)
 {
     j = json{
@@ -568,6 +642,15 @@ void to_json(json& j, const Integ_Opt& integ_opt)
         {"redshift_0", integ_opt.z_out},
         {"time_step", integ_opt.db}
     };
+}
+
+void from_json(const json& j, Integ_Opt& integ_opt)
+{
+    integ_opt.z_in = j.at("redshift").get<double>();
+    integ_opt.z_out = j.at("redshift_0").get<double>();
+    integ_opt.db = j.at("time_step").get<double>();
+
+    integ_opt.init();
 }
 
 void to_json(json& j, const App_Opt& app_opt)
@@ -578,12 +661,26 @@ void to_json(json& j, const App_Opt& app_opt)
     };
 }
 
+void from_json(const json& j, App_Opt& app_op)
+{
+    app_op.nu_dim = j.at("viscosity").get<double>();
+    app_op.nu = app_op.nu_dim;
+    app_op.rs = j.at("cut_radius").get<double>();
+}
+
 void to_json(json& j, const Run_Opt& run_opt)
 {
     j = json{
         {"num_thread", run_opt.nt},
         {"seed", run_opt.seed}
     };
+}
+
+void from_json(const json& j, Run_Opt& run_opt)
+{
+    run_opt.nt = j.at("num_thread").get<unsigned>();
+    run_opt.seed = j.at("seed").get<unsigned long>();
+    run_opt.init();
 }
 
 void Sim_Param::print_info(string out, string app) const
@@ -625,6 +722,7 @@ void Sim_Param::print_info(string out, string app) const
                 {"app", app}
             };
             o << setw(2) << j << endl;
+            o.close();
         }
     } else printf("WARNING! Simulation parameters are not initialized!\n");
 }

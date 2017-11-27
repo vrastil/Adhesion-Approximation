@@ -1,5 +1,7 @@
 // SWIG interface
 %module fastsim
+%include "std_string.i"
+
 %{
 #include "core.h"
 %}
