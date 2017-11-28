@@ -373,66 +373,70 @@ double Interp_obj::eval(double x) const{ return gsl_spline_eval(spline, x, acc);
  */
 
 template<unsigned N>
-Extrap_Pk::Extrap_Pk(const Data_Vec<double, N>& data, const Sim_Param& sim):
-    Interp_obj(data), cosmo(sim.cosmo), n_s(0)
+Extrap_Pk::Extrap_Pk(const Data_Vec<double, N>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
+    const unsigned m_u, const unsigned n_u):
+    Interp_obj(data), cosmo(sim.cosmo)
 {
-    unsigned m, n;
-    // LOWER RANGE -- fit linear power spectrum to data[m:n)
+    // LOWER RANGE -- fit linear power spectrum to data[m_l:n_l)
     printf("Fitting amplitude of P(k) in lower range.\n");
-    m = get_nearest(2*PI/sim.box_opt.box_size, data[0]) + sim.out_opt.bins_per_decade/2; // discard half of the first decade values due to undersampling
-    n = m + sim.out_opt.bins_per_decade/2; // fit over half of a decade
-    k_min = data[0][m];
-    fit_lin(data, m, n, A_low);
-    // UPPER RANGE -- ffit linear power spectrum to data[m:n)
+    k_min = data[0][m_l]; // first k in data
+    fit_lin(data, m_l, n_l, A_low);
+
+    // UPPER RANGE -- fit Ak^ns to data[m_u,n_u)
     printf("Fitting amplitude of P(k) in upper range.\n");
-    k_max = sim.other_par.nyquist.at("particle")/2.; //< trust simulation up to HALF k_nq
-    n = get_nearest(k_max, data[0]) + 1;
-    m = n - sim.out_opt.bins_per_decade/2; // fit over half of the last decade
-    fit_lin(data, m, n, A_up);
+    k_max =  data[0][n_u-1]; // last k in data
+    fit_power_law(data, m_u, n_u, A_up, n_s);
 }
 
 template<unsigned N>
-Extrap_Pk::Extrap_Pk(const Data_Vec<double, N>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
-    const unsigned m_u, const unsigned n_u, double n_s):
-    Interp_obj(data), cosmo(sim.cosmo), n_s(n_s)
-{
-    // LOWER RANGE -- fit linear power spectrum to data[m:n)
-    printf("Fitting amplitude of P(k) in lower range.\n");
-    k_min = data[0][n_l-1];
-    fit_lin(data, m_l, n_l, A_low);
+Extrap_Pk::Extrap_Pk(const Data_Vec<double, N>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_u):
+    Extrap_Pk(data, sim,
+        // fit over first and last half of a decade
+        m_l, m_l + sim.out_opt.bins_per_decade/2,
+        n_u - sim.out_opt.bins_per_decade/2, n_u
+    ) {}
 
-    // UPPER RANGE -- fit Ak^ns to data[m,n)
-    printf("Fitting amplitude of P(k) in upper range.\n");
-    k_max =  data[0][n_u-1];
-    fit_power_law(data, m_u, n_u, A_up);
-}
+template<unsigned N>
+Extrap_Pk::Extrap_Pk(const Data_Vec<double, N>& data, const Sim_Param& sim):
+    Extrap_Pk(data, sim,
+        // trust simulation up to HALF k_nq
+        0, get_nearest(sim.other_par.nyquist.at("particle")/2., data[0]) + 1
+    ) {}
 
 template<unsigned N>
 void Extrap_Pk::fit_lin(const Data_Vec<double, N>& data, const unsigned m, const unsigned n, double &A)
 {
     // FIT linear power spectrum to data[m:n)
-    vector<double> k, Pk;
+    // fit 'P(k) = A * P_lin(k)' via A
+    vector<double> Pk_res;
+    Pk_res.reserve(n-m);
+    vector<double> A_vec(n-m, 1);
+
     for(unsigned i = m; i < n; i++){
-        k.push_back(lin_pow_spec(data[0][i], cosmo));
-        Pk.push_back(data[1][i]);
+        Pk_res.push_back(data[1][i] / lin_pow_spec(data[0][i], cosmo));
     }
     double A_sigma2, sumsq;
-    gsl_fit_mul(k.data(), 1, Pk.data(), 1, n-m, &A, &A_sigma2, &sumsq);
+    gsl_fit_mul(A_vec.data(), 1, Pk_res.data(), 1, n-m, &A, &A_sigma2, &sumsq);
     printf("\t[fit A = %e, sigma = %f, sumsq = %f]\n", A, sqrt(A_sigma2), sumsq);
 }
 
 template<unsigned N>
-void Extrap_Pk::fit_power_law(const Data_Vec<double, N>& data, const unsigned m, const unsigned n, double &A)
+void Extrap_Pk::fit_power_law(const Data_Vec<double, N>& data, const unsigned m, const unsigned n, double &A, double &n_s)
 {
-    // FIT Ak^ns to data[m,n)
+    // FIT scale-free power spectrum to data[m,n)
+    // fit 'log P(k) = log A + n_s * log k' via A, n_s
     vector<double> k, Pk;
+    k.reserve(n-m);
+    Pk.reserve(n-m);
+
     for(unsigned i = m; i < n; i++){
-        k.push_back(pow(data[0][i], n_s));
-        Pk.push_back(data[1][i]);
+        k.push_back(log(data[0][i]));
+        Pk.push_back(log(data[1][i]));
     }
-    double A_sigma2, sumsq;
-    gsl_fit_mul(k.data(), 1, Pk.data(), 1, n-m, &A, &A_sigma2, &sumsq);
-    printf("\t[fit A = %e, n_s = %.3f, sigma = %f, sumsq = %f]\n", A, n_s, sqrt(A_sigma2), sumsq);
+    double cov00, cov01, cov11, sumsq;
+    gsl_fit_linear(k.data(), 1, Pk.data(), 1, n-m, &A, &n_s, &cov00, &cov01, &cov11, &sumsq);
+    printf("\t[fit logA = %e, n_s = %.3f, sigma_A = %f, sigma_n = %f, sumsq = %f]\n", A, n_s, sqrt(cov00), sqrt(cov11), sumsq);
+    A = exp(A); // log A => A
 }
 
 double Extrap_Pk::eval(double k) const
@@ -442,11 +446,7 @@ double Extrap_Pk::eval(double k) const
         return A_low*lin_pow_spec(k, cosmo);
     }
     else if (k <= k_max) return Interp_obj::eval(k);
-    else
-    {
-        if (n_s == 0) return A_up*lin_pow_spec(k, cosmo);
-        else return A_up*pow(k, n_s);
-    }
+    else return A_up*pow(k, n_s);
 }
 
 struct xi_integrand_param
@@ -591,10 +591,10 @@ template void Interp_obj::init(const Data_Vec<double, 3>& data);
 template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 2>& data, const Sim_Param& sim);
 template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 3>& data, const Sim_Param& sim);
 template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 2>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
-              const unsigned m_u, const unsigned n_u, double n_s);
+              const unsigned m_u, const unsigned n_u);
 template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 3>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
-              const unsigned m_u, const unsigned n_u, double n_s);
+              const unsigned m_u, const unsigned n_u);
 template void Extrap_Pk::fit_lin(const Data_Vec<double, 2>& data, const unsigned m, const unsigned n, double& A);
 template void Extrap_Pk::fit_lin(const Data_Vec<double, 3>& data, const unsigned m, const unsigned n, double& A);
-template void Extrap_Pk::fit_power_law(const Data_Vec<double, 2>& data, const unsigned m, const unsigned n, double& A);
-template void Extrap_Pk::fit_power_law(const Data_Vec<double, 3>& data, const unsigned m, const unsigned n, double& A);
+template void Extrap_Pk::fit_power_law(const Data_Vec<double, 2>& data, const unsigned m, const unsigned n, double& A, double& n_s);
+template void Extrap_Pk::fit_power_law(const Data_Vec<double, 3>& data, const unsigned m, const unsigned n, double& A, double& n_s);

@@ -57,19 +57,21 @@ public:
     template<unsigned N>
     Extrap_Pk(const Data_Vec<double, N>& data, const Sim_Param& sim);
     template<unsigned N>
+    Extrap_Pk(const Data_Vec<double, N>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_u);
+    template<unsigned N>
     Extrap_Pk(const Data_Vec<double, N>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
-              const unsigned m_u, const unsigned n_u, double n_s);
+              const unsigned m_u, const unsigned n_u);
     double eval(double k) const;
 
 private:
     template<unsigned N>
     void fit_lin(const Data_Vec<double, N>& data, const unsigned m, const unsigned n, double& A);
     template<unsigned N>
-    void fit_power_law(const Data_Vec<double, N>& data, const unsigned m, const unsigned n, double& A);
+    void fit_power_law(const Data_Vec<double, N>& data, const unsigned m, const unsigned n, double& A, double& n_s);
 
-    double A_low, A_up; // amplitude of linear power
+    double A_low; // amplitude of linear power in lower range
     const Cosmo_Param& cosmo;
-    double n_s; // if defined simple power-law
+    double A_up, n_s; // scale-free power spectrum in upper range
     double k_min, k_max; // interpolation range
 };
 
