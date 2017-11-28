@@ -63,7 +63,6 @@ public:
               const unsigned m_u, const unsigned n_u);
     double eval(double k) const;
 
-private:
     template<unsigned N>
     void fit_lin(const Data_Vec<double, N>& data, const unsigned m, const unsigned n, double& A);
     template<unsigned N>
@@ -73,6 +72,20 @@ private:
     const Cosmo_Param& cosmo;
     double A_up, n_s; // scale-free power spectrum in upper range
     double k_min, k_max; // interpolation range
+};
+
+class Extrap_Pk_Double
+{/*
+    takes two Extrapolate objects -- linear and nonlinear power spectrum
+    call 'eval(k)' based on k_split (upper range of the linear)
+    stores references!!! originaly objects must remain
+*/
+public:
+    Extrap_Pk_Double(const Extrap_Pk& Pk_lin, const Extrap_Pk& Pk_nl) : 
+    Pk_lin(Pk_lin), Pk_nl(Pk_nl), k_split(Pk_lin.k_max) {}
+    const Extrap_Pk& Pk_lin, Pk_nl;
+    const double k_split;
+    double eval(double k) const { return k < k_split ? Pk_lin.eval(k) : Pk_nl.eval(k); }
 };
 
 void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const Extrap_Pk& P_k, Data_Vec<double, 2>* corr_func_binned);

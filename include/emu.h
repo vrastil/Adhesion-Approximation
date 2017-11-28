@@ -5,7 +5,9 @@
 
 #pragma once
 #include "core.h"
-
-const int nmode = 351;
-void emu(double *xstar, double *ystar);
-Data_Vec<double, 2> init_emu(const Sim_Param &sim, double z);
+namespace emu
+{
+    extern const int nmode;
+    void emu(double *xstar, double *ystar);
+    Data_Vec<double, 2> init_emu(const Sim_Param &sim, double z);
+}

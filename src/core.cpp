@@ -892,8 +892,8 @@ void App_Var<T>::print()
     
     /* Get power spectrum from emulator and extrapolate */
     if (sim.out_opt.get_emu_extrap &&  (z() < 2.2)){ // emulator range
-        corr_func_binned = init_emu(sim, z());
-        Extrap_Pk P_k(corr_func_binned, sim, 0, 5, nmode-5, nmode);
+        corr_func_binned = emu::init_emu(sim, z());
+        Extrap_Pk P_k(corr_func_binned, sim, 0, 5, emu::nmode-5, emu::nmode);
     /* Print emulator power spectrum */
         if (sim.out_opt.print_emu_spec){
             gen_pow_spec_binned_from_extrap(sim, P_k, &corr_func_binned);

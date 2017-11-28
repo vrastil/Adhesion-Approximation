@@ -9,11 +9,14 @@
 //
 
 #include "stdafx.h"
-#include "params.h"
 #include "core.h"
+namespace emu
+{
+#include "params.h"
 
 // Sizes of stuff
-static int m[2] = {111, 36}, neta=2808, peta[2]={7, 28}, rs=8, p=8, nmode=351;
+static int m[2] = {111, 36}, neta=2808, peta[2]={7, 28}, rs=8, p=8;
+extern const int nmode=351;
 
 // Kriging basis computed by emuInit
 // Sizes of each basis will be peta[ee] and m[ee]
@@ -333,4 +336,6 @@ Data_Vec<double, 2> init_emu(const Sim_Param &sim, double z)
         emu_data[1][i] *= pow(sim.cosmo.h, 3); // convert emulator P(k) [Mpc^3] into [(Mpc/h)^3]
     }
     return emu_data; // move
+}
+// end of namespace
 }
