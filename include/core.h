@@ -401,11 +401,13 @@ void to_json(nlohmann::json&, const Box_Opt&);
 void to_json(nlohmann::json&, const Integ_Opt&);
 void to_json(nlohmann::json&, const App_Opt&);
 void to_json(nlohmann::json&, const Run_Opt&);
+void to_json(nlohmann::json&, const Out_Opt&);
 
 void from_json(const nlohmann::json&, Box_Opt&);
 void from_json(const nlohmann::json&, Integ_Opt&);
 void from_json(const nlohmann::json&, App_Opt&);
 void from_json(const nlohmann::json&, Run_Opt&);
+void from_json(const nlohmann::json&, Out_Opt&);
 
 /**
  * @class:	Data_Vec

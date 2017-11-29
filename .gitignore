@@ -16,7 +16,7 @@ tests/test
 *.pyc
 
 # swig files, created symlinks
-swig/*.cxx
+swig/*.cpp
 swig/*.py
 simpy/fastsim.py
 

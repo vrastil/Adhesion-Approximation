@@ -193,8 +193,9 @@ const char *humanSize(uint64_t bytes){
  Mesh_base<T>::Mesh_base(unsigned n1, unsigned n2, unsigned n3):
     N1(n1), N2(n2), N3(n3), length(n1*n2*n3), data(new T[length])
  {
-    #ifdef TEST
-    printf("Normal constructor %p, N1 = %i, N2 = %i, N3 = %i\n", this, N1, N2, N3); 
+    #ifdef DEBUG
+    cout << ">>> Debug: Mesh_base NORMAL constructor: " << this
+         << ", N = (" << N1 << ", "  << N2 << ", " << N3 << ")\n";
     #endif
  }
  
@@ -204,8 +205,9 @@ const char *humanSize(uint64_t bytes){
  {
     #pragma omp parallel for
     for (unsigned i = 0; i < length; i++) data[i] = that.data[i];
-    #ifdef TEST
-    printf("Copy constructor: %p <-- %p\n", this, &that);
+    #ifdef DEBUG
+    cout << ">>> Debug: Mesh_base COPY constructor: " << this 
+         << " <-- " << &that << "\n";
     #endif
  }
  
@@ -222,17 +224,19 @@ const char *humanSize(uint64_t bytes){
  template <class T>
  Mesh_base<T>::Mesh_base(Mesh_base<T>&& that) noexcept
  {
-    swap(*this, that);
-    #ifdef TEST
-    printf("Move constructor: %p <-- %p\n", this, &that);
+    #ifdef DEBUG
+    cout << ">>> Debug: Mesh_base MOVE constructor: " << this 
+         << " <-- " << &that << "\n";
     #endif
+    swap(*this, that);
  }
  
  template <class T>
  Mesh_base<T>& Mesh_base<T>::operator=(Mesh_base<T> that)
  {
-    #ifdef TEST
-    printf("Copy or move assignemnt: %p <-- %p\n", this, &that);
+    #ifdef DEBUG
+    cout << ">>> Debug: Mesh_base COPY or MOVE assignemnt: " << this 
+         << " <-- " << &that << "\n";
     #endif
     swap(*this, that);
     return *this;
@@ -241,10 +245,10 @@ const char *humanSize(uint64_t bytes){
  template <class T>
  Mesh_base<T>::~Mesh_base<T>()
  {
-     delete[] data;
-     #ifdef TEST
-     printf("Destructor: %p\n", this);
-     #endif
+    delete[] data;
+    #ifdef DEBUG
+    cout << ">>> Debug: Mesh_base destructor: " << this << "\n";
+    #endif
  }
  
  template <class T>
@@ -376,6 +380,7 @@ void Cosmo_Param::init()
     h = H0/100;
     
     // CCL VARIABLES
+    config = default_config; // first initialize to default (in case new configuration options are added)
     switch (pwr_type)
     {
         case e_power_spec::ccl_EH: config.transfer_function_method = ccl_eisenstein_hu; break;
@@ -386,6 +391,9 @@ void Cosmo_Param::init()
     config.mass_function_method = ccl_tinker;
     int status = 0;
     params = ccl_parameters_create_flat_lcdm(Omega_c(), Omega_b, h, sigma8, ns, &status);
+    #ifdef DEBUG
+    cout << ">>> Debug: Creating 'ccl_cosmology*': " << cosmo << "\n";
+    #endif
     cosmo = ccl_cosmology_create(params, config);
 
     // PRECOMPUTED VALUES
@@ -435,52 +443,61 @@ void to_json(json& j, const Cosmo_Param& cosmo)
 
 void from_json(const json& j, Cosmo_Param& cosmo)
 {
+    #ifdef DEBUG
+    cout << ">>> Debug: Loading 'Cosmo_Param& cosmo' from json file\n";
+    #endif
     cosmo.pwr_type_i = j.at("pwr_type").get<int>();
-    cosmo.pwr_type = static_cast<e_power_spec>(cosmo.pwr_type_i);
-    cosmo.A = j.at("A").get<double>();
+    // cosmo.pwr_type = static_cast<e_power_spec>(cosmo.pwr_type_i);
+    // cosmo.A = j.at("A").get<double>();
     cosmo.ns = j.at("index").get<double>();
     cosmo.sigma8 = j.at("sigma8").get<double>();
     cosmo.k2_G = j.at("smoothing_k").get<double>();
-    cosmo.k2_G *= cosmo.k2_G;
+    // cosmo.k2_G *= cosmo.k2_G;
     cosmo.Omega_b = j.at("Omega_b").get<double>();
     cosmo.Omega_m = j.at("Omega_m").get<double>();
     cosmo.h = j.at("h").get<double>();
     cosmo.H0 = cosmo.h * 100;
-
-    string tmp;
-    tmp = j.at("transfer_function_method").get<string>();
-    // convert from pyccl transfer_function_types keys
-    if (tmp == "emulator") cosmo.config.transfer_function_method = ccl_emulator;
-    else if (tmp == "eisenstein_hu") cosmo.config.transfer_function_method = ccl_eisenstein_hu;
-    else if (tmp == "bbks") cosmo.config.transfer_function_method = ccl_bbks;
-    else if (tmp == "boltzmann_class") cosmo.config.transfer_function_method = ccl_boltzmann_class;
-    else if (tmp == "boltzmann_camb") cosmo.config.transfer_function_method = ccl_boltzmann_camb;
+    cosmo.init();
+    // string tmp;
+    // tmp = j.at("transfer_function_method").get<string>();
+    // // convert from pyccl transfer_function_types keys
+    // if (tmp == "emulator") cosmo.config.transfer_function_method = ccl_emulator;
+    // else if (tmp == "eisenstein_hu") cosmo.config.transfer_function_method = ccl_eisenstein_hu;
+    // else if (tmp == "bbks") cosmo.config.transfer_function_method = ccl_bbks;
+    // else if (tmp == "boltzmann_class") cosmo.config.transfer_function_method = ccl_boltzmann_class;
+    // else if (tmp == "boltzmann_camb") cosmo.config.transfer_function_method = ccl_boltzmann_camb;
     
-    tmp = j.at("matter_power_spectrum_method").get<string>();
-    // convert from pyccl matter_power_spectrum_types keys
-    if (tmp == "linear") cosmo.config.matter_power_spectrum_method = ccl_linear;
-    else if (tmp == "halofit") cosmo.config.matter_power_spectrum_method = ccl_halofit;
-    else if (tmp == "halo_model") cosmo.config.matter_power_spectrum_method = ccl_halo_model;
+    // tmp = j.at("matter_power_spectrum_method").get<string>();
+    // // convert from pyccl matter_power_spectrum_types keys
+    // if (tmp == "linear") cosmo.config.matter_power_spectrum_method = ccl_linear;
+    // else if (tmp == "halofit") cosmo.config.matter_power_spectrum_method = ccl_halofit;
+    // else if (tmp == "halo_model") cosmo.config.matter_power_spectrum_method = ccl_halo_model;
     
-    tmp = j.at("mass_function_method").get<string>();
-    // convert from pyccl mass_function_types keys
-    if (tmp == "tinker") cosmo.config.mass_function_method = ccl_tinker;
-    else if (tmp == "tinker10") cosmo.config.mass_function_method = ccl_tinker10;
-    else if (tmp == "watson") cosmo.config.mass_function_method = ccl_watson;
-    else if (tmp == "angulo") cosmo.config.mass_function_method = ccl_angulo;
+    // tmp = j.at("mass_function_method").get<string>();
+    // // convert from pyccl mass_function_types keys
+    // if (tmp == "tinker") cosmo.config.mass_function_method = ccl_tinker;
+    // else if (tmp == "tinker10") cosmo.config.mass_function_method = ccl_tinker10;
+    // else if (tmp == "watson") cosmo.config.mass_function_method = ccl_watson;
+    // else if (tmp == "angulo") cosmo.config.mass_function_method = ccl_angulo;
 
-    int status = 0;
-    cosmo.params = ccl_parameters_create_flat_lcdm(cosmo.Omega_c(), cosmo.Omega_b, cosmo.h, cosmo.sigma8, cosmo.ns, &status);
-    cosmo.cosmo = ccl_cosmology_create(cosmo.params, cosmo.config);
-    cosmo.D_norm = growth_factor(1, cosmo);
-    norm_pwr(&cosmo);
+    // int status = 0;
+    // cosmo.params = ccl_parameters_create_flat_lcdm(cosmo.Omega_c(), cosmo.Omega_b, cosmo.h, cosmo.sigma8, cosmo.ns, &status);
+    // cosmo.cosmo = ccl_cosmology_create(cosmo.params, cosmo.config);
+    // cosmo.D_norm = growth_factor(1, cosmo);
+    // norm_pwr(&cosmo);
 
-    cosmo.is_init = true;
+    // cosmo.is_init = true;
 }
 
 Cosmo_Param::~Cosmo_Param()
 {
+    #ifdef DEBUG
+    cout << ">>> Debug: Cosmo_Param destructor: " << this << "\n";
+    #endif
     if(is_init){
+        #ifdef DEBUG
+        cout << ">>> Debug: Free space after ccl_cosmology: " << cosmo << "\n";
+        #endif
         ccl_cosmology_free(cosmo);
     }
 }
@@ -600,16 +617,22 @@ Sim_Param::Sim_Param(string file_name)
     ifstream i(file_name);
     json j;
     i >> j;
-    box_opt = j["box_opt"];
-    integ_opt = j["integ_opt"];
-    cosmo = j["cosmo"];
-    app_opt = j["app_opt"];
+    run_opt = j.at("run_opt");
+    box_opt = j.at("box_opt");
+    integ_opt = j.at("integ_opt");
+    try{ // new format of json files
+        out_opt = j.at("out_opt");
+    }
+    catch(const out_of_range& oor){ // old format does not store Out_Opt
+        cout << "WARNING! No 'Out_Opt' key in json files. Filling with default values.\n";
+        out_opt.out_dir = j.at("out_dir");
+        out_opt.bins_per_decade = 20;
+        out_opt.points_per_10_Mpc = 10;
+    }
+    app_opt = j.at("app_opt");
+    from_json(j.at("cosmo"), cosmo); //< call explicitly, SWIG has some issues with json.hpp
     app_opt.init(box_opt);
-    run_opt = j["run_opt"];
-    out_opt.out_dir = j["out_dir"];
     other_par.init(box_opt);
-
-
     is_init = 1;
     i.close();
 }
@@ -683,6 +706,22 @@ void from_json(const json& j, Run_Opt& run_opt)
     run_opt.init();
 }
 
+void to_json(json& j, const Out_Opt& out_opt)
+{
+    j = json{
+        {"bins_per_decade", out_opt.bins_per_decade},
+        {"points_per_10_Mpc", out_opt.points_per_10_Mpc},
+        {"out_dir", out_opt.points_per_10_Mpc}
+    };
+}
+
+void from_json(const json& j, Out_Opt& out_opt)
+{
+    out_opt.bins_per_decade = j.at("bins_per_decade").get<unsigned>();
+    out_opt.points_per_10_Mpc = j.at("points_per_10_Mpc").get<unsigned>();
+    out_opt.out_dir = j.at("out_dir").get<string>();
+}
+
 void Sim_Param::print_info(string out, string app) const
 {
     if (is_init) 
@@ -716,7 +755,7 @@ void Sim_Param::print_info(string out, string app) const
                 {"cosmo", cosmo},
                 {"app_opt", app_opt},
                 {"run_opt", run_opt},
-                {"out_dir", out_opt.out_dir},
+                {"out_dir", out_opt},
                 {"k_nyquist", other_par.nyquist},
                 {"results", {}},
                 {"app", app}
