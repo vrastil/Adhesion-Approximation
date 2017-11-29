@@ -584,17 +584,20 @@ double  get_max_Pk(Sim_Param* sim)
 }
 
 // maybe replace function templates by class template? better to maintain, less variability
-template Interp_obj::Interp_obj(const Data_Vec<double, 2>& data);
-template Interp_obj::Interp_obj(const Data_Vec<double, 3>& data);
-template void Interp_obj::init(const Data_Vec<double, 2>& data);
-template void Interp_obj::init(const Data_Vec<double, 3>& data);
-template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 2>& data, const Sim_Param& sim);
-template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 3>& data, const Sim_Param& sim);
-template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 2>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
-              const unsigned m_u, const unsigned n_u);
-template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 3>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
-              const unsigned m_u, const unsigned n_u);
-template void Extrap_Pk::fit_lin(const Data_Vec<double, 2>& data, const unsigned m, const unsigned n, double& A);
-template void Extrap_Pk::fit_lin(const Data_Vec<double, 3>& data, const unsigned m, const unsigned n, double& A);
-template void Extrap_Pk::fit_power_law(const Data_Vec<double, 2>& data, const unsigned m, const unsigned n, double& A, double& n_s);
-template void Extrap_Pk::fit_power_law(const Data_Vec<double, 3>& data, const unsigned m, const unsigned n, double& A, double& n_s);
+template Interp_obj::Interp_obj(const Data_Vec<double, 2>&);
+template Interp_obj::Interp_obj(const Data_Vec<double, 3>&);
+template void Interp_obj::init(const Data_Vec<double, 2>&);
+template void Interp_obj::init(const Data_Vec<double, 3>&);
+template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 2>&, const Sim_Param&);
+template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 3>&, const Sim_Param&);
+template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 2>&, const Sim_Param&, const unsigned, const unsigned);
+template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 3>&, const Sim_Param&, const unsigned, const unsigned);
+
+template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 2>&, const Sim_Param&, const unsigned, const unsigned,
+              const unsigned, const unsigned);
+template Extrap_Pk::Extrap_Pk(const Data_Vec<double, 3>&, const Sim_Param&, const unsigned, const unsigned,
+              const unsigned, const unsigned);
+template void Extrap_Pk::fit_lin(const Data_Vec<double, 2>&, const unsigned m, const unsigned n, double& A);
+template void Extrap_Pk::fit_lin(const Data_Vec<double, 3>&, const unsigned m, const unsigned n, double& A);
+template void Extrap_Pk::fit_power_law(const Data_Vec<double, 2>&, const unsigned m, const unsigned n, double& A, double& n_s);
+template void Extrap_Pk::fit_power_law(const Data_Vec<double, 3>&, const unsigned m, const unsigned n, double& A, double& n_s);
