@@ -491,7 +491,7 @@ public:
 	double b_half() const { return b - db/2.; }
 	bool integrate() const { return (b <= b_out) && (db > 0);}
 	bool printing() const { return print_every ? ((step % print_every) == 0) or (b == b_out) : print_every ; }
-    void print();
+    void print_output();
     void upd_time();
     void print_mem() const;
     void print_info() const;	

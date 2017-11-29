@@ -831,7 +831,7 @@ void App_Var<T>::upd_time()
 }
  
 template <class T> 
-void App_Var<T>::print()
+void App_Var<T>::print_output()
 {
     /* Printing positions */
     if (sim.out_opt.print_par_pos){

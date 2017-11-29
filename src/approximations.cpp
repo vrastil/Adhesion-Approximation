@@ -65,7 +65,7 @@ void print_init(T& APP)
 {
     /* Setting initial (binned) power spectrum, WARNING: power_aux[0] is modified */
     APP.track.update_track_par(APP.particles);
-    if (APP.print_every) APP.print();
+    if (APP.print_every) APP.print_output();
     APP.upd_time();
 }
 
@@ -116,7 +116,7 @@ void integration(T& APP, function<void()> upd_pos)
 		printf("\nStarting computing step with z = %.2f (b = %.3f)\n", APP.z(), APP.b);
 		upd_pos();
         APP.track.update_track_par(APP.particles);
-		if (APP.printing()) APP.print();
+		if (APP.printing()) APP.print_output();
 		APP.upd_time();
     }
     APP.print_info();
