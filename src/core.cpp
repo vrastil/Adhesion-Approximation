@@ -615,27 +615,34 @@ Sim_Param::Sim_Param(int ac, char* av[])
 
 Sim_Param::Sim_Param(string file_name)
 {
-    ifstream i(file_name);
-    json j;
-    i >> j;
-    run_opt = j.at("run_opt");
-    box_opt = j.at("box_opt");
-    integ_opt = j.at("integ_opt");
-    try{ // new format of json files
-        out_opt = j.at("out_opt");
+    try{
+        Ifstream i(file_name);
+        json j;
+        i >> j;
+        try{ run_opt = j.at("run_opt"); } // sim_param.json has run_opt
+        catch(const out_of_range& oor){ // stack_info.json does not have run_opt
+            run_opt.nt = 0; // max
+            run_opt.seed = 0; // random
+            run_opt.init();
+        }
+        box_opt = j.at("box_opt");
+        integ_opt = j.at("integ_opt");
+        try{ out_opt = j.at("out_opt"); } // new format of json files
+        catch(const out_of_range& oor){ // old format does not store Out_Opt
+            out_opt.out_dir = j.at("out_dir");
+            out_opt.bins_per_decade = 20;
+            out_opt.points_per_10_Mpc = 10;
+        }
+        app_opt = j.at("app_opt");
+        from_json(j.at("cosmo"), cosmo); //< call explicitly, SWIG has some issues with json.hpp
+        app_opt.init(box_opt);
+        other_par.init(box_opt);
     }
-    catch(const out_of_range& oor){ // old format does not store Out_Opt
-        cout << "WARNING! No 'Out_Opt' key in json files. Filling with default values.\n";
-        out_opt.out_dir = j.at("out_dir");
-        out_opt.bins_per_decade = 20;
-        out_opt.points_per_10_Mpc = 10;
+    catch(const out_of_range& oor){
+        string err = string(oor.what()) + " in file '" + file_name + "'";
+        throw out_of_range(err);
     }
-    app_opt = j.at("app_opt");
-    from_json(j.at("cosmo"), cosmo); //< call explicitly, SWIG has some issues with json.hpp
-    app_opt.init(box_opt);
-    other_par.init(box_opt);
     is_init = 1;
-    i.close();
 }
 
 void to_json(json& j, const Box_Opt& box_opt)
@@ -712,7 +719,7 @@ void to_json(json& j, const Out_Opt& out_opt)
     j = json{
         {"bins_per_decade", out_opt.bins_per_decade},
         {"points_per_10_Mpc", out_opt.points_per_10_Mpc},
-        {"out_dir", out_opt.points_per_10_Mpc}
+        {"out_dir", out_opt.out_dir}
     };
 }
 
@@ -756,7 +763,7 @@ void Sim_Param::print_info(string out, string app) const
                 {"cosmo", cosmo},
                 {"app_opt", app_opt},
                 {"run_opt", run_opt},
-                {"out_dir", out_opt},
+                {"out_opt", out_opt},
                 {"k_nyquist", other_par.nyquist},
                 {"results", {}},
                 {"app", app}

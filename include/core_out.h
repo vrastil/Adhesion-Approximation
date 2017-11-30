@@ -8,6 +8,29 @@
 #include "stdafx.h"
 #include "core.h"
 
+/**
+ * class  Ofstream handles opening and closing files, has 16MB buffer for output 
+ */
+
+class Ofstream : public std::ofstream
+{
+public:
+    Ofstream(std::string file_name);
+    char* buf;
+    ~Ofstream();
+};
+
+/**
+ * class  Ifstream handles opening and closing files
+ */
+
+class Ifstream : public std::ifstream
+{
+public:
+    Ifstream(std::string file_name);
+    ~Ifstream();
+};
+
 std::string currentDateTime();
 std::string std_out_dir(std::string pre_subdir, const Sim_Param &sim);
 

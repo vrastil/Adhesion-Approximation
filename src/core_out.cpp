@@ -1,31 +1,35 @@
 
 #include "stdafx.h"
 #include "core.h"
+#include "core_out.h"
 
 namespace fs = boost::filesystem;
 using namespace std;
 
 #define BUFF_SIZE 1024 * 1024 * 16 // 16 MB buffer
 
-class Ofstream : public ofstream
-{
-public:
-    Ofstream(string file_name) : ofstream(file_name), buf(new char[BUFF_SIZE])
-    {
-        if (!this->is_open())
-        {
-            cout <<  "Error while opening " << file_name << "\n";
-        }
-        this->rdbuf()->pubsetbuf(buf, sizeof(buf));
-    }
-    char* buf;
 
-    ~Ofstream()
-    {
-        delete[] buf;
-        this->close();
-    }
-};
+Ofstream::Ofstream(string file_name) : ofstream(file_name), buf(new char[BUFF_SIZE])
+{
+    if (!this->is_open()) throw runtime_error("Error while opening '" + file_name + "'");
+    this->rdbuf()->pubsetbuf(buf, sizeof(buf));
+}
+
+Ofstream::~Ofstream()
+{
+    delete[] buf;
+    if (this->is_open()) this->close();
+}
+
+Ifstream::Ifstream(string file_name) : ifstream(file_name)
+{
+    if (!this->is_open()) throw runtime_error("Error while opening '" + file_name + "'");
+}
+
+Ifstream::~Ifstream()
+{
+    if (this->is_open()) this->close();
+}
 
 // Get current date/time, format is YYYY-MM-DD.HH:mm:ss
 string currentDateTime()
