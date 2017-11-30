@@ -391,10 +391,11 @@ void Cosmo_Param::init()
     config.mass_function_method = ccl_tinker;
     int status = 0;
     params = ccl_parameters_create_flat_lcdm(Omega_c(), Omega_b, h, sigma8, ns, &status);
-    #ifdef DEBUG
-    cout << ">>> Debug: Creating 'ccl_cosmology*': " << cosmo << "\n";
-    #endif
     cosmo = ccl_cosmology_create(params, config);
+    #ifdef DEBUG
+    cout << ">>> Debug: Created ccl_cosmology*: " << cosmo << "\n";
+    #endif
+    
 
     // PRECOMPUTED VALUES
     D_norm = growth_factor(1, *this);

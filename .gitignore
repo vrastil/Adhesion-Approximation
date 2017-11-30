@@ -5,6 +5,7 @@ report/
 
 # program, object files, libraries, depedency files, scripts
 adh_app
+debug
 tests/test
 *.o
 *.d

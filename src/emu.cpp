@@ -170,41 +170,25 @@ void emu(double *xstar, double *ystar) {
     xstar[6] = pow(-xstar[5]-xstar[6], 0.25);
     
     // Check the inputs to make sure we're interpolating.
-    for(i=0; i<p; i++) {
+        for(i=0; i<p; i++) {
         if((xstar[i] < xmin[i]) || (xstar[i] > xmax[i])) {
+            std::string err = " must be between " + std::to_string(xmin[i]) + " and " + std::to_string(xmax[i]) + ".\n";
             switch(i) {
-                case 0:
-                    printf("omega_m must be between %f and %f.\n", xmin[i], xmax[i]);
-                    break;
-                case 1:
-                    printf("omega_b must be between %f and %f.\n", xmin[i], xmax[i]);
-                    break;
-                case 2:
-                    printf("sigma_8 must be between %f and %f.\n", xmin[i], xmax[i]);
-                    break;
-                case 3:
-                    printf("h must be between %f and %f.\n", xmin[i], xmax[i]);
-                    break;
-                case 4:
-                    printf("n_s must be between %f and %f.\n", xmin[i], xmax[i]);
-                    break;
-                case 5:
-                    printf("w_0 must be between %f and %f.\n", xmin[i], xmax[i]);
-                    break;
-                case 6:
-                    printf("(-w_0-w_a)^(1/4) must be between %f and %f.\n", xmin[i], xmax[i]);
-                    break;
-                case 7:
-                    printf("omega_nu must be between %f and %f.\n", xmin[i], xmax[i]);
-                    break;
+                case 0: throw std::out_of_range("omega_m" + err);
+                case 1: throw std::out_of_range("omega_b" + err);
+                case 2: throw std::out_of_range("sigma_8" + err);
+                case 3: throw std::out_of_range("h" + err);
+                case 4: throw std::out_of_range("n_s" + err);
+                case 5: throw std::out_of_range("w_0" + err);
+                case 6: throw std::out_of_range("(-w_0-w_a)^(1/4)" + err);
+                case 7: throw std::out_of_range("omega_nu" + err);
             }
             exit(1);
         }
     } // for(i=0; i<p; i++)
     if((xstar[p] < z[0]) || (xstar[p] > z[rs-1])) {
-        printf("z must be between %f and %f.\n", z[0], z[rs-1]);
-        printf("%f\n", xstar[p]-z[rs-1]);
-        exit(1);
+        std::string err = " must be between " + std::to_string(z[0]) + " and " + std::to_string(z[rs-1]) + ".\n";
+        throw std::out_of_range("z" + err);
     }
     
     // Standardize the inputs
@@ -310,10 +294,6 @@ void emu(double *xstar, double *ystar) {
 
 Data_Vec<double, 2> init_emu(const Sim_Param &sim, double z)
 {
-    if ((z < 0) || (z>2.02)){ // emulator range
-        std::cout << "WARNING! Value of redshift outside emulator range!\n";
-        return Data_Vec<double, 2>();
-    }
     std::cout << "Initializing emulator...\n";
     Data_Vec<double, 2> emu_data(nmode);
     for (unsigned i = 0; i < emu_data.size(); i++){
