@@ -456,14 +456,14 @@ void vel_pwr_spec_k(const vector<Mesh> &vel_field, Mesh* power_aux)
 }
 
 void gen_cqty_binned(const double x_min, const double x_max, const unsigned bins_per_decade,
-                    const Mesh &qty_mesh, const unsigned half_length, Data_Vec<double,3>& qty_binned, const double mod_q, const double mod_x)
+                    const Mesh &qty_mesh, const unsigned half_length, Data_Vec<double,2>& qty_binned, const double mod_q, const double mod_x)
 {
     /* bin some complex quantity on mesh in logarithmic bins, assuming:
        Q(x) = mod_q*qty_mesh[2*i]
        x = mod_x*qty_mesh[2*i+1]
        [mesh[2*i+1]] = [x_min] = [x_max]
 
-       return binned data in qty_binned {x, <Q(x)>, std<Q(x)>}
+       return binned data in qty_binned {x, <Q(x)>}
 
        Note: passing length of the array for case when my mesh is bigger than data stored in there
              overloaded function exists when this is not the case
@@ -488,23 +488,16 @@ void gen_cqty_binned(const double x_min, const double x_max, const unsigned bins
             #pragma omp atomic
             qty_binned[1][bin] += qty_mesh[2*i];
             #pragma omp atomic
-            qty_binned[2][bin] += pow(qty_mesh[2*i], 2);
-            #pragma omp atomic
             tmp[bin]++;
         }
     }
 
-    /* compute average x, Q(x), std<Q(x)> in bins */
+    /* compute average x, Q(x) in bins */
     unsigned count;
     for (unsigned j = 0; j < qty_binned.size(); ){
         count = tmp[j];
         if (count){
             qty_binned[0][j] *= mod_x / count;
-            // unbiased estimator of variance is 1/N-1
-            // using qty_binned[1][j] = N * mean
-            qty_binned[2][j] = count - 1 ?  mod_q*sqrt(
-                (qty_binned[2][j] - pow(qty_binned[1][j], 2) / count) / (count - 1)
-            ) : 0;
             qty_binned[1][j] *= mod_q / count;
             j++;
         }else{
@@ -516,7 +509,7 @@ void gen_cqty_binned(const double x_min, const double x_max, const unsigned bins
 
 
 void gen_cqty_binned(const double x_min, const double x_max, const unsigned bins_per_decade,
-                    const Mesh &qty_mesh, Data_Vec<double, 3>& qty_binned, const double mod_q, const double mod_x)
+                    const Mesh &qty_mesh, Data_Vec<double, 2>& qty_binned, const double mod_q, const double mod_x)
 {
     gen_cqty_binned(x_min, x_max, bins_per_decade, qty_mesh, qty_mesh.length / 2, qty_binned, mod_q, mod_x);
 }
@@ -568,7 +561,7 @@ void gen_rqty_binned(const double x_min, const double x_max, const double x_0,
 }
 */
 
-void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_Vec<double, 3>* pwr_spec_binned)
+void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_Vec<double, 2>* pwr_spec_binned)
 {
     const double mod_pk = pow(sim.box_opt.box_size, 3.); // P(k) -> dimensionFULL!
     const double mod_k = 2.*PI/sim.box_opt.box_size;
@@ -576,7 +569,7 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_Vec<d
 	gen_cqty_binned(1, sim.box_opt.mesh_num_pwr,  sim.out_opt.bins_per_decade, power_aux, *pwr_spec_binned, mod_pk, mod_k);
 }
 
-void gen_pow_spec_binned_init(const Sim_Param &sim, const Mesh &power_aux, const unsigned half_length, Data_Vec<double, 3>* pwr_spec_binned)
+void gen_pow_spec_binned_init(const Sim_Param &sim, const Mesh &power_aux, const unsigned half_length, Data_Vec<double, 2>* pwr_spec_binned)
 {
     /* same as above but now  power_aux is storing only data [0...mesh_num], NOT mesh_num_pwr */
     const double mod_pk = pow(sim.box_opt.box_size, 3.); // P(k) -> dimensionFULL!
@@ -585,8 +578,7 @@ void gen_pow_spec_binned_init(const Sim_Param &sim, const Mesh &power_aux, const
 	gen_cqty_binned(1, sim.box_opt.mesh_num,  sim.out_opt.bins_per_decade, power_aux, half_length, *pwr_spec_binned, mod_pk, mod_k);
 }
 
-template <unsigned N>
-void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const Extrap_Pk &P_k, Data_Vec<double, N>* pwr_spec_binned)
+void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const Extrap_Pk &P_k, Data_Vec<double, 2>* pwr_spec_binned)
 {
     const double k_max = sim.other_par.k_print.upper;
     const double k_min = sim.other_par.k_print.lower;
@@ -778,5 +770,3 @@ void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param 
 
 template void get_rho_from_par(Particle_x*, Mesh*, const Sim_Param&);
 template void get_rho_from_par(Particle_v*, Mesh*, const Sim_Param&);
-template void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const Extrap_Pk &P_k, Data_Vec<double, 2>* pwr_spec_binned);
-template void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const Extrap_Pk &P_k, Data_Vec<double, 3>* pwr_spec_binned);

@@ -95,8 +95,7 @@ void print_par_pos_cut_small(T* particles, const Sim_Param &sim, string out_dir,
    }
 }
 
-template <unsigned N>
-void print_pow_spec(const Data_Vec<double, N> &pwr_spec_binned, string out_dir, string suffix)
+void print_pow_spec(const Data_Vec<double, 2> &pwr_spec_binned, string out_dir, string suffix)
 {
 	out_dir += "pwr_spec/";
 	string file_name = out_dir + "pwr_spec" + suffix + ".dat";
@@ -104,22 +103,19 @@ void print_pow_spec(const Data_Vec<double, N> &pwr_spec_binned, string out_dir, 
 	
 	cout << "Writing power spectrum into file " << file_name << "\n";
 	File << "# This file contains power spectrum P(k) in units [(Mpc/h)^3] depending on wavenumber k in units [h/Mpc].\n"
-	        "# k [h/Mpc]\tP(k) [(Mpc/h)^3]";
-    if (N == 2) File << "\n";
-    else if(N == 3) File << "\tstd<P(k)> [(Mpc/h)^3]\n";
+	        "# k [h/Mpc]\tP(k) [(Mpc/h)^3]\n";
 
     File << scientific;
     const unsigned size = pwr_spec_binned.size();
 	for (unsigned j = 0; j < size; j++){
-        for (unsigned i = 0; i < N; i++){
+        for (unsigned i = 0; i < 2; i++){
             File << pwr_spec_binned[i][j] << "\t";
         }
         File << "\n";
 	}
 }
 
-template <unsigned N>
-void print_vel_pow_spec(const Data_Vec<double, N> &pwr_spec_binned, string out_dir, string suffix)
+void print_vel_pow_spec(const Data_Vec<double, 2> &pwr_spec_binned, string out_dir, string suffix)
 {
 	out_dir += "vel_pwr_spec/";
 	string file_name = out_dir + "vel_pwr_spec" + suffix + ".dat";
@@ -127,14 +123,12 @@ void print_vel_pow_spec(const Data_Vec<double, N> &pwr_spec_binned, string out_d
 	
 	cout << "Writing velocity divergence power spectrum into file " << file_name << "\n";
 	File << "# This file contains velocity divergence power spectrum P(k) in units [(Mpc/h)^3] depending on wavenumber k in units [h/Mpc].\n"
-	        "# k [h/Mpc]\tP(k) [(Mpc/h)^3]";
-    if (N == 2) File << "\n";
-    else if(N == 3) File << "\tstd<P(k)> [(Mpc/h)^3]\n";
-    
+	        "# k [h/Mpc]\tP(k) [(Mpc/h)^3]\n";
+
     File << scientific;
     const unsigned size = pwr_spec_binned.size();
 	for (unsigned j = 0; j < size; j++){
-        for (unsigned i = 0; i < N; i++){
+        for (unsigned i = 0; i < 2; i++){
             File << pwr_spec_binned[i][j] << "\t";
         }
         File << "\n";
@@ -162,8 +156,7 @@ double rel_error(double a, double b)
     return a ? fabs((a-b)/a) : fabs(a-b);
 }
 
-template <unsigned N>
-void print_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Data_Vec<double, N> &pwr_spec_binned_0,
+void print_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Data_Vec<double, 2> &pwr_spec_binned_0,
 	double growth, string out_dir, string suffix)
 {
     out_dir += "pwr_diff/";
@@ -192,8 +185,7 @@ void print_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Data_
 	}
 }
 
-template <unsigned N>
-void print_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Interp_obj &pwr_spec_input,
+void print_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Interp_obj &pwr_spec_input,
 	double growth, string out_dir, string suffix)
 {
     out_dir += "pwr_diff/";
@@ -221,8 +213,7 @@ void print_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Inter
 	}
 }
 
-template <unsigned N>
-void print_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Data_Vec<double, N> &pwr_spec_binned_0,
+void print_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Data_Vec<double, 2> &pwr_spec_binned_0,
     const Interp_obj &pwr_spec_input, double growth_now, double growth_init, string out_dir, string suffix)
 {
     out_dir += "pwr_diff/";
@@ -258,8 +249,7 @@ void print_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Data_
 	}
 }
 
-template <unsigned N>
-void print_vel_pow_spec_diff(const Data_Vec<double, N> &pwr_spec_binned, const Data_Vec<double, N> &pwr_spec_binned_0,
+void print_vel_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Data_Vec<double, 2> &pwr_spec_binned_0,
 	double dDda, string out_dir, string suffix)
 {
     out_dir += "vel_pwr_diff/";
@@ -373,19 +363,3 @@ void print_dens_bin(const vector<int> &dens_binned, string out_dir, string suffi
 
 template void print_par_pos_cut_small(Particle_x*, const Sim_Param&, string, string);
 template void print_par_pos_cut_small(Particle_v*, const Sim_Param&, string, string);
-template void print_pow_spec(const Data_Vec<double, 2>&, string, string);
-template void print_pow_spec(const Data_Vec<double, 3>&, string, string);
-template void print_vel_pow_spec(const Data_Vec<double, 2>&, string, string);
-template void print_vel_pow_spec(const Data_Vec<double, 3>&, string, string);
-
-template void print_pow_spec_diff(const Data_Vec<double, 2>&, const Data_Vec<double, 2>&, double, string, string);
-template void print_pow_spec_diff(const Data_Vec<double, 3>&, const Data_Vec<double, 3>&, double, string, string);
-template void print_pow_spec_diff(const Data_Vec<double, 2>&, const Interp_obj&, double, string, string);
-template void print_pow_spec_diff(const Data_Vec<double, 3>&, const Interp_obj&, double, string, string);
-template void print_pow_spec_diff(const Data_Vec<double, 2>&, const Data_Vec<double, 2>&,
-                const Interp_obj&, double, double, string, string);
-template void print_pow_spec_diff(const Data_Vec<double, 3>&, const Data_Vec<double, 3>&,
-                const Interp_obj&, double, double, string, string);
-
-template void print_vel_pow_spec_diff(const Data_Vec<double, 2>&, const Data_Vec<double, 2>&, double, string, string);
-template void print_vel_pow_spec_diff(const Data_Vec<double, 3>&, const Data_Vec<double, 3>&, double, string, string);

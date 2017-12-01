@@ -482,8 +482,7 @@ public:
     T* particles;
 
     // OTHER VARIABLES
-    Data_Vec<double, 3> pwr_spec_binned, pwr_spec_binned_0, vel_pwr_spec_binned_0;
-    Data_Vec<double, 2> corr_func_binned;
+    Data_Vec<double, 2> corr_func_binned, pwr_spec_binned, pwr_spec_binned_0, vel_pwr_spec_binned_0;
     Interp_obj pwr_spec_input;
 	fftw_plan p_F, p_B, p_F_pwr, p_B_pwr;
 	Tracking track;
