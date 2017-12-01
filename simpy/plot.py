@@ -174,8 +174,7 @@ def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, pw
         plt.show()
     plt.close(fig)
 
-
-def plot_pwr_spec_stacked(data_list, zs, a_sim_info, Pk_list_extrap=None, pwr_spec_files_emu=None,
+def plot_pwr_spec_stacked(data_list, zs, a_sim_info, Pk_list_extrap=None, Pk_nl_list=None,
                           out_dir='auto', pk_type='dens', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
@@ -208,15 +207,12 @@ def plot_pwr_spec_stacked(data_list, zs, a_sim_info, Pk_list_extrap=None, pwr_sp
                          facecolor='darkgrey', alpha=0.5)
 
         if Pk_list_extrap is not None:
-            plt.plot(k, Pk_list_extrap[i].eval_list(k), 'k--')
+            plt.plot(k, [Pk_list_extrap[i](k_) for k_ in k], 'k--')
+        
+        if Pk_nl_list is not None and (zs[i] <= 2.02 or zs[i] == 'init'):
+            plt.plot(k, [Pk_nl_list[i](k_) for k_ in k], '-')
 
         del k, P_k, P_k_std, data
-
-    if pwr_spec_files_emu is not None:
-        data = np.loadtxt(pwr_spec_files_emu[-1])
-        k, P_k = data[:, 0], data[:, 1]
-        plt.plot(k, P_k, '-')
-        del k, P_k, data
 
     if a_sim_info.k_nyquist is not None:
         ls = [':', '-.', '--']
@@ -352,50 +348,31 @@ def plot_corr_func_from_data_single(corr_data, z, a_sim_info, corr_data_lin=None
 
 
 # correlation function stacked data, linear and emu corr. func in files
-def plot_corr_func_from_data(corr_data_list, zs, a_sim_info, corr_func_files_lin=None, corr_func_files_emu=None, zs_emu=None, out_dir='auto', save=True, show=False):
+def plot_corr_func_from_data(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, show=False):
 
     a_end = 1 / (1 + zs[-1])
     a_ = 0
-    j = 0
-    init_idx_cor = 0  # if there is pwr_spec file 'init', extrap files have one file less
-    for i, z in enumerate(zs):
-        # input correlation function handled separately
-        if z == "init":
-            init_idx_cor += 1
-            continue
-        # load emulator correlation BEFORE disregarding the plot (near times),
-        # still need to update j in this case
-        if corr_func_files_emu is not None and z == zs_emu[j]:
-            corr_data_emu = np.transpose(np.loadtxt(corr_func_files_emu[j]))
-            j += 1
-        else:
-            corr_data_emu = None
 
-        a = 1 / (1 + z)
-        # no need to plot EVERY correlation function
-        if a < 2 * a_ and z > 1 and a != a_end:
-            continue
-        a_ = a
-        corr_data = corr_data_list[i]
-        if corr_func_files_lin is not None:
-            corr_data_lin = np.transpose(np.loadtxt(
-                corr_func_files_lin[i - init_idx_cor]))
-        else:
-            corr_data_lin = None
+    corr_par_it = iter(corr_data_all['par'])
+    corr_lin_it= iter(corr_data_all['lin'])
+    corr_emu_it = iter(corr_data_all['emu'])
+
+    for z in zs:
+        corr_par = next(corr_par_it)
+        corr_lin = next(corr_lin_it)
+        corr_emu = next(corr_emu_it) if z <= 2.02 or z == 'init' else None
+        if z != 'init':
+            a = 1 / (1 + z) 
+            # no need to plot EVERY correlation function
+            if a < 2 * a_ and z > 1 and a != a_end:
+                continue
+            a_ = a
 
         plot_corr_func_from_data_single(
-            corr_data, z, a_sim_info, corr_data_lin, corr_data_emu, out_dir, save, show)
-        del corr_data, corr_data_lin, corr_data_emu
-    # input correlation function
-    if zs[0] == "init" and zs_emu[-1] == 0:
-        corr_data_emu = np.transpose(np.loadtxt(corr_func_files_emu[-1]))
-        corr_data_lin = np.transpose(np.loadtxt(corr_func_files_lin[-1]))
-        corr_data = corr_data_list[0]
-        plot_corr_func_from_data_single(
-            corr_data, zs[0], a_sim_info, corr_data_lin, corr_data_emu, out_dir, save, show)
+            corr_par, z, a_sim_info, corr_lin, corr_emu, out_dir, save, show)
 
 
-# correlation function directly from siulation, no stacking, all data in files
+# correlation function directly from simulation, no stacking, all data in files
 def plot_corr_func(corr_func_files, zs, a_sim_info, corr_func_files_lin=None, corr_func_files_emu=None, zs_emu=None, out_dir='auto', save=True, show=False):
     corr_data_list = [np.transpose(np.loadtxt(
         corr_func_files[i])) for i in xrange(len(zs))]
