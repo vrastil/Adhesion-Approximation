@@ -6,9 +6,21 @@ namespace po = boost::program_options;
 
 using namespace std;
 
+struct Dvector { vector<double> v; };
+
+void validate(boost::any& v, const vector<string>& values, Dvector*, int) {
+  Dvector dvalues;
+  for(auto val : values){
+      cout << val;
+      dvalues.v.push_back(stod(val));
+  }
+  v = dvalues;
+}
+
 int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
 	try {
 		string config_file;
+        Dvector print_z;
 		// options ONLY on command line
 		po::options_description generic("Generic options");
 		generic.add_options()
@@ -34,9 +46,10 @@ int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
             ;
         
         po::options_description config_output("Output options");
-        config_integ.add_options()
+        config_output.add_options()
             ("print_every", po::value<unsigned>(&sim->out_opt.print_every)->default_value(1, "1"), "save particle positions and power spectrum "
                                                                                             "every n-th step, set 0 for no printing")
+            ("print_z", po::value<Dvector>(&print_z)->multitoken(), "save output info at additional redshifts (optional")
             ("pwr_bins", po::value<unsigned>(&sim->out_opt.bins_per_decade)->default_value(30), "number of bins per decade in power spectrum")
             ("corr_pt", po::value<unsigned>(&sim->out_opt.points_per_10_Mpc)->default_value(10), "number of points per 10 Mpc in correlation function")
             ("out_dir,o", po::value<string>(&sim->out_opt.out_dir)->default_value("output/"), "output folder name")
@@ -49,6 +62,7 @@ int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
             ("print_emu_corr", po::value<bool>(&sim->out_opt.print_emu_corr)->default_value(false), "print emulator correlation function")
             ("print_vel_pwr", po::value<bool>(&sim->out_opt.print_vel_pwr)->default_value(false), "print velocity power spectrum")
             ;
+            sim->out_opt.print_z = print_z.v;
 		
 		po::options_description config_app("Approximations");
 		config_app.add_options()
@@ -87,7 +101,7 @@ int handle_cmd_line(int ac, char* av[], Sim_Param* sim){
 			;
 			
 		po::options_description cmdline_options("\nCOSMOLOGICAL APPROXIMATION");
-        cmdline_options.add(generic).add(config_mesh).add(config_power).add(config_integ).add(config_app).add(config_run).add(config_other);
+        cmdline_options.add(generic).add(config_mesh).add(config_power).add(config_integ).add(config_output).add(config_app).add(config_run).add(config_other);
 		
 		po::variables_map vm;
 		store(po::command_line_parser(ac, av).options(cmdline_options).run(), vm);		
