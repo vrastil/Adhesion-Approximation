@@ -1,15 +1,8 @@
-from datetime import datetime
 import os.path
 import sys
 import traceback
-import gc
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 import numpy as np
-from scipy.interpolate import PchipInterpolator
 from scipy.optimize import curve_fit
-from scipy.integrate import quad
 import json
 
 from . import *
@@ -31,6 +24,19 @@ class StackInfo(SimInfo):
             yield x
 
     def __init__(self, group_sim_infos=None, stack_info_file=None):
+        if group_sim_infos is not None:
+            self.load_group_sim_infos(group_sim_infos)
+        elif stack_info_file is not None:
+            SimInfo.__init__(self, stack_info_file)
+            self.sim = fs.Sim_Param(stack_info_file)
+        else:
+            raise KeyError("Constructor 'StackInfo' called without arguments.")
+
+        for key in RESULTS_KEYS_STACK:
+            if key not in self.results:
+                self.results[key] = False
+
+    def load_group_sim_infos(self, group_sim_infos):
         # use last SimInfo of SORTED list, i.e. the last run (if need to add
         # info, e.g. coorelation data)
         self.group_sim_infos = group_sim_infos
@@ -64,15 +70,11 @@ class StackInfo(SimInfo):
                     self.save()
         else:  # save new StackInfo
             self.results = {}
-            self.save()
-
-        for key in RESULTS_KEYS_STACK:
-            if key not in self.results:
-                self.results[key] = False
+            self.save()     
 
     def save(self):
         data = self.__dict__.copy()
-        for key in ('ccl_cosmo', 'run_opt', 'out_dir', 'last', 'sim', 'group_sim_infos'):
+        for key in ('ccl_cosmo', 'run_opt', 'out_dir', 'sim', 'group_sim_infos'):
             data.pop(key, None)
         # overriding
         with open(self.file, 'w') as outfile:
@@ -281,11 +283,11 @@ def load_corr(stack_info, zs, Pk_list, Pk_nl_list):
     return xi_all
 
 
-def get_nonlinear_pwr_spec(sim, z):
-    if z == 'init': z = 0.0
-    data = fs.init_emu(sim, z)
-    Pk_nl = fs.Extrap_Pk(data, sim, 0, 10, 341, 351)
-    return Pk_nl
+def get_Extrap_pk_nl(sim, z):
+    """ return Extrap_Pk object for non-linear power spectra"""
+    if z == 'init' or z < 0: z = 0.0
+    elif z > 2.02: z = 2.02
+    return fs.Extrap_Pk(fs.init_emu(sim, z), sim, 0, 10, 341, 351)
 
 
 def get_ndarray(Data_Vec):
@@ -296,23 +298,57 @@ def get_ndarray(Data_Vec):
 
 def get_Data_vec(data):
     size = len(data[0])
-    Data_Vec = fs.Data_d2(size)
+    Data_Vec = fs.Data_d3(size)
     for i in range(size):
         Data_Vec[0][i] = data[0][i]
         Data_Vec[1][i] = data[1][i]
+        Data_Vec[2][i] = data[2][i] 
     return Data_Vec
+
+def pwr_spec_non_linear(sim, kk, z):
+    """ return ndarray of power spectra for every k in kk (iterable) """
+    Pk_nl = get_Extrap_pk_nl(sim, z)
+    return np.array([Pk_nl(k) for k in kk])
+
+def pwr_spec_linear(sim, kk, z):
+    D = fs.growth_factor(1./(1.+z), sim.cosmo)
+    return np.array([D*D*fs.lin_pow_spec(k, sim.cosmo) for k in kk])
+
+def get_hybrid_pwr_spec(sim, data, k_nyquist_par, z=1):
+    """ given data [k, Pk, std] and initial guess of redshift:
+    return fit of hybrid power spectrum: (1-A)*P_lin(k) + A*P_nl(k) """
+    # define functions which will be used in fitting
+    pk_nl_func = lambda kk, z: pwr_spec_non_linear(sim, kk, z)
+    pk_lin_func = lambda kk, z: pwr_spec_linear(sim, kk, z)
+    pk_hyb_func = lambda kk, z, A: (1-A)*pk_lin_func(kk, z) + A*pk_nl_func(kk, z)
+
+    # extract data
+    kk, Pk, std = data
+    
+    # get proper slice of data -- last decade befor half of particle nyquist
+    idx = (np.abs(kk-0.5*k_nyquist_par)).argmin()
+    idx = slice(idx - sim.out_opt.bins_per_decade, idx)
+
+    # fit data
+    popt, pcov = curve_fit(pk_hyb_func, kk[idx], Pk[idx], sigma=std[idx], p0=(z, 0.3))
+
+    # get hybrid Extrap
+    Pk_NL = fs.Extrap_Pk_Nl(get_Data_vec(data), sim, popt[1], popt[0])
+
+    # return all info in dict
+    return {"Pk_NL" : Pk_NL, "popt" : popt, "pcov" : pcov}
 
 
 def corr_func(sim, Pk=None, z=None):
-    corr_func = fs.Data_d2()
-    if Pk is not None: # compute correlation function based on given continuous power spectrum
-        fs.gen_corr_func_binned_gsl_qawf(sim, Pk, corr_func)
+    corr = fs.Data_d2()
+    if Pk is not None: # compute correlation function from given continuous power spectrum
+        fs.gen_corr_func_binned_gsl_qawf(sim, Pk, corr)
     elif z is not None: # compute linear correlation function at given redshift
         a = 1./(1.+z) if z != 'init' else 1.0
-        fs.gen_corr_func_binned_gsl_qawf_lin(sim, a, corr_func)
+        fs.gen_corr_func_binned_gsl_qawf_lin(sim, a, corr)
     else:
         raise KeyError("Function 'corr_func' called without arguments.")
-    return get_ndarray(corr_func)
+    return get_ndarray(corr)
 
 
 def stack_group(group_sim_infos=None, stack_info_file=None):
@@ -326,13 +362,14 @@ def stack_group(group_sim_infos=None, stack_info_file=None):
 
     # for each entry in data_list compute its continuous version
     # get non-linear power spectra for z in emulator range, z == 'init' transformed into z = 0.0
+    Pk_hyb_lis = [get_hybrid_pwr_spec(stack_info.sim, data, stack_info.k_nyquist["particle"]) for data in data_list]
     Pk_list = [fs.Extrap_Pk(get_Data_vec(data), stack_info.sim) for data in data_list]
-    Pk_nl_list = [get_nonlinear_pwr_spec(stack_info.sim, z) for z in zs if z <= 2.02 or z == 'init']
+    #Pk_list = [x["Pk_NL"] for x in Pk_hyb_lis]
+    Pk_nl_list = [get_Extrap_pk_nl(stack_info.sim, z) for z in zs if z <= 2.02 or z == 'init']
 
     # compute correlation function for simulated, linear and non-linear power spectra
     # return dictionary, keys = 'par', 'lin', 'emu'
     xi_all = load_corr(stack_info, zs, Pk_list, Pk_nl_list)
-
 
     print '\tPlotting power spectrum...'
     plot.plot_pwr_spec_stacked(data_list, zs, stack_info, Pk_list, Pk_nl_list)
@@ -347,6 +384,7 @@ def stack_group(group_sim_infos=None, stack_info_file=None):
     plot.plot_supp_lms(supp_lms, a, stack_info, k_lms, supp_std_lms)
 
     print '\tPlotting power spectrum suppression (map)...'
+    # WARNING! data in data_list_diff are potentially modified -- aligning values to the same counts
     plot.plot_pwr_spec_diff_map_from_data(data_list_diff["par"], zs_diff, stack_info, ext_title="par")
 
     print '\tPlotting correlation function...'
@@ -358,9 +396,7 @@ def stack_group(group_sim_infos=None, stack_info_file=None):
 def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/'):
     # get all runs
     files = get_files_in_traverse_dir(in_dir, 'sim_param.json')
-    sim_infos = []
-    for a_file, sub in files:
-        sim_infos.append(SimInfo(a_file))
+    sim_infos = [SimInfo(a_file[0]) for a_file in files]
     del files
 
     # separate files according to run parameters
@@ -370,9 +406,7 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
     del sim_infos
 
     # print info about separated files
-    num_all_runs = 0
-    num_all_sep_runs = 0
-    num_sep_runs = 0
+    num_all_runs = num_all_sep_runs = num_sep_runs = 0
     for sep_sim_infos in sep_files:
         num_all_runs += len(sep_sim_infos)
         if len(sep_sim_infos) > 1:
@@ -402,7 +436,7 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
         try:
             stack_infos.append(stack_group(sep_sim_infos))
         except:
-            print "=" * 105
+            print "=" * 110
             traceback.print_exc(file=sys.stdout)
-            print "=" * 105
+            print "=" * 110
     return stack_infos

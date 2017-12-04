@@ -189,30 +189,40 @@ def plot_pwr_spec_stacked(data_list, zs, a_sim_info, Pk_list_extrap=None, Pk_nl_
     plt.yscale('log')
     plt.xscale('log')
 
-    a_end = 1 / (1 + zs[-1])
+    a_end = 1. / (1. + zs[-1])
     a_ = 0
-    lab = 'init'
-    for i, data in enumerate(data_list):
-        if zs[i] != 'init':
-            a = 1 / (1 + zs[i])
+    
+    data_it = iter(data_list)
+    Pk_lin_it = iter(Pk_list_extrap)
+    Pk_nl_it = iter(Pk_nl_list)
+
+    for z in zs:
+        k, P_k, P_k_std = next(data_it)
+        Pk_lin = next(Pk_lin_it)
+        Pk_nl = next(Pk_nl_it) if z <= 2.02 or z == 'init' else None
+
+        if z != 'init':
+            a = 1. / (1. + z)
             if ((a < 1.5 * a_) or (1.5 * a > a_end)) and a != a_end:
                 continue
             a_ = a
-            lab = 'z = ' + str(zs[i])
+            lab = 'z = ' + str(z)
+        else:
+            continue # <<< do not plot show init power spectra, feel free to turn on
+            lab = 'init'
 
-        k, P_k, P_k_std = data[0], data[1], data[2]
         # plt.errorbar(k, P_k, yerr=P_k_std, fmt='o', ms=3, label=lab)
         plt.plot(k, P_k, 'o', ms=3, label=lab)
         plt.fill_between(k, P_k - P_k_std, P_k + P_k_std,
                          facecolor='darkgrey', alpha=0.5)
 
-        if Pk_list_extrap is not None:
-            plt.plot(k, [Pk_list_extrap[i](k_) for k_ in k], 'k--')
+        if Pk_lin is not None:
+            plt.plot(k, [Pk_lin(k_) for k_ in k], 'k--')
         
-        if Pk_nl_list is not None and (zs[i] <= 2.02 or zs[i] == 'init'):
-            plt.plot(k, [Pk_nl_list[i](k_) for k_ in k], '-')
+        if Pk_nl is not None:
+            plt.plot(k, [Pk_nl(k_) for k_ in k], '-')
 
-        del k, P_k, P_k_std, data
+        del k, P_k, P_k_std
 
     if a_sim_info.k_nyquist is not None:
         ls = [':', '-.', '--']
@@ -350,7 +360,7 @@ def plot_corr_func_from_data_single(corr_data, z, a_sim_info, corr_data_lin=None
 # correlation function stacked data, linear and emu corr. func in files
 def plot_corr_func_from_data(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, show=False):
 
-    a_end = 1 / (1 + zs[-1])
+    a_end = 1. / (1. + zs[-1])
     a_ = 0
 
     corr_par_it = iter(corr_data_all['par'])
@@ -362,7 +372,7 @@ def plot_corr_func_from_data(corr_data_all, zs, a_sim_info, out_dir='auto', save
         corr_lin = next(corr_lin_it)
         corr_emu = next(corr_emu_it) if z <= 2.02 or z == 'init' else None
         if z != 'init':
-            a = 1 / (1 + z) 
+            a = 1. / (1. + z) 
             # no need to plot EVERY correlation function
             if a < 2 * a_ and z > 1 and a != a_end:
                 continue
