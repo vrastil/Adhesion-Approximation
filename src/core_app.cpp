@@ -591,7 +591,7 @@ void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const Extrap_Pk &P_k,
 	for (unsigned j = 0; j < pwr_spec_binned->size(); j++){
         k = k_min*exp10(j*log_bin);
 		(*pwr_spec_binned)[0][j] = k;
-        (*pwr_spec_binned)[1][j] = P_k.eval(k);
+        (*pwr_spec_binned)[1][j] = P_k(k);
     }
 }
 

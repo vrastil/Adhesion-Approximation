@@ -207,7 +207,7 @@ void print_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Inter
         else
         {
             P_k = pwr_spec_binned[1][j];
-            P_lin = pwr_spec_input.eval(k) * pow(growth, 2.);
+            P_lin = pwr_spec_input(k) * pow(growth, 2.);
             File << scientific << k << "\t" << fixed << (P_k-P_lin)/P_lin << "\n";
         }
 	}
@@ -242,7 +242,7 @@ void print_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Data_
         else
         {
             P_k = pwr_spec_binned[1][j];
-            P_input = pwr_spec_input.eval(k) * pow(growth_now, 2.);
+            P_input = pwr_spec_input(k) * pow(growth_now, 2.);
             P_par = pwr_spec_binned_0[1][j] * pow(growth_now / growth_init, 2.);
             File << scientific << k << "\t" << fixed << P_k/P_input - P_k/P_par << "\n";
         }

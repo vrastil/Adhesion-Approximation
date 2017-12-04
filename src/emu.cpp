@@ -294,7 +294,9 @@ void emu(double *xstar, double *ystar) {
 
 Data_Vec<double, 2> init_emu(const Sim_Param &sim, double z)
 {
+    #ifndef SWIG
     std::cout << "Initializing emulator...\n";
+    #endif
     Data_Vec<double, 2> emu_data(nmode);
     for (unsigned i = 0; i < emu_data.size(); i++){
         emu_data[0][i] = mode[i] / sim.cosmo.h; // convert emulator k [1/Mpc] into [h/Mpc]

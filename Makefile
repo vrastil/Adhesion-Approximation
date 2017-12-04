@@ -35,7 +35,7 @@ unit: src/unity_build.cpp $(PCH_O)
 	$(COMPILE.fin) -I./include -o adh_app src/unity_build.cpp $(CXXLIB)
 
 
-swig: CXXFLAGS +=-Ofast -march=native
+swig: CXXFLAGS +=-Ofast -march=native -D SWIG
 swig: $(LIB) swig/*.i
 	swig -python -c++ -I/usr/local/include/ -I./include -o swig/swig_wrap.cpp swig/all.i
 	$(COMPILE.cc) -c -I/usr/include/python2.7 -o swig/swig_wrap.o swig/swig_wrap.cpp

@@ -46,7 +46,7 @@ public:
     Integr_obj(f, a, b, epsabs, epsrel, limit), key(key) {}
 
     // METHODS
-    double eval(void* params)
+    double operator()(void* params)
     {
         F.params = params;
         gsl_errno = gsl_integration_qag(&F, a, b, epsabs, epsrel, limit, key, w, &result, &error);
@@ -67,7 +67,7 @@ public:
     Integr_obj(f, a, 0, epsabs, epsrel, limit) {}
 
     // METHODS
-    double eval(void* params)
+    double operator()(void* params)
     {
         F.params = params;
         gsl_errno = gsl_integration_qagiu(&F, a, epsabs, epsrel, limit, w, &result, &error);
@@ -91,7 +91,7 @@ public:
         gsl_integration_qawo_table_free(wf);
     }
     // METHODS
-    double eval(double r, void* params)
+    double operator()(double r, void* params)
     {
         gsl_integration_qawo_table_set(wf, r, L, GSL_INTEG_SINE);
         F.params = params;
@@ -118,7 +118,7 @@ public:
         gsl_integration_workspace_free (wc);
     }
     // METHODS
-    double eval(double r, void* params)
+    double operator()(double r, void* params)
     {
         gsl_integration_qawo_table_set(wf, r, L, GSL_INTEG_SINE);
         F.params = params;
@@ -191,7 +191,7 @@ void norm_pwr_gsl(Cosmo_Param* pwr_par)
 {
     /* Normalize the power spectrum */
     Integr_obj_qagiu s8(&power_spectrum_s8, 0, 0, 1e-7, 1000);
-	pwr_par->A = pow(pwr_par->sigma8, 2)/s8.eval(pwr_par);
+	pwr_par->A = pow(pwr_par->sigma8, 2)/s8(pwr_par);
 }
 
 void norm_pwr_ccl(Cosmo_Param* pwr_par)
@@ -231,7 +231,7 @@ double growth_factor(double a, const Cosmo_Param& pwr_par)
     if (a == 0) return 0;
     Integr_obj_qag D(&growth_factor_integrand, 0, a, 0, 1e-7, 1000, GSL_INTEG_GAUSS61);
     growth_factor_integrand_param param = {pwr_par};
-    return hubble_param(a, pwr_par)*D.eval(&param)/pwr_par.D_norm;
+    return hubble_param(a, pwr_par)*D(&param)/pwr_par.D_norm;
     #endif
 }
 
@@ -363,7 +363,7 @@ Interp_obj::~Interp_obj()
     }
 }
 
-double Interp_obj::eval(double x) const{ return gsl_spline_eval(spline, x, acc); }
+double Interp_obj::operator()(double x) const{ return gsl_spline_eval(spline, x, acc); }
 
 /**
  * @class:	Extrap_Pk
@@ -378,12 +378,16 @@ Extrap_Pk::Extrap_Pk(const Data_Vec<double, N>& data, const Sim_Param& sim, cons
     Interp_obj(data), cosmo(sim.cosmo)
 {
     // LOWER RANGE -- fit linear power spectrum to data[m_l:n_l)
+    #ifndef SWIG
     printf("Fitting amplitude of P(k) in lower range.\n");
+    #endif
     k_min = data[0][m_l]; // first k in data
     fit_lin(data, m_l, n_l, A_low);
 
     // UPPER RANGE -- fit Ak^ns to data[m_u,n_u)
+    #ifndef SWIG
     printf("Fitting amplitude of P(k) in upper range.\n");
+    #endif
     k_max =  data[0][n_u-1]; // last k in data
     fit_power_law(data, m_u, n_u, A_up, n_s);
 }
@@ -408,16 +412,31 @@ void Extrap_Pk::fit_lin(const Data_Vec<double, N>& data, const unsigned m, const
 {
     // FIT linear power spectrum to data[m:n)
     // fit 'P(k) = A * P_lin(k)' via A
-    vector<double> Pk_res;
+    // for N = 2 perform non-weighted least-square fitting
+    // for N = 3 use data[2] as sigma, w = 1/sigma^2
+    double Pk, err;
+    vector<double> Pk_res, w;
     Pk_res.reserve(n-m);
+    if (N == 3){
+        w.reserve(n-m);
+    }
     vector<double> A_vec(n-m, 1);
 
     for(unsigned i = m; i < n; i++){
-        Pk_res.push_back(data[1][i] / lin_pow_spec(data[0][i], cosmo));
+        Pk = lin_pow_spec(data[0][i], cosmo);
+        Pk_res.push_back(data[1][i] / Pk);
+        if (N == 3) w.push_back(pow(Pk/data[2][i], 2));
     }
     double A_sigma2, sumsq;
-    gsl_fit_mul(A_vec.data(), 1, Pk_res.data(), 1, n-m, &A, &A_sigma2, &sumsq);
-    printf("\t[fit A = %e, sigma = %f, sumsq = %f]\n", A, sqrt(A_sigma2), sumsq);
+
+    if (!isfinite(A)) throw domain_error("Encountered error during fitting");
+
+    if (N == 3) gsl_fit_wmul(A_vec.data(), 1, w.data(), 1, Pk_res.data(), 1, n-m, &A, &A_sigma2, &sumsq);
+    else gsl_fit_mul(A_vec.data(), 1, Pk_res.data(), 1, n-m, &A, &A_sigma2, &sumsq);
+
+    #ifndef SWIG
+    printf("\t[%sfit A = %.1e, err = %.2f\%]\n", N == 3 ? "weighted-" : "", A, 100*sqrt(A_sigma2)/A);
+    #endif
 }
 
 template<unsigned N>
@@ -425,34 +444,49 @@ void Extrap_Pk::fit_power_law(const Data_Vec<double, N>& data, const unsigned m,
 {
     // FIT scale-free power spectrum to data[m,n)
     // fit 'log P(k) = log A + n_s * log k' via A, n_s
-    vector<double> k, Pk;
+    // for N = 2 perform non-weighted least-square fitting
+    // for N = 3 use data[2] as sigma, w = 1/sigma^2
+    vector<double> k, Pk, w;
+    double err;
     k.reserve(n-m);
     Pk.reserve(n-m);
-
+    if (N == 3){
+        w.reserve(n-m);
+    }
     for(unsigned i = m; i < n; i++){
         k.push_back(log(data[0][i]));
         Pk.push_back(log(data[1][i]));
+        if (N == 3)w.push_back(pow(data[1][i]/data[2][i], 2)); // weight = 1/sigma^2, approx log(1+x) = x for x rel. error
     }
     double cov00, cov01, cov11, sumsq;
-    gsl_fit_linear(k.data(), 1, Pk.data(), 1, n-m, &A, &n_s, &cov00, &cov01, &cov11, &sumsq);
-    printf("\t[fit logA = %e, n_s = %.3f, sigma_A = %f, sigma_n = %f, sumsq = %f]\n", A, n_s, sqrt(cov00), sqrt(cov11), sumsq);
+    if (N == 3) gsl_fit_wlinear(k.data(), 1, w.data(), 1, Pk.data(), 1, n-m, &A, &n_s, &cov00, &cov01, &cov11, &sumsq);
+    else gsl_fit_linear(k.data(), 1, Pk.data(), 1, n-m, &A, &n_s, &cov00, &cov01, &cov11, &sumsq);
+
+    if (!isfinite(A)) throw domain_error("Encountered error during fitting");
+
     A = exp(A); // log A => A
+    #ifndef SWIG
+    printf("\t[%sfit A = %.1e, err = %.2f\%, n_s = %.3f, err = %.2f\%, corr = %.2f\%]\n",
+            N == 3 ? "weighted-" : "", A, 100*sqrt(cov00), n_s,  100*sqrt(cov11)/abs(n_s), 100*cov01/sqrt(cov00*cov11));
+   #endif
 }
 
-double Extrap_Pk::eval(double k) const
+double Extrap_Pk::operator()(double k) const
 {
     if (k < k_min)
     {
         return A_low*lin_pow_spec(k, cosmo);
     }
-    else if (k <= k_max) return Interp_obj::eval(k);
+    else if (k <= k_max) return Interp_obj::operator()(k);
     else return A_up*pow(k, n_s);
 }
 
+template <class P>
 struct xi_integrand_param
 {
+    xi_integrand_param(double r, const P& P_k): r(r), P_k(P_k) {}
     double r;
-    const Extrap_Pk* P_k;
+    const P& P_k;
 };
 
 struct xi_integrand_param_lin
@@ -464,11 +498,12 @@ struct xi_integrand_param_lin
 /**
  * @brief integrand for correlation function when weight-function 'sin(kr)' is used in integration
  */
+template <class P>
 double xi_integrand_W(double k, void* params){
-    xi_integrand_param* my_par = (xi_integrand_param*) params;
+    xi_integrand_param<P>* my_par = (xi_integrand_param<P>*) params;
     const double r = my_par->r;
-    const Extrap_Pk* P_k = my_par->P_k;
-    return 1/(2*PI*PI)*k/r*P_k->eval(k);
+    const P& P_k = my_par->P_k;
+    return 1/(2*PI*PI)*k/r*P_k(k);
 };
 
 double xi_integrand_W_lin(double k, void* params){
@@ -477,27 +512,27 @@ double xi_integrand_W_lin(double k, void* params){
     const double P_k = lin_pow_spec(k, my_par->pwr_par);
     return 1/(2*PI*PI)*k/r*P_k;
 };
-
 /**
  * @brief integrand for correlation function when non-weighted integration is used
  */
+template <class P>
 double xi_integrand_G(double k, void* params){
-    xi_integrand_param* my_par = (xi_integrand_param*) params;
+    xi_integrand_param<P>* my_par = (xi_integrand_param<P>*) params;
     const double r = my_par->r;
     double j0;
     if (k*r < 1e-3) j0 = 1 - k*k*r*r/6.;
     else j0 = sin(k*r) / (k*r);
-    const Extrap_Pk* P_k = my_par->P_k;
-    return 1/(2*PI*PI)*k*k*j0*P_k->eval(k);
+    const P& P_k = my_par->P_k;
+    return 1/(2*PI*PI)*k*k*j0*P_k(k);
 };
 
-template <class T>
-void gen_corr_func_binned_gsl(const Sim_Param &sim, const Extrap_Pk& P_k, Data_Vec<double, 2>* corr_func_binned, T* xi_r)
+template <class P, class T> // both callable with 'operator()(double)'
+void gen_corr_func_binned_gsl(const Sim_Param &sim, const P& P_k, Data_Vec<double, 2>* corr_func_binned, T& xi_r)
 {
     const double x_min = sim.other_par.x_corr.lower;
     const double x_max = sim.other_par.x_corr.upper;
 
-    xi_integrand_param my_param = {0, &P_k};
+    xi_integrand_param<P> my_param(0, P_k);
 
     const double lin_bin = 10./sim.out_opt.points_per_10_Mpc;
     unsigned req_size = (unsigned)ceil((x_max - x_min)/lin_bin);
@@ -508,12 +543,12 @@ void gen_corr_func_binned_gsl(const Sim_Param &sim, const Extrap_Pk& P_k, Data_V
         r = x_min + i*lin_bin;
         my_param.r = r;
         (*corr_func_binned)[0][i] = r;
-        (*corr_func_binned)[1][i] = xi_r->eval(r, &my_param);
+        (*corr_func_binned)[1][i] = xi_r(r, &my_param);
     }
 }
 
 template <class T>
-void gen_corr_func_binned_gsl_lin(const Sim_Param &sim, double a, Data_Vec<double, 2>* corr_func_binned, T* xi_r)
+void gen_corr_func_binned_gsl_lin(const Sim_Param &sim, double a, Data_Vec<double, 2>* corr_func_binned, T& xi_r)
 {
     const double x_min = sim.other_par.x_corr.lower;
     const double x_max = sim.other_par.x_corr.upper;
@@ -530,19 +565,20 @@ void gen_corr_func_binned_gsl_lin(const Sim_Param &sim, double a, Data_Vec<doubl
         r = x_min + i*lin_bin;
         my_param.r = r;
         (*corr_func_binned)[0][i] = r;
-        (*corr_func_binned)[1][i] = D2*xi_r->eval(r, &my_param);
+        (*corr_func_binned)[1][i] = D2*xi_r(r, &my_param);
     }
 }
 
 #define EPSABS 1e-7
 #define EPSREL 1e-4
 
-void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const Extrap_Pk& P_k, Data_Vec<double, 2>* corr_func_binned)
+template<class P> // everything callable P_k(k)
+void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<double, 2>* corr_func_binned)
 {
     printf("Computing correlation function via GSL integration QAWF of extrapolated power spectrum...\n");
 
-    Integr_obj_qawf xi_r(&xi_integrand_W, 0, EPSABS,  4000, 50);
-    gen_corr_func_binned_gsl(sim, P_k, corr_func_binned, &xi_r);
+    Integr_obj_qawf xi_r(&xi_integrand_W<P>, 0, EPSABS,  4000, 50);
+    gen_corr_func_binned_gsl(sim, P_k, corr_func_binned, xi_r);
 }
 
 void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, double a, Data_Vec<double, 2>* corr_func_binned)
@@ -550,7 +586,7 @@ void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, double a, Data_Vec<
     printf("Computing correlation function via GSL integration QAWF of linear power spectrum...\n");
 
     Integr_obj_qawf xi_r(&xi_integrand_W_lin, 0, EPSABS,  4000, 50);
-    gen_corr_func_binned_gsl_lin(sim, a, corr_func_binned, &xi_r);
+    gen_corr_func_binned_gsl_lin(sim, a, corr_func_binned, xi_r);
 }
 
 double  get_max_Pk(Sim_Param* sim)
@@ -601,3 +637,6 @@ template void Extrap_Pk::fit_lin(const Data_Vec<double, 2>&, const unsigned m, c
 template void Extrap_Pk::fit_lin(const Data_Vec<double, 3>&, const unsigned m, const unsigned n, double& A);
 template void Extrap_Pk::fit_power_law(const Data_Vec<double, 2>&, const unsigned m, const unsigned n, double& A, double& n_s);
 template void Extrap_Pk::fit_power_law(const Data_Vec<double, 3>&, const unsigned m, const unsigned n, double& A, double& n_s);
+
+template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk&, Data_Vec<double, 2>*);
+template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk_Nl&, Data_Vec<double, 2>*);

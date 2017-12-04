@@ -6,6 +6,7 @@
  
 #include "stdafx.h"
 #include "core.h"
+#include "emu.h"
 
 
 void norm_pwr(Cosmo_Param* pwr_par);
@@ -28,7 +29,7 @@ public:
     template<unsigned N>
     Interp_obj(const Data_Vec<double, N>& data);
     ~Interp_obj();
-    double eval(double x) const;
+    double operator()(double x) const;
     template<unsigned N>
     void init(const Data_Vec<double, N>& data);
 
@@ -61,7 +62,7 @@ public:
     template<unsigned N>
     Extrap_Pk(const Data_Vec<double, N>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
               const unsigned m_u, const unsigned n_u);
-    double eval(double k) const;
+    double operator()(double k) const;
 
     template<unsigned N>
     void fit_lin(const Data_Vec<double, N>& data, const unsigned m, const unsigned n, double& A);
@@ -74,19 +75,22 @@ public:
     double k_min, k_max; // interpolation range
 };
 
-class Extrap_Pk_Double
+class Extrap_Pk_Nl
 {/*
-    takes two Extrapolate objects -- linear and nonlinear power spectrum
-    call 'eval(k)' based on k_split (upper range of the linear)
-    stores references!!! originaly objects must remain
+    creates Extrapolate object (linear power spectrum) from data and store non-linear parameters
+    call 'operator()(k)' based on k_split (upper range of the linear)
 */
 public:
-    Extrap_Pk_Double(const Extrap_Pk& Pk_lin, const Extrap_Pk& Pk_nl) : 
-    Pk_lin(Pk_lin), Pk_nl(Pk_nl), k_split(Pk_lin.k_max) {}
-    const Extrap_Pk& Pk_lin, Pk_nl;
-    const double k_split;
-    double eval(double k) const { return k < k_split ? Pk_lin.eval(k) : Pk_nl.eval(k); }
+    Extrap_Pk_Nl(const Data_Vec<double, 3>& data, const Sim_Param &sim, double A_nl, double z_eff):
+        Pk_lin(data, sim), Pk_nl(emu::init_emu(sim, z_eff > 2.02 ? 2.02 : z_eff < 0 ? 0 : z_eff), sim, 0, 10, 341, 351),
+        A_nl(A_nl), k_split(Pk_lin.k_max), D(growth_factor(1./(1.+z_eff), sim.cosmo)) {}
+    const Extrap_Pk Pk_lin, Pk_nl;
+    const double A_nl, k_split, D;
+    double operator()(double k) const { 
+        return k < k_split ? Pk_lin(k) : A_nl*Pk_nl(k) + D*D*(1-A_nl)*lin_pow_spec(k, Pk_nl.cosmo);
+        }
 };
 
-void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const Extrap_Pk& P_k, Data_Vec<double, 2>* corr_func_binned);
+template<class P> // everything callable P_k(k)
+void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<double, 2>* corr_func_binned);
 void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, double a, Data_Vec<double, 2>* corr_func_binned);
