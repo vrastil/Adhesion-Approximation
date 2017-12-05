@@ -83,9 +83,9 @@ class Extrap_Pk_Nl
 public:
     Extrap_Pk_Nl(const Data_Vec<double, 3>& data, const Sim_Param &sim, double A_nl, double z_eff):
         Pk_lin(data, sim), Pk_nl(emu::init_emu(sim, z_eff > 2.02 ? 2.02 : z_eff < 0 ? 0 : z_eff), sim, 0, 10, 341, 351),
-        A_nl(A_nl), k_split(Pk_lin.k_max), D(growth_factor(1./(1.+z_eff), sim.cosmo)) {}
+        A_nl(A_nl), A_low(Pk_lin.A_low), k_split(Pk_lin.k_max), D(growth_factor(1./(1.+z_eff), sim.cosmo)) {}
     const Extrap_Pk Pk_lin, Pk_nl;
-    const double A_nl, k_split, D;
+    const double A_nl, A_low, k_split, D;
     double operator()(double k) const { 
         return k < k_split ? Pk_lin(k) : A_nl*Pk_nl(k) + D*D*(1-A_nl)*lin_pow_spec(k, Pk_nl.cosmo);
         }

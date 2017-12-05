@@ -208,8 +208,11 @@ def plot_pwr_spec_stacked(data_list, zs, a_sim_info, Pk_list_extrap=None, Pk_nl_
             a_ = a
             lab = 'z = ' + str(z)
         else:
-            continue # <<< do not plot show init power spectra, feel free to turn on
+            continue # <<< do not plot init power spectra, feel free to turn on
             lab = 'init'
+        
+        if a_ != a_end:
+            Pk_nl = None # <<< do not plot non-linear power spectra, except at the end of simulation
 
         # plt.errorbar(k, P_k, yerr=P_k_std, fmt='o', ms=3, label=lab)
         plt.plot(k, P_k, 'o', ms=3, label=lab)

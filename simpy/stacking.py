@@ -3,6 +3,7 @@ import sys
 import traceback
 import numpy as np
 from scipy.optimize import curve_fit
+from scipy.optimize import brentq
 import json
 
 from . import *
@@ -32,6 +33,7 @@ class StackInfo(SimInfo):
         else:
             raise KeyError("Constructor 'StackInfo' called without arguments.")
 
+        self.data = {}
         for key in RESULTS_KEYS_STACK:
             if key not in self.results:
                 self.results[key] = False
@@ -283,6 +285,13 @@ def load_corr(stack_info, zs, Pk_list, Pk_nl_list):
     return xi_all
 
 
+def get_z_from_A(cosmo, A):
+    # 'f = 0' <=> A = D^2 (linear power grows as D^2)
+    f = lambda a : A - fs.growth_factor(a, cosmo)**2
+    a = brentq(f, 0, 1)
+    return 1./a - 1
+
+
 def get_Extrap_pk_nl(sim, z):
     """ return Extrap_Pk object for non-linear power spectra"""
     if z == 'init' or z < 0: z = 0.0
@@ -314,13 +323,21 @@ def pwr_spec_linear(sim, kk, z):
     D = fs.growth_factor(1./(1.+z), sim.cosmo)
     return np.array([D*D*fs.lin_pow_spec(k, sim.cosmo) for k in kk])
 
+def pwr_spec_hybrid(sim, kk, z, A):
+    if z > 2.02:
+        # A = 0, TBD: extrapolate emulator
+        return pwr_spec_linear(sim, kk, z)
+    else:
+        return (1-A)*pwr_spec_linear(sim, kk, z) + A*pwr_spec_non_linear(sim, kk, z)
+
+
 def get_hybrid_pwr_spec(sim, data, k_nyquist_par, z=1):
     """ given data [k, Pk, std] and initial guess of redshift:
     return fit of hybrid power spectrum: (1-A)*P_lin(k) + A*P_nl(k) """
     # define functions which will be used in fitting
     pk_nl_func = lambda kk, z: pwr_spec_non_linear(sim, kk, z)
     pk_lin_func = lambda kk, z: pwr_spec_linear(sim, kk, z)
-    pk_hyb_func = lambda kk, z, A: (1-A)*pk_lin_func(kk, z) + A*pk_nl_func(kk, z)
+    pk_hyb_func = lambda kk, z, A: pwr_spec_hybrid(sim, kk, z, A)
 
     # extract data
     kk, Pk, std = data
@@ -333,7 +350,10 @@ def get_hybrid_pwr_spec(sim, data, k_nyquist_par, z=1):
     popt, pcov = curve_fit(pk_hyb_func, kk[idx], Pk[idx], sigma=std[idx], p0=(z, 0.3))
 
     # get hybrid Extrap
-    Pk_NL = fs.Extrap_Pk_Nl(get_Data_vec(data), sim, popt[1], popt[0])
+    if popt[0] > 2.02:
+        Pk_NL = fs.Extrap_Pk(get_Data_vec(data), sim)
+    else:
+        Pk_NL = fs.Extrap_Pk_Nl(get_Data_vec(data), sim, popt[1], popt[0])
 
     # return all info in dict
     return {"Pk_NL" : Pk_NL, "popt" : popt, "pcov" : pcov}
@@ -351,7 +371,7 @@ def corr_func(sim, Pk=None, z=None):
     return get_ndarray(corr)
 
 
-def stack_group(group_sim_infos=None, stack_info_file=None):
+def stack_group(group_sim_infos=None, stack_info_file=None, plot_all=True):
     # load & save all info about stack
     stack_info = StackInfo(group_sim_infos=group_sim_infos, stack_info_file=stack_info_file)
 
@@ -363,37 +383,49 @@ def stack_group(group_sim_infos=None, stack_info_file=None):
     # for each entry in data_list compute its continuous version
     # get non-linear power spectra for z in emulator range, z == 'init' transformed into z = 0.0
     Pk_hyb_lis = [get_hybrid_pwr_spec(stack_info.sim, data, stack_info.k_nyquist["particle"]) for data in data_list]
-    Pk_list = [fs.Extrap_Pk(get_Data_vec(data), stack_info.sim) for data in data_list]
-    #Pk_list = [x["Pk_NL"] for x in Pk_hyb_lis]
+    #Pk_list = [fs.Extrap_Pk(get_Data_vec(data), stack_info.sim) for data in data_list]
+    Pk_list = [x["Pk_NL"] for x in Pk_hyb_lis]
     Pk_nl_list = [get_Extrap_pk_nl(stack_info.sim, z) for z in zs if z <= 2.02 or z == 'init']
 
     # compute correlation function for simulated, linear and non-linear power spectra
     # return dictionary, keys = 'par', 'lin', 'emu'
     xi_all = load_corr(stack_info, zs, Pk_list, Pk_nl_list)
 
-    print '\tPlotting power spectrum...'
-    plot.plot_pwr_spec_stacked(data_list, zs, stack_info, Pk_list, Pk_nl_list)
+    # save all data to stack_info for later analysis
+    stack_info.data["zs"] = zs
+    stack_info.data["data_list"] = data_list
+    stack_info.data["zs_diff"] = zs_diff
+    stack_info.data["data_list_diff"] = data_list_diff
+    stack_info.data["Pk_hyb_lis"] = Pk_hyb_lis
+    stack_info.data["Pk_list"] = Pk_list
+    stack_info.data["Pk_nl_list"] = Pk_nl_list
+    stack_info.data["xi_all"] = xi_all
 
-    print '\tPlotting power spectrum difference...'
-    for diff_type, data in data_list_diff.iteritems():
-        plot.plot_pwr_spec_diff_from_data(data, zs_diff, stack_info, ext_title=diff_type)
+    if plot_all:
+        print '\tPlotting power spectrum...'
+        plot.plot_pwr_spec_stacked(data_list, zs, stack_info, Pk_list, Pk_nl_list)
 
-    print '\tPlotting power spectrum suppression...'
-    a = [1./(z+1) for z in zs_diff]
-    supp_lms, supp_std_lms, k_lms = load_k_supp_from_data(data_list_diff["par"], stack_info.k_nyquist["particle"])
-    plot.plot_supp_lms(supp_lms, a, stack_info, k_lms, supp_std_lms)
+        print '\tPlotting power spectrum difference...'
+        for diff_type, data in data_list_diff.iteritems():
+            plot.plot_pwr_spec_diff_from_data(data, zs_diff, stack_info, ext_title=diff_type)
 
-    print '\tPlotting power spectrum suppression (map)...'
-    # WARNING! data in data_list_diff are potentially modified -- aligning values to the same counts
-    plot.plot_pwr_spec_diff_map_from_data(data_list_diff["par"], zs_diff, stack_info, ext_title="par")
+        print '\tPlotting power spectrum suppression...'
+        a = [1./(z+1) for z in zs_diff]
+        supp_lms, supp_std_lms, k_lms = load_k_supp_from_data(data_list_diff["par"], stack_info.k_nyquist["particle"])
+        plot.plot_supp_lms(supp_lms, a, stack_info, k_lms, supp_std_lms)
 
-    print '\tPlotting correlation function...'
-    plot.plot_corr_func_from_data(xi_all, zs, stack_info)
+        print '\tPlotting power spectrum suppression (map)...'
+        # WARNING! data in data_list_diff are potentially modified -- aligning values to the same counts
+        plot.plot_pwr_spec_diff_map_from_data(data_list_diff["par"], zs_diff, stack_info, ext_title="par")
 
+        print '\tPlotting correlation function...'
+        plot.plot_corr_func_from_data(xi_all, zs, stack_info)
+
+    return None
     return stack_info
 
 
-def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/'):
+def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/', plot_all=True):
     # get all runs
     files = get_files_in_traverse_dir(in_dir, 'sim_param.json')
     sim_infos = [SimInfo(a_file[0]) for a_file in files]
@@ -434,7 +466,7 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
     for sep_sim_infos in sep_files:
         print "\nStacking group %s" % sep_sim_infos[0].info_tr()
         try:
-            stack_infos.append(stack_group(sep_sim_infos))
+            stack_infos.append(stack_group(sep_sim_infos, plot_all=plot_all))
         except:
             print "=" * 110
             traceback.print_exc(file=sys.stdout)
