@@ -129,6 +129,31 @@ protected:
     gsl_integration_workspace* wc;
 };
 
+/**
+ * @class:	ODE_Solver
+ * @brief:	Explicit embedded Runge-Kutta Prince-Dormand (8, 9) method.
+ */
+
+
+ODE_Solver::ODE_Solver(int (* function) (double, const double[], double[], void*), size_t dim, void* params,
+            const double hstart, const double epsabs, const double epsrel):
+    sys({function, NULL, dim, params}),
+    d(gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rk8pd, hstart, epsabs, epsrel)) {}
+
+ODE_Solver::~ODE_Solver()
+{
+    gsl_odeiv2_driver_free (d);
+}
+
+void ODE_Solver::update(double &t, const double t1, double y[])
+{
+    status = gsl_odeiv2_driver_apply (d, &t, t1, y);
+    if (status == GSL_SUCCESS) return;
+    else if (status == GSL_EMAXITER) throw runtime_error("maximum number of steps reached");
+    else if (status == GSL_ENOPROG) throw runtime_error("the step size droped below minimum value");
+    else if (status == GSL_EBADFUNC) throw runtime_error("uknown error in 'gsl_odeiv2'");
+}
+
 double transfer_function_2(double k, const Cosmo_Param& parameters)
 {
     if (k == 0) return 1.;
@@ -187,102 +212,107 @@ double power_spectrum_s8(double k, void* parameters)
 			*pow(3.*gsl_sf_bessel_j1(k*8)/(k*8), 2.); // window function R = 8 Mpc/h
 }
 
-void norm_pwr_gsl(Cosmo_Param* pwr_par)
+void norm_pwr_gsl(Cosmo_Param* cosmo)
 {
     /* Normalize the power spectrum */
     Integr_obj_qagiu s8(&power_spectrum_s8, 0, 0, 1e-7, 1000);
-	pwr_par->A = pow(pwr_par->sigma8, 2)/s8(pwr_par);
+	cosmo->A = pow(cosmo->sigma8, 2)/s8(cosmo);
 }
 
-void norm_pwr_ccl(Cosmo_Param* pwr_par)
+void norm_pwr_ccl(Cosmo_Param* cosmo)
 {
     /* Normalize the power spectrum */
     int status = 0;
-    ccl_sigma8(pwr_par->cosmo, &status);
+    ccl_sigma8(cosmo->cosmo, &status);
 }
 
-void norm_pwr(Cosmo_Param* pwr_par)
+void norm_pwr(Cosmo_Param* cosmo)
 {
     printf("Initializing given power spectrum...\n");
-    if (pwr_par->pwr_type_i < 4) norm_pwr_gsl(pwr_par);
-    else norm_pwr_ccl(pwr_par);
+    if (cosmo->pwr_type_i < 4) norm_pwr_gsl(cosmo);
+    else norm_pwr_ccl(cosmo);
 }
 
-double hubble_param(double a, const Cosmo_Param& pwr_par)
+double hubble_param(double a, const Cosmo_Param& cosmo)
 {
-    const double Om = pwr_par.Omega_m;
-    const double OL = pwr_par.Omega_L();
+    const double Om = cosmo.Omega_m;
+    const double OL = cosmo.Omega_L();
     return sqrt(Om*pow(a, -3) + OL);
 }
 
-struct growth_factor_integrand_param { const Cosmo_Param& pwr_par; };
+double Omega_lambda(double a, const Cosmo_Param& cosmo)
+{
+    const double Om = cosmo.Omega_m;
+    const double OL = cosmo.Omega_L();
+    return OL/(Om*pow(a, -3) + OL);
+}
 
 double growth_factor_integrand(double a, void* parameters)
 {    
-    return pow(a*hubble_param(a, static_cast<growth_factor_integrand_param*>(parameters)->pwr_par), -3);
+    return pow(a*hubble_param(a, static_cast<Cosmo_wrapper*>(parameters)->cosmo), -3);
 }
 
-double growth_factor(double a, const Cosmo_Param& pwr_par)
+double growth_factor(double a, const Cosmo_Param& cosmo)
 {
     #ifdef CCL_GROWTH
     int status = 0;
-    return ccl_growth_factor(pwr_par.cosmo, a, &status);
+    return ccl_growth_factor(cosmo.cosmo, a, &status);
     #else
     if (a == 0) return 0;
-    Integr_obj_qag D(&growth_factor_integrand, 0, a, 0, 1e-7, 1000, GSL_INTEG_GAUSS61);
-    growth_factor_integrand_param param = {pwr_par};
-    return hubble_param(a, pwr_par)*D(&param)/pwr_par.D_norm;
+    Integr_obj_qag D(&growth_factor_integrand, 0, a, 0, 1e-12, 1000, GSL_INTEG_GAUSS61);
+    Cosmo_wrapper param(cosmo);
+    return hubble_param(a, cosmo)*D(&param)/cosmo.D_norm;
     #endif
 }
 
 double growth_factor(double a, void* parameters)
 {
-    return growth_factor(a, static_cast<growth_factor_integrand_param*>(parameters)->pwr_par);
+    return growth_factor(a, static_cast<Cosmo_wrapper*>(parameters)->cosmo);
 }
 
 double ln_growth_factor(double log_a, void* parameters)
 {
-    return log(growth_factor(exp(log_a), static_cast<growth_factor_integrand_param*>(parameters)->pwr_par));
+    return log(growth_factor(exp(log_a), static_cast<Cosmo_wrapper*>(parameters)->cosmo));
 }
 
-double growth_rate(double a, const Cosmo_Param& pwr_par)
+double growth_rate(double a, const Cosmo_Param& cosmo)
 {
     #ifdef CCL_GROWTH
     int status = 0;
-    return ccl_growth_rate(pwr_par.cosmo, a, &status);
+    return ccl_growth_rate(cosmo.cosmo, a, &status);
     #else
     if (a == 0) return 1;
-    growth_factor_integrand_param param = {pwr_par};
+    Cosmo_wrapper param(cosmo);
     gsl_function F = {&ln_growth_factor, &param};
     double dDda, error;
-    gsl_deriv_central(&F, log(a), 1e-6, &dDda, &error);
+    gsl_deriv_central(&F, log(a), 1e-12, &dDda, &error);
     return dDda;
     #endif
 }
 
-double growth_change(double a, const Cosmo_Param& pwr_par)
+double growth_change(double a, const Cosmo_Param& cosmo)
 { // normal derivative dD/da, not logarithmic one
-    growth_factor_integrand_param param = {pwr_par};
+    Cosmo_wrapper param(cosmo);
     gsl_function F = {&growth_factor, &param};
     double dDda, error;
-    if (a == 0) gsl_deriv_forward(&F, a, 1e-6, &dDda, &error);
-    else gsl_deriv_central(&F, a, 1e-6, &dDda, &error);
+    if (a == 0) gsl_deriv_forward(&F, a, 1e-12, &dDda, &error);
+    else gsl_deriv_central(&F, a, 1e-12, &dDda, &error);
     return dDda;
 }
 
-double lin_pow_spec(double k, const Cosmo_Param& pwr_par, double a)
+double lin_pow_spec(double k, const Cosmo_Param& cosmo, double a)
 {
-    if (pwr_par.pwr_type_i < 4){
-        return power_spectrum(k, pwr_par);
+    if (cosmo.pwr_type_i < 4){
+        return power_spectrum(k, cosmo);
     } else {
         int status = 0;
-        return ccl_linear_matter_power(pwr_par.cosmo, k*pwr_par.h, a, &status)*pow(pwr_par.h, 3);
+        return ccl_linear_matter_power(cosmo.cosmo, k*cosmo.h, a, &status)*pow(cosmo.h, 3);
     }
 }
 
-double lin_pow_spec(double k, const Cosmo_Param& pwr_par)
+double lin_pow_spec(double k, const Cosmo_Param& cosmo)
 {
-    return lin_pow_spec(k, pwr_par, 1.);
+    return lin_pow_spec(k, cosmo, 1.);
 }
 
 double find_pk_max(double k, void* parameters)
@@ -429,7 +459,7 @@ void Extrap_Pk::fit_lin(const Data_Vec<double, N>& data, const unsigned m, const
     }
     double A_sigma2, sumsq;
 
-    if (!isfinite(A)) throw domain_error("Encountered error during fitting");
+    if (!isfinite(A)) throw runtime_error("Encountered error during fitting");
 
     if (N == 3) gsl_fit_wmul(A_vec.data(), 1, w.data(), 1, Pk_res.data(), 1, n-m, &A, &A_sigma2, &sumsq);
     else gsl_fit_mul(A_vec.data(), 1, Pk_res.data(), 1, n-m, &A, &A_sigma2, &sumsq);
@@ -462,7 +492,7 @@ void Extrap_Pk::fit_power_law(const Data_Vec<double, N>& data, const unsigned m,
     if (N == 3) gsl_fit_wlinear(k.data(), 1, w.data(), 1, Pk.data(), 1, n-m, &A, &n_s, &cov00, &cov01, &cov11, &sumsq);
     else gsl_fit_linear(k.data(), 1, Pk.data(), 1, n-m, &A, &n_s, &cov00, &cov01, &cov11, &sumsq);
 
-    if (!isfinite(A)) throw domain_error("Encountered error during fitting");
+    if (!isfinite(A)) throw runtime_error("Encountered error during fitting");
 
     A = exp(A); // log A => A
     #ifndef SWIG
@@ -492,7 +522,7 @@ struct xi_integrand_param
 struct xi_integrand_param_lin
 {
     double r;
-    const Cosmo_Param& pwr_par;
+    const Cosmo_Param& cosmo;
 };
 
 /**
@@ -509,7 +539,7 @@ double xi_integrand_W(double k, void* params){
 double xi_integrand_W_lin(double k, void* params){
     xi_integrand_param_lin* my_par = (xi_integrand_param_lin*) params;
     const double r = my_par->r;
-    const double P_k = lin_pow_spec(k, my_par->pwr_par);
+    const double P_k = lin_pow_spec(k, my_par->cosmo);
     return 1/(2*PI*PI)*k/r*P_k;
 };
 /**
@@ -520,7 +550,7 @@ double xi_integrand_G(double k, void* params){
     xi_integrand_param<P>* my_par = (xi_integrand_param<P>*) params;
     const double r = my_par->r;
     double j0;
-    if (k*r < 1e-3) j0 = 1 - k*k*r*r/6.;
+    if (k*r < 1e-6) j0 = 1 - k*k*r*r/6.;
     else j0 = sin(k*r) / (k*r);
     const P& P_k = my_par->P_k;
     return 1/(2*PI*PI)*k*k*j0*P_k(k);
@@ -569,8 +599,8 @@ void gen_corr_func_binned_gsl_lin(const Sim_Param &sim, double a, Data_Vec<doubl
     }
 }
 
-#define EPSABS 1e-7
-#define EPSREL 1e-4
+#define EPSABS 1e-9
+#define EPSREL 1e-6
 
 template<class P> // everything callable P_k(k)
 void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<double, 2>* corr_func_binned)

@@ -46,6 +46,7 @@
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_min.h>
+#include <gsl/gsl_odeiv2.h>
 #include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_spline.h>
 

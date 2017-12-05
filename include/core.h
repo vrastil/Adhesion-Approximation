@@ -250,6 +250,17 @@ void to_json(nlohmann::json&, const Cosmo_Param&);
 void from_json(const nlohmann::json&, Cosmo_Param&);
 
 /**
+ * @struct:	Cosmo_wrapper
+ * @brief:	wrapper around Cosmo_Param for cast to void*
+ */
+
+struct Cosmo_wrapper
+{
+    Cosmo_wrapper(const Cosmo_Param& cosmo) : cosmo(cosmo) {}
+    const Cosmo_Param& cosmo;
+};
+
+/**
  * @class:	Tracking
  * @brief:	class storing info about tracked particles
  */

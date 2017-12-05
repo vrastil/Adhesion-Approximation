@@ -9,12 +9,14 @@
 #include "emu.h"
 
 
-void norm_pwr(Cosmo_Param* pwr_par);
-double lin_pow_spec(double k, const Cosmo_Param& pwr_par, double a);
+void norm_pwr(Cosmo_Param* cosmo);
+double lin_pow_spec(double k, const Cosmo_Param& cosmo, double a);
 double lin_pow_spec(double k, const Cosmo_Param& parameters);
-double growth_factor(double a, const Cosmo_Param& pwr_par);
-double growth_rate(double a, const Cosmo_Param& pwr_par);
-double growth_change(double a, const Cosmo_Param& pwr_par);
+double growth_factor(double a, const Cosmo_Param& cosmo);
+double growth_rate(double a, const Cosmo_Param& cosmo);
+double growth_change(double a, const Cosmo_Param& cosmo);
+double Omega_lambda(double a, const Cosmo_Param& cosmo);
+
 double  get_max_Pk(Sim_Param* sim);
 
 /**
@@ -39,6 +41,23 @@ private:
     bool is_init;
     gsl_spline* spline;
     gsl_interp_accel* acc;
+};
+
+/**
+ * @class:	ODE_Solver
+ * @brief:	Explicit embedded Runge-Kutta Prince-Dormand (8, 9) method.
+ */
+
+class ODE_Solver
+{
+public:
+    ODE_Solver(int (* function) (double t, const double y[], double dydt[], void * params), size_t dim, void* params,
+               const double hstart = 1e-6, const double epsabs = 1e-6, const double epsrel = 0);
+    ~ODE_Solver();
+    void update(double &t, const double t1, double y[]);
+    int status;
+    gsl_odeiv2_system sys;
+    gsl_odeiv2_driver* d;
 };
 
 /**
