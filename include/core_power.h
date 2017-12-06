@@ -69,9 +69,8 @@ public:
 
 class Extrap_Pk : public Interp_obj
 { /*
-    linear interpolation of data [k, P(k)] within 'useful' range
-    fit to primordial P_i(k) below the 'useful' range
-    fit to Padé approximant R [0/3] above the 'useful' range
+    Steffen interpolation of data [k, P(k)] within range k_min, k_max
+    fit to primordial P_i(k) below this range, fit A*k^ns above
 */
 public:
     template<unsigned N>
@@ -94,20 +93,20 @@ public:
     double k_min, k_max; // interpolation range
 };
 
+/**
+ * @class:	Extrap_Pk_Nl
+ * @brief:	creates Extrapolate object (linear power spectrum) from data and store non-linear parameters
+            call 'operator()(k)' based on k_split (upper range of the linear)
+ */
+
 class Extrap_Pk_Nl
-{/*
-    creates Extrapolate object (linear power spectrum) from data and store non-linear parameters
-    call 'operator()(k)' based on k_split (upper range of the linear)
-*/
+{
 public:
-    Extrap_Pk_Nl(const Data_Vec<double, 3>& data, const Sim_Param &sim, double A_nl, double z_eff):
-        Pk_lin(data, sim), Pk_nl(emu::init_emu(sim, z_eff > 2.02 ? 2.02 : z_eff < 0 ? 0 : z_eff), sim, 0, 10, 341, 351),
-        A_nl(A_nl), A_low(Pk_lin.A_low), k_split(Pk_lin.k_max), D(growth_factor(1./(1.+z_eff), sim.cosmo)) {}
+    Extrap_Pk_Nl(const Data_Vec<double, 3>& data, const Sim_Param &sim, double A_nl, double z_eff);
     const Extrap_Pk Pk_lin, Pk_nl;
-    const double A_nl, A_low, k_split, D;
-    double operator()(double k) const { 
-        return k < k_split ? Pk_lin(k) : A_nl*Pk_nl(k) + D*D*(1-A_nl)*lin_pow_spec(k, Pk_nl.cosmo);
-        }
+    const double A_nl, A_low, k_split, D, D_202, z_eff;
+    const double A1, A2; //< derived parameters, pre-compute
+    double operator()(double k) const;
 };
 
 template<class P> // everything callable P_k(k)

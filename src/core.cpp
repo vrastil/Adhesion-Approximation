@@ -629,7 +629,8 @@ Sim_Param::Sim_Param(string file_name)
         integ_opt = j.at("integ_opt");
         try{ out_opt = j.at("out_opt"); } // new format of json files
         catch(const out_of_range& oor){ // old format does not store Out_Opt
-            out_opt.out_dir = j.at("out_dir");
+            try {out_opt.out_dir = j.at("out_dir"); } // stack_info.json doesn`t store out_dir
+            catch(const out_of_range& oor){out_opt.out_dir = "~/home/FASTSIM/output/" } // do not need it, set to some default
             out_opt.bins_per_decade = 20;
             out_opt.points_per_10_Mpc = 10;
         }

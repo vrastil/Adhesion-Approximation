@@ -314,30 +314,30 @@ def get_Data_vec(data):
         Data_Vec[2][i] = data[2][i] 
     return Data_Vec
 
-def pwr_spec_non_linear(sim, kk, z):
+def pwr_spec_non_linear(sim, kk, a):
     """ return ndarray of power spectra for every k in kk (iterable) """
-    Pk_nl = get_Extrap_pk_nl(sim, z)
+    Pk_nl = get_Extrap_pk_nl(sim, 1./a-1.)
     return np.array([Pk_nl(k) for k in kk])
 
-def pwr_spec_linear(sim, kk, z):
-    D = fs.growth_factor(1./(1.+z), sim.cosmo)
+def pwr_spec_linear(sim, kk, a):
+    D = fs.growth_factor(a, sim.cosmo)
     return np.array([D*D*fs.lin_pow_spec(k, sim.cosmo) for k in kk])
 
-def pwr_spec_hybrid(sim, kk, z, A):
-    if z > 2.02:
-        # A = 0, TBD: extrapolate emulator
-        return pwr_spec_linear(sim, kk, z)
+def pwr_spec_hybrid(sim, kk, a, A):
+    if a < 0.3312:
+        # extrapolate based on Pk_NL / Pk_L = D(z) / D(2.02) <<< fast decay of Pk_NL
+        nl_ratio = pwr_spec_non_linear(sim, kk, 0.3312) / pwr_spec_linear(sim, kk, 0.3312)
+        #nl_ratio *= fs.growth_factor(1./(1.+z), sim.cosmo) / fs.growth_factor(1./(1.+2.02), sim.cosmo)
+        return (1-A+A*nl_ratio)*pwr_spec_linear(sim, kk, a)
     else:
-        return (1-A)*pwr_spec_linear(sim, kk, z) + A*pwr_spec_non_linear(sim, kk, z)
+        return (1-A)*pwr_spec_linear(sim, kk, a) + A*pwr_spec_non_linear(sim, kk, a)
 
 
-def get_hybrid_pwr_spec(sim, data, k_nyquist_par, z=1):
+def get_hybrid_pwr_spec(sim, data, k_nyquist_par):
     """ given data [k, Pk, std] and initial guess of redshift:
     return fit of hybrid power spectrum: (1-A)*P_lin(k) + A*P_nl(k) """
     # define functions which will be used in fitting
-    pk_nl_func = lambda kk, z: pwr_spec_non_linear(sim, kk, z)
-    pk_lin_func = lambda kk, z: pwr_spec_linear(sim, kk, z)
-    pk_hyb_func = lambda kk, z, A: pwr_spec_hybrid(sim, kk, z, A)
+    pk_hyb_func = lambda kk, a, A: pwr_spec_hybrid(sim, kk, a, A)
 
     # extract data
     kk, Pk, std = data
@@ -347,13 +347,10 @@ def get_hybrid_pwr_spec(sim, data, k_nyquist_par, z=1):
     idx = slice(idx - sim.out_opt.bins_per_decade, idx)
 
     # fit data
-    popt, pcov = curve_fit(pk_hyb_func, kk[idx], Pk[idx], sigma=std[idx], p0=(z, 0.3))
+    popt, pcov = curve_fit(pk_hyb_func, kk[idx], Pk[idx], sigma=std[idx], p0=(0.3, 0.3))
 
     # get hybrid Extrap
-    if popt[0] > 2.02:
-        Pk_NL = fs.Extrap_Pk(get_Data_vec(data), sim)
-    else:
-        Pk_NL = fs.Extrap_Pk_Nl(get_Data_vec(data), sim, popt[1], popt[0])
+    Pk_NL = fs.Extrap_Pk_Nl(get_Data_vec(data), sim, popt[1], 1./popt[0]-1)
 
     # return all info in dict
     return {"Pk_NL" : Pk_NL, "popt" : popt, "pcov" : pcov}
@@ -421,7 +418,6 @@ def stack_group(group_sim_infos=None, stack_info_file=None, plot_all=True):
         print '\tPlotting correlation function...'
         plot.plot_corr_func_from_data(xi_all, zs, stack_info)
 
-    return None
     return stack_info
 
 

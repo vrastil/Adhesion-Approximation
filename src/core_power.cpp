@@ -511,6 +511,28 @@ double Extrap_Pk::operator()(double k) const
     else return A_up*pow(k, n_s);
 }
 
+/**
+ * @class:	Extrap_Pk_Nl
+ * @brief:	creates Extrapolate object (linear power spectrum) from data and store non-linear parameters
+            call 'operator()(k)' based on k_split (upper range of the linear)
+ */
+
+Extrap_Pk_Nl::Extrap_Pk_Nl(const Data_Vec<double, 3>& data, const Sim_Param &sim, double A_nl, double z_eff):
+    Pk_lin(data, sim), Pk_nl(emu::init_emu(sim, z_eff > 2.02 ? 2.02 : z_eff < 0 ? 0 : z_eff), sim, 0, 10, 341, 351),
+    A_nl(A_nl), A_low(Pk_lin.A_low), k_split(Pk_lin.k_max), D(growth_factor(1./(1.+z_eff), sim.cosmo)),
+    D_202(growth_factor(1./(1.+2.02), sim.cosmo)), z_eff(z_eff),
+    A1(D*D*(1-A_nl)), A2(A_nl*pow(D/D_202, 2))
+    {}
+
+
+double Extrap_Pk_Nl::operator()(double k) const {
+    if (k < k_split) return Pk_lin(k);
+    else if (z_eff < 2.02) return A_nl*Pk_nl(k) + A1*lin_pow_spec(k, Pk_nl.cosmo);
+    // extrapolate based on Pk_NL / Pk_L = D(z) / D(2.02) <<< fast decay of Pk_NL
+    else return A2*Pk_nl(k) + A1*lin_pow_spec(k, Pk_nl.cosmo);
+}
+
+
 template <class P>
 struct xi_integrand_param
 {

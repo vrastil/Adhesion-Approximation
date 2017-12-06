@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.cm as cm
 from matplotlib.colors import SymLogNorm
+from matplotlib.ticker import FormatStrFormatter
 # from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 from scipy import interpolate
@@ -14,6 +15,7 @@ from scipy.misc import derivative
 
 from . import get_files_in_traverse_dir
 
+matplotlib.rcParams.update({'font.size': 15})
 
 def trans_fce(k, Omega_m=1, h=0.67, q_log=2.34, q_1=3.89, q_2=16.2, q_3=5.47, q_4=6.71):
     if k == 0:
@@ -469,6 +471,7 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
     ymax = math.ceil(ymax / 0.1) * 0.1
     ymin = math.floor(ymin / 0.1) * 0.1
     ax.yaxis.grid(True)
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     plt.ylim(ymin=ymin, ymax=ymax)
 
     fig.suptitle(suptitle, y=0.99, size=20)
@@ -870,22 +873,19 @@ def plot_supp_lms(supp_lms, a, a_sim_info, k_lms, supp_std_lms, out_dir='auto', 
         out_file = 'supp_vel.png'
         suptitle = r"Power spectrum suppression $(\nabla\cdot u)$"
     fig = plt.figure(figsize=(15, 11))
+    ax = plt.gca()
     supp_l, supp_m, supp_s = supp_lms
     supp_large_std, supp_medium_std, supp_small_std = supp_std_lms
     k_l, k_m, k_s = k_lms
 
     cmap = cm.get_cmap('gnuplot')
-    plt.errorbar(a, supp_l, fmt='-o', yerr=supp_large_std, ms=3, color=cmap(0.1), lw=4,
+    ax.errorbar(a, supp_l, fmt='-o', yerr=supp_large_std, ms=3, color=cmap(0.1), lw=4,
                  label='Large-scale:\n' r'$\langle%.2f,%.2f\rangle$' % (k_l[0], k_l[1]))
-    plt.errorbar(a, supp_m, fmt='-o', yerr=supp_medium_std, ms=3, color=cmap(0.5), lw=2.5,
+    ax.errorbar(a, supp_m, fmt='-o', yerr=supp_medium_std, ms=3, color=cmap(0.5), lw=2.5,
                  label='Medium-scale:\n'r'$\langle%.2f,%.2f\rangle$' % (k_m[0], k_m[1]))
-    plt.errorbar(a, supp_s, fmt='-o', yerr=supp_small_std, ms=3, color=cmap(0.9), lw=1,
+    ax.errorbar(a, supp_s, fmt='-o', yerr=supp_small_std, ms=3, color=cmap(0.9), lw=1,
                  label='Small-scale:\n'r'$\langle%.2f,%.2f\rangle$' % (k_s[0], k_s[1]))
-    # plt.plot(a, supp_l, '-o', ms=3, label='Large-scale:\n' r'$\langle%.2f,%.2f\rangle$ h/Mpc' % (k_l[0], k_l[1]))
-    # plt.plot(a, supp_m, '-o', ms=3, label='Medium-scale:\n'r'$\langle%.2f,%.2f\rangle$ h/Mpc' % (k_m[0], k_m[1]))
-    # plt.plot(a, supp_s, '-o', ms=3, label='Small-scale:\n'r'$\langle%.2f,%.2f\rangle$ h/Mpc' % (k_s[0], k_s[1]))
 
-    ax = plt.gca()
     ax.yaxis.grid(True)
     ymin, ymax = ax.get_ylim()
     if ymax > 1:
@@ -898,6 +898,7 @@ def plot_supp_lms(supp_lms, a, a_sim_info, k_lms, supp_std_lms, out_dir='auto', 
     plt.xlabel(r"$a(t)$", fontsize=15)
     plt.ylabel(
         r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$", fontsize=25)
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
  #   plt.subplots_adjust(left=0.1, right=0.7, top=0.9, bottom=0.1)
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
