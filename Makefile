@@ -26,7 +26,7 @@ adh_app: CXXFLAGS +=-Ofast -march=native
 adh_app: $(LIB)
 	$(COMPILE.fin) -o $@ $^ $(CXXLIB)
 
-debug: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -Wfloat-conversion -D DEBUG
+debug: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -Wfloat-conversion
 debug: $(LIB)
 	$(COMPILE.fin) -o $@ $^ $(CXXLIB)
 
@@ -50,7 +50,7 @@ $(LIB): $(OBJ_FILES)
 src/%.o: src/%.cpp $(PCH_O)
 	$(COMPILE.cc) -o $@ $<
 
-check: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -Wfloat-conversion -D TEST -D DEBUG
+check: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -Wfloat-conversion -D TEST
 check: $(TEST_OBJ_FILES)
 	$(COMPILE.fin) -o tests/test $^ $(CXXLIB)
 	./tests/test

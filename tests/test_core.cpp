@@ -215,18 +215,6 @@ TEST_CASE( "UNIT TEST: particle class {Particle_v}", "[core]" )
     CHECK( par2(1) == -4.56E-7 );
 }
 
-TEST_CASE( "UNIT TEST: power spectrum class {e_power_spec}", "[core]" ){
-    e_power_spec ps0 = power_law_T;
-    e_power_spec ps1 = power_law;
-    e_power_spec ps2 = flat;
-    e_power_spec ps3 = single;
-
-    CHECK( ps0 == 0 );
-    CHECK( ps1 == 1 );
-    CHECK( ps2 == 2 );
-    CHECK( ps3 == 3 );
-}
-
 TEST_CASE( "UNIT TEST: tracking class {Tracking}", "[core]" )
 {
     // 2, 12, 2

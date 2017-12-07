@@ -317,8 +317,8 @@ static void gen_rho_w_pow_k(const Sim_Param &sim, Mesh* rho)
 	for(unsigned i=0; i < len; i++)
 	{
         k = k0*sqrt(get_k_sq(N, i));
-        (*rho)[2*i] *= mod*sqrt(lin_pow_spec(k, sim.cosmo));
-        (*rho)[2*i+1] *= mod*sqrt(lin_pow_spec(k, sim.cosmo));
+        (*rho)[2*i] *= mod*sqrt(lin_pow_spec(1, k, sim.cosmo));
+        (*rho)[2*i+1] *= mod*sqrt(lin_pow_spec(1, k, sim.cosmo));
 	}
 }
 

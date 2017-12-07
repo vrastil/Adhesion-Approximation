@@ -9,15 +9,14 @@
 #include "emu.h"
 
 
-void norm_pwr(Cosmo_Param* cosmo);
-double lin_pow_spec(double k, const Cosmo_Param& cosmo, double a);
-double lin_pow_spec(double k, const Cosmo_Param& parameters);
+void norm_pwr(Cosmo_Param& cosmo);
+double norm_growth_factor(const Cosmo_Param& cosmo);
 double growth_factor(double a, const Cosmo_Param& cosmo);
 double growth_rate(double a, const Cosmo_Param& cosmo);
 double growth_change(double a, const Cosmo_Param& cosmo);
 double Omega_lambda(double a, const Cosmo_Param& cosmo);
-
-double  get_max_Pk(Sim_Param* sim);
+double lin_pow_spec(double a, double k, const Cosmo_Param& cosmo);
+double non_lin_pow_spec(double a, double k, const Cosmo_Param& cosmo);
 
 /**
  * @class:	Interp_obj
@@ -102,10 +101,9 @@ public:
 class Extrap_Pk_Nl
 {
 public:
-    Extrap_Pk_Nl(const Data_Vec<double, 3>& data, const Sim_Param &sim, double A_nl, double z_eff);
-    const Extrap_Pk Pk_lin, Pk_nl;
-    const double A_nl, A_low, k_split, D, D_202, z_eff;
-    const double A1, A2; //< derived parameters, pre-compute
+    Extrap_Pk_Nl(const Data_Vec<double, 3>& data, const Sim_Param &sim, double A_nl, double a_eff);
+    const Extrap_Pk Pk_lin;
+    const double A_nl, a_eff, k_split;
     double operator()(double k) const;
 };
 

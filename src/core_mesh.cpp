@@ -170,7 +170,7 @@ template<unsigned points>
 IT<points>::IT(const Vec_3D<double> &pos): counter(0)
 {
     for(unsigned i = 0; i < 3; i++){
-        vec[i] = (int)(pos[i] - 0.5*(points - 2));
+        vec[i] = (int)(pos[i] - 0.5*(int(points) - 2));
     }
 }
 

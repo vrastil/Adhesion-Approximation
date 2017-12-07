@@ -50,7 +50,7 @@ public:
     {
         F.params = params;
         gsl_errno = gsl_integration_qag(&F, a, b, epsabs, epsrel, limit, key, w, &result, &error);
-        if (gsl_errno) printf ("GSL integration error: %s\n", gsl_strerror (gsl_errno));
+        if (gsl_errno) throw runtime_error("GSL integration error: " + string(gsl_strerror(gsl_errno)));
         return result;
     }
 protected:
@@ -71,6 +71,7 @@ public:
     {
         F.params = params;
         gsl_errno = gsl_integration_qagiu(&F, a, epsabs, epsrel, limit, w, &result, &error);
+        if (gsl_errno) throw runtime_error("GSL integration error: " + string(gsl_strerror(gsl_errno)));
         return result;
     }
 };
@@ -95,7 +96,8 @@ public:
     {
         gsl_integration_qawo_table_set(wf, r, L, GSL_INTEG_SINE);
         F.params = params;
-        gsl_integration_qawo(&F, a, epsabs, epsrel, limit, w, wf, &result, &error);
+        gsl_errno = gsl_integration_qawo(&F, a, epsabs, epsrel, limit, w, wf, &result, &error);
+        if (gsl_errno) throw runtime_error("GSL integration error: " + string(gsl_strerror(gsl_errno)));
         return result;
     }
 protected:
@@ -122,7 +124,8 @@ public:
     {
         gsl_integration_qawo_table_set(wf, r, L, GSL_INTEG_SINE);
         F.params = params;
-        gsl_integration_qawf(&F, a, epsabs, limit, w, wc, wf, &result, &error);
+        gsl_errno = gsl_integration_qawf(&F, a, epsabs, limit, w, wc, wf, &result, &error);
+        if (gsl_errno) throw runtime_error("GSL integration error: " + string(gsl_strerror(gsl_errno)));
         return result;
     }
 protected:
@@ -148,93 +151,20 @@ ODE_Solver::~ODE_Solver()
 void ODE_Solver::update(double &t, const double t1, double y[])
 {
     status = gsl_odeiv2_driver_apply (d, &t, t1, y);
-    if (status == GSL_SUCCESS) return;
-    else if (status == GSL_EMAXITER) throw runtime_error("maximum number of steps reached");
-    else if (status == GSL_ENOPROG) throw runtime_error("the step size droped below minimum value");
-    else if (status == GSL_EBADFUNC) throw runtime_error("uknown error in 'gsl_odeiv2'");
+    if (status) throw runtime_error("GSL ODE error: " + string(gsl_strerror(status)));
 }
 
-double transfer_function_2(double k, const Cosmo_Param& parameters)
+void norm_pwr(Cosmo_Param& cosmo)
 {
-    if (k == 0) return 1.;
-
-	const double q = k / (parameters.Omega_m*parameters.h);
-	double T_k =	log(1+2.34*q)/(2.34*q)*
-					pow(1 + 3.89*q + pow(16.2*q, 2.) + pow(5.47*q, 3.) + pow(6.71*q, 4.)
-					, -1./4.);
-	return pow(T_k, 2.);
-}
-
-double power_spectrum_T(double k, const Cosmo_Param& parameters)
-{
-	if (k == 0) return 0;
-	const double ns = parameters.ns;
-	return pow(k, ns)*transfer_function_2(k, parameters);
-}
-
-double power_spectrum_scale_free(double k, const Cosmo_Param& parameters)
-{
-	if (k == 0) return 0;
-	const double ns = parameters.ns;
-	return pow(k, ns);
-}
-
-double flat_power_spectrum(double k, const Cosmo_Param& parameters)
-{
-	return 1;
-}
-
-double single_power_spectrum_T(double k, const Cosmo_Param& parameters)
-{
-	if ((k > 0.01) and (k < 0.04)) return power_spectrum_T(k, parameters);
-	else return 0.;
-}
-
-double power_spectrum(double k, const Cosmo_Param& parameters)
-{
-    const double A = parameters.A;
-    const double supp = parameters.k2_G ? exp(-k*k/parameters.k2_G) : 1;
-	switch (parameters.pwr_type)
-	{
-		case e_power_spec::power_law_T: return supp*A*power_spectrum_T(k, parameters);
-		case e_power_spec::power_law: return supp*A*power_spectrum_scale_free(k, parameters);
-		case e_power_spec::flat: return supp*A*flat_power_spectrum(k, parameters);
-		case e_power_spec::single: return supp*A*single_power_spectrum_T(k, parameters);
-		default: return supp*A*power_spectrum_T(k, parameters);
-	}
-}
-
-
-double power_spectrum_s8(double k, void* parameters)
-{
-	return	k*k/(2.*PI*PI) // spherical factor
-			*power_spectrum(k, *static_cast<const Cosmo_Param*>(parameters)) // P(k)
-			*pow(3.*gsl_sf_bessel_j1(k*8)/(k*8), 2.); // window function R = 8 Mpc/h
-}
-
-void norm_pwr_gsl(Cosmo_Param* cosmo)
-{
-    /* Normalize the power spectrum */
-    Integr_obj_qagiu s8(&power_spectrum_s8, 0, 0, 1e-7, 1000);
-	cosmo->A = pow(cosmo->sigma8, 2)/s8(cosmo);
-}
-
-void norm_pwr_ccl(Cosmo_Param* cosmo)
-{
-    /* Normalize the power spectrum */
+    cout << "Initializing CCL power spectrum...\n";
     int status = 0;
-    ccl_sigma8(cosmo->cosmo, &status);
+    ccl_sigma8(cosmo.cosmo, &status);
+    throw_ccl(cosmo.cosmo, status);
 }
 
-void norm_pwr(Cosmo_Param* cosmo)
+static double hubble_param(double a, const Cosmo_Param& cosmo)
 {
-    printf("Initializing given power spectrum...\n");
-    if (cosmo->pwr_type_i < 4) norm_pwr_gsl(cosmo);
-    else norm_pwr_ccl(cosmo);
-}
-
-double hubble_param(double a, const Cosmo_Param& cosmo)
-{
+    // hubble normalize to H(a = 1) == 1
     const double Om = cosmo.Omega_m;
     const double OL = cosmo.Omega_L();
     return sqrt(Om*pow(a, -3) + OL);
@@ -242,103 +172,104 @@ double hubble_param(double a, const Cosmo_Param& cosmo)
 
 double Omega_lambda(double a, const Cosmo_Param& cosmo)
 {
+    // try ccl range
+    int status = 0;
+    double OL = ccl_omega_x(cosmo.cosmo, a, ccl_omega_l_label, &status);
+    if(!status) return OL;
+
+    // compute outside range
     const double Om = cosmo.Omega_m;
-    const double OL = cosmo.Omega_L();
+    OL = cosmo.Omega_L();
     return OL/(Om*pow(a, -3) + OL);
 }
 
-double growth_factor_integrand(double a, void* parameters)
+static double growth_factor_integrand(double a, void* params)
 {    
-    return pow(a*hubble_param(a, static_cast<Cosmo_wrapper*>(parameters)->cosmo), -3);
+    return pow(a*hubble_param(a, *static_cast<const Cosmo_Param*>(params)), -3);
 }
 
 double growth_factor(double a, const Cosmo_Param& cosmo)
 {
-    #ifdef CCL_GROWTH
+    // D(0) == 0; D(1) == 1, do not check (not often, better performance)
+    if (!a) return 0;
+
+    // try ccl range
     int status = 0;
-    return ccl_growth_factor(cosmo.cosmo, a, &status);
-    #else
-    if (a == 0) return 0;
+    double D_ccl = ccl_growth_factor(cosmo.cosmo, a, &status);
+    if (!status) return D_ccl;
+
+    // integrate outside range
     Integr_obj_qag D(&growth_factor_integrand, 0, a, 0, 1e-12, 1000, GSL_INTEG_GAUSS61);
-    Cosmo_wrapper param(cosmo);
-    return hubble_param(a, cosmo)*D(&param)/cosmo.D_norm;
-    #endif
+    return hubble_param(a, cosmo)*D(static_cast<void*>(cosmo))/cosmo.D_norm;
 }
 
-double growth_factor(double a, void* parameters)
+static double growth_factor(double a, void* params)
 {
-    return growth_factor(a, static_cast<Cosmo_wrapper*>(parameters)->cosmo);
+    return growth_factor(a, *static_cast<const Cosmo_Param*>(params));
 }
 
-double ln_growth_factor(double log_a, void* parameters)
+double norm_growth_factor(const Cosmo_Param& cosmo)
 {
-    return log(growth_factor(exp(log_a), static_cast<Cosmo_wrapper*>(parameters)->cosmo));
+    Integr_obj_qag D(&growth_factor_integrand, 0, 1, 0, 1e-12, 1000, GSL_INTEG_GAUSS61);
+    return D(static_cast<void*>(cosmo));
+}
+
+static double ln_growth_factor(double log_a, void* parameters)
+{
+    return log(growth_factor(exp(log_a), *static_cast<const Cosmo_Param*>(parameters)));
 }
 
 double growth_rate(double a, const Cosmo_Param& cosmo)
 {
-    #ifdef CCL_GROWTH
+    // f(0) == 0
+    if (!a) return 1;
+
+    // try ccl range
     int status = 0;
-    return ccl_growth_rate(cosmo.cosmo, a, &status);
-    #else
-    if (a == 0) return 1;
-    Cosmo_wrapper param(cosmo);
-    gsl_function F = {&ln_growth_factor, &param};
-    double dDda, error;
-    gsl_deriv_central(&F, log(a), 1e-12, &dDda, &error);
-    return dDda;
-    #endif
+    double f = ccl_growth_rate(cosmo.cosmo, a, &status);
+    if (!status) return f;
+    
+    // logarithmic derivative outside range
+    gsl_function F = {&ln_growth_factor, static_cast<void*>(cosmo)};
+    double error;
+    status = gsl_deriv_central(&F, log(a), 1e-12, &f, &error);
+    if (!status) return f;
+    throw runtime_error("GSL ODE error: " + string(gsl_strerror(status)));
+    
 }
 
 double growth_change(double a, const Cosmo_Param& cosmo)
-{ // normal derivative dD/da, not logarithmic one
-    Cosmo_wrapper param(cosmo);
-    gsl_function F = {&growth_factor, &param};
-    double dDda, error;
-    if (a == 0) gsl_deriv_forward(&F, a, 1e-12, &dDda, &error);
-    else gsl_deriv_central(&F, a, 1e-12, &dDda, &error);
-    return dDda;
-}
-
-double lin_pow_spec(double k, const Cosmo_Param& cosmo, double a)
 {
-    if (cosmo.pwr_type_i < 4){
-        return power_spectrum(k, cosmo);
-    } else {
-        int status = 0;
-        return ccl_linear_matter_power(cosmo.cosmo, k*cosmo.h, a, &status)*pow(cosmo.h, 3);
+    if (a){
+        // compute with growth rate
+        return growth_rate(a, cosmo)*growth_factor(a, cosmo)/a;
+    }
+    else{
+        gsl_function F = {&growth_factor, static_cast<void*>(cosmo)};
+        double dDda, error;
+        int status = gsl_deriv_forward(&F, a, 1e-12, &dDda, &error);
+        if (!status) return dDda;
+        throw runtime_error("GSL ODE error: " + string(gsl_strerror(status)));
     }
 }
 
-double lin_pow_spec(double k, const Cosmo_Param& cosmo)
+double lin_pow_spec(double a, double k, const Cosmo_Param& cosmo)
 {
-    return lin_pow_spec(k, cosmo, 1.);
+    int status = 0;
+    double pk = ccl_linear_matter_power(cosmo.cosmo, k*cosmo.h, a, &status)*pow(cosmo.h, 3);
+    if (!status) return pk;
+    throw_ccl(cosmo.cosmo, status);
 }
 
-double find_pk_max(double k, void* parameters)
+double non_lin_pow_spec(double k, const Cosmo_Param& cosmo, double a)
 {
-    return -lin_pow_spec(k, *static_cast<Cosmo_Param*>(parameters));
+    int status = 0;
+    double pk = ccl_nonlin_matter_power(cosmo.cosmo, k*cosmo.h, a, &status)*pow(cosmo.h, 3);
+    if (!status) return pk;
+    throw_ccl(cosmo.cosmo, status);
 }
 
-double pade_approx(double x, unsigned m, const double* a, unsigned n, const double* b)
-{
-    double numerator = 0;
-    double denominator = 1;
-    for(unsigned i = 0; i <= m; i++){
-        numerator += a[i]*pow(x, i);
-    }
-    for(unsigned i = 0; i <= n; i++){
-        denominator += b[i]*pow(x, i+1); // note that b[0] = b1
-    }
-    return numerator/denominator;
-}
-
-double pade_approx(double x, const vector<double>& a, const vector<double>& b)
-{
-    return pade_approx(x, a.size(), a.data(), b.size(), b.data());
-}
-
-int get_nearest(const double val, const vector<double>& vec)
+static int get_nearest(const double val, const vector<double>& vec)
 {
     int pos = 0;
     double dv = abs(vec[0] - val);
@@ -444,7 +375,7 @@ void Extrap_Pk::fit_lin(const Data_Vec<double, N>& data, const unsigned m, const
     // fit 'P(k) = A * P_lin(k)' via A
     // for N = 2 perform non-weighted least-square fitting
     // for N = 3 use data[2] as sigma, w = 1/sigma^2
-    double Pk, err;
+    double Pk;
     vector<double> Pk_res, w;
     Pk_res.reserve(n-m);
     if (N == 3){
@@ -453,16 +384,16 @@ void Extrap_Pk::fit_lin(const Data_Vec<double, N>& data, const unsigned m, const
     vector<double> A_vec(n-m, 1);
 
     for(unsigned i = m; i < n; i++){
-        Pk = lin_pow_spec(data[0][i], cosmo);
+        Pk = lin_pow_spec(1, data[0][i], cosmo);
         Pk_res.push_back(data[1][i] / Pk);
         if (N == 3) w.push_back(pow(Pk/data[2][i], 2));
     }
     double A_sigma2, sumsq;
 
-    if (!isfinite(A)) throw runtime_error("Encountered error during fitting");
-
-    if (N == 3) gsl_fit_wmul(A_vec.data(), 1, w.data(), 1, Pk_res.data(), 1, n-m, &A, &A_sigma2, &sumsq);
-    else gsl_fit_mul(A_vec.data(), 1, Pk_res.data(), 1, n-m, &A, &A_sigma2, &sumsq);
+    int gsl_errno;
+    if (N == 3) gsl_errno = gsl_fit_wmul(A_vec.data(), 1, w.data(), 1, Pk_res.data(), 1, n-m, &A, &A_sigma2, &sumsq);
+    else gsl_errno = gsl_fit_mul(A_vec.data(), 1, Pk_res.data(), 1, n-m, &A, &A_sigma2, &sumsq);
+    if (gsl_errno) throw runtime_error("GSL integration error: " + string(gsl_strerror(gsl_errno)));
 
     #ifndef SWIG
     printf("\t[%sfit A = %.1e, err = %.2f\%]\n", N == 3 ? "weighted-" : "", A, 100*sqrt(A_sigma2)/A);
@@ -477,7 +408,6 @@ void Extrap_Pk::fit_power_law(const Data_Vec<double, N>& data, const unsigned m,
     // for N = 2 perform non-weighted least-square fitting
     // for N = 3 use data[2] as sigma, w = 1/sigma^2
     vector<double> k, Pk, w;
-    double err;
     k.reserve(n-m);
     Pk.reserve(n-m);
     if (N == 3){
@@ -489,23 +419,23 @@ void Extrap_Pk::fit_power_law(const Data_Vec<double, N>& data, const unsigned m,
         if (N == 3)w.push_back(pow(data[1][i]/data[2][i], 2)); // weight = 1/sigma^2, approx log(1+x) = x for x rel. error
     }
     double cov00, cov01, cov11, sumsq;
-    if (N == 3) gsl_fit_wlinear(k.data(), 1, w.data(), 1, Pk.data(), 1, n-m, &A, &n_s, &cov00, &cov01, &cov11, &sumsq);
-    else gsl_fit_linear(k.data(), 1, Pk.data(), 1, n-m, &A, &n_s, &cov00, &cov01, &cov11, &sumsq);
-
-    if (!isfinite(A)) throw runtime_error("Encountered error during fitting");
+    int gsl_errno;
+    if (N == 3) gsl_errno = gsl_fit_wlinear(k.data(), 1, w.data(), 1, Pk.data(), 1, n-m, &A, &n_s, &cov00, &cov01, &cov11, &sumsq);
+    else gsl_errno = gsl_fit_linear(k.data(), 1, Pk.data(), 1, n-m, &A, &n_s, &cov00, &cov01, &cov11, &sumsq);
+    if (gsl_errno) throw runtime_error("GSL integration error: " + string(gsl_strerror(gsl_errno)));
 
     A = exp(A); // log A => A
     #ifndef SWIG
     printf("\t[%sfit A = %.1e, err = %.2f\%, n_s = %.3f, err = %.2f\%, corr = %.2f\%]\n",
             N == 3 ? "weighted-" : "", A, 100*sqrt(cov00), n_s,  100*sqrt(cov11)/abs(n_s), 100*cov01/sqrt(cov00*cov11));
-   #endif
+    #endif
 }
 
 double Extrap_Pk::operator()(double k) const
 {
     if (k < k_min)
     {
-        return A_low*lin_pow_spec(k, cosmo);
+        return A_low*lin_pow_spec(1, k, cosmo);
     }
     else if (k <= k_max) return Interp_obj::operator()(k);
     else return A_up*pow(k, n_s);
@@ -517,19 +447,13 @@ double Extrap_Pk::operator()(double k) const
             call 'operator()(k)' based on k_split (upper range of the linear)
  */
 
-Extrap_Pk_Nl::Extrap_Pk_Nl(const Data_Vec<double, 3>& data, const Sim_Param &sim, double A_nl, double z_eff):
-    Pk_lin(data, sim), Pk_nl(emu::init_emu(sim, z_eff > 2.02 ? 2.02 : z_eff < 0 ? 0 : z_eff), sim, 0, 10, 341, 351),
-    A_nl(A_nl), A_low(Pk_lin.A_low), k_split(Pk_lin.k_max), D(growth_factor(1./(1.+z_eff), sim.cosmo)),
-    D_202(growth_factor(1./(1.+2.02), sim.cosmo)), z_eff(z_eff),
-    A1(D*D*(1-A_nl)), A2(A_nl*pow(D/D_202, 2))
-    {}
+Extrap_Pk_Nl::Extrap_Pk_Nl(const Data_Vec<double, 3>& data, const Sim_Param &sim, double A_nl, double a_eff):
+    Pk_lin(data, sim), A_nl(A_nl), a_eff(a_eff), k_split(Pk_lin.k_max) {}
 
 
 double Extrap_Pk_Nl::operator()(double k) const {
     if (k < k_split) return Pk_lin(k);
-    else if (z_eff < 2.02) return A_nl*Pk_nl(k) + A1*lin_pow_spec(k, Pk_nl.cosmo);
-    // extrapolate based on Pk_NL / Pk_L = D(z) / D(2.02) <<< fast decay of Pk_NL
-    else return A2*Pk_nl(k) + A1*lin_pow_spec(k, Pk_nl.cosmo);
+    else return (1-A_nl)*lin_pow_spec(a_eff, k, Pk_lin.cosmo) + A_nl*non_lin_pow_spec(a_eff, k, Pk_lin.cosmo);
 }
 
 
@@ -561,7 +485,7 @@ double xi_integrand_W(double k, void* params){
 double xi_integrand_W_lin(double k, void* params){
     xi_integrand_param_lin* my_par = (xi_integrand_param_lin*) params;
     const double r = my_par->r;
-    const double P_k = lin_pow_spec(k, my_par->cosmo);
+    const double P_k = lin_pow_spec(1, k, my_par->cosmo);
     return 1/(2*PI*PI)*k/r*P_k;
 };
 /**
@@ -641,36 +565,6 @@ void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, double a, Data_Vec<
     gen_corr_func_binned_gsl_lin(sim, a, corr_func_binned, xi_r);
 }
 
-double  get_max_Pk(Sim_Param* sim)
-{
-    const gsl_min_fminimizer_type * T = gsl_min_fminimizer_brent;
-    gsl_min_fminimizer * s = gsl_min_fminimizer_alloc (T);
-    gsl_function F;
-    F.function = &find_pk_max;
-    F.params = &sim->cosmo;
-    double k_l = sim->other_par.k_print.lower;
-    double k_u = sim->other_par.k_print.upper;
-    double k = (k_l + k_u) / 2.;
-    gsl_min_fminimizer_set(s, &F, k, k_l, k_u);
-
-    int status;
-    int iter = 0, max_iter = 100;
-    do
-    {
-        iter++;
-        status = gsl_min_fminimizer_iterate (s);
-
-        k = gsl_min_fminimizer_x_minimum (s);
-        k_l = gsl_min_fminimizer_x_lower (s);
-        k_u = gsl_min_fminimizer_x_upper (s);
-
-        status = gsl_min_test_interval (k_l, k_u, 0, 1e-3);
-
-    } while ((status == GSL_CONTINUE) && (iter < max_iter));
-    gsl_min_fminimizer_free(s);
-    return k;
-}
-
 // maybe replace function templates by class template? better to maintain, less variability
 template Interp_obj::Interp_obj(const Data_Vec<double, 2>&);
 template Interp_obj::Interp_obj(const Data_Vec<double, 3>&);
@@ -692,3 +586,7 @@ template void Extrap_Pk::fit_power_law(const Data_Vec<double, 3>&, const unsigne
 
 template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk&, Data_Vec<double, 2>*);
 template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk_Nl&, Data_Vec<double, 2>*);
+
+#ifdef TEST
+#include "test_power.cpp"
+#endif

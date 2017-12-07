@@ -126,7 +126,7 @@ void integration(T& APP, function<void()> upd_pos)
 * APPROXIMATIONS *
 *****************/
 
-int zel_app(const Sim_Param &sim)
+void zel_app(const Sim_Param &sim)
 {
     cout << "\n"
 	"************************\n"
@@ -141,10 +141,9 @@ int zel_app(const Sim_Param &sim)
     };
     integration(APP, upd_pos);
 	printf("Zel`dovich approximation ended successfully.\n");
-	return APP.err;
 }
 
-int frozen_flow(const Sim_Param &sim)
+void frozen_flow(const Sim_Param &sim)
 {
 	cout << "\n"
 	"*************************\n"
@@ -160,10 +159,9 @@ int frozen_flow(const Sim_Param &sim)
     };
     integration(APP, upd_pos);
     printf("Frozen-flow approximation ended successfully.\n");
-    return APP.err;
 }
 
-int frozen_potential(const Sim_Param &sim)
+void frozen_potential(const Sim_Param &sim)
 {
 	cout << "\n"
 	"******************************\n"
@@ -179,10 +177,9 @@ int frozen_potential(const Sim_Param &sim)
     };
     integration(APP, upd_pos);
     printf("Frozen-potential approximation ended successfully.\n");
-    return APP.err;
 }
 
-int mod_frozen_potential(const Sim_Param &sim)
+void mod_frozen_potential(const Sim_Param &sim)
 {
 	cout << "\n"
 	"***************************************\n"
@@ -199,10 +196,9 @@ int mod_frozen_potential(const Sim_Param &sim)
     };
     integration(APP, upd_pos);
     printf("Modified Frozen-potential approximation ended successfully.\n");
-    return APP.err;
 }
 
-int adhesion_approximation(const Sim_Param &sim)
+void adhesion_approximation(const Sim_Param &sim)
 {
 	cout << "\n"
 	"**********************\n"
@@ -220,7 +216,6 @@ int adhesion_approximation(const Sim_Param &sim)
     };
     integration(APP, upd_pos);
 	printf("Adhesion approximation ended successfully.\n");
-    return APP.err;
 }
 
 /***********************************

@@ -193,7 +193,7 @@ const char *humanSize(uint64_t bytes){
  Mesh_base<T>::Mesh_base(unsigned n1, unsigned n2, unsigned n3):
     N1(n1), N2(n2), N3(n3), length(n1*n2*n3), data(new T[length])
  {
-    #ifdef DEBUG
+    #ifdef TEST
     cout << ">>> Debug: Mesh_base NORMAL constructor: " << this
          << ", N = (" << N1 << ", "  << N2 << ", " << N3 << ")\n";
     #endif
@@ -205,7 +205,7 @@ const char *humanSize(uint64_t bytes){
  {
     #pragma omp parallel for
     for (unsigned i = 0; i < length; i++) data[i] = that.data[i];
-    #ifdef DEBUG
+    #ifdef TEST
     cout << ">>> Debug: Mesh_base COPY constructor: " << this 
          << " <-- " << &that << "\n";
     #endif
@@ -224,7 +224,7 @@ const char *humanSize(uint64_t bytes){
  template <class T>
  Mesh_base<T>::Mesh_base(Mesh_base<T>&& that) noexcept
  {
-    #ifdef DEBUG
+    #ifdef TEST
     cout << ">>> Debug: Mesh_base MOVE constructor: " << this 
          << " <-- " << &that << "\n";
     #endif
@@ -234,7 +234,7 @@ const char *humanSize(uint64_t bytes){
  template <class T>
  Mesh_base<T>& Mesh_base<T>::operator=(Mesh_base<T> that)
  {
-    #ifdef DEBUG
+    #ifdef TEST
     cout << ">>> Debug: Mesh_base COPY or MOVE assignemnt: " << this 
          << " <-- " << &that << "\n";
     #endif
@@ -246,7 +246,7 @@ const char *humanSize(uint64_t bytes){
  Mesh_base<T>::~Mesh_base<T>()
  {
     delete[] data;
-    #ifdef DEBUG
+    #ifdef TEST
     cout << ">>> Debug: Mesh_base destructor: " << this << "\n";
     #endif
  }
@@ -373,43 +373,102 @@ Mesh& Mesh::operator/=(const double& rhs)
  * @brief:	class storing parameters for power spectrum
  */
 
+Cosmo_Param::Cosmo_Param():
+    // cosmo == NULL as indicator of uninitialization
+    // config first initialize to default (in case new configuration options are added)
+    config(default_config), cosmo(NULL)
+    {
+    #ifdef TEST
+    cout << ">>> Debug: Creating Cosmo_Param via call to Cosmo_Param()\n";
+    cout << "\tconfig.transfer_function_method = " << config.transfer_function_method << "\n";
+    #endif
+    }
+
 void Cosmo_Param::init()
 {
-    pwr_type = static_cast<e_power_spec>(pwr_type_i);
     k2_G *= k2_G;
     h = H0/100;
-    
-    // CCL VARIABLES
-    config = default_config; // first initialize to default (in case new configuration options are added)
-    switch (pwr_type)
-    {
-        case e_power_spec::ccl_EH: config.transfer_function_method = ccl_eisenstein_hu; break;
-        case e_power_spec::ccl_BBKS: config.transfer_function_method = ccl_bbks; break;
-        default: config.transfer_function_method = ccl_bbks; break;
-    }
-    config.matter_power_spectrum_method = ccl_linear;
-    config.mass_function_method = ccl_tinker;
+    #ifdef TEST
+    cout << ">>> Debug: Creating Cosmo_Param via call to init()\n";
+    cout << "\tconfig.transfer_function_method = " << config.transfer_function_method << "\n";
+    #endif
+
+    // create flat LCDM cosmology
     int status = 0;
-    params = ccl_parameters_create_flat_lcdm(Omega_c(), Omega_b, h, sigma8, ns, &status);
-    cosmo = ccl_cosmology_create(params, config);
-    #ifdef DEBUG
+    cosmo = ccl_cosmology_create_with_lcdm_params(Omega_c(), Omega_b, 0, h, sigma8, ns, config, &status);
+    if (!status) throw_ccl(cosmo, status);
+
+    #ifdef TEST
     cout << ">>> Debug: Created ccl_cosmology*: " << cosmo << "\n";
     #endif
     
-
     // PRECOMPUTED VALUES
-    D_norm = growth_factor(1, *this);
+    D_norm = norm_growth_factor(*this); //< use only when outside CCL range
 
     // normalize power spectrum
-    norm_pwr(this);
+    norm_pwr(*this);
+}
 
-    is_init = true;
+
+Cosmo_Param::~Cosmo_Param()
+{
+    #ifdef TEST
+    cout << ">>> Debug: Cosmo_Param destructor: " << this << "\n";
+    #endif
+    if(cosmo){
+        #ifdef TEST
+        cout << ">>> Debug: Free space after ccl_cosmology: " << cosmo << "\n";
+        #endif
+        ccl_cosmology_free(cosmo);
+    }
+}
+
+Cosmo_Param::operator void*() const
+{
+    return const_cast<Cosmo_Param*>(this);
+}
+
+
+// convert to pyccl transfer_function_types keys
+const map<string, transfer_function_t> transfer_function_method = {
+    {"emulator", ccl_emulator},
+    {"eisenstein_hu", ccl_eisenstein_hu},
+    {"bbks", ccl_bbks},
+    {"boltzmann_class", ccl_boltzmann_class},
+    {"boltzmann_camb", ccl_boltzmann_camb}
+};
+// convert to pyccl matter_power_spectrum_types keys
+const map<string, matter_power_spectrum_t> matter_power_spectrum_method = {
+    {"linear", ccl_linear},
+    {"halofit", ccl_halofit},
+    {"halo_model", ccl_halo_model}
+};
+// convert to pyccl mass_function_types keys
+const map<string, mass_function_t> mass_function_method = {
+    {"tinker", ccl_tinker},
+    {"tinker10", ccl_tinker10},
+    {"watson", ccl_watson},
+    {"angulo", ccl_angulo}
+};
+// convert to pyccl baryons_power_spectrum keys
+const map<string, baryons_power_spectrum_t> baryons_power_spectrum_method = {
+    {"nobaryons", ccl_nobaryons},
+    {"bcm", ccl_bcm}
+};
+
+/**
+ * return first occurence of 'value' in std::map
+ */
+template<typename T, typename U>
+T find_value(std::map<T, U> map, U value)
+{
+    for(auto x : map) if (x.second == value) return x.first;
+    throw std::out_of_range("Value not found");
 }
 
 void to_json(json& j, const Cosmo_Param& cosmo)
 {
     j = json{
-        {"pwr_type", cosmo.pwr_type_i},
         {"A", cosmo.A},
         {"index", cosmo.ns},
         {"sigma8", cosmo.sigma8},
@@ -419,88 +478,53 @@ void to_json(json& j, const Cosmo_Param& cosmo)
         {"Omega_m", cosmo.Omega_m},
         {"h", cosmo.h}
     };
-    switch (cosmo.config.transfer_function_method)
-    { // convert to pyccl transfer_function_types keys
-        case ccl_emulator: j["transfer_function_method"] = "emulator"; break;
-        case ccl_eisenstein_hu: j["transfer_function_method"] = "eisenstein_hu"; break;
-        case ccl_bbks: j["transfer_function_method"] = "bbks"; break;
-        case ccl_boltzmann_class: j["transfer_function_method"] = "boltzmann_class"; break;
-        case ccl_boltzmann_camb: j["transfer_function_method"] = "boltzmann_camb"; break;
-    }
-    switch (cosmo.config.matter_power_spectrum_method)
-    { // convert to pyccl matter_power_spectrum_types keys
-        case ccl_linear: j["matter_power_spectrum_method"] = "linear"; break;
-        case ccl_halofit: j["matter_power_spectrum_method"] = "halofit"; break;
-        case ccl_halo_model: j["matter_power_spectrum_method"] = "halo_model"; break;
-    }
-    switch (cosmo.config.mass_function_method)
-    { // convert to pyccl mass_function_types keys
-        case ccl_tinker: j["mass_function_method"] = "tinker"; break;
-        case ccl_tinker10: j["mass_function_method"] = "tinker10"; break;
-        case ccl_watson: j["mass_function_method"] = "watson"; break;
-        case ccl_angulo: j["mass_function_method"] = "angulo"; break;
-    }
+    
+    j["transfer_function_method"] = find_value(transfer_function_method, cosmo.config.transfer_function_method);
+    j["matter_power_spectrum_method"] = find_value(matter_power_spectrum_method, cosmo.config.matter_power_spectrum_method);
+    j["mass_function_method"] = find_value(mass_function_method, cosmo.config.mass_function_method);
+    j["baryons_power_spectrum_method"] = find_value(baryons_power_spectrum_method, cosmo.config.baryons_power_spectrum_method);
 }
 
 void from_json(const json& j, Cosmo_Param& cosmo)
 {
-    #ifdef DEBUG
+    #ifdef TEST
     cout << ">>> Debug: Loading 'Cosmo_Param& cosmo' from json file\n";
     #endif
-    cosmo.pwr_type_i = j.at("pwr_type").get<int>();
-    // cosmo.pwr_type = static_cast<e_power_spec>(cosmo.pwr_type_i);
-    // cosmo.A = j.at("A").get<double>();
+    cosmo.A = j.at("A").get<double>();
     cosmo.ns = j.at("index").get<double>();
     cosmo.sigma8 = j.at("sigma8").get<double>();
     cosmo.k2_G = j.at("smoothing_k").get<double>();
-    // cosmo.k2_G *= cosmo.k2_G;
     cosmo.Omega_b = j.at("Omega_b").get<double>();
     cosmo.Omega_m = j.at("Omega_m").get<double>();
     cosmo.h = j.at("h").get<double>();
     cosmo.H0 = cosmo.h * 100;
-    cosmo.init();
-    // string tmp;
-    // tmp = j.at("transfer_function_method").get<string>();
-    // // convert from pyccl transfer_function_types keys
-    // if (tmp == "emulator") cosmo.config.transfer_function_method = ccl_emulator;
-    // else if (tmp == "eisenstein_hu") cosmo.config.transfer_function_method = ccl_eisenstein_hu;
-    // else if (tmp == "bbks") cosmo.config.transfer_function_method = ccl_bbks;
-    // else if (tmp == "boltzmann_class") cosmo.config.transfer_function_method = ccl_boltzmann_class;
-    // else if (tmp == "boltzmann_camb") cosmo.config.transfer_function_method = ccl_boltzmann_camb;
     
-    // tmp = j.at("matter_power_spectrum_method").get<string>();
-    // // convert from pyccl matter_power_spectrum_types keys
-    // if (tmp == "linear") cosmo.config.matter_power_spectrum_method = ccl_linear;
-    // else if (tmp == "halofit") cosmo.config.matter_power_spectrum_method = ccl_halofit;
-    // else if (tmp == "halo_model") cosmo.config.matter_power_spectrum_method = ccl_halo_model;
-    
-    // tmp = j.at("mass_function_method").get<string>();
-    // // convert from pyccl mass_function_types keys
-    // if (tmp == "tinker") cosmo.config.mass_function_method = ccl_tinker;
-    // else if (tmp == "tinker10") cosmo.config.mass_function_method = ccl_tinker10;
-    // else if (tmp == "watson") cosmo.config.mass_function_method = ccl_watson;
-    // else if (tmp == "angulo") cosmo.config.mass_function_method = ccl_angulo;
-
-    // int status = 0;
-    // cosmo.params = ccl_parameters_create_flat_lcdm(cosmo.Omega_c(), cosmo.Omega_b, cosmo.h, cosmo.sigma8, cosmo.ns, &status);
-    // cosmo.cosmo = ccl_cosmology_create(cosmo.params, cosmo.config);
-    // cosmo.D_norm = growth_factor(1, cosmo);
-    // norm_pwr(&cosmo);
-
-    // cosmo.is_init = true;
-}
-
-Cosmo_Param::~Cosmo_Param()
-{
-    #ifdef DEBUG
-    cout << ">>> Debug: Cosmo_Param destructor: " << this << "\n";
-    #endif
-    if(is_init){
-        #ifdef DEBUG
-        cout << ">>> Debug: Free space after ccl_cosmology: " << cosmo << "\n";
-        #endif
-        ccl_cosmology_free(cosmo);
+    string tmp;
+    try{
+        tmp = j.at("transfer_function_method").get<string>();
+        cosmo.config.transfer_function_method = transfer_function_method.at(tmp);
+    }catch(const out_of_range& oor){
+        cosmo.config.transfer_function_method = ccl_boltzmann_class;
     }
+    try{
+        tmp = j.at("matter_power_spectrum_method").get<string>();
+        cosmo.config.matter_power_spectrum_method = matter_power_spectrum_method.at(tmp);
+    }catch(const out_of_range& oor){
+        cosmo.config.matter_power_spectrum_method = ccl_halofit;
+    }
+    try{
+        tmp = j.at("mass_function_method").get<string>();
+        cosmo.config.mass_function_method = mass_function_method.at(tmp);
+    }catch(const out_of_range& oor){
+        cosmo.config.mass_function_method = ccl_tinker10;
+    }
+    try{
+        tmp = j.at("baryons_power_spectrum_method").get<string>();
+        cosmo.config.baryons_power_spectrum_method = baryons_power_spectrum_method.at(tmp);
+    }catch(const out_of_range& oor){
+        cosmo.config.baryons_power_spectrum_method = ccl_nobaryons;
+    }
+    cosmo.init();
 }
 
 /**
@@ -600,17 +624,14 @@ void Other_par::init(const Box_Opt& box_opt)
 
 Sim_Param::Sim_Param(int ac, char* av[])
 {
-	if (handle_cmd_line(ac, av, this)) is_init = 0;
-	else {
-        run_opt.init();
-        box_opt.init();
-        integ_opt.init();
-        out_opt.init();
-        app_opt.init(box_opt);
-        cosmo.init();
-        other_par.init(box_opt);
-        is_init = 1;
-    }
+	handle_cmd_line(ac, av, *this);//< throw if anything happend
+    run_opt.init();
+    box_opt.init();
+    integ_opt.init();
+    out_opt.init();
+    app_opt.init(box_opt);
+    cosmo.init();
+    other_par.init(box_opt);
 }
 
 Sim_Param::Sim_Param(string file_name)
@@ -630,7 +651,7 @@ Sim_Param::Sim_Param(string file_name)
         try{ out_opt = j.at("out_opt"); } // new format of json files
         catch(const out_of_range& oor){ // old format does not store Out_Opt
             try {out_opt.out_dir = j.at("out_dir"); } // stack_info.json doesn`t store out_dir
-            catch(const out_of_range& oor){out_opt.out_dir = "~/home/FASTSIM/output/" } // do not need it, set to some default
+            catch(const out_of_range& oor){out_opt.out_dir = "~/home/FASTSIM/output/"; } // do not need it, set to some default
             out_opt.bins_per_decade = 20;
             out_opt.points_per_10_Mpc = 10;
         }
@@ -643,7 +664,6 @@ Sim_Param::Sim_Param(string file_name)
         string err = string(oor.what()) + " in file '" + file_name + "'";
         throw out_of_range(err);
     }
-    is_init = 1;
 }
 
 void to_json(json& j, const Box_Opt& box_opt)
@@ -733,46 +753,47 @@ void from_json(const json& j, Out_Opt& out_opt)
 
 void Sim_Param::print_info(string out, string app) const
 {
-    if (is_init) 
-	{
-        if (out == "")
-        {
-            printf("\n*********************\n");
-            printf("SIMULATION PARAMETERS\n");
-            printf("*********************\n");
-            printf("Ng:\t\t%i\n", box_opt.Ng);
-            printf("Num_par:\t%i^3\n", box_opt.par_num_1d);
-            printf("Num_mesh:\t%i^3\n", box_opt.mesh_num);
-            printf("Num_mesh_pwr:\t%i^3\n", box_opt.mesh_num_pwr);
-            printf("Box size:\t%.0f Mpc/h\n", box_opt.box_size);
-            printf("Redshift:\t%G--->%G\n", integ_opt.z_in, integ_opt.z_out);
-            printf("Pk:\t\t[sigma_8 = %G, As = %G, ns = %G, k_smooth = %G, pwr_type = %i]\n", 
-                cosmo.sigma8, cosmo.A, cosmo.ns, sqrt(cosmo.k2_G), cosmo.pwr_type_i);
-            printf("AA:\t\t[nu = %G (Mpc/h)^2]\n", app_opt.nu_dim);
-            printf("LL:\t\t[rs = %G, a = %G, M = %i, Hc = %G]\n", app_opt.rs, app_opt.a, app_opt.M, app_opt.Hc);
-            printf("num_thread:\t%i\n", run_opt.nt);
-            printf( "Output:\t\t'%s'\n", out_opt.out_dir.c_str());
-        }
-        else
-        {
-            string file_name = out + "sim_param.json";
-            ofstream o(file_name);
+    if (out == "")
+    {
+        printf("\n*********************\n");
+        printf("SIMULATION PARAMETERS\n");
+        printf("*********************\n");
+        printf("Ng:\t\t%i\n", box_opt.Ng);
+        printf("Num_par:\t%i^3\n", box_opt.par_num_1d);
+        printf("Num_mesh:\t%i^3\n", box_opt.mesh_num);
+        printf("Num_mesh_pwr:\t%i^3\n", box_opt.mesh_num_pwr);
+        printf("Box size:\t%.0f Mpc/h\n", box_opt.box_size);
+        printf("Redshift:\t%G--->%G\n", integ_opt.z_in, integ_opt.z_out);
+        printf("Pk:\t\t[sigma_8 = %G, As = %G, ns = %G, k_smooth = %G]\n", 
+            cosmo.sigma8, cosmo.A, cosmo.ns, sqrt(cosmo.k2_G));
+        printf("\t\t[transfer_function_method = %s]\n", find_value(transfer_function_method, cosmo.config.transfer_function_method));
+        printf("\t\t[matter_power_spectrum_method = %s]\n", find_value(matter_power_spectrum_method, cosmo.config.matter_power_spectrum_method));
+        printf("\t\t[mass_function_method = %s]\n", find_value(mass_function_method, cosmo.config.mass_function_method));
+        printf("\t\t[baryons_power_spectrum_method = %s]\n", find_value(baryons_power_spectrum_method, cosmo.config.baryons_power_spectrum_method));
+        printf("AA:\t\t[nu = %G (Mpc/h)^2]\n", app_opt.nu_dim);
+        printf("LL:\t\t[rs = %G, a = %G, M = %i, Hc = %G]\n", app_opt.rs, app_opt.a, app_opt.M, app_opt.Hc);
+        printf("num_thread:\t%i\n", run_opt.nt);
+        printf( "Output:\t\t'%s'\n", out_opt.out_dir.c_str());
+    }
+    else
+    {
+        string file_name = out + "sim_param.json";
+        ofstream o(file_name);
 
-            json j = {
-                {"box_opt", box_opt},
-                {"integ_opt", integ_opt},
-                {"cosmo", cosmo},
-                {"app_opt", app_opt},
-                {"run_opt", run_opt},
-                {"out_opt", out_opt},
-                {"k_nyquist", other_par.nyquist},
-                {"results", {}},
-                {"app", app}
-            };
-            o << setw(2) << j << endl;
-            o.close();
-        }
-    } else printf("WARNING! Simulation parameters are not initialized!\n");
+        json j = {
+            {"box_opt", box_opt},
+            {"integ_opt", integ_opt},
+            {"cosmo", cosmo},
+            {"app_opt", app_opt},
+            {"run_opt", run_opt},
+            {"out_opt", out_opt},
+            {"k_nyquist", other_par.nyquist},
+            {"results", {}},
+            {"app", app}
+        };
+        o << setw(2) << j << endl;
+        o.close();
+    }
 }
 
 
@@ -799,7 +820,7 @@ bool Run_Opt::simulate()
  
 template <class T> 
 App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
-	sim(sim), err(0), step(0), print_every(sim.out_opt.print_every),
+	sim(sim), step(0), print_every(sim.out_opt.print_every),
     b(sim.integ_opt.b_in), b_out(sim.integ_opt.b_out), db(sim.integ_opt.db),
     app_str(app_str), z_suffix_const("_" + app_str + "_"), out_dir_app(std_out_dir(app_str + "_run/", sim)),
 	track(4, sim.box_opt.par_num_1d),
@@ -833,10 +854,8 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
     memory_alloc += sizeof(T)*sim.box_opt.par_num;
 
 	// FFTW PREPARATION
-	err = !fftw_init_threads();
-	if (err){
-		printf("Errors during multi-thread initialization!\n");
-		throw err;
+	if (!fftw_init_threads()){
+		throw runtime_error("Errors during multi-thread initialization");
 	}
 	fftw_plan_with_nthreads(sim.run_opt.nt);
 	p_F = fftw_plan_dft_r2c_3d(sim.box_opt.mesh_num, sim.box_opt.mesh_num, sim.box_opt.mesh_num, app_field[0].real(),

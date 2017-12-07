@@ -7,6 +7,12 @@
 
 #include "stdafx.h"
 
+inline void throw_ccl(ccl_cosmology *cosmo, int status)
+{
+    if (!status) return;
+    throw std::runtime_error(cosmo->status_message);
+}
+
 constexpr double PI = M_PI;
 /**
  * @class:	Vec_3D<T>
@@ -212,53 +218,32 @@ public:
 	const double& operator()(int i) const{ return velocity[i]; }
 };
 
-/**
- * @class:	Cosmo_Param
- * @brief:	class storing parameters for power spectrum
- */
-
-enum class e_power_spec : unsigned { power_law_T = 0, power_law = 1, flat = 2, single = 3,
-                    ccl_EH = 4, ccl_BBKS = 5};
-
 class Cosmo_Param
 {
 public:
-    // CONSTRUCTOR, PRINT, DESTRUCTOR
-    void init();
+    // CONSTRUCTORS, DESTRUCTOR
+    void init(); //< lazy constructor
+    Cosmo_Param();
     ~Cosmo_Param();
 
-	double A = 1, ns, k2_G, sigma8;
-    e_power_spec pwr_type;
-    unsigned pwr_type_i;
+    // CCL VARIABLES
+    ccl_configuration config;
+    ccl_cosmology* cosmo;
 
     // COSMOLOGY (flat LCDM)
+    double A = 1, ns, k2_G, sigma8;
     double Omega_m, Omega_b, H0, h;
     double Omega_c() const { return Omega_m - Omega_b; }
     double Omega_L() const { return 1 - Omega_m; }
 
     // PRECOMPUTED VALUES
-    double D_norm = 1;
-        
-    // CCL VARIABLES
-    ccl_configuration config;
-    ccl_parameters params;
-    ccl_cosmology* cosmo;
+    double D_norm;
 
-	bool is_init = 0;
+    // DEALING WITH GSL 'void* param'
+    explicit operator void*() const;
 };
 void to_json(nlohmann::json&, const Cosmo_Param&);
 void from_json(const nlohmann::json&, Cosmo_Param&);
-
-/**
- * @struct:	Cosmo_wrapper
- * @brief:	wrapper around Cosmo_Param for cast to void*
- */
-
-struct Cosmo_wrapper
-{
-    Cosmo_wrapper(const Cosmo_Param& cosmo) : cosmo(cosmo) {}
-    const Cosmo_Param& cosmo;
-};
 
 /**
  * @class:	Tracking
@@ -399,8 +384,6 @@ public:
     Run_Opt run_opt;
     Other_par other_par;
 
-    bool is_init = 0;
-
 	// METHODS
     void print_info(std::string out, std::string app) const;
 	void print_info() const;
@@ -482,7 +465,7 @@ public:
     // VARIABLES
     const Sim_Param &sim;
 
-	int err, step, print_every;
+	int step, print_every;
     double b, b_out, db;
     double D_init, dDda_init;
     const std::string app_str, z_suffix_const, out_dir_app;

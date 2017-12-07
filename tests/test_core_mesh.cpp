@@ -50,27 +50,22 @@ TEST_CASE( "UNIT TEST: periodicity functions {get_per}", "[core_mesh]" )
 
 TEST_CASE( "UNIT TEST: assign functions iterator {IT}", "[core_mesh]" )
 {
-    IT it0(Vec_3D<double>(3.2, 7.8, 4.0), 0);
-    CHECK( it0.counter == 0);
-    CHECK( it0.points == 1);
-    CHECK( it0.max_counter == 1);
-    REQUIRE( it0.vec == Vec_3D<int>(3, 8, 4) );
-    CHECK_FALSE( it0.iter() );
-
-    IT it1(Vec_3D<double>(3.2, 7.8, 4.0), 1);
+    IT<1> it1(Vec_3D<double>(3.2, 7.8, 4.0));
+    REQUIRE( it1.vec == Vec_3D<int>(3, 8, 4) );
     CHECK( it1.counter == 0);
-    CHECK( it1.points == 2);
-    CHECK( it1.max_counter == 8);
-    REQUIRE( it1.vec == Vec_3D<int>(3, 7, 4) );
+    CHECK_FALSE( it1.iter() );
 
-    CHECK( it1.iter() );
-    CHECK( it1.vec == Vec_3D<int>(3, 7, 5) );
-    CHECK( it1.iter() );
-    CHECK( it1.vec == Vec_3D<int>(3, 8, 4) );
+    IT<2> it2(Vec_3D<double>(3.2, 7.8, 4.0));
+    REQUIRE( it2.vec == Vec_3D<int>(3, 7, 4) );
+    CHECK( it2.iter() );
+
+    IT<3> it3(Vec_3D<double>(3.2, 7.8, 4.0), 2);
+    REQUIRE( it3.vec == Vec_3D<int>(0, 2, 1) );
+
+    CHECK( it2.vec == Vec_3D<int>(3, 7, 5) );
+    CHECK( it2.iter() );
+    CHECK( it2.vec == Vec_3D<int>(3, 8, 4) );
     
-    do{} while( it1.iter() );
-    CHECK( it1.vec == Vec_3D<int>(4, 8, 5) );
-    // CHECK( it1.vec[0] == 4 );
-    // CHECK( it1.vec[1] == 8 );
-    // CHECK( it1.vec[2] == 5 );
+    do{} while( it2.iter() );
+    CHECK( it2.vec == Vec_3D<int>(4, 8, 5) );
 }
