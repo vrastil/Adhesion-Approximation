@@ -20,6 +20,5 @@
 
 // Individual headers
 %include "core.i"
-%include "emu.i"
 %include "power.i"
 %include "ccl.i"

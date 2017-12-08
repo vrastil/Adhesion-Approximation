@@ -261,7 +261,7 @@ double lin_pow_spec(double a, double k, const Cosmo_Param& cosmo)
     throw_ccl(cosmo.cosmo, status);
 }
 
-double non_lin_pow_spec(double k, const Cosmo_Param& cosmo, double a)
+double non_lin_pow_spec(double a, double k, const Cosmo_Param& cosmo)
 {
     int status = 0;
     double pk = ccl_nonlin_matter_power(cosmo.cosmo, k*cosmo.h, a, &status)*pow(cosmo.h, 3);
@@ -339,14 +339,14 @@ Extrap_Pk::Extrap_Pk(const Data_Vec<double, N>& data, const Sim_Param& sim, cons
     Interp_obj(data), cosmo(sim.cosmo)
 {
     // LOWER RANGE -- fit linear power spectrum to data[m_l:n_l)
-    #ifndef SWIG
+    #ifndef LESSINFO
     printf("Fitting amplitude of P(k) in lower range.\n");
     #endif
     k_min = data[0][m_l]; // first k in data
     fit_lin(data, m_l, n_l, A_low);
 
     // UPPER RANGE -- fit Ak^ns to data[m_u,n_u)
-    #ifndef SWIG
+    #ifndef LESSINFO
     printf("Fitting amplitude of P(k) in upper range.\n");
     #endif
     k_max =  data[0][n_u-1]; // last k in data
@@ -395,7 +395,7 @@ void Extrap_Pk::fit_lin(const Data_Vec<double, N>& data, const unsigned m, const
     else gsl_errno = gsl_fit_mul(A_vec.data(), 1, Pk_res.data(), 1, n-m, &A, &A_sigma2, &sumsq);
     if (gsl_errno) throw runtime_error("GSL integration error: " + string(gsl_strerror(gsl_errno)));
 
-    #ifndef SWIG
+    #ifndef LESSINFO
     printf("\t[%sfit A = %.1e, err = %.2f\%]\n", N == 3 ? "weighted-" : "", A, 100*sqrt(A_sigma2)/A);
     #endif
 }
@@ -425,7 +425,7 @@ void Extrap_Pk::fit_power_law(const Data_Vec<double, N>& data, const unsigned m,
     if (gsl_errno) throw runtime_error("GSL integration error: " + string(gsl_strerror(gsl_errno)));
 
     A = exp(A); // log A => A
-    #ifndef SWIG
+    #ifndef LESSINFO
     printf("\t[%sfit A = %.1e, err = %.2f\%, n_s = %.3f, err = %.2f\%, corr = %.2f\%]\n",
             N == 3 ? "weighted-" : "", A, 100*sqrt(cov00), n_s,  100*sqrt(cov11)/abs(n_s), 100*cov01/sqrt(cov00*cov11));
     #endif

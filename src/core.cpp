@@ -10,7 +10,6 @@
 #include "core_app.h"
 #include "core_mesh.h"
 #include "core_power.h"
-#include "emu.h"
 
 using namespace std;
 using json = nlohmann::json;
@@ -460,7 +459,7 @@ const map<string, baryons_power_spectrum_t> baryons_power_spectrum_method = {
  * return first occurence of 'value' in std::map
  */
 template<typename T, typename U>
-T find_value(std::map<T, U> map, U value)
+T find_value(const std::map<T, U>& map, const U& value)
 {
     for(auto x : map) if (x.second == value) return x.first;
     throw std::out_of_range("Value not found");
@@ -592,7 +591,6 @@ void Out_Opt::init()
     get_pk_extrap = print_corr|| print_extrap_pwr;
     get_pwr = get_pk_extrap || print_pwr;
     get_rho = get_pwr || print_dens;
-    get_emu_extrap = print_emu_spec || print_emu_corr;
 }
 
 void App_Opt::init(const Box_Opt& box_opt)
@@ -766,10 +764,10 @@ void Sim_Param::print_info(string out, string app) const
         printf("Redshift:\t%G--->%G\n", integ_opt.z_in, integ_opt.z_out);
         printf("Pk:\t\t[sigma_8 = %G, As = %G, ns = %G, k_smooth = %G]\n", 
             cosmo.sigma8, cosmo.A, cosmo.ns, sqrt(cosmo.k2_G));
-        printf("\t\t[transfer_function_method = %s]\n", find_value(transfer_function_method, cosmo.config.transfer_function_method));
-        printf("\t\t[matter_power_spectrum_method = %s]\n", find_value(matter_power_spectrum_method, cosmo.config.matter_power_spectrum_method));
-        printf("\t\t[mass_function_method = %s]\n", find_value(mass_function_method, cosmo.config.mass_function_method));
-        printf("\t\t[baryons_power_spectrum_method = %s]\n", find_value(baryons_power_spectrum_method, cosmo.config.baryons_power_spectrum_method));
+        cout <<"\t\t[transfer_function_method = " << find_value(transfer_function_method, cosmo.config.transfer_function_method) << "]\n";
+        cout <<"\t\t[matter_power_spectrum_method = " << find_value(matter_power_spectrum_method, cosmo.config.matter_power_spectrum_method) << "]\n";
+        cout <<"\t\t[mass_function_method = " << find_value(mass_function_method, cosmo.config.mass_function_method) << "]\n";
+        cout << "\t\t[baryons_power_spectrum_method = " << find_value(baryons_power_spectrum_method, cosmo.config.baryons_power_spectrum_method) << "]\n";
         printf("AA:\t\t[nu = %G (Mpc/h)^2]\n", app_opt.nu_dim);
         printf("LL:\t\t[rs = %G, a = %G, M = %i, Hc = %G]\n", app_opt.rs, app_opt.a, app_opt.M, app_opt.Hc);
         printf("num_thread:\t%i\n", run_opt.nt);
@@ -953,23 +951,6 @@ void App_Var<T>::print_output()
             print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_par" + z_suffix());
             gen_corr_func_binned_gsl_qawf_lin(sim, b, &corr_func_binned);
             print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_lin" + z_suffix());
-        }
-    }
-
-    
-    /* Get power spectrum from emulator and extrapolate */
-    if (sim.out_opt.get_emu_extrap &&  (z() < 2.2)){ // emulator range
-        corr_func_binned = emu::init_emu(sim, z());
-        Extrap_Pk P_k(corr_func_binned, sim, 0, 5, emu::nmode-5, emu::nmode);
-    /* Print emulator power spectrum */
-        if (sim.out_opt.print_emu_spec){
-            gen_pow_spec_binned_from_extrap(sim, P_k, &corr_func_binned);
-            print_pow_spec(corr_func_binned, out_dir_app, "_emu" + z_suffix());
-        }
-    /* Printing correlation function */
-        if (sim.out_opt.print_emu_corr){
-            gen_corr_func_binned_gsl_qawf(sim, P_k, &corr_func_binned);
-            print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_emu" + z_suffix());
         }
     }
 

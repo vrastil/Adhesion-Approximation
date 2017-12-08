@@ -90,7 +90,7 @@ void standard_preparation(T& APP)
     gen_rho_dist_k(APP.sim, &APP.app_field[0], APP.p_F);
 
     /* Print input power spectrum (one realisation), before Zel`dovich push */
-    print_input_realisation(APP);
+    if (APP.print_every) print_input_realisation(APP);
     
 	/* Computing initial potential in k-space */
 	gen_pot_k(APP.app_field[0], &APP.power_aux[0]);

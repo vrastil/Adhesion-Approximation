@@ -294,7 +294,7 @@ void emu(double *xstar, double *ystar) {
 
 Data_Vec<double, 2> init_emu(const Sim_Param &sim, double z)
 {
-    #ifndef SWIG
+    #ifndef LESSINFO
     std::cout << "Initializing emulator...\n";
     #endif
     Data_Vec<double, 2> emu_data(nmode);

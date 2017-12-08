@@ -58,8 +58,6 @@ void handle_cmd_line(int ac, char* av[], Sim_Param& sim){
         ("print_pwr", po::value<bool>(&sim.out_opt.print_pwr)->default_value(false), "print power spectrum")
         ("print_extrap_pwr", po::value<bool>(&sim.out_opt.print_extrap_pwr)->default_value(false), "print extrapolated power spectrum")
         ("print_corr", po::value<bool>(&sim.out_opt.print_corr)->default_value(false), "print correlation function")
-        ("print_emu_spec", po::value<bool>(&sim.out_opt.print_emu_spec)->default_value(false), "print emulator power spectrum")
-        ("print_emu_corr", po::value<bool>(&sim.out_opt.print_emu_corr)->default_value(false), "print emulator correlation function")
         ("print_vel_pwr", po::value<bool>(&sim.out_opt.print_vel_pwr)->default_value(false), "print velocity power spectrum")
         ;
     
@@ -109,18 +107,6 @@ void handle_cmd_line(int ac, char* av[], Sim_Param& sim){
     store(po::command_line_parser(ac, av).options(cmdline_options).run(), vm);		
     po::notify(vm);
 
-    sim.out_opt.print_z = print_z.v;
-    sim.cosmo.config.transfer_function_method = static_cast<transfer_function_t>(trans_func_cmd);
-    sim.cosmo.config.matter_power_spectrum_method = static_cast<matter_power_spectrum_t>(matter_pwr_cmd);
-    sim.cosmo.config.baryons_power_spectrum_method = static_cast<baryons_power_spectrum_t>(baryons_pwr_cmd);
-    sim.cosmo.config.mass_function_method = static_cast<mass_function_t>(mass_func_cmd);
-
-    #ifdef TEST
-    cout << ">>> Debug: Sim_Param initialization\n";
-    cout << "\ttransfer_function = " << trans_func_cmd << " --> " << static_cast<transfer_function_t>(trans_func_cmd) << "\n";
-    cout << "\tsim.cosmo.config.transfer_function_method = " << sim.cosmo.config.transfer_function_method << "\n";
-    #endif
-
     if (vm.count("help")) {
         cout << setprecision(3) << cmdline_options << "\n";
         throw string("help");
@@ -136,4 +122,18 @@ void handle_cmd_line(int ac, char* av[], Sim_Param& sim){
             cout << "Cannot open config file '" << config_file << "'. Using default and command lines values.\n";
         }
     }
+
+    // !!!>>> THIS NEEDS TO BE AFTER ALL CALLS TO NOTIFY() <<<!!!
+
+    #ifdef TEST
+    cout << ">>> Debug: Sim_Param initialization\n";
+    cout << "\ttransfer_function = " << trans_func_cmd << " --> " << static_cast<transfer_function_t>(trans_func_cmd) << "\n";
+    cout << "\tsim.cosmo.config.transfer_function_method = " << sim.cosmo.config.transfer_function_method << "\n";
+    #endif
+
+    sim.out_opt.print_z = print_z.v;
+    sim.cosmo.config.transfer_function_method = static_cast<transfer_function_t>(trans_func_cmd);
+    sim.cosmo.config.matter_power_spectrum_method = static_cast<matter_power_spectrum_t>(matter_pwr_cmd);
+    sim.cosmo.config.baryons_power_spectrum_method = static_cast<baryons_power_spectrum_t>(baryons_pwr_cmd);
+    sim.cosmo.config.mass_function_method = static_cast<mass_function_t>(mass_func_cmd);
 }
