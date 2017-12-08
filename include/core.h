@@ -89,6 +89,8 @@ template <typename T> bool operator>=(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs
  *			creates a mesh of N1*N2*N3 cells
  */
 
+// ignore following in SWIG wrapper
+#ifndef SWIG
 template <typename T>
 class Mesh_base
 {
@@ -217,6 +219,7 @@ public:
 	double &operator()(int i){ return velocity[i]; }
 	const double& operator()(int i) const{ return velocity[i]; }
 };
+#endif
 
 class Cosmo_Param
 {
@@ -314,9 +317,9 @@ struct Out_Opt {
     unsigned print_every, bins_per_decade, points_per_10_Mpc;
     std::vector<double> print_z; //< for which redshifts print output on top of print_every (optional)
     std::string out_dir; //< where to save output of the simulation
-    bool print_par_pos, print_dens, print_pwr, print_extrap_pwr, print_corr, print_emu_spec, print_emu_corr, print_vel_pwr;
+    bool print_par_pos, print_dens, print_pwr, print_extrap_pwr, print_corr, print_vel_pwr;
     /* derived param*/
-    bool get_rho, get_pwr, get_pk_extrap, get_emu_extrap;
+    bool get_rho, get_pwr, get_pk_extrap;
 };
 
 
@@ -409,9 +412,9 @@ void from_json(const nlohmann::json&, Out_Opt&);
  * @brief:	class containing data [x, y,...]
  */
 
- template <typename T, unsigned N>
- class Data_Vec
- {
+template <typename T, unsigned N>
+class Data_Vec
+{
 public:
     // CONSTRUCTORS
     Data_Vec() = default;
@@ -443,8 +446,11 @@ public:
     void fill(const T& val){
         for (auto &vec : data) std::fill(vec.begin(), vec.end(), val);
     }
- };
- 
+};
+
+// ignore following in SWIG wrapper
+#ifndef SWIG
+
 #include "core_power.h"
 
 /**
@@ -539,7 +545,7 @@ public:
  * @brief:	class containing variables for modified Frozen-potential approximation
  */
 
- class App_Var_FP_mod: public App_Var<Particle_v>
+class App_Var_FP_mod: public App_Var<Particle_v>
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR
@@ -549,3 +555,4 @@ public:
     LinkedList linked_list;
     Interp_obj fs_interp;
 };
+#endif

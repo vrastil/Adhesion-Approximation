@@ -6,8 +6,6 @@
  
 #include "stdafx.h"
 #include "core.h"
-#include "emu.h"
-
 
 void norm_pwr(Cosmo_Param& cosmo);
 double norm_growth_factor(const Cosmo_Param& cosmo);
