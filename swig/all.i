@@ -18,6 +18,8 @@
 %include "std_vector.i"
 %include "std_map.i"
 
+%template(vectord) std::vector<double>;
+
 // Individual headers
 %include "core.i"
 %include "power.i"

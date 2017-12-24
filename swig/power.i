@@ -13,3 +13,5 @@
 }
 %template(gen_corr_func_binned_gsl_qawf) gen_corr_func_binned_gsl_qawf<Extrap_Pk>;
 %template(gen_corr_func_binned_gsl_qawf) gen_corr_func_binned_gsl_qawf<Extrap_Pk_Nl>;
+%template(Extrap_Pk_Nl) Extrap_Pk_Nl::Extrap_Pk_Nl<2>;
+%template(Extrap_Pk_Nl) Extrap_Pk_Nl::Extrap_Pk_Nl<3>;

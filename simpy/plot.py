@@ -1,3 +1,6 @@
+"""
+'plot.py' modules serves for plotting results
+"""
 import math
 import matplotlib
 matplotlib.use('Agg')
@@ -7,313 +10,137 @@ import matplotlib.gridspec as gridspec
 import matplotlib.cm as cm
 from matplotlib.colors import SymLogNorm
 from matplotlib.ticker import FormatStrFormatter
-# from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
-from scipy import interpolate
-from scipy.integrate import quad
-from scipy.misc import derivative
 
-from . import get_files_in_traverse_dir
+from . import power
 
+matplotlib.rcParams['legend.numpoints'] = 1
 matplotlib.rcParams.update({'font.size': 15})
 
-def trans_fce(k, Omega_m=1, h=0.67, q_log=2.34, q_1=3.89, q_2=16.2, q_3=5.47, q_4=6.71):
-    if k == 0:
-        return 1
-    q = k / (Omega_m * h)
-    tmp_log = np.log(1 + q_log * q) / (q_log * q)
-    tmp_pol = 1 + q_1 * q + (q_2 * q)**2 + (q_3 * q)**3 + (q_4 * q)**4
-    return tmp_log * tmp_pol**(-1. / 4)
-
-
-def hubble_param(a, cosmo):
-    Om = cosmo["Omega_b"] + cosmo["Omega_c"]
-    OL = 1 - Om
-    return np.sqrt(Om * abs(a)**(-3) + OL)
-
-
-def growth_factor(a, cosmo=None):
-    if cosmo is None:
-        return a
-    if a == 0:
-        return 0
-
-    def f(a_, cosmo_): return (a_ * hubble_param(a_, cosmo_))**(-3)
-    D, err = quad(f, 0, a, args=(cosmo,))
-    if "D_norm" not in cosmo:
-        cosmo["D_norm"], err = quad(f, 0, 1, args=(cosmo,))
-    return np.sign(a) * D * hubble_param(a, cosmo) / cosmo["D_norm"]
-
-
-def growth_change(a, cosmo=None):
-    if cosmo is None:
-        return 1
-    return derivative(growth_factor, a, dx=1e-6, args=(cosmo,))
-
-
-def pwr_spec_prim(k, A=187826, n=1):
-    return A * k**n
-
-
-def pwr_spec(k, cosmo, ccl_cosmo=None, z=0, q_log=2.34, q_1=3.89, q_2=16.2, q_3=5.47, q_4=6.71):
-    supp = np.exp(-k * k / cosmo["smoothing_k"]) if cosmo["smoothing_k"] else 1
-    a = 1. / (z + 1.)
-    supp *= growth_factor(a, cosmo)**2
-    if ccl_cosmo is None:
-        A, n, Omega_m, h = cosmo["A"], cosmo["index"], cosmo["Omega_m"], cosmo["h"]
-        P_prim = pwr_spec_prim(k, A=A, n=n)
-        T_k = trans_fce(k, Omega_m=Omega_m, h=h, q_log=q_log,
-                        q_1=q_1, q_2=q_2, q_3=q_3, q_4=q_4)
-        return supp * P_prim * T_k**2
-    else:
-        import pyccl as ccl
-        return supp * ccl.linear_matter_power(ccl_cosmo, k * cosmo["h"], 1.) * cosmo["h"]**3
-
-
-def plot_pwr_spec(pwr_spec_files, zs, a_sim_info, pwr_spec_files_extrap=None, pwr_spec_files_emu=None,
-                  out_dir='auto', pk_type='dens', save=True, show=False):
-    if out_dir == 'auto':
-        out_dir = a_sim_info.res_dir
-    if pk_type == "dens":
-        out_file = 'pwr_spec.png'
-        suptitle = "Power spectrum"
-    elif pk_type == "vel":
-        out_file = 'vel_pwr_spec.png'
-        suptitle = r"Power spectrum $(\nabla\cdot u)$"
-    fig = plt.figure(figsize=(15, 11))
-    ax = plt.gca()
-    plt.yscale('log')
-    plt.xscale('log')
-
-    a_end = 1 / (1 + zs[-1])
+def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True):
+    """ Generator: iterate through data in list 'iterables'
+    yield list of values when a_i > a_slice*a_i-1 and a_i < a_slice*a_end
+    stops when a_i > a_end, a_end is the last value in zs, if not specified
+    return string representation of z; 'z = ' + str(zs[i]); or 'init'
+    """
+    if a_end is None:
+        a_end = 1./(zs[-1]+1)
     a_ = 0
-    lab = 'init'
-    init_idx_cor = 0  # if there is pwr_spec file 'init', extrap files have one file less
-    for i, pwr in enumerate(pwr_spec_files):
-        if zs[i] != 'init':
-            a = 1 / (1 + zs[i])
-            if ((a < 1.5 * a_) or (1.5 * a > a_end)) and a != a_end:
-                continue
-            a_ = a
-            lab = 'z = ' + str(zs[i])
-        else:
-            init_idx_cor += 1
-
-        data = np.loadtxt(pwr)
-        k, P_k = data[:, 0], data[:, 1]
-        plt.plot(k, P_k, 'o', ms=3, label=lab)
-        del k, P_k, data
-
-        if pwr_spec_files_extrap is not None and zs[i] != 'init':
-            data = np.loadtxt(pwr_spec_files_extrap[i - init_idx_cor])
-            k, P_k = data[:, 0], data[:, 1]
-            plt.plot(k, P_k, 'k--')
-            del k, P_k, data
-
-    if pwr_spec_files_emu is not None:
-        data = np.loadtxt(pwr_spec_files_emu[-1])
-        k, P_k = data[:, 0], data[:, 1]
-        plt.plot(k, P_k, '-')
-        del k, P_k, data
-
-    if a_sim_info.k_nyquist is not None:
-        ls = [':', '-.', '--']
-        ls *= (len(a_sim_info.k_nyquist) - 1) / 3 + 1
-        ls = iter(ls)
-        val_lab = {}
-        for key, val in a_sim_info.k_nyquist.iteritems():
-            if val in val_lab:
-                val_lab[val] += ",\n" + " " * 8 + key
-            else:
-                val_lab[val] = r"$k_{Nq}$ (" + key
-        for val, lab in val_lab.iteritems():
-            ax.axvline(val, ls=next(ls), c='k', label=lab + r")")
-
-    data = np.loadtxt(pwr_spec_files[-1])
-    k = data[:, 0]
-    k = np.logspace(np.log10(k[0]), np.log10(k[-1]), num=50)
-    del data
-
-    if pk_type == "dens":
-        P_0 = [pwr_spec(k_, a_sim_info.cosmo,
-                        ccl_cosmo=a_sim_info.ccl_cosmo, z=zs[-1]) for k_ in k]
-        P_i = [pwr_spec(k_, a_sim_info.cosmo, ccl_cosmo=a_sim_info.ccl_cosmo,
-                        z=zs[init_idx_cor]) for k_ in k]
-        plt.plot(k, P_0, '-')
-        plt.plot(k, P_i, '-')
-    elif pk_type == "vel":
-        P_0 = [pwr_spec(k_, a_sim_info.cosmo,
-                        ccl_cosmo=a_sim_info.ccl_cosmo, z=0) for k_ in k]
-        a_0 = 1. / (zs[init_idx_cor] + 1.)
-        a_i = 1. / (zs[-1] + 1.)
-        P_i = np.array(P_0) * growth_change(a_i, a_sim_info.cosmo)**2
-        P_0 = np.array(P_0) * growth_change(a_0, a_sim_info.cosmo)**2
-        plt.plot(k, P_i, '-')
-        plt.plot(k, P_0, '-')
-
-    fig.suptitle(suptitle, y=0.99, size=20)
-    plt.xlabel(r"$k [h/$Mpc$]$", fontsize=15)
-    plt.ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=15)
-
-    # LEGEND manipulation
-    handles, labels = ax.get_legend_handles_labels()
-    hl = sorted(zip(handles, labels), key=lambda x: x[1], reverse=True)
-    handles, labels = zip(*hl)
-    # pade_lab_index = labels.index("Pade app.")
-    # labels.insert(-1, labels.pop(pade_lab_index))
-    # handles.insert(-1, handles.pop(pade_lab_index))
-    plt.legend(handles, labels, loc='upper left',
-               bbox_to_anchor=(1.0, 1.0), fontsize=14)
-
-    plt.draw()
-    plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
-                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
-
-    if save:
-        plt.savefig(out_dir + out_file)
-    if show:
-        plt.show()
-    plt.close(fig)
-
-def plot_pwr_spec_stacked(data_list, zs, a_sim_info, Pk_list_extrap=None, Pk_nl_list=None,
-                          out_dir='auto', pk_type='dens', save=True, show=False):
-    if out_dir == 'auto':
-        out_dir = a_sim_info.res_dir
-    if pk_type == "dens":
-        out_file = 'pwr_spec.png'
-        suptitle = "Power spectrum"
-    elif pk_type == "vel":
-        out_file = 'vel_pwr_spec.png'
-        suptitle = r"Power spectrum $(\nabla\cdot u)$"
-    fig = plt.figure(figsize=(15, 11))
-    ax = plt.gca()
-    plt.yscale('log')
-    plt.xscale('log')
-
-    a_end = 1. / (1. + zs[-1])
-    a_ = 0
-    
-    data_it = iter(data_list)
-    Pk_lin_it = iter(Pk_list_extrap)
-    Pk_nl_it = iter(Pk_nl_list)
-
+    my_it = [iter(x) for x in iterables]
     for z in zs:
-        k, P_k, P_k_std = next(data_it)
-        Pk_lin = next(Pk_lin_it)
-        Pk_nl = next(Pk_nl_it) if z <= 2.02 or z == 'init' else None
-
+        values = [next(x) for x in my_it]
         if z != 'init':
-            a = 1. / (1. + z)
-            if ((a < 1.5 * a_) or (1.5 * a > a_end)) and a != a_end:
+            a = 1./(1.+z)
+            if ((a < a_slice * a_) or (a_slice * a > a_end)) and a != a_end:
                 continue
+            elif a > a_end:
+                raise StopIteration()
             a_ = a
             lab = 'z = ' + str(z)
+        elif skip_init:
+            continue
+        yield [lab] + values
+
+def close_fig(filename, fig, save=True, show=False):
+    """save and/or show figure, close figure"""
+    if save:
+        fig.savefig(filename)
+    if show:
+        plt.show()
+    fig.clf()
+    plt.close(fig)
+
+def add_nyquist_info(ax, a_sim_info):
+    """plot lines corresponding to particle, potential and analys nyquist wavelengtsh"""
+    ls = iter([':', '-.', '--'])
+    val_lab = {}
+    for key, val in a_sim_info.k_nyquist.iteritems():
+        if val in val_lab:
+            val_lab[val] += ",\n" + " " * 8 + key
         else:
-            continue # <<< do not plot init power spectra, feel free to turn on
-            lab = 'init'
-        
-        if a_ != a_end:
-            Pk_nl = None # <<< do not plot non-linear power spectra, except at the end of simulation
+            val_lab[val] = r"$k_{Nq}$ (" + key
+    for val, lab in val_lab.iteritems():
+        ax.axvline(val, ls=next(ls), c='k', label=lab + r")")
 
-        # plt.errorbar(k, P_k, yerr=P_k_std, fmt='o', ms=3, label=lab)
-        plt.plot(k, P_k, 'o', ms=3, label=lab)
-        plt.fill_between(k, P_k - P_k_std, P_k + P_k_std,
-                         facecolor='darkgrey', alpha=0.5)
-
-        if Pk_lin is not None:
-            plt.plot(k, [Pk_lin(k_) for k_ in k], 'k--')
-        
-        if Pk_nl is not None:
-            plt.plot(k, [Pk_nl(k_) for k_ in k], '-')
-
-        del k, P_k, P_k_std
-
-    if a_sim_info.k_nyquist is not None:
-        ls = [':', '-.', '--']
-        ls *= (len(a_sim_info.k_nyquist) - 1) / 3 + 1
-        ls = iter(ls)
-        val_lab = {}
-        for key, val in a_sim_info.k_nyquist.iteritems():
-            if val in val_lab:
-                val_lab[val] += ",\n" + " " * 8 + key
-            else:
-                val_lab[val] = r"$k_{Nq}$ (" + key
-        for val, lab in val_lab.iteritems():
-            ax.axvline(val, ls=next(ls), c='k', label=lab + r")")
-
-    data = data_list[-1]
-    k = data[0]
-    k = np.logspace(np.log10(k[0]), np.log10(k[-1]), num=50)
-    del data
-
+def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False, out_dir='auto',
+                  pk_type='dens', save=True, show=False):
+    """" Plot power spectrum -- points and extrapolated values,
+    show 'true' linear Pk at the initial and final redshift """
+    if out_dir == 'auto':
+        out_dir = a_sim_info.res_dir
     if pk_type == "dens":
-        z0 = zs[0] if zs[0] != "init" else zs[1]
-        P_0 = [pwr_spec(k_, a_sim_info.cosmo,
-                        ccl_cosmo=a_sim_info.ccl_cosmo, z=zs[-1]) for k_ in k]
-        P_i = [pwr_spec(k_, a_sim_info.cosmo,
-                        ccl_cosmo=a_sim_info.ccl_cosmo, z=z0) for k_ in k]
-        plt.plot(k, P_0, '-')
-        plt.plot(k, P_i, '-')
+        out_file = 'pwr_spec.png'
+        suptitle = "Power spectrum"
     elif pk_type == "vel":
-        P_0 = [pwr_spec(k_, a_sim_info.cosmo,
-                        ccl_cosmo=a_sim_info.ccl_cosmo, z=0) for k_ in k]
-        a_0 = 1. / (zs[0] + 1.)
-        a_i = 1. / (zs[-1] + 1.)
-        P_i = np.array(P_0) * growth_change(a_i, a_sim_info.cosmo)**2
-        P_0 = np.array(P_0) * growth_change(a_0, a_sim_info.cosmo)**2
-        plt.plot(k, P_i, '-')
-        plt.plot(k, P_0, '-')
+        out_file = 'vel_pwr_spec.png'
+        suptitle = r"Power spectrum $(\nabla\cdot u)$"
+    fig = plt.figure(figsize=(15, 11))
+    ax = plt.gca()
+    ax.set_yscale('log')
+    ax.set_xscale('log')
 
+    for lab, Pkk, Pk_ext in iter_data(zs, [data, Pk_list_extrap]):
+        k, P_k = Pkk[0], Pkk[1]
+        ax.plot(k, P_k, 'o', ms=3, label=lab)
+        # show 1 standard deviation
+        if err:
+            P_k_std = Pkk[2]
+            ax.fill_between(k, P_k - P_k_std, P_k + P_k_std,
+                             facecolor='darkgrey', alpha=0.5)
+        k = np.geomspace(k[0]/5,k[-1]) # extra half a decade for lin-/nl-/extrpolated-pk
+        ax.plot(k, [Pk_ext(k_) for k_ in k], 'k--')
+
+    add_nyquist_info(ax, a_sim_info)
+
+    # plot non/linear power spectra
+    a_0 = 1./(1.+zs[-1])
+    a_i = 1./(1.+zs[0]) if zs[0] != 'init' else 1./(1.+zs[1])
+    P_i = power.lin_pow_spec(a_i, k, a_sim_info.sim.cosmo)
+    P_0 = power.lin_pow_spec(a_0, k, a_sim_info.sim.cosmo)
+    if pk_type == "dens":
+        P_0_nl = power.non_lin_pow_spec(a_0, k, a_sim_info.sim.cosmo)
+        ax.plot(k, P_0_nl, '-')
+    elif pk_type == "vel":
+        P_i *= power.growth_change(a_i, a_sim_info.sim.cosmo)**2
+        P_0 *= power.growth_change(a_0, a_sim_info.sim.cosmo)**2
+    ax.plot(k, P_0, '-')
+    ax.plot(k, P_i, '-')
+    
     fig.suptitle(suptitle, y=0.99, size=20)
-    plt.xlabel(r"$k [h/$Mpc$]$", fontsize=15)
-    plt.ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=15)
+    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=15)
+    ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=15)
 
     # LEGEND manipulation
+    #handles, labels = zip(*sorted(zip(*ax.get_legend_handles_labels()), key=lambda x: x[1], reverse=True))
     handles, labels = ax.get_legend_handles_labels()
-    hl = sorted(zip(handles, labels), key=lambda x: x[1], reverse=True)
-    handles, labels = zip(*hl)
-    # pade_lab_index = labels.index("Pade app.")
-    # labels.insert(-1, labels.pop(pade_lab_index))
-    # handles.insert(-1, handles.pop(pade_lab_index))
     plt.legend(handles, labels, loc='upper left',
                bbox_to_anchor=(1.0, 1.0), fontsize=14)
-
     plt.draw()
     plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
 
-    if save:
-        plt.savefig(out_dir + out_file)
-    if show:
-        plt.show()
-    plt.close(fig)
+    close_fig(out_dir + out_file, fig, save=save, show=show)
 
 
-def plot_corr_func_from_data_single(corr_data, z, a_sim_info, corr_data_lin=None, corr_data_emu=None, out_dir='auto', save=True, show=False):
+def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_data_nl=None, out_dir='auto', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
-
+    z_out = lab if lab == 'init' else 'z' + lab[4:]
     # *****************
     # first plot, xi(r)
     # *****************
     fig = plt.figure(figsize=(15, 11))
-    if z == 'init':
-        lab = z
-        z_out = z
-    else:
-        lab = 'z = ' + str(z)
-        z_out = 'z%.2f' % z
+    
     # load all data, plot xi(r)
-    r, xi = corr_data[0], corr_data[1]
+    r, xi = corr_data
     plt.plot(r, xi, 'o', ms=3, label=lab)
     if corr_data_lin is not None:
-        r_lin, xi_lin = corr_data_lin[0], corr_data_lin[1]
+        r_lin, xi_lin = corr_data_lin
         plt.plot(r_lin, xi_lin, '-', label=r"$\Lambda$CDM (lin)")
-    if corr_data_emu is not None:
-        r_emu, xi_emu = corr_data_emu[0], corr_data_emu[1]
-        plt.plot(r_emu, xi_emu, '-', label=r"$\Lambda$CDM (emu)")
+    if corr_data_nl is not None:
+        r_nl, xi_nl = corr_data_nl
+        plt.plot(r_nl, xi_nl, '-', label=r"$\Lambda$CDM (nl)")
     # adjust figure, labels
     fig.suptitle("Correlation function", y=0.99, size=20)
     plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
@@ -326,11 +153,7 @@ def plot_corr_func_from_data_single(corr_data, z, a_sim_info, corr_data_lin=None
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
     # save & show (in jupyter)
-    if save:
-        plt.savefig(out_dir + 'corr_func_%s.png' % z_out)
-    if show:
-        plt.show()
-    plt.close(fig)
+    close_fig(out_dir + 'corr_func_%s.png' % z_out, fig, save=save, show=show)
 
     # **********************
     # second plot, r*r*xi(r)
@@ -341,9 +164,9 @@ def plot_corr_func_from_data_single(corr_data, z, a_sim_info, corr_data_lin=None
     if corr_data_lin is not None:
         plt.plot(r_lin, r_lin * r_lin * xi_lin,
                  '-', label=r"$\Lambda$CDM (lin)")
-    if corr_data_emu is not None:
-        plt.plot(r_emu, r_emu * r_emu * xi_emu,
-                 '-', label=r"$\Lambda$CDM (emu)")
+    if corr_data_nl is not None:
+        plt.plot(r_nl, r_nl * r_nl * xi_nl,
+                 '-', label=r"$\Lambda$CDM (nnl)")
     # adjust figure, labels
     fig.suptitle("Correlation function", y=0.99, size=20)
     plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
@@ -355,44 +178,14 @@ def plot_corr_func_from_data_single(corr_data, z, a_sim_info, corr_data_lin=None
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
     # save & show (in jupyter)
-    if save:
-        plt.savefig(out_dir + 'corr_r2_func_%s.png' % z_out)
-    if show:
-        plt.show()
-    plt.close(fig)
-
+    close_fig(out_dir + 'corr_r2_func_%s.png' % z_out, fig, save=save, show=show)
 
 # correlation function stacked data, linear and emu corr. func in files
-def plot_corr_func_from_data(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, show=False):
-
-    a_end = 1. / (1. + zs[-1])
-    a_ = 0
-
-    corr_par_it = iter(corr_data_all['par'])
-    corr_lin_it= iter(corr_data_all['lin'])
-    corr_emu_it = iter(corr_data_all['emu'])
-
-    for z in zs:
-        corr_par = next(corr_par_it)
-        corr_lin = next(corr_lin_it)
-        corr_emu = next(corr_emu_it) if z <= 2.02 or z == 'init' else None
-        if z != 'init':
-            a = 1. / (1. + z) 
-            # no need to plot EVERY correlation function
-            if a < 2 * a_ and z > 1 and a != a_end:
-                continue
-            a_ = a
-
-        plot_corr_func_from_data_single(
-            corr_par, z, a_sim_info, corr_lin, corr_emu, out_dir, save, show)
-
-
-# correlation function directly from simulation, no stacking, all data in files
-def plot_corr_func(corr_func_files, zs, a_sim_info, corr_func_files_lin=None, corr_func_files_emu=None, zs_emu=None, out_dir='auto', save=True, show=False):
-    corr_data_list = [np.transpose(np.loadtxt(
-        corr_func_files[i])) for i in xrange(len(zs))]
-    plot_corr_func_from_data(corr_data_list, zs, a_sim_info, corr_func_files_lin,
-                             corr_func_files_emu, zs_emu, out_dir, save, show)
+def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, show=False):
+    for lab, corr_par, corr_lin, corr_nl in iter_data(zs, [corr_data_all['par'],
+                                                      corr_data_all['lin'], corr_data_all['nl']]):
+        plot_corr_func_single(
+            corr_par, lab, a_sim_info, corr_lin, corr_nl, out_dir, save, show)
 
 
 def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='', save=True, show=False):
@@ -405,66 +198,34 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
         out_file = 'vel_pwr_spec_diff'
         suptitle = r"Power spectrum difference $(\nabla\cdot u)$"
 
-    if ext_title == 'input':
-        ext_title = ' (ref: input)'
-        out_file += '_input'
-    if ext_title == 'hybrid':
-        ext_title = ' (ref: hybrid)'
-        out_file += '_hybrid'
-    if ext_title == 'par':
-        ext_title = ' (ref: particle)'
-        out_file += '_par'
-    out_file += '.png'
-    suptitle += ext_title
+    out_file += '_%s.png' % ext_title
+    suptitle += ' (ref: %s)' % ext_title
 
     fig = plt.figure(figsize=(15, 11))
     ax = plt.gca()
     plt.xscale('log')
 
+    ymin = ymax = 0
     # SMALL / MEDIUM / LARGE SCALE VALUES
-    k = data_list[-1][0]
     # half of nyquist wavelength, 7 subintervals
+    k = data_list[-1][0]
     idx = (np.abs(k - 0.5 * a_sim_info.k_nyquist["particle"])).argmin() / 7
     cmap = cm.get_cmap('gnuplot')
     ax.axvspan(k[0 * idx], k[1 * idx], alpha=0.2, color=cmap(0.1))
     ax.axvspan(k[3 * idx], k[4 * idx], alpha=0.3, color=cmap(0.5))
     ax.axvspan(k[6 * idx], k[7 * idx], alpha=0.4, color=cmap(0.9))
-    del k
 
-    a_end = 1 / (1 + zs[-1])
-    a_ = 0
-    ymin = ymax = 0
-    for i, data in enumerate(data_list):
-        a = 1 / (1 + zs[i])
-        if ((a < 1.5 * a_) or (1.5 * a > a_end)) and a != a_end:
-            continue
-        a_ = a
-        lab = 'z = ' + str(zs[i])
+    for lab, data in iter_data(zs, [data_list]):
         k, P_k = data[0], data[1]
-        try:
-            P_k_std = data[2]
-        except IndexError:
-            plt.plot(k, P_k, 'o', ms=3, label=lab)
+        if len(data) == 3:
+            plt.errorbar(k, P_k, fmt='o', yerr=data[2], ms=3, label=lab)
         else:
-            plt.errorbar(k, P_k, fmt='o', yerr=P_k_std, ms=3, label=lab)
-            del P_k_std
-
+            plt.plot(k, P_k, 'o', ms=3, label=lab)
+            
         ymax = max(ymax, np.max(P_k[0:7 * idx]))
         ymin = min(ymin, np.min(P_k[0:7 * idx]))
-        del k, P_k
 
-    if a_sim_info.k_nyquist is not None:
-        ls = [':', '-.', '--']
-        ls *= (len(a_sim_info.k_nyquist) - 1) / 3 + 1
-        ls = iter(ls)
-        val_lab = {}
-        for key, val in a_sim_info.k_nyquist.iteritems():
-            if val in val_lab:
-                val_lab[val] += ",\n" + " " * 8 + key
-            else:
-                val_lab[val] = r"$k_{Nq}$ (" + key
-        for val, lab in val_lab.iteritems():
-            ax.axvline(val, ls=next(ls), c='k', label=lab + r")")
+    add_nyquist_info(ax, a_sim_info)
 
     if ymax > 1:
         ymax = 1
@@ -482,14 +243,11 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
     plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
-    if save:
-        plt.savefig(out_dir + out_file)
-    if show:
-        plt.show()
-    plt.close(fig)
+
+    close_fig(out_dir + out_file, fig, save=save, show=show)
 
 
-def plot_pwr_spec_diff_map_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='', save=True, show=False):
+def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if pk_type == "dens":
@@ -499,17 +257,8 @@ def plot_pwr_spec_diff_map_from_data(data_list, zs, a_sim_info, out_dir='auto', 
         out_file = 'vel_pwr_spec_diff'
         suptitle = r"Power spectrum difference $(\nabla\cdot u)$"
 
-    if ext_title == 'input':
-        ext_title = ' (ref: input)'
-        out_file += '_input'
-    if ext_title == 'hybrid':
-        ext_title = ' (ref: hybrid)'
-        out_file += '_hybrid'
-    if ext_title == 'par':
-        ext_title = ' (ref: particle)'
-        out_file += '_par'
-    out_file += '_map.png'
-    suptitle += ext_title
+    out_file += '_%s_map.png' % ext_title
+    suptitle += ' (ref: %s)' % ext_title
 
     fig = plt.figure(figsize=(10, 10))
     gs = gridspec.GridSpec(1, 15, wspace=0.5)
@@ -521,45 +270,6 @@ def plot_pwr_spec_diff_map_from_data(data_list, zs, a_sim_info, out_dir='auto', 
     # hack around pcolormesh plotting edges
     da = (a[-1] - a[0]) / (len(a) - 1)
     a = np.array([a[0]-da/2] + [1 / (1 + z) + da/2 for z in zs])
-    # check if all zs have the same lengths
-    try:
-        data_array = np.array(data_list)
-    except ValueError:
-        print '\t\tData in data_list have different shapes. Trying to cut...'
-        # convert to list so elements can be deleted
-        data_list = [np.array(data).tolist() for data in data_list]
-        del_num = 0
-        j = 0
-        while True:
-            k_row = [data[0][j] for data in  data_list]
-            k_max = np.max(k_row)
-            for ik, k in  enumerate(k_row):
-                k_ = k
-                while not np.isclose(k_, k_max, rtol=1.e-5, atol=1.e-5) and k_ < k_max :
-                    # remove k, Pk if not the same, look for first close
-                    if j == len(data_list[ik][0]):
-                        break
-                    del_num += 1
-                    del data_list[ik][0][j]
-                    del data_list[ik][1][j]
-                    try:
-                        del data_list[ik][2][j]
-                    except IndexError:
-                        pass
-                    # look at the next k
-                    k_ = data_list[ik][0][j]
-            
-            j += 1
-            # check if j is length of ALL arrays
-            for x in data_list:
-                if len(x[0]) != j:
-                    break
-            else:
-                break
-        if del_num:
-            print "\t\tDeleted %i excess values." % (del_num)
-        data_array = np.array(data_list)
-
     k = data_array[0][0]
     supp = data_array[:, 1, :] # extract Pk, shape = (zs, k)
     im = ax.pcolormesh(k, a, supp, cmap='seismic', norm=SymLogNorm(linthresh=0.2, linscale=1.0,
@@ -583,19 +293,8 @@ def plot_pwr_spec_diff_map_from_data(data_list, zs, a_sim_info, out_dir='auto', 
     plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
-    if save:
-        plt.savefig(out_dir + out_file)
-    if show:
-        plt.show()
-    plt.close(fig)
 
-
-def plot_pwr_spec_diff(pwr_spec_diff_files, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='', save=True, show=False):
-    data_list = [np.transpose(np.loadtxt(a_file))
-                 for a_file in pwr_spec_diff_files]
-    plot_pwr_spec_diff_from_data(
-        data_list, zs, a_sim_info, out_dir, pk_type, ext_title, save, show)
-
+    close_fig(out_dir + out_file, fig, save=save, show=show)
 
 def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, scale='', show_k_lms=False, res=None):
     fig = plt.figure(figsize=(15, 11))
@@ -642,14 +341,10 @@ def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, scale='', 
     plt.ylabel(ylabel, fontsize=25)
     plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
     plt.subplots_adjust(left=0.1, right=0.7, bottom=0.1, top=0.89)
-    if save:
-        plt.savefig(out_dir + 'supp.png')
-    if show:
-        plt.show()
-    plt.close(fig)
+    close_fig(out_dir + 'supp.png', fig, save=save, show=show)
 
 
-def plot_dens_histo(dens_bin_files, zs, a_sim_info, out_dir='auto', fix_N=1, fix_rho=0.0, save=True, show=False):
+def plot_dens_histo(data_list, zs, a_sim_info, out_dir='auto', fix_N=1, fix_rho=0.0, save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     num_sub_x = 3
@@ -659,34 +354,24 @@ def plot_dens_histo(dens_bin_files, zs, a_sim_info, out_dir='auto', fix_N=1, fix
     gs = gridspec.GridSpec(num_sub_y, num_sub_x, wspace=0.2,
                            hspace=0.3, left=0.1, right=0.84, bottom=0.1, top=0.89)
 
-    for i, rho_fl in enumerate(dens_bin_files):
-        lab = 'z = ' + str(zs[i])
-        data = np.loadtxt(rho_fl)
-        rho, count = data[:, 0], data[:, 1]
+    for lab, data, gs_cur in iter_data(zs, [data_list, gs]):
+        rho, count = data
         count *= fix_N
         rho += fix_rho
         xmin = -1
         xmax = rho[np.nonzero(count)[0][-1]] + 1
-        ax = plt.subplot(gs[i])
-        # plt.subplot(num_sub_y, num_sub_x, i + 1)
+        ax = plt.subplot(gs_cur)
         ax.set_xlim(xmin=xmin, xmax=xmax)
         ax.hist(rho, bins=20, weights=count, facecolor='green',
                 edgecolor='black', linewidth=0.8, normed=True)
         ax.set_yscale('log', nonposy='clip')
         ax.set_title(lab)
-        del rho, count, data
 
     fig.suptitle("Overdensity distribution", y=0.99, size=20)
 
     plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    # plt.subplots_adjust(wspace=0.2, hspace=0.3)
-    # plt.subplots_adjust(wspace=0.2, hspace=0.3, left=0.1, right=0.84, top=0.9)
-    if save:
-        plt.savefig(out_dir + 'dens_histo.png')
-    if show:
-        plt.show()
-    plt.close(fig)
+    close_fig(out_dir + 'dens_histo.png', fig, save=save, show=show)
 
 
 def plot_par_last_slice(files, files_t, zs, a_sim_info, out_dir='auto', save=True, show=False):
@@ -720,11 +405,7 @@ def plot_par_last_slice(files, files_t, zs, a_sim_info, out_dir='auto', save=Tru
     ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=13)
     fig.suptitle("Slice through simulation box (particles), z = %.2f" %
                  zs[-1], y=0.99, size=20)
-    if save:
-        plt.savefig(out_dir + 'par_evol_last.png')
-    if show:
-        plt.show()
-    plt.close(fig)
+    close_fig(out_dir + 'par_evol_last.png', fig, save=save, show=show)
 
 
 def plot_par_evol(files, files_t, zs, a_sim_info, out_dir='auto', save=True):
@@ -779,9 +460,9 @@ def plot_par_evol(files, files_t, zs, a_sim_info, out_dir='auto', save=True):
         fig, animate, frames=2 * num, interval=250, blit=True)
     if save:
         ani.save(out_dir + 'par_evol.gif', writer='imagemagick')
-    plt.close(fig)
     del ani
-
+    fig.clf()
+    plt.close(fig)
 
 def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=False):
     if out_dir == 'auto':
@@ -805,12 +486,7 @@ def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=Fals
                  z, y=0.99, size=20)
     cbar = fig.colorbar(im, cax=cbar_ax, ticks=[-1, 0, 1, 10, 100])
     cbar.ax.set_yticklabels(['-1', '0', '1', '10', '> 100'])
-    if save:
-        plt.savefig(out_dir + 'dens_z%.2f.png' % z)
-    if show:
-        plt.show()
-    plt.close(fig)
-
+    close_fig(out_dir + 'dens_z%.2f.png' % z, fig, save=save, show=show)
 
 def plot_dens_two_slices(files, zs, a_sim_info, out_dir='auto', save=True, show=False):
     half = len(files) / 2
@@ -859,11 +535,12 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir='auto', save=True):
         fig, animate, frames=2 * num, interval=250, blit=True)
     if save:
         ani.save(out_dir + 'dens_evol.gif', writer='imagemagick')
-    plt.close(fig)
     del ani
+    fig.clf()
+    plt.close(fig)
 
 
-def plot_supp_lms(supp_lms, a, a_sim_info, k_lms, supp_std_lms, out_dir='auto', pk_type='dens', suptitle='', save=True, show=False):
+def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle='', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if pk_type == "dens":
@@ -874,17 +551,12 @@ def plot_supp_lms(supp_lms, a, a_sim_info, k_lms, supp_std_lms, out_dir='auto', 
         suptitle = r"Power spectrum suppression $(\nabla\cdot u)$"
     fig = plt.figure(figsize=(15, 11))
     ax = plt.gca()
-    supp_l, supp_m, supp_s = supp_lms
-    supp_large_std, supp_medium_std, supp_small_std = supp_std_lms
-    k_l, k_m, k_s = k_lms
-
     cmap = cm.get_cmap('gnuplot')
-    ax.errorbar(a, supp_l, fmt='-o', yerr=supp_large_std, ms=3, color=cmap(0.1), lw=4,
-                 label='Large-scale:\n' r'$\langle%.2f,%.2f\rangle$' % (k_l[0], k_l[1]))
-    ax.errorbar(a, supp_m, fmt='-o', yerr=supp_medium_std, ms=3, color=cmap(0.5), lw=2.5,
-                 label='Medium-scale:\n'r'$\langle%.2f,%.2f\rangle$' % (k_m[0], k_m[1]))
-    ax.errorbar(a, supp_s, fmt='-o', yerr=supp_small_std, ms=3, color=cmap(0.9), lw=1,
-                 label='Small-scale:\n'r'$\langle%.2f,%.2f\rangle$' % (k_s[0], k_s[1]))
+
+    for i, scale in enumerate(['Large', 'Medium', 'Small']):
+        ax.errorbar(a, supp[i][0], fmt='-o', yerr=supp[i][1], ms=3,
+                    color=cmap(0.1+i*0.4), lw=4-i*1.5,
+                    label='%s-scale:\n' r'$\langle%.2f,%.2f\rangle$' % (scale, supp[i][2][0], supp[i][2][0]))
 
     ax.yaxis.grid(True)
     ymin, ymax = ax.get_ylim()
@@ -905,11 +577,7 @@ def plot_supp_lms(supp_lms, a, a_sim_info, k_lms, supp_std_lms, out_dir='auto', 
     plt.draw()
     plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    if save:
-        plt.savefig(out_dir + out_file)
-    if show:
-        plt.show()
-    plt.close(fig)
+    close_fig(out_dir + out_file, fig, save=save, show=show)
 
 
 def plot_all_single_supp(res, out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/supp_comparison/',
