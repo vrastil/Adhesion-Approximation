@@ -10,12 +10,13 @@ import json
 import os
 from .fastsim import Sim_Param
 
-RESULTS_KEYS = ["pwr_spec", "pwr_diff", "pwr_spec_supp", "dens_hist",
-                "vel_pwr_spec", "vel_pwr_diff", "vel_pwr_spec_supp",
+RESULTS_KEYS = ["pwr_spec", "pwr_diff", "pwr_diff_i", "pwr_diff_h",
+                "pwr_spec_supp", "pwr_spec_supp_map",
+                "dens_hist", "vel_pwr_spec", "vel_pwr_diff", "vel_pwr_spec_supp",
                 "par_slice", "par_ani", "dens_slice", "dens_ani", "corr_func"]
 
-RESULTS_KEYS_FILES = ["corr_files", "pwr_spec_files",
-                      "pwr_spec_diff_files"]
+RESULTS_KEYS_FILES = ["corr_files", "pwr_spec_files", "pwr_diff_files",
+                      "pwr_diff_files_i", "pwr_diff_files_h"]
 
 RESULTS_KEYS_STACK = RESULTS_KEYS + RESULTS_KEYS_FILES
 
@@ -112,13 +113,12 @@ class SimInfo(object):
             return not self.results[key] or key in rerun
 
     def done(self, key):
+        self.results[key] = True
         with open(self.file) as data_file:
             data = json.loads(data_file.read())
         if data["results"] is None:
             data["results"] = {}
-
         data["results"][key] = True
-
         with open(self.file, 'w') as outfile:
             json.dump(data, outfile, indent=2)
 
@@ -153,15 +153,11 @@ class StackInfo(SimInfo):
             self.box_opt["mesh_num"], self.box_opt["par_num"],
             self.box_opt["mesh_num_pwr"], self.box_opt["box_size"])
         self.file = self.dir + 'stack_info.json'
-        self.pwr_dir = self.dir + "pwr_spec/"
-        self.pwr_diff_dir = self.dir + "pwr_diff/"
-        self.corr_dir = self.dir + "corr_func/"
         self.res_dir = self.dir + 'results/'
 
         create_dir(self.dir)
-        create_dir(self.pwr_dir)
-        create_dir(self.pwr_diff_dir)
-        create_dir(self.corr_dir)
+        create_dir(self.dir + "pwr_spec/")
+        create_dir(self.dir + "pwr_diff/")
         create_dir(self.res_dir)
 
         self.seeds = [SI.run_opt["seed"] for SI in self]
@@ -180,7 +176,7 @@ class StackInfo(SimInfo):
 
     def save(self):
         data = self.__dict__.copy()
-        for key in ('ccl_cosmo', 'run_opt', 'out_dir', 'sim', 'group_sim_infos'):
+        for key in ('ccl_cosmo', 'run_opt', 'out_dir', 'res_dir', 'data', 'sim', '_sim', 'group_sim_infos'):
             data.pop(key, None)
         # overriding
         with open(self.file, 'w') as outfile:
@@ -189,9 +185,11 @@ class StackInfo(SimInfo):
 
 def compare(sim_info_1, sim_info_2):
     attributes = [a for a in dir(sim_info_1) if
-                  not a.startswith('__') and not callable(getattr(sim_info_1, a))
-                  and a != "results" and a != "out_dir" and a != "dir" and a != "file"
-                  and a != "res_dir" and a != "run_opt" and a != "ccl_cosmo"]
+                  not a.startswith('__') and a != "results" 
+                  and a != "out_dir" and a != "dir" and a != "file"
+                  and a != "run_opt" and a != "out_opt" and a != "res_dir"
+                  and a != "data" and a != "sim"  and a != "_sim"
+                  and not callable(getattr(sim_info_1, a))] #< last to avoid call to sim
     for att in attributes:
         att1 = getattr(sim_info_1, att)
         att2 = getattr(sim_info_2, att)

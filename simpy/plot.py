@@ -166,7 +166,7 @@ def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_d
                  '-', label=r"$\Lambda$CDM (lin)")
     if corr_data_nl is not None:
         plt.plot(r_nl, r_nl * r_nl * xi_nl,
-                 '-', label=r"$\Lambda$CDM (nnl)")
+                 '-', label=r"$\Lambda$CDM (nl)")
     # adjust figure, labels
     fig.suptitle("Correlation function", y=0.99, size=20)
     plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
