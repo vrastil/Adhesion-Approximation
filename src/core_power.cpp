@@ -258,15 +258,19 @@ double lin_pow_spec(double a, double k, const Cosmo_Param& cosmo)
     int status = 0;
     double pk = ccl_linear_matter_power(cosmo.cosmo, k*cosmo.h, a, &status)*pow(cosmo.h, 3);
     if (!status) return pk;
+    status = 0;
+    pk = ccl_linear_matter_power(cosmo.cosmo, k*cosmo.h, 1, &status)*pow(cosmo.h, 3);
+    double D = growth_factor(a, cosmo);
+    if (!status) return D*D*pk;
     throw_ccl(cosmo.cosmo, status);
 }
 
 double non_lin_pow_spec(double a, double k, const Cosmo_Param& cosmo)
 {
+    if (a < 1e-3) return lin_pow_spec(a, k, cosmo);
     int status = 0;
     double pk = ccl_nonlin_matter_power(cosmo.cosmo, k*cosmo.h, a, &status)*pow(cosmo.h, 3);
     if (!status) return pk;
-    throw_ccl(cosmo.cosmo, status);
 }
 
 static int get_nearest(const double val, const vector<double>& vec)
@@ -447,7 +451,8 @@ double Extrap_Pk::operator()(double k) const
             call 'operator()(k)' based on k_split (upper range of the linear)
  */
 
-Extrap_Pk_Nl::Extrap_Pk_Nl(const Data_Vec<double, 3>& data, const Sim_Param &sim, double A_nl, double a_eff):
+template<unsigned N>
+Extrap_Pk_Nl::Extrap_Pk_Nl(const Data_Vec<double, N>& data, const Sim_Param &sim, double A_nl, double a_eff):
     Pk_lin(data, sim), A_nl(A_nl), a_eff(a_eff), k_split(Pk_lin.k_max) {}
 
 
@@ -465,34 +470,22 @@ struct xi_integrand_param
     const P& P_k;
 };
 
-struct xi_integrand_param_lin
-{
-    double r;
-    const Cosmo_Param& cosmo;
-};
-
 /**
  * @brief integrand for correlation function when weight-function 'sin(kr)' is used in integration
  */
 template <class P>
-double xi_integrand_W(double k, void* params){
+static double xi_integrand_W(double k, void* params){
     xi_integrand_param<P>* my_par = (xi_integrand_param<P>*) params;
     const double r = my_par->r;
     const P& P_k = my_par->P_k;
     return 1/(2*PI*PI)*k/r*P_k(k);
 };
 
-double xi_integrand_W_lin(double k, void* params){
-    xi_integrand_param_lin* my_par = (xi_integrand_param_lin*) params;
-    const double r = my_par->r;
-    const double P_k = lin_pow_spec(1, k, my_par->cosmo);
-    return 1/(2*PI*PI)*k/r*P_k;
-};
 /**
  * @brief integrand for correlation function when non-weighted integration is used
  */
 template <class P>
-double xi_integrand_G(double k, void* params){
+static double xi_integrand_G(double k, void* params){
     xi_integrand_param<P>* my_par = (xi_integrand_param<P>*) params;
     const double r = my_par->r;
     double j0;
@@ -503,7 +496,7 @@ double xi_integrand_G(double k, void* params){
 };
 
 template <class P, class T> // both callable with 'operator()(double)'
-void gen_corr_func_binned_gsl(const Sim_Param &sim, const P& P_k, Data_Vec<double, 2>* corr_func_binned, T& xi_r)
+static void gen_corr_func_binned_gsl(const Sim_Param &sim, const P& P_k, Data_Vec<double, 2>* corr_func_binned, T& xi_r)
 {
     const double x_min = sim.other_par.x_corr.lower;
     const double x_max = sim.other_par.x_corr.upper;
@@ -523,46 +516,34 @@ void gen_corr_func_binned_gsl(const Sim_Param &sim, const P& P_k, Data_Vec<doubl
     }
 }
 
-template <class T>
-void gen_corr_func_binned_gsl_lin(const Sim_Param &sim, double a, Data_Vec<double, 2>* corr_func_binned, T& xi_r)
-{
-    const double x_min = sim.other_par.x_corr.lower;
-    const double x_max = sim.other_par.x_corr.upper;
+/**
+ * GSL_EPSABS - absolute error
+ * GSL_LIMIT -  max. number of subintervals for adaptive integration
+ * GSL_N - max. number of bisections of integration interval (QAWO / QAWF)
+ */
 
-    xi_integrand_param_lin my_param = {0, sim.cosmo};
-
-    const double lin_bin = 10./sim.out_opt.points_per_10_Mpc;
-    unsigned req_size = (unsigned)ceil((x_max - x_min)/lin_bin);
-    corr_func_binned->resize(req_size);
-
-    const double D2 = pow(growth_factor(a, sim.cosmo), 2);
-	double r;
-	for(unsigned i = 0; i < req_size; i++){
-        r = x_min + i*lin_bin;
-        my_param.r = r;
-        (*corr_func_binned)[0][i] = r;
-        (*corr_func_binned)[1][i] = D2*xi_r(r, &my_param);
-    }
-}
-
-#define EPSABS 1e-9
-#define EPSREL 1e-6
+constexpr double GSL_EPSABS = 1e-9;
+constexpr size_t GSL_LIMIT = 4000;
+constexpr size_t GSL_N = 50;
 
 template<class P> // everything callable P_k(k)
 void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<double, 2>* corr_func_binned)
 {
-    printf("Computing correlation function via GSL integration QAWF of extrapolated power spectrum...\n");
-
-    Integr_obj_qawf xi_r(&xi_integrand_W<P>, 0, EPSABS,  4000, 50);
+    printf("Computing correlation function via GSL integration QAWF...\n");
+    Integr_obj_qawf xi_r(&xi_integrand_W<P>, 0, GSL_EPSABS,  GSL_LIMIT, GSL_N);
     gen_corr_func_binned_gsl(sim, P_k, corr_func_binned, xi_r);
 }
 
 void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, double a, Data_Vec<double, 2>* corr_func_binned)
 {
-    printf("Computing correlation function via GSL integration QAWF of linear power spectrum...\n");
+    auto P_k = [&](double k){ return lin_pow_spec(a, k, sim.cosmo); };
+    gen_corr_func_binned_gsl_qawf(sim, P_k, corr_func_binned);
+}
 
-    Integr_obj_qawf xi_r(&xi_integrand_W_lin, 0, EPSABS,  4000, 50);
-    gen_corr_func_binned_gsl_lin(sim, a, corr_func_binned, xi_r);
+void gen_corr_func_binned_gsl_qawf_nl(const Sim_Param &sim, double a, Data_Vec<double, 2>* corr_func_binned)
+{
+    auto P_k = [&](double k){ return non_lin_pow_spec(a, k, sim.cosmo); };
+    gen_corr_func_binned_gsl_qawf(sim, P_k, corr_func_binned);
 }
 
 // maybe replace function templates by class template? better to maintain, less variability
@@ -586,6 +567,9 @@ template void Extrap_Pk::fit_power_law(const Data_Vec<double, 3>&, const unsigne
 
 template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk&, Data_Vec<double, 2>*);
 template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk_Nl&, Data_Vec<double, 2>*);
+
+template Extrap_Pk_Nl::Extrap_Pk_Nl(const Data_Vec<double, 2>&, const Sim_Param&, double, double);
+template Extrap_Pk_Nl::Extrap_Pk_Nl(const Data_Vec<double, 3>&, const Sim_Param&, double, double);
 
 #ifdef TEST
 #include "test_power.cpp"

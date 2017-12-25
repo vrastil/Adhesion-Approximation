@@ -99,7 +99,8 @@ public:
 class Extrap_Pk_Nl
 {
 public:
-    Extrap_Pk_Nl(const Data_Vec<double, 3>& data, const Sim_Param &sim, double A_nl, double a_eff);
+    template<unsigned N>
+    Extrap_Pk_Nl(const Data_Vec<double, N>& data, const Sim_Param &sim, double A_nl, double a_eff);
     const Extrap_Pk Pk_lin;
     const double A_nl, a_eff, k_split;
     double operator()(double k) const;
@@ -108,3 +109,4 @@ public:
 template<class P> // everything callable P_k(k)
 void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<double, 2>* corr_func_binned);
 void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, double a, Data_Vec<double, 2>* corr_func_binned);
+void gen_corr_func_binned_gsl_qawf_nl(const Sim_Param &sim, double a, Data_Vec<double, 2>* corr_func_binned);
