@@ -96,12 +96,28 @@ void handle_cmd_line(int ac, char* av[], Sim_Param& sim){
     
     po::options_description config_other("Approximation`s options");
     config_other.add_options()
-        ("viscosity,v", po::value<double>(&sim.app_opt.nu)->default_value(1.), "'viscozity' for adhesion approximation in units of pixel^2")
+        ("viscosity,v", po::value<double>(&sim.app_opt.nu)->default_value(1., "1.0"), "'viscozity' for adhesion approximation in units of pixel^2")
         ("cut_radius,r", po::value<double>(&sim.app_opt.rs)->default_value(2.7, "2.7"), "short-range force cutoff radius in units of mesh cells")
         ;
+
+    po::options_description mod_grav("Modified Gravities");
+    mod_grav.add_options()
+        ("comp_chi", po::value<bool>(&sim.comp_app.chi)->default_value(false), "compute chameleon gravity")
+        ;
+    
+    po::options_description config_cham("Chameleon parameters");
+    config_cham.add_options()
+        ("chi_beta", po::value<double>(&sim.chi_opt.beta)->default_value(1/sqrt(6), "(1/6)^1/2"), "coupling constant")
+        ("chi_n", po::value<double>(&sim.chi_opt.n)->default_value(0.5, "1/2"), "chameleon power-law potential exponent,\n0 < n < 1")
+        ("chi_phi", po::value<double>(&sim.chi_opt.phi)->default_value(1E-6, "1E-6"), "screening potential")
+        ;
+    mod_grav.add(config_cham);
+    
         
     po::options_description cmdline_options("\nCOSMOLOGICAL APPROXIMATION");
-    cmdline_options.add(generic).add(config_mesh).add(config_power).add(config_integ).add(config_output).add(config_app).add(config_run).add(config_other);
+    cmdline_options.add(generic).add(config_mesh).add(config_power).add(config_integ);
+    cmdline_options.add(config_output).add(config_app).add(config_run).add(config_other);
+    cmdline_options.add(mod_grav);
     
     po::variables_map vm;
     store(po::command_line_parser(ac, av).options(cmdline_options).run(), vm);		

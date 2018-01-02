@@ -615,6 +615,11 @@ void Other_par::init(const Box_Opt& box_opt)
     x_corr.upper = 200;
 }
 
+void Chi_Opt::init()
+{
+    chi_prefix = 2*beta*MPL*phi;
+}
+
 /**
  * @class:	Sim_Param
  * @brief:	class storing simulation parameters
@@ -630,6 +635,8 @@ Sim_Param::Sim_Param(int ac, char* av[])
     app_opt.init(box_opt);
     cosmo.init();
     other_par.init(box_opt);
+
+    if (comp_app.chi) chi_opt.init();
 }
 
 Sim_Param::Sim_Param(string file_name)
@@ -657,6 +664,13 @@ Sim_Param::Sim_Param(string file_name)
         from_json(j.at("cosmo"), cosmo); //< call explicitly, SWIG has some issues with json.hpp
         app_opt.init(box_opt);
         other_par.init(box_opt);
+
+        try{
+            chi_opt = j.at("chi_opt");
+            chi_opt.init();
+            comp_app.chi = true;
+        } catch(const out_of_range& oor){ comp_app.chi = false; }
+        
     }
     catch(const out_of_range& oor){
         string err = string(oor.what()) + " in file '" + file_name + "'";
@@ -749,6 +763,22 @@ void from_json(const json& j, Out_Opt& out_opt)
     out_opt.out_dir = j.at("out_dir").get<string>();
 }
 
+void to_json(json& j, const Chi_Opt& chi_opt)
+{
+    j = json{
+        {"beta", chi_opt.beta},
+        {"n", chi_opt.n},
+        {"phi", chi_opt.phi}
+    };
+}
+
+void from_json(const json& j, Chi_Opt& chi_opt)
+{
+    chi_opt.beta = j.at("beta").get<double>();
+    chi_opt.n = j.at("n").get<double>();
+    chi_opt.phi = j.at("phi").get<double>();
+}
+
 void Sim_Param::print_info(string out, string app) const
 {
     if (out == "")
@@ -770,6 +800,7 @@ void Sim_Param::print_info(string out, string app) const
         cout << "\t\t[baryons_power_spectrum_method = " << find_value(baryons_power_spectrum_method, cosmo.config.baryons_power_spectrum_method) << "]\n";
         printf("AA:\t\t[nu = %G (Mpc/h)^2]\n", app_opt.nu_dim);
         printf("LL:\t\t[rs = %G, a = %G, M = %i, Hc = %G]\n", app_opt.rs, app_opt.a, app_opt.M, app_opt.Hc);
+        if (comp_app.chi) printf("Chameleon:\t[beta = %.3f, n = %.2f, phi = %G\n", chi_opt.beta, chi_opt.n, chi_opt.phi);
         printf("num_thread:\t%i\n", run_opt.nt);
         printf( "Output:\t\t'%s'\n", out_opt.out_dir.c_str());
     }
@@ -789,6 +820,8 @@ void Sim_Param::print_info(string out, string app) const
             {"results", {}},
             {"app", app}
         };
+        if (comp_app.chi) j["chi_opt"] = chi_opt;
+
         o << setw(2) << j << endl;
         o.close();
     }

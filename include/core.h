@@ -14,6 +14,8 @@ inline void throw_ccl(ccl_cosmology *cosmo, int status)
 }
 
 constexpr double PI = M_PI;
+constexpr double MPL = 2.435E18; // Reduced Planck mass, [GeV/c^2]
+
 /**
  * @class:	Vec_3D<T>
  * @brief:	class handling basic 3D-vector functions
@@ -326,7 +328,8 @@ struct Out_Opt {
 /* APPROXIMATIONS */
 struct Comp_App {
     /* cmd args */
-    bool ZA, FF, FP, AA, FP_pp;
+    bool ZA, FF, FP, AA, FP_pp; //< approximations
+    bool chi; //< modified gravities
 };
 
 
@@ -365,6 +368,15 @@ struct Other_par {
     std::map<std::string,double> nyquist; //< Nyquist frequencies of potential mesh, analyses mesh and particle separation
 };
 
+/* CHAMELEON */
+struct Chi_Opt {
+    void init();
+    /* cmd args */
+    double beta, n, phi;
+    /* derived param*/
+    double chi_prefix;
+};
+
 /**
  * @class:	Sim_Param
  * @brief:	class storing simulation parameters
@@ -386,6 +398,7 @@ public:
     App_Opt app_opt;
     Run_Opt run_opt;
     Other_par other_par;
+    Chi_Opt chi_opt;
 
 	// METHODS
     void print_info(std::string out, std::string app) const;
