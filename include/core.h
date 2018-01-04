@@ -4,14 +4,7 @@
  */
 
 #pragma once
-
 #include "stdafx.h"
-
-inline void throw_ccl(ccl_cosmology *cosmo, int status)
-{
-    if (!status) return;
-    throw std::runtime_error(cosmo->status_message);
-}
  
 template <typename T> int sgn(T val)
 {

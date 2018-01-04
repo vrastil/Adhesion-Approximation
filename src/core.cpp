@@ -3,7 +3,6 @@
  * @brief:	class definitions
  */
  
-#include "stdafx.h"
 #include "core.h"
 #include "core_cmd.h"
 #include "core_out.h"
@@ -320,7 +319,7 @@ void Cosmo_Param::init()
     // create flat LCDM cosmology
     int status = 0;
     cosmo = ccl_cosmology_create_with_lcdm_params(Omega_c(), Omega_b, 0, h, sigma8, ns, config, &status);
-    if (!status) throw_ccl(cosmo, status);
+    if (status) throw std::runtime_error(cosmo->status_message);
 
     #ifdef TEST
     cout << ">>> Debug: Created ccl_cosmology*: " << cosmo << "\n";

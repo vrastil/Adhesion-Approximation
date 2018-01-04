@@ -1,6 +1,4 @@
 #pragma once
-
-#include "stdafx.h"
 #include "core.h"
 
 void zel_app(const Sim_Param &sim);

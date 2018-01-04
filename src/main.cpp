@@ -1,5 +1,3 @@
-
-#include "stdafx.h"
 #include "core.h"
 #include "core_power.h"
 #include "approximations.hpp"

@@ -1,5 +1,3 @@
-
-#include "stdafx.h"
 #include "core.h"
 #include "core_mesh.h"
 #include "core_power.h"
@@ -159,7 +157,7 @@ void norm_pwr(Cosmo_Param& cosmo)
     cout << "Initializing CCL power spectrum...\n";
     int status = 0;
     ccl_sigma8(cosmo.cosmo, &status);
-    throw_ccl(cosmo.cosmo, status);
+    if (status) throw std::runtime_error(cosmo.cosmo->status_message);
 }
 
 static double hubble_param(double a, const Cosmo_Param& cosmo)
@@ -262,7 +260,7 @@ double lin_pow_spec(double a, double k, const Cosmo_Param& cosmo)
     pk = ccl_linear_matter_power(cosmo.cosmo, k*cosmo.h, 1, &status)*pow(cosmo.h, 3);
     double D = growth_factor(a, cosmo);
     if (!status) return D*D*pk;
-    throw_ccl(cosmo.cosmo, status);
+    else throw std::runtime_error(cosmo.cosmo->status_message);
 }
 
 double non_lin_pow_spec(double a, double k, const Cosmo_Param& cosmo)
@@ -271,6 +269,7 @@ double non_lin_pow_spec(double a, double k, const Cosmo_Param& cosmo)
     int status = 0;
     double pk = ccl_nonlin_matter_power(cosmo.cosmo, k*cosmo.h, a, &status)*pow(cosmo.h, 3);
     if (!status) return pk;
+    else throw std::runtime_error(cosmo.cosmo->status_message);
 }
 
 static int get_nearest(const double val, const vector<double>& vec)
@@ -400,7 +399,7 @@ void Extrap_Pk::fit_lin(const Data_Vec<double, N>& data, const unsigned m, const
     if (gsl_errno) throw runtime_error("GSL integration error: " + string(gsl_strerror(gsl_errno)));
 
     #ifndef LESSINFO
-    printf("\t[%sfit A = %.1e, err = %.2f\%]\n", N == 3 ? "weighted-" : "", A, 100*sqrt(A_sigma2)/A);
+    printf("\t[%sfit A = %.1e, err = %.2f%%]\n", N == 3 ? "weighted-" : "", A, 100*sqrt(A_sigma2)/A);
     #endif
 }
 
@@ -430,7 +429,7 @@ void Extrap_Pk::fit_power_law(const Data_Vec<double, N>& data, const unsigned m,
 
     A = exp(A); // log A => A
     #ifndef LESSINFO
-    printf("\t[%sfit A = %.1e, err = %.2f\%, n_s = %.3f, err = %.2f\%, corr = %.2f\%]\n",
+    printf("\t[%sfit A = %.1e, err = %.2f%%, n_s = %.3f, err = %.2f%%, corr = %.2f%%]\n",
             N == 3 ? "weighted-" : "", A, 100*sqrt(cov00), n_s,  100*sqrt(cov11)/abs(n_s), 100*cov01/sqrt(cov00*cov11));
     #endif
 }

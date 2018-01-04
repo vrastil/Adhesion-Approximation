@@ -8,7 +8,6 @@
 //
 //
 
-#include "stdafx.h"
 #include "core.h"
 namespace emu
 {

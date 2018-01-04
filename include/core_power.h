@@ -3,8 +3,6 @@
  * @brief:	functions handling operations with power spectra
  */
 #pragma once
- 
-#include "stdafx.h"
 #include "core.h"
 
 void norm_pwr(Cosmo_Param& cosmo);
