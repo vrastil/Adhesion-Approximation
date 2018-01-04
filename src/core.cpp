@@ -40,7 +40,7 @@ const char *humanSize(uint64_t bytes){
  T Vec_3D<T>::norm2() const
  {
      T tmp(0);
-     for (const T val : vec)
+     for (const T& val : *this)
      {
          tmp += val*val;
      }
@@ -52,7 +52,7 @@ const char *humanSize(uint64_t bytes){
  {
      for(unsigned i = 0; i < 3; ++i)
      {
-         vec[i] += rhs[i];
+         (*this)[i] += rhs[i];
      }
      return *this;
  }
@@ -69,7 +69,7 @@ const char *humanSize(uint64_t bytes){
  {
      for(unsigned i = 0; i < 3; ++i)
      {
-         vec[i] -= rhs[i];
+         (*this)[i] -= rhs[i];
      }
      return *this;
  }
@@ -84,7 +84,7 @@ const char *humanSize(uint64_t bytes){
  template <typename T>
  Vec_3D<T>& Vec_3D<T>::operator+=(T rhs)
  {
-     for(T& val : vec)
+     for(T& val : *this)
      {
          val += rhs;
      }
@@ -94,7 +94,7 @@ const char *humanSize(uint64_t bytes){
  template <typename T>
  Vec_3D<T>& Vec_3D<T>::operator-=(T rhs)
  {
-     for(T& val : vec)
+     for(T& val : *this)
      {
          val -= rhs;
      }
@@ -104,7 +104,7 @@ const char *humanSize(uint64_t bytes){
  template <typename T>
  Vec_3D<T>& Vec_3D<T>::operator*=(T rhs)
  {
-     for(T& val : vec)
+     for(T& val : *this)
      {
          val *= rhs;
      }
@@ -156,7 +156,7 @@ const char *humanSize(uint64_t bytes){
  template <typename T>
  Vec_3D<T>& Vec_3D<T>::operator/=(T rhs)
  {
-     for(T& val : vec)
+     for(T& val : *this)
      {
          val /= rhs;
      }

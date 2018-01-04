@@ -12,47 +12,30 @@ inline void throw_ccl(ccl_cosmology *cosmo, int status)
     if (!status) return;
     throw std::runtime_error(cosmo->status_message);
 }
-
-constexpr double PI = M_PI;
-/**
- * @class:	Vec_3D<T>
- * @brief:	class handling basic 3D-vector functions
- */
  
 template <typename T> int sgn(T val)
 {
 	return (T(0) < val) - (val < T(0));
 }
 
+constexpr double PI = M_PI;
+/**
+ * @class:	Vec_3D<T>
+ * @brief:	class handling basic 3D-vector functions
+ */
+
 template <typename T>
-class Vec_3D
+class Vec_3D : public std::array<T, 3>
 {
 public:
 	// CONSTRUCTORS
 	Vec_3D(){};
 	Vec_3D(T x, T y, T z):
-	vec({x, y, z}) {};
-    
-    // VARIABLES
-    std::array<T, 3> vec;
-
-    // ELEMENT ACCESS
-    T& operator[](int i){ return vec[i]; }
-    const T& operator[](int i) const { return vec[i]; }
-
-    // ITERATORS
-    typedef typename std::array<T, 3>::iterator iterator;
-    typedef typename std::array<T, 3>::const_iterator const_iterator;
-
-    iterator begin() noexcept { return vec.begin(); }
-    const_iterator cbegin() const noexcept { return vec.cbegin(); }
-    iterator end() noexcept { return vec.end(); }
-    const_iterator cend() const noexcept { return vec.end(); }
+	std::array<T, 3>({x, y, z}) {};
     
     // METHODS
     T norm2() const;
 	double norm() const { return sqrt(norm2()); }
-	void fill(const T& value){ vec.fill(value); }
 		
 	// OPERATORS	
 	Vec_3D<T>& operator+=(const Vec_3D<T>& rhs);
@@ -75,13 +58,6 @@ template <typename T> Vec_3D<T> operator+(T lhs, Vec_3D<T> rhs);
 template <typename T> Vec_3D<T> operator-(Vec_3D<T> lhs, T rhs);
 template <typename T> Vec_3D<T> operator-(T lhs, Vec_3D<T> rhs);
 template <typename T> Vec_3D<T> operator/(Vec_3D<T> lhs, T rhs);
-
-template <typename T> bool operator==(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){return lhs.vec == rhs.vec; }
-template <typename T> bool operator!=(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec != rhs.vec; }
-template <typename T> bool operator<(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec < rhs.vec; }
-template <typename T> bool operator<=(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec <= rhs.vec; }
-template <typename T> bool operator>(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec > rhs.vec; }
-template <typename T> bool operator>=(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec >= rhs.vec; }
 
 /**
  * @class:	Mesh_base<T>
