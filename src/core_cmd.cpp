@@ -125,15 +125,15 @@ void handle_cmd_line(int ac, char* av[], Sim_Param& sim){
 
     // !!!>>> THIS NEEDS TO BE AFTER ALL CALLS TO NOTIFY() <<<!!!
 
-    #ifdef TEST
-    cout << ">>> Debug: Sim_Param initialization\n";
-    cout << "\ttransfer_function = " << trans_func_cmd << " --> " << static_cast<transfer_function_t>(trans_func_cmd) << "\n";
-    cout << "\tsim.cosmo.config.transfer_function_method = " << sim.cosmo.config.transfer_function_method << "\n";
-    #endif
-
     sim.out_opt.print_z = print_z.v;
     sim.cosmo.config.transfer_function_method = static_cast<transfer_function_t>(trans_func_cmd);
     sim.cosmo.config.matter_power_spectrum_method = static_cast<matter_power_spectrum_t>(matter_pwr_cmd);
     sim.cosmo.config.baryons_power_spectrum_method = static_cast<baryons_power_spectrum_t>(baryons_pwr_cmd);
     sim.cosmo.config.mass_function_method = static_cast<mass_function_t>(mass_func_cmd);
+
+    #ifdef TEST
+    cout << ">>> Debug: Sim_Param initialization\n";
+    cout << "\ttransfer_function = " << trans_func_cmd << " --> " << static_cast<transfer_function_t>(trans_func_cmd) << "\n";
+    cout << "\tsim.cosmo.config.transfer_function_method = " << sim.cosmo.config.transfer_function_method << "\n";
+    #endif
 }

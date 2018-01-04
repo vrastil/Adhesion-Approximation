@@ -184,71 +184,13 @@ const char *humanSize(uint64_t bytes){
  
  /**
   * @class:	Mesh_base<T>
-  * @brief:	class handling basic mesh functions, the most important are creating and destroing the underlying data structure
+  * @brief:	class handling basic mesh functions such as accessing underlying data
   *			creates a mesh of N1*N2*N3 cells
   */
  
  template <class T>
  Mesh_base<T>::Mesh_base(unsigned n1, unsigned n2, unsigned n3):
-    N1(n1), N2(n2), N3(n3), length(n1*n2*n3), data(new T[length])
- {
-    #ifdef TEST
-    cout << ">>> Debug: Mesh_base NORMAL constructor: " << this
-         << ", N = (" << N1 << ", "  << N2 << ", " << N3 << ")\n";
-    #endif
- }
- 
- template <class T>
- Mesh_base<T>::Mesh_base(const Mesh_base<T>& that):
-    N1(that.N1), N2(that.N2), N3(that.N3), length(that.length), data(new T[length])
- {
-    #pragma omp parallel for
-    for (unsigned i = 0; i < length; i++) data[i] = that.data[i];
-    #ifdef TEST
-    cout << ">>> Debug: Mesh_base COPY constructor: " << this 
-         << " <-- " << &that << "\n";
-    #endif
- }
- 
- template <class T>
- void swap(Mesh_base<T>& first, Mesh_base<T>& second)
- {
-     std::swap(first.length, second.length);
-     std::swap(first.N1, second.N1);
-     std::swap(first.N2, second.N2);
-     std::swap(first.N3, second.N3);
-     std::swap(first.data, second.data);
- }
-
- template <class T>
- Mesh_base<T>::Mesh_base(Mesh_base<T>&& that) noexcept
- {
-    #ifdef TEST
-    cout << ">>> Debug: Mesh_base MOVE constructor: " << this 
-         << " <-- " << &that << "\n";
-    #endif
-    swap(*this, that);
- }
- 
- template <class T>
- Mesh_base<T>& Mesh_base<T>::operator=(Mesh_base<T> that)
- {
-    #ifdef TEST
-    cout << ">>> Debug: Mesh_base COPY or MOVE assignemnt: " << this 
-         << " <-- " << &that << "\n";
-    #endif
-    swap(*this, that);
-    return *this;
- }
- 
- template <class T>
- Mesh_base<T>::~Mesh_base<T>()
- {
-    delete[] data;
-    #ifdef TEST
-    cout << ">>> Debug: Mesh_base destructor: " << this << "\n";
-    #endif
- }
+    N1(n1), N2(n2), N3(n3), length(n1*n2*n3), data(length) {}
  
  template <class T>
  T& Mesh_base<T>::operator()(Vec_3D<int> pos)
@@ -304,23 +246,6 @@ const char *humanSize(uint64_t bytes){
  */
 
 Mesh::Mesh(unsigned n): Mesh_base(n, n, n+2), N(n) {}
-
-// Mesh::Mesh(const Mesh& that): Mesh_base(that), N(that.N) {}
-
-// Mesh::Mesh(Mesh&& that) noexcept: Mesh_base(that), N(that.N) {}
-
-// Mesh& Mesh::operator=(Mesh that)
-// {
-//     printf("Copy or move assignemnt: %p <-- %p\n", this, &that);
-//     swap(*this, that);
-//     return *this;
-// }
-
-// void swap(Mesh& first, Mesh& second)
-// {
-//     std::swap(first.N, second.N);
-//     swap<Mesh_base<double>>(first, second);
-// }
 
 void Mesh::reset_part(bool part)
 {

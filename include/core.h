@@ -95,19 +95,16 @@ template <typename T>
 class Mesh_base
 {
 public:
-	// CONSTRUCTORS & DESTRUCTOR
+	// CONSTRUCTOR
 	Mesh_base(unsigned n1, unsigned n2, unsigned n3);
-    Mesh_base(const Mesh_base& that);
-    Mesh_base(Mesh_base<T>&& that) noexcept;
-    Mesh_base& operator=(Mesh_base that);
-    template <class U> friend void swap(Mesh_base<U>& first, Mesh_base<U>& second);
-	~Mesh_base();
 	
 	// VARIABLES
 	unsigned N1, N2, N3, length; // acces dimensions and length of mesh
+    std::vector<T> data; // data stored on the mesh
 	
 	// METHODS
-	T* real() const { return data;} // acces data
+    T* real() { return data.data();} // acces data through pointer
+    const T* real() const { return data.data();} // acces data through const pointer
 	void assign(T val);
 	
 	// OPERATORS
@@ -127,10 +124,6 @@ public:
 	Mesh_base& operator-=(const T& rhs){ return *this+=-rhs; }
 	Mesh_base& operator*=(const T& rhs);
 	Mesh_base& operator/=(const T& rhs);
-
-protected:
-	// VARIABLES
-	T* data;
 };
 
 // template <typename T> void swap(Mesh_base<T>& first, Mesh_base<T>& second);
@@ -155,7 +148,9 @@ public:
 	unsigned N; // acces dimension of mesh
 	
 	// METHODS
-    fftw_complex* complex() const { return reinterpret_cast<fftw_complex*>(data);}
+    fftw_complex* complex() { return reinterpret_cast<fftw_complex*>(data.data());}
+    const fftw_complex* complex() const { return reinterpret_cast<const fftw_complex*>(data.data());}
+
     void reset_part(bool part);
     void reset_re() { reset_part(0); }
     void reset_im() { reset_part(1); }
