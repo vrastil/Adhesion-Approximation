@@ -6,9 +6,9 @@ TEST_CASE( "UNIT TEST: growth functions {growth_factor, growth_rate, growth_chan
     char* argv[1] = {"test"};
     try{
         Sim_Param sim(argc, argv);
-        double D, D_to_a, f, Oma, OLa, dDda, factor;
+        FTYPE D, D_to_a, f, Oma, OLa, dDda, factor;
         printf("a\t\tD\t\tf\t\tdD/da\t\tD/a*f\t\tOm\t\tOm^0.6\t\tfactor\n");
-        for (double a =0; a <= 1.0; a += 0.1)
+        for (FTYPE a =0; a <= 1.0; a += 0.1)
         {
             D = growth_factor(a, sim.cosmo);
             f = growth_rate(a, sim.cosmo);

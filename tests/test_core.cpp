@@ -5,15 +5,15 @@ TEST_CASE( "UNIT TEST: sign function {sgn<T>}", "[core]" )
     CHECK( sgn<int>(0) == 0 );
     CHECK( sgn<int>(10) == 1 );
     CHECK( sgn<int>(-5) == -1 );
-    CHECK( sgn<double>(0.) == 0 );
-    CHECK( sgn<double>(0.34534535) == 1 );
-    CHECK( sgn<double>(-1.34534E16) == -1 );
+    CHECK( sgn<FTYPE>(0.) == 0 );
+    CHECK( sgn<FTYPE>(0.34534535) == 1 );
+    CHECK( sgn<FTYPE>(-1.34534E16) == -1 );
 
 }
 
 TEST_CASE( "UNIT TEST: vector class {Vec_3D<T>}", "[core]" )
 {
-    Vec_3D<double> vec_d(sqrt(2.), -sqrt(2.), sqrt(5.));
+    Vec_3D<FTYPE> vec_d(sqrt(2.), -sqrt(2.), sqrt(5.));
     Vec_3D<int> vec_i(3,0,-4);
     CHECK( vec_d.norm() == Approx(3.) );
     CHECK( vec_i.norm() == Approx(5) );
@@ -26,15 +26,15 @@ TEST_CASE( "UNIT TEST: vector class {Vec_3D<T>}", "[core]" )
     vec_i.fill(0);
     vec_i+=Vec_3D<int>(2, 3, -4);
     REQUIRE ( (vec_i[0] + vec_i[1] + vec_i[2]) == Approx(1) );
-    Vec_3D<double> vec_d2 = (Vec_3D<double>)vec_i + Vec_3D<double>(1., 1.5, -3.5)*2.;
+    Vec_3D<FTYPE> vec_d2 = (Vec_3D<FTYPE>)vec_i + Vec_3D<FTYPE>(1., 1.5, -3.5)*2.;
     REQUIRE( vec_d2[0] == Approx(4.) );
     REQUIRE( vec_d2[1] == Approx(6.) );
     REQUIRE( vec_d2[2] == Approx(-11.) );
 
-    double sumd = 0;
-    double sumi = 0;
+    FTYPE sumd = 0;
+    FTYPE sumi = 0;
 
-    for (double val : vec_d2) sumd += val;
+    for (FTYPE val : vec_d2) sumd += val;
     for (int val : vec_i) sumi += val;
 
     CHECK( sumd == Approx(-1.) );
@@ -50,7 +50,7 @@ TEST_CASE( "UNIT TEST: vector class {Vec_3D<T>}", "[core]" )
 TEST_CASE( "UNIT TEST: mesh class {Mesh_base<T>}", "[core]" )
 {
     // dimension
-    Mesh_base<double> mesh(8, 16, 20);
+    Mesh_base<FTYPE> mesh(8, 16, 20);
     CHECK( mesh.N1 == 8 );
     CHECK( mesh.N2 == 16 );
     CHECK( mesh.N3 == 20 );
@@ -74,13 +74,13 @@ TEST_CASE( "UNIT TEST: mesh class {Mesh_base<T>}", "[core]" )
     CHECK( mesh(pos) == 2.71 );
     
     // copy constructor
-    Mesh_base<double> mesh2(mesh);
+    Mesh_base<FTYPE> mesh2(mesh);
     CHECK( mesh2[0] == -0.5 );
     CHECK( mesh2[5] == 3.14 );
     CHECK( mesh2[1041] == 2.71 );
 
     // assign operator
-    Mesh_base<double> mesh3(2,5,7);
+    Mesh_base<FTYPE> mesh3(2,5,7);
     mesh3 = mesh;
     CHECK( mesh3.N1 == 8 );
     CHECK( mesh3.N2 == 16 );
@@ -156,7 +156,7 @@ TEST_CASE( "UNIT TEST: mesh class {Mesh}", "[core]" )
 TEST_CASE( "UNIT TEST: particle class {Particle_x}", "[core]" )
 {
     Particle_x par1(0., -3.14, 4E5);
-    Vec_3D<double> position(0., -3.14, 4E5);
+    Vec_3D<FTYPE> position(0., -3.14, 4E5);
     Particle_x par2(position);
 
     CHECK( par1.position[0] == 0. );
@@ -186,8 +186,8 @@ TEST_CASE( "UNIT TEST: particle class {Particle_x}", "[core]" )
 TEST_CASE( "UNIT TEST: particle class {Particle_v}", "[core]" )
 {    
     Particle_v par1(0., -3.14, 4E5, 2.3E-6, -4.56E-7, 6.87903E-6);
-    Vec_3D<double> position(0., -3.14, 4E5);
-    Vec_3D<double> velocity(2.3E-6, -4.56E-7, 6.87903E-6);
+    Vec_3D<FTYPE> position(0., -3.14, 4E5);
+    Vec_3D<FTYPE> velocity(2.3E-6, -4.56E-7, 6.87903E-6);
     Particle_v par2(position, velocity);
 
     CHECK( par1[0] == 0. );

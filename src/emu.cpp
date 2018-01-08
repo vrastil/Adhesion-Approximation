@@ -19,19 +19,19 @@ extern const int nmode=351;
 
 // Kriging basis computed by emuInit
 // Sizes of each basis will be peta[ee] and m[ee]
-static double KrigBasis[2][28][111];
+static FTYPE KrigBasis[2][28][111];
 
 // Need to combine some things into a big thing.
-static double beta[2][28][8];
-static double w[2][28][111];
-static double lamws[2][28];
-static double lamz[2][28];
+static FTYPE beta[2][28][8];
+static FTYPE w[2][28][111];
+static FTYPE lamws[2][28];
+static FTYPE lamz[2][28];
 
 // Initialization to compute the kriging basis for the two parts
 void emuInit() {
    
     int ee, i, j, k, l;
-    double cov;
+    FTYPE cov;
     gsl_matrix *SigmaSim;
     gsl_vector *b;
 
@@ -131,16 +131,16 @@ void emuInit() {
 } // emuInit()
 
 // Actual emulation
-void emu(double *xstar, double *ystar) {
+void emu(FTYPE *xstar, FTYPE *ystar) {
     
-    static double inited=0;
+    static FTYPE inited=0;
     int ee, i, j, k;
-    double wstar[peta[0]+peta[1]];
-    double Sigmastar[2][peta[1]][m[0]];
-    double ystaremu[neta];
-    double ybyz[rs];
-    double logc;
-    double xstarstd[p];
+    FTYPE wstar[peta[0]+peta[1]];
+    FTYPE Sigmastar[2][peta[1]][m[0]];
+    FTYPE ystaremu[neta];
+    FTYPE ybyz[rs];
+    FTYPE logc;
+    FTYPE xstarstd[p];
     int zmatch;
     gsl_spline *zinterp = gsl_spline_alloc(gsl_interp_cspline, rs);
     gsl_interp_accel *accel = gsl_interp_accel_alloc();
@@ -291,17 +291,17 @@ void emu(double *xstar, double *ystar) {
     }
 }
 
-Data_Vec<double, 2> init_emu(const Sim_Param &sim, double z)
+Data_Vec<FTYPE, 2> init_emu(const Sim_Param &sim, FTYPE z)
 {
     #ifndef LESSINFO
     std::cout << "Initializing emulator...\n";
     #endif
-    Data_Vec<double, 2> emu_data(nmode);
+    Data_Vec<FTYPE, 2> emu_data(nmode);
     for (unsigned i = 0; i < emu_data.size(); i++){
         emu_data[0][i] = mode[i] / sim.cosmo.h; // convert emulator k [1/Mpc] into [h/Mpc]
     }
 
-    double xstar[9];
+    FTYPE xstar[9];
     xstar[0] = sim.cosmo.Omega_m*pow(sim.cosmo.h, 2); // omega_m
     xstar[1] = sim.cosmo.Omega_b*pow(sim.cosmo.h, 2); // omega_b
     xstar[2] = sim.cosmo.sigma8; // sigma_8

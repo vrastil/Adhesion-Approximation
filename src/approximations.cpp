@@ -5,8 +5,8 @@
 
 using namespace std;
 
-static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu);
-static void gen_expot(Mesh* potential,  const Mesh& expotential, double nu, double b);
+static void gen_init_expot(const Mesh& potential, Mesh* expotential, FTYPE nu);
+static void gen_expot(Mesh* potential,  const Mesh& expotential, FTYPE nu, FTYPE b);
 static void aa_convolution(App_Var_AA* APP);
 
 /*********************
@@ -219,8 +219,8 @@ void adhesion_approximation(const Sim_Param &sim)
 * ADHESION APPROXIMATION FUNCTIONS *
 ***********************************/
 
-const double ACC = 1e-10;
-const double log_acc = log(ACC);
+const FTYPE ACC = 1e-10;
+const FTYPE log_acc = log(ACC);
 
 static void aa_convolution(App_Var_AA* APP)
 {
@@ -235,7 +235,7 @@ static void aa_convolution(App_Var_AA* APP)
 	fftw_execute_dft_c2r_triple(APP->p_B, APP->app_field);
 }
 
-static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu)
+static void gen_init_expot(const Mesh& potential, Mesh* expotential, FTYPE nu)
 {
 	printf("Storing initial expotenital in q-space...\n");
     // store exponent only
@@ -244,22 +244,22 @@ static void gen_init_expot(const Mesh& potential, Mesh* expotential, double nu)
     for (unsigned i = 0; i < expotential->length; i++) (*expotential)[i] = -potential[i] / (2*nu);
 }
 
-static double get_summation(const vector<double>& exp_aux)
+static FTYPE get_summation(const vector<FTYPE>& exp_aux)
 {
-    double max_exp = *max_element(exp_aux.begin(), exp_aux.end());
-    double sum = 0;
+    FTYPE max_exp = *max_element(exp_aux.begin(), exp_aux.end());
+    FTYPE sum = 0;
     for(auto const& a_exp: exp_aux) {
         if ((a_exp - max_exp) > log_acc) sum+= exp(a_exp - max_exp);
     }
     return max_exp + log(sum);
 }
 
-static void convolution_y1(Mesh* potential, const vector<double>& gaussian, const Mesh& expotential_0){
+static void convolution_y1(Mesh* potential, const vector<FTYPE>& gaussian, const Mesh& expotential_0){
 	// multi-thread index is y3
     // compute f1 (x1, y2, y3)
 
     const int N = potential->N;
-    vector<double> exp_aux;
+    vector<FTYPE> exp_aux;
     
 	#pragma omp parallel for private(exp_aux)
 	for (int x1 = 0; x1 < N; x1++){
@@ -277,12 +277,12 @@ static void convolution_y1(Mesh* potential, const vector<double>& gaussian, cons
 	}
 }
 
-static void convolution_y2(Mesh* potential, const vector<double>& gaussian){
+static void convolution_y2(Mesh* potential, const vector<FTYPE>& gaussian){
     // compute f2 (x1, x2, y3)
 
     const int N = potential->N;
-	vector<double> sum_aux;
-	vector<double> exp_aux;
+	vector<FTYPE> sum_aux;
+	vector<FTYPE> exp_aux;
 
 	#pragma omp parallel for private(sum_aux, exp_aux)
 	for (int x1 = 0; x1 < N; x1++){
@@ -306,12 +306,12 @@ static void convolution_y2(Mesh* potential, const vector<double>& gaussian){
 	}
 }
 
-static void convolution_y3(Mesh* potential, const vector<double>& gaussian){
+static void convolution_y3(Mesh* potential, const vector<FTYPE>& gaussian){
     // compute f3 (x1, x2, x3) == expotential(x, b)
 
     const int N = potential->N;
-	vector<double> sum_aux;
-    vector<double> exp_aux;
+	vector<FTYPE> sum_aux;
+    vector<FTYPE> exp_aux;
 
 	#pragma omp parallel for private(sum_aux, exp_aux)
 	for (int x1 = 0; x1 < N; x1++){
@@ -334,7 +334,7 @@ static void convolution_y3(Mesh* potential, const vector<double>& gaussian){
 	}
 }
 
-static void gen_expot(Mesh* potential,  const Mesh& expotential_0, double nu, double b)
+static void gen_expot(Mesh* potential,  const Mesh& expotential_0, FTYPE nu, FTYPE b)
 {
 	/* Computing convolution using direct sum */
 	printf("Computing expotential in q-space...\n");
@@ -347,7 +347,7 @@ static void gen_expot(Mesh* potential,  const Mesh& expotential_0, double nu, do
 	*/
 
 	// store values of exponential - every convolution uses the same exp(-r^2/4bv)
-	vector<double> gaussian(expotential_0.N);
+	vector<FTYPE> gaussian(expotential_0.N);
 
 	#pragma omp parallel for
 	for (unsigned i = 0; i < expotential_0.N; i++){

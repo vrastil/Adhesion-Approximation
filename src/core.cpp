@@ -18,7 +18,7 @@ const char *humanSize(uint64_t bytes){
 	char length = sizeof(suffix) / sizeof(suffix[0]);
 
 	int i = 0;
-	double dblBytes = bytes;
+	FTYPE dblBytes = bytes;
 
 	if (bytes > 1024) {
 		for (i = 0; (bytes / 1024) > 0 && i<length-1; i++, bytes /= 1024)
@@ -35,151 +35,157 @@ const char *humanSize(uint64_t bytes){
  * @brief:	class handling basic 3D-vector functions
  */
 
- template <typename T>
- T Vec_3D<T>::norm2() const
- {
-     T tmp(0);
-     for (const T& val : *this)
-     {
-         tmp += val*val;
-     }
-     return tmp;
- }
+template <typename T>
+T Vec_3D<T>::norm2() const
+{
+    T tmp(0);
+    for (const T& val : *this)
+    {
+        tmp += val*val;
+    }
+    return tmp;
+}
+
+template <typename T>
+FTYPE Vec_3D<T>::norm() const
+{
+return sqrt(norm2());
+}
  
- template <typename T>
- Vec_3D<T>& Vec_3D<T>::operator+=(const Vec_3D<T>& rhs)
- {
-     for(unsigned i = 0; i < 3; ++i)
-     {
-         (*this)[i] += rhs[i];
-     }
-     return *this;
- }
+template <typename T>
+Vec_3D<T>& Vec_3D<T>::operator+=(const Vec_3D<T>& rhs)
+{
+    for(unsigned i = 0; i < 3; ++i)
+    {
+        (*this)[i] += rhs[i];
+    }
+    return *this;
+}
  
- template <typename T>
- Vec_3D<T> operator+(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
- {
-     lhs += rhs;
-     return lhs;
- }
+template <typename T>
+Vec_3D<T> operator+(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
+{
+   lhs += rhs;
+    return lhs;
+}
+
+template <typename T>
+Vec_3D<T>& Vec_3D<T>::operator-=(const Vec_3D<T>& rhs)
+{
+    for(unsigned i = 0; i < 3; ++i)
+    {
+        (*this)[i] -= rhs[i];
+    }
+    return *this;
+}
  
- template <typename T>
- Vec_3D<T>& Vec_3D<T>::operator-=(const Vec_3D<T>& rhs)
- {
-     for(unsigned i = 0; i < 3; ++i)
-     {
-         (*this)[i] -= rhs[i];
-     }
-     return *this;
- }
+template <typename T>
+Vec_3D<T> operator-(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
+{
+    lhs -= rhs;
+    return lhs;
+}
  
- template <typename T>
- Vec_3D<T> operator-(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
- {
-     lhs -= rhs;
-     return lhs;
- }
+template <typename T>
+Vec_3D<T>& Vec_3D<T>::operator+=(T rhs)
+{
+    for(T& val : *this)
+    {
+        val += rhs;
+    }
+    return *this;
+}
  
- template <typename T>
- Vec_3D<T>& Vec_3D<T>::operator+=(T rhs)
- {
-     for(T& val : *this)
-     {
-         val += rhs;
-     }
-     return *this;
- }
+template <typename T>
+Vec_3D<T>& Vec_3D<T>::operator-=(T rhs)
+{
+    for(T& val : *this)
+    {
+        val -= rhs;
+    }
+    return *this;
+}
  
- template <typename T>
- Vec_3D<T>& Vec_3D<T>::operator-=(T rhs)
- {
-     for(T& val : *this)
-     {
-         val -= rhs;
-     }
-     return *this;
- }
+template <typename T>
+Vec_3D<T>& Vec_3D<T>::operator*=(T rhs)
+{
+    for(T& val : *this)
+    {
+        val *= rhs;
+    }
+    return *this;
+}
+
+template <typename T>
+Vec_3D<T> operator*(Vec_3D<T> lhs, T rhs)
+{
+    lhs *= rhs;
+    return lhs;
+}
  
- template <typename T>
- Vec_3D<T>& Vec_3D<T>::operator*=(T rhs)
- {
-     for(T& val : *this)
-     {
-         val *= rhs;
-     }
-     return *this;
- }
+template <typename T>
+Vec_3D<T> operator*(T lhs, Vec_3D<T> rhs)
+{
+    rhs *= lhs;
+    return rhs;
+}
  
- template <typename T>
- Vec_3D<T> operator*(Vec_3D<T> lhs, T rhs)
- {
-     lhs *= rhs;
-     return lhs;
- }
- 
- template <typename T>
- Vec_3D<T> operator*(T lhs, Vec_3D<T> rhs)
- {
-     rhs *= lhs;
-     return rhs;
- }
- 
- template <typename T>
- Vec_3D<T> operator+(Vec_3D<T> lhs, T rhs)
- {
-     lhs += rhs;
-     return lhs;
- }
- 
- template <typename T>
- Vec_3D<T> operator+(T lhs, Vec_3D<T> rhs)
- {
-     rhs += lhs;
-     return rhs;
- }
- 
- template <typename T>
- Vec_3D<T> operator-(Vec_3D<T> lhs, T rhs)
- {
-     lhs -= rhs;
-     return lhs;
- }
- 
- template <typename T>
- Vec_3D<T> operator-(T lhs, Vec_3D<T> rhs)
- {
-     rhs -= lhs;
-     return rhs;
- }
- 
- template <typename T>
- Vec_3D<T>& Vec_3D<T>::operator/=(T rhs)
- {
-     for(T& val : *this)
-     {
-         val /= rhs;
-     }
-     return *this;
- }
- 
- template <typename T>
- Vec_3D<T> operator/(Vec_3D<T> lhs, T rhs)
- {
-     lhs /= rhs;
-     return lhs;
- }
- 
- template <typename T>
- template<class U>
- Vec_3D<T>::operator Vec_3D<U>() const
- {
-     Vec_3D<U> lhs;
-     for(unsigned i = 0; i < 3; ++i)
-     {
-         lhs[i] = static_cast<U>((*this)[i]);
-     }
-     return lhs;
- }
+template <typename T>
+Vec_3D<T> operator+(Vec_3D<T> lhs, T rhs)
+{
+    lhs += rhs;
+    return lhs;
+}
+
+template <typename T>
+Vec_3D<T> operator+(T lhs, Vec_3D<T> rhs)
+{
+    rhs += lhs;
+    return rhs;
+}
+
+template <typename T>
+Vec_3D<T> operator-(Vec_3D<T> lhs, T rhs)
+{
+    lhs -= rhs;
+    return lhs;
+}
+
+template <typename T>
+Vec_3D<T> operator-(T lhs, Vec_3D<T> rhs)
+{
+    rhs -= lhs;
+    return rhs;
+}
+
+template <typename T>
+Vec_3D<T>& Vec_3D<T>::operator/=(T rhs)
+{
+    for(T& val : *this)
+    {
+        val /= rhs;
+    }
+    return *this;
+}
+
+template <typename T>
+Vec_3D<T> operator/(Vec_3D<T> lhs, T rhs)
+{
+    lhs /= rhs;
+    return lhs;
+}
+
+template <typename T>
+template<class U>
+Vec_3D<T>::operator Vec_3D<U>() const
+{
+    Vec_3D<U> lhs;
+    for(unsigned i = 0; i < 3; ++i)
+    {
+        lhs[i] = static_cast<U>((*this)[i]);
+    }
+    return lhs;
+}
  
  /**
   * @class:	Mesh_base<T>
@@ -255,19 +261,19 @@ void Mesh::reset_part(bool part)
     }
 }
 
-double& Mesh::operator()(Vec_3D<int> pos)
+FTYPE& Mesh::operator()(Vec_3D<int> pos)
 {
 	get_per(pos, N);
 	return data[pos[0]*N2*N3+pos[1]*N3+pos[2]]; 
 }
 
-const double & Mesh::operator()(Vec_3D<int> pos) const
+const FTYPE & Mesh::operator()(Vec_3D<int> pos) const
 {
 	get_per(pos, N);
 	return data[pos[0]*N2*N3+pos[1]*N3+pos[2]];
 }
 
-Mesh& Mesh::operator+=(const double& rhs)
+Mesh& Mesh::operator+=(const FTYPE& rhs)
 {
 	#pragma omp parallel for
 		for (unsigned i = 0; i < length; i++) this->data[i]+=rhs;
@@ -275,7 +281,7 @@ Mesh& Mesh::operator+=(const double& rhs)
 	return *this;
 }
 
-Mesh& Mesh::operator*=(const double& rhs)
+Mesh& Mesh::operator*=(const FTYPE& rhs)
 {
 	#pragma omp parallel for
 		for (unsigned i = 0; i < length; i++) this->data[i]*=rhs;
@@ -283,7 +289,7 @@ Mesh& Mesh::operator*=(const double& rhs)
 	return *this;
 }
 
-Mesh& Mesh::operator/=(const double& rhs)
+Mesh& Mesh::operator/=(const FTYPE& rhs)
 {
 	#pragma omp parallel for
 		for (unsigned i = 0; i < length; i++) this->data[i]/=rhs;
@@ -413,13 +419,13 @@ void from_json(const json& j, Cosmo_Param& cosmo)
     #ifdef TEST
     cout << ">>> Debug: Loading 'Cosmo_Param& cosmo' from json file\n";
     #endif
-    cosmo.A = j.at("A").get<double>();
-    cosmo.ns = j.at("index").get<double>();
-    cosmo.sigma8 = j.at("sigma8").get<double>();
-    cosmo.k2_G = j.at("smoothing_k").get<double>();
-    cosmo.Omega_b = j.at("Omega_b").get<double>();
-    cosmo.Omega_m = j.at("Omega_m").get<double>();
-    cosmo.h = j.at("h").get<double>();
+    cosmo.A = j.at("A").get<FTYPE>();
+    cosmo.ns = j.at("index").get<FTYPE>();
+    cosmo.sigma8 = j.at("sigma8").get<FTYPE>();
+    cosmo.k2_G = j.at("smoothing_k").get<FTYPE>();
+    cosmo.Omega_b = j.at("Omega_b").get<FTYPE>();
+    cosmo.Omega_m = j.at("Omega_m").get<FTYPE>();
+    cosmo.h = j.at("h").get<FTYPE>();
     cosmo.H0 = cosmo.h * 100;
     
     string tmp;
@@ -461,7 +467,7 @@ Tracking::Tracking(int sqr_num_track_par, int par_num_per_dim):
 	printf("Initializing IDs of tracked particles...\n");
 	par_ids.reserve(num_track_par);
 	int x, y, z;
-	double s;
+	FTYPE s;
 	y = par_num_per_dim / 2; // middle of the cube
 	s = par_num_per_dim / (4.*(sqr_num_track_par+1.)); // quarter of the cube
 	for (int i=1; i<=sqr_num_track_par;i++)
@@ -521,14 +527,14 @@ void App_Opt::init(const Box_Opt& box_opt)
 {
     a = rs / 0.735;
     M = (int)(box_opt.mesh_num / rs);
-    Hc = double(box_opt.mesh_num) / M;
+    Hc = FTYPE(box_opt.mesh_num) / M;
     nu_dim = nu;
     nu /= pow(box_opt.box_size/box_opt.mesh_num, 2.); // converting to dimensionless units
 }
 
 void Other_par::init(const Box_Opt& box_opt)
 {
-    double tmp = PI/box_opt.box_size;
+    FTYPE tmp = PI/box_opt.box_size;
 
     nyquist["analysis"] = tmp*box_opt.mesh_num_pwr;
     nyquist["potential"] = tmp*box_opt.mesh_num;
@@ -604,7 +610,7 @@ void from_json(const json& j, Box_Opt& box_opt)
     box_opt.mesh_num = j.at("mesh_num").get<unsigned>();
     box_opt.mesh_num_pwr = j.at("mesh_num_pwr").get<unsigned>();
     box_opt.par_num_1d = j.at("par_num").get<unsigned>();
-    box_opt.box_size = j.at("box_size").get<double>();
+    box_opt.box_size = j.at("box_size").get<FTYPE>();
 
     box_opt.init();
 }
@@ -620,9 +626,9 @@ void to_json(json& j, const Integ_Opt& integ_opt)
 
 void from_json(const json& j, Integ_Opt& integ_opt)
 {
-    integ_opt.z_in = j.at("redshift").get<double>();
-    integ_opt.z_out = j.at("redshift_0").get<double>();
-    integ_opt.db = j.at("time_step").get<double>();
+    integ_opt.z_in = j.at("redshift").get<FTYPE>();
+    integ_opt.z_out = j.at("redshift_0").get<FTYPE>();
+    integ_opt.db = j.at("time_step").get<FTYPE>();
 
     integ_opt.init();
 }
@@ -637,9 +643,9 @@ void to_json(json& j, const App_Opt& app_opt)
 
 void from_json(const json& j, App_Opt& app_op)
 {
-    app_op.nu_dim = j.at("viscosity").get<double>();
+    app_op.nu_dim = j.at("viscosity").get<FTYPE>();
     app_op.nu = app_op.nu_dim;
-    app_op.rs = j.at("cut_radius").get<double>();
+    app_op.rs = j.at("cut_radius").get<FTYPE>();
 }
 
 void to_json(json& j, const Run_Opt& run_opt)
@@ -755,7 +761,7 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
         app_field.emplace_back(sim.box_opt.mesh_num);
         power_aux.emplace_back(sim.box_opt.mesh_num_pwr);
     }
-    memory_alloc = sizeof(double)*(app_field[0].length*app_field.size()+power_aux[0].length*power_aux.size());
+    memory_alloc = sizeof(FTYPE)*(app_field[0].length*app_field.size()+power_aux[0].length*power_aux.size());
 
     // RESERVE MEMORY FOR BINNED POWER SPECTRA
     unsigned bin_num = (unsigned)ceil(log10(sim.box_opt.mesh_num_pwr)*sim.out_opt.bins_per_decade);
@@ -854,7 +860,7 @@ void App_Var<T>::print_output()
             D_init = growth_factor(b, sim.cosmo);
             is_init_pwr_spec_0 = true;
         }
-        double D_now = growth_factor(b, sim.cosmo);
+        FTYPE D_now = growth_factor(b, sim.cosmo);
         print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, D_now / D_init, out_dir_app, "_par" + z_suffix());
         print_pow_spec_diff(pwr_spec_binned, pwr_spec_input, D_now, out_dir_app, "_input" + z_suffix());
         print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, pwr_spec_input, D_now, D_init,
@@ -913,7 +919,7 @@ void App_Var<T>::print_info() const
  App_Var_AA::App_Var_AA(const Sim_Param &sim, string app_str):
     App_Var<Particle_v>(sim, app_str), expotential (sim.box_opt.mesh_num)
 {
-    memory_alloc += sizeof(double)*expotential.length;
+    memory_alloc += sizeof(FTYPE)*expotential.length;
 }
 
 /**
@@ -928,10 +934,10 @@ void App_Var<T>::print_info() const
 
     // precompute short range force
     size_t res = size_t(sim.app_opt.rs/0.05)+1; // force resolution 5% of mesh cell
-    const double r0 = sim.app_opt.rs / (res-1);
-    Data_Vec<double, 2> data(res);
-    double r;
-    const double e2 = pow(sim.box_opt.Ng*0.1, 2); // softening of 10% of average interparticle length
+    const FTYPE r0 = sim.app_opt.rs / (res-1);
+    Data_Vec<FTYPE, 2> data(res);
+    FTYPE r;
+    const FTYPE e2 = pow(sim.box_opt.Ng*0.1, 2); // softening of 10% of average interparticle length
 
     #pragma omp parallel for private(r)
     for(unsigned i = 0; i < res; i++)
@@ -949,7 +955,7 @@ void App_Var<T>::print_info() const
  */
 
 
-LinkedList::LinkedList(unsigned par_num, int m, double hc):
+LinkedList::LinkedList(unsigned par_num, int m, FTYPE hc):
 	par_num(par_num), Hc(hc), LL(par_num), HOC(m, m, m) {}
 	
 void LinkedList::get_linked_list(Particle_v* particles)
@@ -963,16 +969,16 @@ void LinkedList::get_linked_list(Particle_v* particles)
 }
 
 template class Vec_3D<int>;
-template class Vec_3D<double>;
-template Vec_3D<double> operator+ (Vec_3D<double>, const Vec_3D<double>&);
-template Vec_3D<double> operator- (Vec_3D<double>, const Vec_3D<double>&);
-template Vec_3D<double> operator* (Vec_3D<double>, double);
-template Vec_3D<double> operator* (double, Vec_3D<double>);
-template Vec_3D<double> operator/ (Vec_3D<double>, double);
-template Vec_3D<int>::operator Vec_3D<double>() const;
-template Vec_3D<double>::operator Vec_3D<int>() const;
+template class Vec_3D<FTYPE>;
+template Vec_3D<FTYPE> operator+ (Vec_3D<FTYPE>, const Vec_3D<FTYPE>&);
+template Vec_3D<FTYPE> operator- (Vec_3D<FTYPE>, const Vec_3D<FTYPE>&);
+template Vec_3D<FTYPE> operator* (Vec_3D<FTYPE>, FTYPE);
+template Vec_3D<FTYPE> operator* (FTYPE, Vec_3D<FTYPE>);
+template Vec_3D<FTYPE> operator/ (Vec_3D<FTYPE>, FTYPE);
+template Vec_3D<int>::operator Vec_3D<FTYPE>() const;
+template Vec_3D<FTYPE>::operator Vec_3D<int>() const;
 template class Mesh_base<int>;
-template class Mesh_base<double>;
+template class Mesh_base<FTYPE>;
 template void Tracking::update_track_par(Particle_x* particles);
 template void Tracking::update_track_par(Particle_v* particles);
 template class App_Var<Particle_x>;
