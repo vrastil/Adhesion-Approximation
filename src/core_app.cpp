@@ -529,12 +529,13 @@ void gen_pow_spec_binned_init(const Sim_Param &sim, const Mesh &power_aux, const
 	gen_cqty_binned(1, sim.box_opt.mesh_num,  sim.out_opt.bins_per_decade, power_aux, half_length, *pwr_spec_binned, mod_pk, mod_k);
 }
 
-void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const Extrap_Pk &P_k, Data_Vec<FTYPE, 2>* pwr_spec_binned)
+template<class P, typename T, unsigned N> // P = everything callable P_k(k), T = float-type, N = number
+void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const P &P_k, Data_Vec<T, N>* pwr_spec_binned)
 {
-    const FTYPE k_max = sim.other_par.k_print.upper;
-    const FTYPE k_min = sim.other_par.k_print.lower;
-    const FTYPE log_bin = 1./ sim.out_opt.bins_per_decade;
-    FTYPE k;
+    const T k_max = sim.other_par.k_print.upper;
+    const T k_min = sim.other_par.k_print.lower;
+    const T log_bin = 1./ sim.out_opt.bins_per_decade;
+    T k;
     unsigned req_size = (unsigned)ceil( sim.out_opt.bins_per_decade*log10(k_max/k_min));
     pwr_spec_binned->resize(req_size);
 
@@ -721,3 +722,4 @@ void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param 
 
 template void get_rho_from_par(Particle_x*, Mesh*, const Sim_Param&);
 template void get_rho_from_par(Particle_v*, Mesh*, const Sim_Param&);
+template void gen_pow_spec_binned_from_extrap(const Sim_Param&, const Extrap_Pk<FTYPE, 2>&, Data_Vec<FTYPE, 2>*);

@@ -34,7 +34,8 @@ void pwr_spec_k_init(const Mesh &rho_k, Mesh* power_aux);
 void vel_pwr_spec_k(const std::vector<Mesh> &vel_field, Mesh* power_aux);
 void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_Vec<FTYPE, 2>* pwr_spec_binned);
 void gen_pow_spec_binned_init(const Sim_Param &sim, const Mesh &power_aux, const unsigned half_length, Data_Vec<FTYPE, 2>* pwr_spec_binned);
-void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const Extrap_Pk &P_k, Data_Vec<FTYPE, 2>* pwr_spec_binned);
+template<class P, typename T, unsigned N> // P = everything callable P_k(k), T = float-type, N = number
+void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const P &P_k, Data_Vec<T, N>* pwr_spec_binned);
 void gen_dens_binned(const Mesh& rho, std::vector<int> &dens_binned, const Sim_Param &sim);
 
 FTYPE force_ref(const FTYPE r, const FTYPE a);

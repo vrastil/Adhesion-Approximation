@@ -869,7 +869,7 @@ void App_Var<T>::print_output()
 
     /* Extrapolate power spectrum beyond range of simulation box */
     if (sim.out_opt.get_pk_extrap){
-        Extrap_Pk P_k(pwr_spec_binned, sim);
+        Extrap_Pk<FTYPE, 2> P_k(pwr_spec_binned, sim);
     /* Print extrapolated power spectrum */
         if (sim.out_opt.print_extrap_pwr){
             gen_pow_spec_binned_from_extrap(sim, P_k, &pwr_spec_binned);
