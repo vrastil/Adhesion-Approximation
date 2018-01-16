@@ -18,7 +18,7 @@ const char *humanSize(uint64_t bytes){
 	char length = sizeof(suffix) / sizeof(suffix[0]);
 
 	int i = 0;
-	FTYPE dblBytes = bytes;
+	double dblBytes = bytes;
 
 	if (bytes > 1024) {
 		for (i = 0; (bytes / 1024) > 0 && i<length-1; i++, bytes /= 1024)
@@ -49,7 +49,7 @@ T Vec_3D<T>::norm2() const
 template <typename T>
 FTYPE Vec_3D<T>::norm() const
 {
-return sqrt(norm2());
+    return sqrt(norm2());
 }
  
 template <typename T>
@@ -469,7 +469,7 @@ Tracking::Tracking(int sqr_num_track_par, int par_num_per_dim):
 	int x, y, z;
 	FTYPE s;
 	y = par_num_per_dim / 2; // middle of the cube
-	s = par_num_per_dim / (4.*(sqr_num_track_par+1.)); // quarter of the cube
+	s = par_num_per_dim / FTYPE(4*(sqr_num_track_par+1)); // quarter of the cube
 	for (int i=1; i<=sqr_num_track_par;i++)
 	{
 		z = (int)(s*i);
@@ -512,8 +512,8 @@ void Box_Opt::init()
 
 void Integ_Opt::init()
 {
-    b_in = 1./(z_in + 1);
-	b_out = 1./(z_out + 1);
+    b_in = 1/(z_in + 1);
+	b_out = 1/(z_out + 1);
 }
 
 void Out_Opt::init()
@@ -525,11 +525,11 @@ void Out_Opt::init()
 
 void App_Opt::init(const Box_Opt& box_opt)
 {
-    a = rs / 0.735;
+    a = rs / FTYPE(0.735);
     M = (int)(box_opt.mesh_num / rs);
     Hc = FTYPE(box_opt.mesh_num) / M;
     nu_dim = nu;
-    nu /= pow(box_opt.box_size/box_opt.mesh_num, 2.); // converting to dimensionless units
+    nu /= pow_(box_opt.box_size/box_opt.mesh_num, 2); // converting to dimensionless units
 }
 
 void Other_par::init(const Box_Opt& box_opt)
@@ -782,17 +782,17 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
     memory_alloc += sizeof(T)*sim.box_opt.par_num;
 
 	// FFTW PREPARATION
-	if (!fftw_init_threads()){
+	if (!FFTW_PLAN_OMP_INIT()){
 		throw runtime_error("Errors during multi-thread initialization");
 	}
-	fftw_plan_with_nthreads(sim.run_opt.nt);
-	p_F = fftw_plan_dft_r2c_3d(sim.box_opt.mesh_num, sim.box_opt.mesh_num, sim.box_opt.mesh_num, app_field[0].real(),
+	FFTW_PLAN_OMP(sim.run_opt.nt);
+	p_F = FFTW_PLAN_R2C(sim.box_opt.mesh_num, sim.box_opt.mesh_num, sim.box_opt.mesh_num, app_field[0].real(),
         app_field[0].complex(), FFTW_ESTIMATE);
-	p_B = fftw_plan_dft_c2r_3d(sim.box_opt.mesh_num, sim.box_opt.mesh_num, sim.box_opt.mesh_num, app_field[0].complex(),
+	p_B = FFTW_PLAN_C2R(sim.box_opt.mesh_num, sim.box_opt.mesh_num, sim.box_opt.mesh_num, app_field[0].complex(),
         app_field[0].real(), FFTW_ESTIMATE);
-    p_F_pwr = fftw_plan_dft_r2c_3d(sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, power_aux[0].real(),
+    p_F_pwr = FFTW_PLAN_R2C(sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, power_aux[0].real(),
 		power_aux[0].complex(), FFTW_ESTIMATE);
-	p_B_pwr = fftw_plan_dft_c2r_3d(sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, power_aux[0].complex(),
+	p_B_pwr = FFTW_PLAN_C2R(sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, power_aux[0].complex(),
 		power_aux[0].real(), FFTW_ESTIMATE);
 }
 
@@ -802,11 +802,11 @@ App_Var<T>::~App_Var()
     delete[] particles;
 
 	// FFTW CLEANUP
-	fftw_destroy_plan(p_F);
-    fftw_destroy_plan(p_B);
-    fftw_destroy_plan(p_F_pwr);
-	fftw_destroy_plan(p_B_pwr);
-	fftw_cleanup_threads();
+	FFTW_DEST_PLAN(p_F);
+    FFTW_DEST_PLAN(p_B);
+    FFTW_DEST_PLAN(p_F_pwr);
+	FFTW_DEST_PLAN(p_B_pwr);
+	FFTW_PLAN_OMP_CLEAN();
 }
 
 template <class T> 
@@ -877,9 +877,9 @@ void App_Var<T>::print_output()
         }
     /* Printing correlation function */
         if (sim.out_opt.print_corr){
-            gen_corr_func_binned_gsl_qawf(sim, P_k, &corr_func_binned);
+            gen_corr_func_binned_gsl_qawf(sim, P_k, corr_func_binned);
             print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_par" + z_suffix());
-            gen_corr_func_binned_gsl_qawf_lin(sim, b, &corr_func_binned);
+            gen_corr_func_binned_gsl_qawf_lin(sim, b, corr_func_binned);
             print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_lin" + z_suffix());
         }
     }
@@ -937,13 +937,13 @@ void App_Var<T>::print_info() const
     const FTYPE r0 = sim.app_opt.rs / (res-1);
     Data_Vec<FTYPE, 2> data(res);
     FTYPE r;
-    const FTYPE e2 = pow(sim.box_opt.Ng*0.1, 2); // softening of 10% of average interparticle length
+    const FTYPE e2 = pow_(sim.box_opt.Ng*0.1, 2); // softening of 10% of average interparticle length
 
     #pragma omp parallel for private(r)
     for(unsigned i = 0; i < res; i++)
     {
         r = i*r0;
-        data[0][i] = pow(r, 2); // store square of r
+        data[0][i] = pow_(r, 2); // store square of r
         data[1][i] = (force_tot(r, e2) - force_ref(r, sim.app_opt.a))/(4*PI);
     }
     fs_interp.init(data);

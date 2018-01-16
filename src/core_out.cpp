@@ -84,7 +84,7 @@ void print_par_pos_cut_small(T* particles, const Sim_Param &sim, string out_dir,
        x = particles[i].position[0];
        y = particles[i].position[1];
        z = particles[i].position[2];			
-       dx = abs(y - sim.box_opt.mesh_num/2.);
+       dx = abs(y - sim.box_opt.mesh_num/2);
        if ((dx < 0.5) && (x < sim.box_opt.mesh_num/4.) && (z < sim.box_opt.mesh_num/4.))
        {
            // cut (L/4 x L/4 x 0.5)
@@ -178,7 +178,7 @@ void print_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Data_V
         }
         else if (err > 1e-12) cout << "WARNING! Different values of k in bin " << j << "! Relative error = " << err << "\n";
         P_k = pwr_spec_binned[1][j];
-        P_lin = pwr_spec_binned_0[1][j] * pow(growth, 2.);
+        P_lin = pwr_spec_binned_0[1][j] * pow_(growth, 2);
         File << scientific << pwr_spec_binned_0[0][j] << "\t" << fixed << (P_k-P_lin)/P_lin << "\n";
 	}
 }
@@ -205,7 +205,7 @@ void print_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Interp
         else
         {
             P_k = pwr_spec_binned[1][j];
-            P_lin = pwr_spec_input(k) * pow(growth, 2.);
+            P_lin = pwr_spec_input(k) * pow_(growth, 2);
             File << scientific << k << "\t" << fixed << (P_k-P_lin)/P_lin << "\n";
         }
 	}
@@ -240,8 +240,8 @@ void print_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Data_V
         else
         {
             P_k = pwr_spec_binned[1][j];
-            P_input = pwr_spec_input(k) * pow(growth_now, 2.);
-            P_par = pwr_spec_binned_0[1][j] * pow(growth_now / growth_init, 2.);
+            P_input = pwr_spec_input(k) * pow_(growth_now, 2);
+            P_par = pwr_spec_binned_0[1][j] * pow_(growth_now / growth_init, 2);
             File << scientific << k << "\t" << fixed << P_k/P_input - P_k/P_par << "\n";
         }
 	}
@@ -270,7 +270,7 @@ void print_vel_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Da
         }
         else if (err > 1e-12) cout << "WARNING! Different values of k in bin " << j << "! Relative error = " << err << "\n";
         P_k = pwr_spec_binned[1][j];
-        P_ZA = pwr_spec_binned_0[1][j] * pow(dDda, 2.);
+        P_ZA = pwr_spec_binned_0[1][j] * pow_(dDda, 2);
         File << scientific << pwr_spec_binned_0[0][j] << "\t" << fixed << (P_k-P_ZA)/P_ZA << "\n";
 	}
 }

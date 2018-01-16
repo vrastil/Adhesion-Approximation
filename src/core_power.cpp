@@ -165,9 +165,10 @@ void norm_pwr(Cosmo_Param& cosmo)
     if (status) throw std::runtime_error(cosmo.cosmo->status_message);
 }
 
-static FTYPE hubble_param(FTYPE a, const Cosmo_Param& cosmo)
+template<typename T>
+static T hubble_param(T a, const Cosmo_Param& cosmo)
 {   // hubble normalize to H(a = 1) == 1
-    return sqrt(cosmo.Omega_m*pow(a, -3) + cosmo.Omega_L());
+    return sqrt(cosmo.Omega_m*pow_(a, -3) + cosmo.Omega_L());
 }
 
 FTYPE Omega_lambda(FTYPE a, const Cosmo_Param& cosmo)
@@ -179,12 +180,12 @@ FTYPE Omega_lambda(FTYPE a, const Cosmo_Param& cosmo)
 
     // compute outside range
     OL = cosmo.Omega_L();
-    return OL/(cosmo.Omega_m*pow(a, -3) + OL);
+    return OL/(cosmo.Omega_m*pow_(a, -3) + OL);
 }
 
 static double growth_factor_integrand(double a, void* params)
 {    
-    return pow(a*hubble_param(a, *static_cast<const Cosmo_Param*>(params)), -3);
+    return pow_(a*hubble_param(a, *static_cast<const Cosmo_Param*>(params)), -3);
 }
 
 FTYPE growth_factor(FTYPE a, const Cosmo_Param& cosmo)
@@ -254,10 +255,10 @@ FTYPE growth_change(FTYPE a, const Cosmo_Param& cosmo)
 FTYPE lin_pow_spec(FTYPE a, FTYPE k, const Cosmo_Param& cosmo)
 {
     int status = 0;
-    FTYPE pk = ccl_linear_matter_power(cosmo.cosmo, k*cosmo.h, a, &status)*pow(cosmo.h, 3);
+    FTYPE pk = ccl_linear_matter_power(cosmo.cosmo, k*cosmo.h, a, &status)*pow_(cosmo.h, 3);
     if (!status) return pk;
     status = 0;
-    pk = ccl_linear_matter_power(cosmo.cosmo, k*cosmo.h, 1, &status)*pow(cosmo.h, 3);
+    pk = ccl_linear_matter_power(cosmo.cosmo, k*cosmo.h, 1, &status)*pow_(cosmo.h, 3);
     FTYPE D = growth_factor(a, cosmo);
     if (!status) return D*D*pk;
     else throw std::runtime_error(cosmo.cosmo->status_message);
@@ -267,7 +268,7 @@ FTYPE non_lin_pow_spec(FTYPE a, FTYPE k, const Cosmo_Param& cosmo)
 {
     if (a < 1e-3) return lin_pow_spec(a, k, cosmo);
     int status = 0;
-    FTYPE pk = ccl_nonlin_matter_power(cosmo.cosmo, k*cosmo.h, a, &status)*pow(cosmo.h, 3);
+    FTYPE pk = ccl_nonlin_matter_power(cosmo.cosmo, k*cosmo.h, a, &status)*pow_(cosmo.h, 3);
     if (!status) return pk;
     else throw std::runtime_error(cosmo.cosmo->status_message);
 }
@@ -289,7 +290,11 @@ void Interp_obj::init(const Data_Vec<T, N>& data)
     is_init = true;
     acc = gsl_interp_accel_alloc ();
     spline = gsl_spline_alloc (gsl_interp_steffen, data.size());
-    gsl_spline_init (spline, data[0].data(), data[1].data(), data.size());
+
+    vector<double> tmp_x(data[0].begin(), data[0].end());
+    vector<double> tmp_y(data[1].begin(), data[1].end());
+
+    gsl_spline_init (spline, tmp_x.data(), tmp_y.data(), data.size());
 
     x_min = data[0].front();
     x_max = data[0].back();
@@ -346,7 +351,7 @@ template <typename T, unsigned N>
 Extrap_Pk<T, N>::Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim):
     Extrap_Pk(data, sim,
         // trust simulation up to HALF k_nq
-        0, get_nearest(sim.other_par.nyquist.at("particle")/2., data[0]) + 1
+        0, get_nearest(sim.other_par.nyquist.at("particle")/2, data[0]) + 1
     ) {}
 
 template <typename T, unsigned N>
@@ -367,7 +372,7 @@ void Extrap_Pk<T, N>::fit_lin(const Data_Vec<T, N>& data, const unsigned m, cons
     for(unsigned i = m; i < n; i++){
         Pk = lin_pow_spec(1, data[0][i], cosmo);
         Pk_res.push_back(data[1][i] / Pk);
-        if (N == 3) w.push_back(pow(Pk/data[2][i], 2));
+        if (N == 3) w.push_back(pow_(Pk/data[2][i], 2));
     }
     double A_sigma2, sumsq;
 
@@ -397,7 +402,7 @@ void Extrap_Pk<T, N>::fit_power_law(const Data_Vec<T, N>& data, const unsigned m
     for(unsigned i = m; i < n; i++){
         k.push_back(log(data[0][i]));
         Pk.push_back(log(data[1][i]));
-        if (N == 3)w.push_back(pow(data[1][i]/data[2][i], 2)); // weight = 1/sigma^2, approx log(1+x) = x for x rel. error
+        if (N == 3)w.push_back(pow_(data[1][i]/data[2][i], 2)); // weight = 1/sigma^2, approx log(1+x) = x for x rel. error
     }
     double cov00, cov01, cov11, sumsq;
     int gsl_errno;
@@ -420,7 +425,7 @@ double Extrap_Pk<T, N>::operator()(double k) const
         return A_low*lin_pow_spec(1, k, cosmo);
     }
     else if (k <= k_max) return Interp_obj::operator()(k);
-    else return A_up*pow(k, n_s);
+    else return A_up*pow_(k, n_s);
 }
 
 /**
@@ -473,7 +478,7 @@ static double xi_integrand_G(double k, void* params){
 };
 
 template <class P, class T> // both callable with 'operator()(double)'
-static void gen_corr_func_binned_gsl(const Sim_Param &sim, const P& P_k, Data_Vec<double, 2>* corr_func_binned, T& xi_r)
+static void gen_corr_func_binned_gsl(const Sim_Param &sim, const P& P_k, Data_Vec<FTYPE, 2>& corr_func_binned, T& xi_r)
 {
     const double x_min = sim.other_par.x_corr.lower;
     const double x_max = sim.other_par.x_corr.upper;
@@ -482,14 +487,14 @@ static void gen_corr_func_binned_gsl(const Sim_Param &sim, const P& P_k, Data_Ve
 
     const double lin_bin = 10./sim.out_opt.points_per_10_Mpc;
     unsigned req_size = (unsigned)ceil((x_max - x_min)/lin_bin);
-    corr_func_binned->resize(req_size);
+    corr_func_binned.resize(req_size);
 
 	double r;
 	for(unsigned i = 0; i < req_size; i++){
         r = x_min + i*lin_bin;
         my_param.r = r;
-        (*corr_func_binned)[0][i] = r;
-        (*corr_func_binned)[1][i] = xi_r(r, &my_param);
+        corr_func_binned[0][i] = r;
+        corr_func_binned[1][i] = xi_r(r, &my_param);
     }
 }
 
@@ -504,22 +509,22 @@ constexpr size_t GSL_LIMIT = 4000;
 constexpr size_t GSL_N = 50;
 
 template<class P> // everything callable P_k(k)
-void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<double, 2>* corr_func_binned)
+void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<FTYPE, 2>& corr_func_binned)
 {
     printf("Computing correlation function via GSL integration QAWF...\n");
     Integr_obj_qawf xi_r(&xi_integrand_W<P>, 0, GSL_EPSABS,  GSL_LIMIT, GSL_N);
     gen_corr_func_binned_gsl(sim, P_k, corr_func_binned, xi_r);
 }
 
-void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, double a, Data_Vec<double, 2>* corr_func_binned)
+void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, FTYPE a, Data_Vec<FTYPE, 2>& corr_func_binned)
 {
-    auto P_k = [&](double k){ return lin_pow_spec(a, k, sim.cosmo); };
+    auto P_k = [&](FTYPE k){ return lin_pow_spec(a, k, sim.cosmo); };
     gen_corr_func_binned_gsl_qawf(sim, P_k, corr_func_binned);
 }
 
-void gen_corr_func_binned_gsl_qawf_nl(const Sim_Param &sim, double a, Data_Vec<double, 2>* corr_func_binned)
+void gen_corr_func_binned_gsl_qawf_nl(const Sim_Param &sim, FTYPE a, Data_Vec<FTYPE, 2>& corr_func_binned)
 {
-    auto P_k = [&](double k){ return non_lin_pow_spec(a, k, sim.cosmo); };
+    auto P_k = [&](FTYPE k){ return non_lin_pow_spec(a, k, sim.cosmo); };
     gen_corr_func_binned_gsl_qawf(sim, P_k, corr_func_binned);
 }
 
@@ -531,8 +536,8 @@ template class Extrap_Pk<FTYPE, 3>;
 template class Extrap_Pk_Nl<FTYPE, 2>;
 template class Extrap_Pk_Nl<FTYPE, 3>;
 
-template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk<FTYPE, 2>&, Data_Vec<FTYPE, 2>*);
-template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk_Nl<FTYPE, 2>&, Data_Vec<FTYPE, 2>*);
+template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk<FTYPE, 2>&, Data_Vec<FTYPE, 2>&);
+template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk_Nl<FTYPE, 2>&, Data_Vec<FTYPE, 2>&);
 
 #ifdef TEST
 #include "test_power.cpp"

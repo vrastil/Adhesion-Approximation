@@ -94,7 +94,7 @@ void handle_cmd_line(int ac, char* av[], Sim_Param& sim){
     
     po::options_description config_other("Approximation`s options");
     config_other.add_options()
-        ("viscosity,v", po::value<FTYPE>(&sim.app_opt.nu)->default_value(1.), "'viscozity' for adhesion approximation in units of pixel^2")
+        ("viscosity,v", po::value<FTYPE>(&sim.app_opt.nu)->default_value(1), "'viscozity' for adhesion approximation in units of pixel^2")
         ("cut_radius,r", po::value<FTYPE>(&sim.app_opt.rs)->default_value(2.7, "2.7"), "short-range force cutoff radius in units of mesh cells")
         ;
         

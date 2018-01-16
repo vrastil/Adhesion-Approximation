@@ -2,14 +2,23 @@
 # export CPATH=$CPATH:/path/to/non-standars/headers/include
 # export LIBRARY_PATH=/path/to/non-standars/libraries/lib
 
+PRECISION = 3
+
 CXXFLAGS =-std=c++11 -pipe
 CXXFLAGS +=-MMD
 CXXFLAGS +=-fopenmp -flto -fPIC
 #CXXFLAGS +=-D CORR
 CXXFLAGS +=-D NOISE_HALF
+CXXFLAGS +=-D PRECISION=$(PRECISION)
 
 CXXLIB +=-lboost_program_options -lboost_filesystem -lboost_system
-CXXLIB +=-lfftw3 -lfftw3_omp
+ifeq ($(PRECISION),1)
+	CXXLIB +=-lfftw3f -lfftw3f_omp
+else ifeq ($(PRECISION),2)
+	CXXLIB +=-lfftw3 -lfftw3_omp
+else ifeq ($(PRECISION),3)
+	CXXLIB +=-lfftw3l -lfftw3l_omp
+endif
 CXXLIB +=-lgsl -lgslcblas
 CXXLIB +=-lccl
 

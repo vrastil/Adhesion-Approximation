@@ -19,19 +19,19 @@ extern const int nmode=351;
 
 // Kriging basis computed by emuInit
 // Sizes of each basis will be peta[ee] and m[ee]
-static FTYPE KrigBasis[2][28][111];
+static double KrigBasis[2][28][111];
 
 // Need to combine some things into a big thing.
-static FTYPE beta[2][28][8];
-static FTYPE w[2][28][111];
-static FTYPE lamws[2][28];
-static FTYPE lamz[2][28];
+static double beta[2][28][8];
+static double w[2][28][111];
+static double lamws[2][28];
+static double lamz[2][28];
 
 // Initialization to compute the kriging basis for the two parts
 void emuInit() {
    
     int ee, i, j, k, l;
-    FTYPE cov;
+    double cov;
     gsl_matrix *SigmaSim;
     gsl_vector *b;
 
@@ -96,7 +96,7 @@ void emuInit() {
                     // compute the covariance
                     cov = 0.0;
                     for(l=0; l<p; l++) {
-                        cov -= beta[ee][i][l]*pow(x[j][l] - x[k][l], 2.0);
+                        cov -= beta[ee][i][l]*pow(x[j][l] - x[k][l], 2);
                     } // for(l=0; l<p; l++)
                     cov = exp(cov) / lamz[ee][i];
                     
@@ -133,14 +133,14 @@ void emuInit() {
 // Actual emulation
 void emu(FTYPE *xstar, FTYPE *ystar) {
     
-    static FTYPE inited=0;
+    static double inited=0;
     int ee, i, j, k;
-    FTYPE wstar[peta[0]+peta[1]];
-    FTYPE Sigmastar[2][peta[1]][m[0]];
-    FTYPE ystaremu[neta];
-    FTYPE ybyz[rs];
-    FTYPE logc;
-    FTYPE xstarstd[p];
+    double wstar[peta[0]+peta[1]];
+    double Sigmastar[2][peta[1]][m[0]];
+    double ystaremu[neta];
+    double ybyz[rs];
+    double logc;
+    double xstarstd[p];
     int zmatch;
     gsl_spline *zinterp = gsl_spline_alloc(gsl_interp_cspline, rs);
     gsl_interp_accel *accel = gsl_interp_accel_alloc();
@@ -210,7 +210,7 @@ void emu(FTYPE *xstar, FTYPE *ystar) {
             for(j=0; j<m[ee]; j++) {
                 logc = 0.0;
                 for(k=0; k<p; k++) {
-                    logc -= beta[ee][i][k]*pow(x[j][k] - xstarstd[k], 2.0);
+                    logc -= beta[ee][i][k]*pow(x[j][k] - xstarstd[k], 2);
                 }
                 Sigmastar[ee][i][j] = exp(logc) / lamz[ee][i];
             }
@@ -302,8 +302,8 @@ Data_Vec<FTYPE, 2> init_emu(const Sim_Param &sim, FTYPE z)
     }
 
     FTYPE xstar[9];
-    xstar[0] = sim.cosmo.Omega_m*pow(sim.cosmo.h, 2); // omega_m
-    xstar[1] = sim.cosmo.Omega_b*pow(sim.cosmo.h, 2); // omega_b
+    xstar[0] = sim.cosmo.Omega_m*pow_(sim.cosmo.h, 2); // omega_m
+    xstar[1] = sim.cosmo.Omega_b*pow_(sim.cosmo.h, 2); // omega_b
     xstar[2] = sim.cosmo.sigma8; // sigma_8
     xstar[3] = sim.cosmo.h; // h
     xstar[4] = sim.cosmo.ns; // n_s
@@ -314,7 +314,7 @@ Data_Vec<FTYPE, 2> init_emu(const Sim_Param &sim, FTYPE z)
 
     emu(xstar, emu_data[1].data());// get P(k)
     for (unsigned i = 0; i < emu_data.size(); i++){
-        emu_data[1][i] *= pow(sim.cosmo.h, 3); // convert emulator P(k) [Mpc^3] into [(Mpc/h)^3]
+        emu_data[1][i] *= pow_(sim.cosmo.h, 3); // convert emulator P(k) [Mpc^3] into [(Mpc/h)^3]
     }
     return emu_data; // move
 }

@@ -5,23 +5,51 @@
 
 #pragma once
 #include "stdafx.h"
- 
+
+/*********************************************
+ * single / double / long double definitions *
+ ********************************************/
+
+#ifndef PRECISION
+#define PRECISION 2 // default double precision
+#endif
+
+#if PRECISION == 1
+typedef float FTYPE;
+#define MAKE_FFTW_NAME(FUNC_NAME) fftwf_ ## FUNC_NAME
+#elif PRECISION == 2
+typedef double FTYPE;
+#define MAKE_FFTW_NAME(FUNC_NAME) fftw_ ## FUNC_NAME
+#elif PRECISION == 3
+typedef long double FTYPE;
+#define MAKE_FFTW_NAME(FUNC_NAME) fftwl_ ## FUNC_NAME
+#endif
+
+#define FFTW_PLAN_TYPE MAKE_FFTW_NAME(plan)
+#define FFTW_DEST_PLAN MAKE_FFTW_NAME(destroy_plan)
+#define FFTW_COMPLEX_TYPE MAKE_FFTW_NAME(complex)
+#define FFTW_PLAN_R2C MAKE_FFTW_NAME(plan_dft_r2c_3d)
+#define FFTW_PLAN_C2R MAKE_FFTW_NAME(plan_dft_c2r_3d)
+#define FFTW_PLAN_OMP MAKE_FFTW_NAME(plan_with_nthreads)
+#define FFTW_PLAN_OMP_INIT MAKE_FFTW_NAME(init_threads)
+#define FFTW_PLAN_OMP_CLEAN MAKE_FFTW_NAME(cleanup_threads)
+#define FFTW_EXEC_R2C MAKE_FFTW_NAME(execute_dft_r2c)
+#define FFTW_EXEC_C2R MAKE_FFTW_NAME(execute_dft_c2r)
+
+constexpr FTYPE PI = (FTYPE)M_PI;
+
+template <typename T>
+inline double pow_(double base, T exp){ return pow(base, exp); } // std::pow is OK for <double>
+#if PRECISION != 2
+template <typename T>
+inline FTYPE pow_(FTYPE base, T exp){ return pow(base, FTYPE(exp)); } // recast exponent to call right overloaded version
+#endif
+
 template <typename T> int sgn(T val)
 {
 	return (T(0) < val) - (val < T(0));
 }
 
-#if PRECISION == 1
-typedef float FTYPE;
-#elif PRECISION == 2
-typedef double FTYPE;
-#elif PRECISION == 3
-typedef long double FTYPE;
-#else
-typedef double FTYPE;
-#endif
-
-constexpr FTYPE PI = M_PI;
 /**
  * @class:	Vec_3D<T>
  * @brief:	class handling basic 3D-vector functions
@@ -127,8 +155,8 @@ public:
 	unsigned N; // acces dimension of mesh
 	
 	// METHODS
-    fftw_complex* complex() { return reinterpret_cast<fftw_complex*>(data.data());}
-    const fftw_complex* complex() const { return reinterpret_cast<const fftw_complex*>(data.data());}
+    FFTW_COMPLEX_TYPE* complex() { return reinterpret_cast<FFTW_COMPLEX_TYPE*>(data.data());}
+    const FFTW_COMPLEX_TYPE* complex() const { return reinterpret_cast<const FFTW_COMPLEX_TYPE*>(data.data());}
 
     void reset_part(bool part);
     void reset_re() { reset_part(0); }
@@ -458,13 +486,13 @@ public:
     // OTHER VARIABLES
     Data_Vec<FTYPE, 2> corr_func_binned, pwr_spec_binned, pwr_spec_binned_0, vel_pwr_spec_binned_0;
     Interp_obj pwr_spec_input;
-	fftw_plan p_F, p_B, p_F_pwr, p_B_pwr;
+	FFTW_PLAN_TYPE p_F, p_B, p_F_pwr, p_B_pwr;
 	Tracking track;
 	std::vector<int> dens_binned;
 	
 	// METHODS
-	FTYPE z() const{ return 1./b - 1.;}
-	FTYPE b_half() const { return b - db/2.; }
+	FTYPE z() const{ return 1/b - 1;}
+	FTYPE b_half() const { return b - db/2; }
 	bool integrate() const { return (b <= b_out) && (db > 0);}
 	bool printing() const { return print_every ? ((step % print_every) == 0) or (b == b_out) : print_every ; }
     void print_output();

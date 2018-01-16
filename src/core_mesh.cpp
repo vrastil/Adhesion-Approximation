@@ -30,16 +30,17 @@ FTYPE get_k_sq(int N, int index)
 	int k_vec[3];
 	FTYPE tmp = 0;
 	get_k_vec(N, index, k_vec);
-	for (int i =0; i<3; i++) tmp += pow(k_vec[i],2.);
+	for (int i =0; i<3; i++) tmp += pow(k_vec[i],2);
 	return tmp;
 }
 
-FTYPE get_per(FTYPE vec, int per)
+template<typename T>
+static T get_per(T vec, int per)
 {
     return ((vec >= per) || (vec < 0) ) ? vec - per * floor( vec / per ) : vec;
 }
 
-int get_per(int vec, int per)
+static int get_per(int vec, int per)
 {
     if ((vec >= per) || (vec < 0) ){
         vec %= per;
@@ -48,22 +49,10 @@ int get_per(int vec, int per)
     else return vec;
 }
 
-void get_per(Vec_3D<FTYPE> &position, int per)
+template<typename T>
+void get_per(Vec_3D<T> &position, int per)
 {
-    for (FTYPE& pos : position) pos = get_per(pos, per);
-}
-
-void get_per(Vec_3D<int> &position, int per)
-{
-    for (int& pos : position) pos = get_per(pos, per);
-}
-
-void get_per(Vec_3D<int> &position, const Vec_3D<int> &per)
-{
-    for (int i = 0; i < 3; i++)
-	{
-        position[i] = get_per(position[i], per[i]);
-	}
+    for (T& pos : position) pos = get_per(pos, per);
 }
 
 void get_per(Vec_3D<int> &position, int perx, int pery, int perz)
@@ -82,31 +71,36 @@ void get_per(Particle_v* particles, const unsigned par_num, const int per)
     }
 }
 
-FTYPE get_distance_1D(FTYPE x_1, FTYPE x_2, int per)
+template<typename T>
+inline T get_distance_1D(T x_1, T x_2, int per)
 {	
-	FTYPE d = abs(x_2 - x_1);
-	if (d <= per / 2.) return d; // most probable, first condition
+	T d = abs(x_2 - x_1);
+	if (d <= per / 2) return d; // most probable, first condition
 	else if (d <= per) return per - d;
-	else d = fmod(d, per); // fmod unlikely to evaluate, speed up code
-	if (d <= per / 2.) return d;
+	else d = fmod(d, T(per)); // fmod unlikely to evaluate, speed up code
+	if (d <= per / 2) return d;
 	else return per - d;
 }
 
-FTYPE get_sgn_distance_1D(FTYPE x_from, FTYPE x_to, int per)
+template<typename T>
+inline T get_distance_1D(T x_1, int x_2, int per){ return get_distance_1D(x_1, (T)x_2, per); }
+
+template<typename T>
+inline T get_sgn_distance_1D(T x_from, T x_to, int per)
 {	// return signed (oriented) distance, e.g. x_to - x_from (no periodicity)
 	// periodicity makes this a little bit trickier
-	FTYPE d = x_from - x_to;
-	if (abs(d) <= per / 2.) return d; // most probable, first condition
+	T d = x_from - x_to;
+	if (abs(d) <= per / 2) return d; // most probable, first condition
 	else if (abs(d) <= per) return d-sgn(d)*per;
-	else d = fmod(d, per); // fmod unlikely to evaluate, speed up code
-	if (abs(d) <= per / 2.) return d;
+	else d = fmod(d, T(per)); // fmod unlikely to evaluate, speed up code
+	if (abs(d) <= per / 2) return d;
 	else return d-sgn(d)*per;
 }
 
 FTYPE get_distance(const Vec_3D<FTYPE> &x_1, const Vec_3D<FTYPE> &x_2, int per)
 {
 	FTYPE dst = 0;
-	for (int i = 0; i < 3; i++) dst+= pow(get_distance_1D(x_1[i], x_2[i], per), 2.);
+	for (int i = 0; i < 3; i++) dst+= pow_(get_distance_1D(x_1[i], x_2[i], per), 2);
 	return sqrt(dst);
 }
 
@@ -147,8 +141,8 @@ template<> FTYPE wgh_sch<2>(const Vec_3D<FTYPE> &x, Vec_3D<int> y, int mesh_num)
     {
         dx = get_distance_1D(x[i], y[i], mesh_num);
         if (dx > 1.5) return 0;
-        else if (dx > 0.5) w *= (1.5 - dx)*(1.5 - dx) / 2.0;
-        else w *= 3 / 4.0 - dx*dx;
+        else if (dx > 0.5) w *= pow_(1.5 - dx, 2) / 2;
+        else w *= 3 / FTYPE(4) - dx*dx;
     }
     return w;
 }
@@ -241,33 +235,23 @@ void assign_from(const vector<Mesh> &field, const Vec_3D<FTYPE> &position, Vec_3
 	} while( it.iter() );
 }
 
-void normalize_FFT_FORWARD(Mesh& rho)
+void fftw_execute_dft_r2c(const FFTW_PLAN_TYPE &p_F, Mesh& rho)
 {
-    rho /= pow(rho.N, 3.);
+	FFTW_EXEC_R2C(p_F, rho.real(), rho.complex());
+	rho /= pow(rho.N, 3); //< normalization
 }
 
-void normalize_FFT_BACKWARD(Mesh& rho)
+void fftw_execute_dft_c2r(const FFTW_PLAN_TYPE &p_B, Mesh& rho)
 {
+	FFTW_EXEC_C2R(p_B, rho.complex(), rho.real());
 }
 
-void fftw_execute_dft_r2c(const fftw_plan &p_F, Mesh& rho)
-{
-	fftw_execute_dft_r2c(p_F, rho.real(), rho.complex());
-	normalize_FFT_FORWARD(rho);
-}
-
-void fftw_execute_dft_c2r(const fftw_plan &p_B, Mesh& rho)
-{
-	fftw_execute_dft_c2r(p_B, rho.complex(), rho.real());
-	normalize_FFT_BACKWARD(rho);
-}
-
-void fftw_execute_dft_r2c_triple(const fftw_plan &p_F, vector<Mesh>& rho)
+void fftw_execute_dft_r2c_triple(const FFTW_PLAN_TYPE &p_F, vector<Mesh>& rho)
 {
 	for (int i = 0; i < 3; i++) fftw_execute_dft_r2c(p_F, rho[i]);
 }
 
-void fftw_execute_dft_c2r_triple(const fftw_plan &p_B, vector<Mesh>& rho)
+void fftw_execute_dft_c2r_triple(const FFTW_PLAN_TYPE &p_B, vector<Mesh>& rho)
 {
 	for (int i = 0; i < 3; i++) fftw_execute_dft_c2r(p_B, rho[i]);
 }
@@ -312,6 +296,8 @@ FTYPE max(const vector<FTYPE>& data)
     return *std::max_element(data.begin(), data.end());
 }
 
+template void get_per(Vec_3D<int> &position, int per);
+template void get_per(Vec_3D<FTYPE> &position, int per);
 template class IT<ORDER+1>;
 template class IT<3>;
 

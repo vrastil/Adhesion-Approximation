@@ -18,9 +18,9 @@ TEST_CASE( "UNIT TEST: periodicity functions {get_per}", "[core_mesh]" )
     CHECK( get_per(-0, 10) == 0 );
     CHECK( get_per(-10, 10) == 0 );
 
-    Vec_3D<FTYPE> pos(0., -10., 10.);
+    Vec_3D<double> pos(0., -10., 10.);
     get_per(pos, 10);
-    Vec_3D<FTYPE> pos2(4.3, -7.8, 18.4);
+    Vec_3D<double> pos2(4.3, -7.8, 18.4);
     get_per(pos2, 10);
 
     CHECK( pos[0] == Approx(0.) );
@@ -36,12 +36,7 @@ TEST_CASE( "UNIT TEST: periodicity functions {get_per}", "[core_mesh]" )
     get_per(pos2i, 10);
 
     CHECK( posi == Vec_3D<int>(0, 0, 0) );
-    CHECK( pos2i == Vec_3D<int>(4, 3, 8) );
-
-    Vec_3D<int> pos3i(0, -10, 10);
-    Vec_3D<int> per(4, 5, 3);
-    get_per(pos3i, per);
-    CHECK( pos3i == Vec_3D<int>(0, 0, 1) );
+    CHECK( pos2i == Vec_3D<int>(4, 3, 8) );    
 
     Vec_3D<int> pos4i(0, -10, 10);
     get_per(pos4i, 5, 10, 4);
