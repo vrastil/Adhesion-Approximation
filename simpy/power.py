@@ -26,13 +26,13 @@ def get_ndarray(Data_Vec):
     return np.array(data)
 
 def get_Data_vec(data):
-    """ copy 2D data 3xN into C++ class Data_Vec<FTYPE, 3> """
+    """ copy 2D data 'dim x size' into C++ class Data_Vec<FTYPE, dim> """
     dim = len(data)
     size = len(data[0])
     if dim == 2:
-        Data_Vec = fs.Data_d2(size)
+        Data_Vec = fs.Data_Vec_2(size)
     elif dim == 3:
-        Data_Vec = fs.Data_d3(size)
+        Data_Vec = fs.Data_Vec_3(size)
     else:
         raise IndexError("only Data_Vec<FTYPE, dim> of 'dim' 2 or 3 supported")
     for j in xrange(dim):
@@ -64,7 +64,7 @@ def corr_func(sim, Pk=None, z=None, non_lin=False):
     """ return correlation function
     if given Pk -- C++ class Extrap_Pk or Extrap_Pk_Nl -- computes its corr. func.
     if given redshift, computes linear or non-linear (emulator) correlation function  """
-    corr = fs.Data_d2()
+    corr = fs.Data_Vec_2()
     if Pk: # compute correlation function from given continuous power spectrum
         fs.gen_corr_func_binned_gsl_qawf(sim, Pk, corr)
     elif z is not None: # compute (non-)linear correlation function

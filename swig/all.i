@@ -24,16 +24,16 @@
 
 // templates generator
 
-%define TEMP_CLASS_GEN(py_name, temp_name)
+%define TEMP_CLASS_GEN(temp_name)
 #if PRECISION == 1
-%template(py_name ## _f2) temp_name<float, 2>;
-%template(py_name ## _f3) temp_name<float, 3>;
+%template(temp_name ## _2) temp_name<float, 2>;
+%template(temp_name ## _3) temp_name<float, 3>;
 #elif PRECISION == 2
-%template(py_name ## _d2) temp_name<double, 2>;
-%template(py_name ## _d3) temp_name<double, 3>;
+%template(temp_name ## _2) temp_name<double, 2>;
+%template(temp_name ## _3) temp_name<double, 3>;
 #elif PRECISION == 3
-%template(py_name ## _l2) temp_name<long double, 2>;
-%template(py_name ## _l3) temp_name<long double, 3>;
+%template(temp_name ## _2) temp_name<long double, 2>;
+%template(temp_name ## _3) temp_name<long double, 3>;
 #endif
 %enddef
 

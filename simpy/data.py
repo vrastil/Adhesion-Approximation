@@ -11,7 +11,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 from . import plot
-from .fastsim import Extrap_Pk_Nl
+from .fastsim import Extrap_Pk_Nl_2, Extrap_Pk_Nl_3
 from .struct import SimInfo, StackInfo, insert
 from .power import hybrid_pow_spec, get_Data_vec, corr_func
 
@@ -391,7 +391,8 @@ def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par):
     perr, pcor = get_perr_pcor(pcov)
 
     # get hybrid Extrap
-    Pk_par = Extrap_Pk_Nl(get_Data_vec(data), sim, popt[1], popt[0])
+    Pk_par = Extrap_Pk_Nl_3 if sigma else Extrap_Pk_Nl_2
+    Pk_par = Pk_par(get_Data_vec(data), sim, popt[1], popt[0])
 
     # return all info in dict
     return {"Pk_par" : Pk_par, "popt" : popt, "pcov" : pcov, 'perr' : perr, 'pcor' : pcor}

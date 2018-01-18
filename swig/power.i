@@ -7,7 +7,7 @@
 %include "core_power.h"
 
 // Instantiate templates
-TEMP_CLASS_GEN(Extrap_Pk, Extrap_Pk)
-TEMP_CLASS_GEN(Extrap_Pk_Nl, Extrap_Pk_Nl)
+TEMP_CLASS_GEN(Extrap_Pk)
+TEMP_CLASS_GEN(Extrap_Pk_Nl)
 TEMP_FUNC_GEN(gen_corr_func_binned_gsl_qawf, Extrap_Pk)
 TEMP_FUNC_GEN(gen_corr_func_binned_gsl_qawf, Extrap_Pk_Nl)

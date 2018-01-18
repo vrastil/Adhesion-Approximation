@@ -11,4 +11,4 @@
 %include "core.h"
 
 // Instantiate templates
-TEMP_CLASS_GEN(Data, Data_Vec)
+TEMP_CLASS_GEN(Data_Vec)

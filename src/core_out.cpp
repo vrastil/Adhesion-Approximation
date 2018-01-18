@@ -149,9 +149,25 @@ void print_corr_func(const Data_Vec<FTYPE, 2> &pwr_spec_binned, string out_dir, 
 	}
 }
 
-FTYPE rel_error(FTYPE a, FTYPE b)
+template<typename T>
+T rel_error(const T& a, const T& b)
 {
     return a ? fabs((a-b)/a) : fabs(a-b);
+}
+
+template<typename T>
+bool is_err(const vector<T>& vec1, const vector<T>& vec2, unsigned bin)
+{
+    const T err = rel_error( vec1[bin], vec2[bin]);
+    constexpr T prec_err = is_same<T, float>::value ? 1e-4f : 1e-8;
+    constexpr T prec_war = is_same<T, float>::value ? 1e-6f : 1e-12;
+
+    if (err > prec_err){
+        cout << "ERROR! Different values of k in bin " << bin << "! Relative error = " << err << "\n";
+        return true;
+    }
+    else if (err > prec_war) cout << "WARNING! Different values of k in bin " << bin << "! Relative error = " << err << "\n";
+    return false;
 }
 
 void print_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Data_Vec<FTYPE, 2> &pwr_spec_binned_0,
@@ -167,16 +183,11 @@ void print_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Data_V
             "# depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 
-	FTYPE P_k, P_lin, err;
+	FTYPE P_k, P_lin;
     cout.precision(10);
     const unsigned size = pwr_spec_binned.size();
 	for (unsigned j = 0; j < size; j++){
-        err = rel_error(pwr_spec_binned[0][j], pwr_spec_binned_0[0][j]);
-        if (err > 1e-6){
-            cout << "ERROR! Different values of k in bin " << j << "! Relative error = " << err << "\n";
-            continue;
-        }
-        else if (err > 1e-12) cout << "WARNING! Different values of k in bin " << j << "! Relative error = " << err << "\n";
+        if (is_err(pwr_spec_binned[0], pwr_spec_binned_0[0], j)) continue;
         P_k = pwr_spec_binned[1][j];
         P_lin = pwr_spec_binned_0[1][j] * pow_(growth, 2);
         File << scientific << pwr_spec_binned_0[0][j] << "\t" << fixed << (P_k-P_lin)/P_lin << "\n";
@@ -224,16 +235,11 @@ void print_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Data_V
             "# depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 
-	FTYPE k, P_k, P_input, P_par, err;
+	FTYPE k, P_k, P_input, P_par;
     cout.precision(10);
     const unsigned size = pwr_spec_binned.size();
 	for (unsigned j = 0; j < size; j++){
-        err = rel_error(pwr_spec_binned[0][j], pwr_spec_binned_0[0][j]);
-        if (err > 1e-6){
-            cout << "ERROR! Different values of k in bin " << j << "! Relative error = " << err << "\n";
-            continue;
-        }
-        else if (err > 1e-12) cout << "WARNING! Different values of k in bin " << j << "! Relative error = " << err << "\n";
+        if (is_err(pwr_spec_binned[0], pwr_spec_binned_0[0], j)) continue;
         k = pwr_spec_binned_0[0][j];
         if (k < pwr_spec_input.x_min) continue;
         else if(k > pwr_spec_input.x_max) break;
@@ -259,16 +265,11 @@ void print_vel_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Da
             "# and lineary extrapolated velocity divergence power spectrum depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 	
-	FTYPE P_k, P_ZA, err;
+	FTYPE P_k, P_ZA;
     cout.precision(10);
     const unsigned size = pwr_spec_binned.size();
 	for (unsigned j = 0; j < size; j++){
-        err = rel_error(pwr_spec_binned[0][j], pwr_spec_binned_0[0][j]);
-        if (err > 1e-6){
-            cout << "ERROR! Different values of k in bin " << j << "! Relative error = " << err << "\n";
-            continue;
-        }
-        else if (err > 1e-12) cout << "WARNING! Different values of k in bin " << j << "! Relative error = " << err << "\n";
+        if (is_err(pwr_spec_binned[0], pwr_spec_binned_0[0], j)) continue;
         P_k = pwr_spec_binned[1][j];
         P_ZA = pwr_spec_binned_0[1][j] * pow_(dDda, 2);
         File << scientific << pwr_spec_binned_0[0][j] << "\t" << fixed << (P_k-P_ZA)/P_ZA << "\n";

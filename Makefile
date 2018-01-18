@@ -2,7 +2,7 @@
 # export CPATH=$CPATH:/path/to/non-standars/headers/include
 # export LIBRARY_PATH=/path/to/non-standars/libraries/lib
 
-PRECISION = 2
+PRECISION = 1
 
 CXXFLAGS =-std=c++11 -pipe
 CXXFLAGS +=-MMD
