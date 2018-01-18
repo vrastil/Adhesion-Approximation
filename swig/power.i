@@ -7,11 +7,7 @@
 %include "core_power.h"
 
 // Instantiate templates
-%extend Extrap_Pk {
-    %template(Extrap_Pk) Extrap_Pk<2>;
-    %template(Extrap_Pk) Extrap_Pk<3>;
-}
-%template(gen_corr_func_binned_gsl_qawf) gen_corr_func_binned_gsl_qawf<Extrap_Pk>;
-%template(gen_corr_func_binned_gsl_qawf) gen_corr_func_binned_gsl_qawf<Extrap_Pk_Nl>;
-%template(Extrap_Pk_Nl) Extrap_Pk_Nl::Extrap_Pk_Nl<2>;
-%template(Extrap_Pk_Nl) Extrap_Pk_Nl::Extrap_Pk_Nl<3>;
+TEMP_CLASS_GEN(Extrap_Pk, Extrap_Pk)
+TEMP_CLASS_GEN(Extrap_Pk_Nl, Extrap_Pk_Nl)
+TEMP_FUNC_GEN(gen_corr_func_binned_gsl_qawf, Extrap_Pk)
+TEMP_FUNC_GEN(gen_corr_func_binned_gsl_qawf, Extrap_Pk_Nl)

@@ -2,7 +2,7 @@
 # export CPATH=$CPATH:/path/to/non-standars/headers/include
 # export LIBRARY_PATH=/path/to/non-standars/libraries/lib
 
-PRECISION = 3
+PRECISION = 2
 
 CXXFLAGS =-std=c++11 -pipe
 CXXFLAGS +=-MMD
@@ -45,7 +45,7 @@ unit: src/unity_build.cpp $(PCH_O)
 
 swig: CXXFLAGS +=-Ofast -march=native -D LESSINFO
 swig: $(LIB) swig/*.i
-	swig -python -c++ -I/usr/local/include/ -I./include -o swig/swig_wrap.cpp swig/all.i
+	swig -python -c++ -DPRECISION=$(PRECISION) -I/usr/local/include/ -I./include -o swig/swig_wrap.cpp swig/all.i
 	$(COMPILE.cc) -c -I/usr/include/python2.7 -o swig/swig_wrap.o swig/swig_wrap.cpp
 	$(COMPILE.fin) -shared -o swig/_fastsim.so swig/swig_wrap.o $(LIB) $(CXXLIB)
 	ln -sf ${CURDIR}/swig/_fastsim.so simpy/
