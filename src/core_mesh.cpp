@@ -158,15 +158,15 @@ FTYPE wgh_sch(const Vec_3D<FTYPE> &x, Vec_3D<int> y, int mesh_num)
  * @brief:	class for effective iteration of cube of mesch cells
  */
 
-template<unsigned points>
+template<int points>
 IT<points>::IT(const Vec_3D<FTYPE> &pos): counter(0)
 {
     for(unsigned i = 0; i < 3; i++){
-        vec[i] = (int)(pos[i] - 0.5*(int(points) - 2));
+        vec[i] = (int)(pos[i] - 0.5*(points - 2));
     }
 }
 
-template<unsigned points>
+template<int points>
 IT<points>::IT(const Vec_3D<FTYPE> &pos, FTYPE Hc): counter(0)
 {
     for(unsigned i = 0; i < 3; i++){
@@ -174,7 +174,7 @@ IT<points>::IT(const Vec_3D<FTYPE> &pos, FTYPE Hc): counter(0)
     }
 }
 
-template<unsigned points>
+template<int points>
 bool IT<points>::iter(){
     if (++counter == (points*points*points)) return false;
     vec[2]++;

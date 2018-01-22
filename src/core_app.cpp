@@ -16,7 +16,7 @@ static void set_unpert_pos_one_par(Vec_3D<int>& unpert_pos, const unsigned par_i
 	unpert_pos[2] = (par_index % par_per_dim) * Ng;
 }
 
-static void set_velocity_one_par(const Vec_3D<int> unpert_pos, Vec_3D<FTYPE>& displ_field, const vector<Mesh> &vel_field)
+static void set_velocity_one_par(const Vec_3D<int>& unpert_pos, Vec_3D<FTYPE>& displ_field, const vector<Mesh> &vel_field)
 {
 	for (unsigned i = 0; i < 3; i++) displ_field[i] = vel_field[i](unpert_pos);
 }
@@ -162,7 +162,7 @@ FTYPE force_tot(const FTYPE r, const FTYPE e2){
 }
 
 void force_short(const Sim_Param &sim, const FTYPE D, const LinkedList& linked_list, Particle_v *particles,
-				 const Vec_3D<FTYPE> position, Vec_3D<FTYPE>* force, Interp_obj* fs_interp)
+				 const Vec_3D<FTYPE>& position, Vec_3D<FTYPE>* force, Interp_obj* fs_interp)
 {	// Calculate short range force in position, force is added
     #define FORCE_SHORT_NO_INTER
 	int p;

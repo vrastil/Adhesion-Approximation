@@ -34,7 +34,7 @@ FTYPE max(FTYPE* p_data, int len);
 FTYPE min(const std::vector<FTYPE>& data);
 FTYPE max(const std::vector<FTYPE>& data);
 
-template<unsigned points>
+template<int points>
 class IT
 {
 public:
