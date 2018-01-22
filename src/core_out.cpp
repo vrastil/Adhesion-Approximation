@@ -159,8 +159,8 @@ template<typename T>
 bool is_err(const vector<T>& vec1, const vector<T>& vec2, unsigned bin)
 {
     const T err = rel_error( vec1[bin], vec2[bin]);
-    constexpr T prec_err = is_same<T, float>::value ? 1e-4f : 1e-8;
-    constexpr T prec_war = is_same<T, float>::value ? 1e-6f : 1e-12;
+    constexpr T prec_err = is_same<T, float>::value ? 1e-3f : 1e-7;
+    constexpr T prec_war = is_same<T, float>::value ? 1e-5f : 1e-12;
 
     if (err > prec_err){
         cout << "ERROR! Different values of k in bin " << bin << "! Relative error = " << err << "\n";

@@ -46,7 +46,7 @@ def non_lin_pow_spec(a, k, cosmo):
     if k.shape:
         return np.array([fs.non_lin_pow_spec(a, k_, cosmo)  for k_ in k])
     else:
-        return fs.non_lin_pow_spec(a, k, cosmo)
+        return fs.non_lin_pow_spec(a, np.asscalar(k), cosmo)
 
 def lin_pow_spec(a, k, cosmo):
     """ return ndarray of linear power spectrum """
@@ -54,10 +54,10 @@ def lin_pow_spec(a, k, cosmo):
     if k.shape:
         return np.array([fs.lin_pow_spec(a, k_, cosmo)  for k_ in k])
     else:
-        return fs.lin_pow_spec(a, k, cosmo)
+        return fs.lin_pow_spec(a, np.asscalar(k), cosmo)
 
 def hybrid_pow_spec(a, k, A, cosmo):
-    """ return 'hybrid' power spectrum: (A-1)*P_lin(k, a) + A*P_nl """
+    """ return 'hybrid' power spectrum: (1-A)*P_lin(k, a) + A*P_nl """
     return (1-A)*lin_pow_spec(a, k, cosmo) + A*non_lin_pow_spec(a, k, cosmo)
 
 def corr_func(sim, Pk=None, z=None, non_lin=False):
@@ -83,7 +83,7 @@ def growth_factor(a, cosmo):
     if a.shape:
         return np.array([fs.growth_factor(a_, cosmo) for a_ in a])
     else:
-        return fs.growth_factor(a, cosmo)
+        return fs.growth_factor(np.asscalar(a), cosmo)
 
 def growth_rate(a, cosmo):
     """ return growth rate 'f= d ln D/ d ln a' at scale factor a, accepts ndarray """
@@ -91,7 +91,7 @@ def growth_rate(a, cosmo):
     if a.shape:
         return np.array([fs.growth_rate(a_, cosmo) for a_ in a])
     else:
-        return fs.growth_rate(a, cosmo)
+        return fs.growth_rate(np.asscalar(a), cosmo)
 
 def growth_change(a, cosmo):
     """ return growth change 'd D/d a' at scale factor a, accepts ndarray """
@@ -99,4 +99,4 @@ def growth_change(a, cosmo):
     if a.shape:
         return np.array([fs.growth_change(a_, cosmo) for a_ in a])
     else:
-        return fs.growth_change(a, cosmo)
+        return fs.growth_change(np.asscalar(a), cosmo)
