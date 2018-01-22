@@ -72,7 +72,7 @@ void get_per(Particle_v* particles, const unsigned par_num, const int per)
 }
 
 template<typename T>
-inline T get_distance_1D(T x_1, T x_2, int per)
+inline T get_distance_1D(const T x_1, const T x_2, const int per)
 {	
 	T d = abs(x_2 - x_1);
 	if (d <= per / 2) return d; // most probable, first condition
@@ -83,7 +83,7 @@ inline T get_distance_1D(T x_1, T x_2, int per)
 }
 
 template<typename T>
-inline T get_distance_1D(T x_1, int x_2, int per){ return get_distance_1D(x_1, (T)x_2, per); }
+inline T get_distance_1D(const T x_1, const int x_2, const int per){ return get_distance_1D(x_1, (T)x_2, per); }
 
 template<typename T>
 inline T get_sgn_distance_1D(T x_from, T x_to, int per)
@@ -111,19 +111,20 @@ Vec_3D<FTYPE> get_sgn_distance(const Vec_3D<FTYPE> &x_from, const Vec_3D<FTYPE> 
 	return dst;
 }
 
-template<unsigned N> FTYPE wgh_sch(const Vec_3D<FTYPE> &x, Vec_3D<int> y, int mesh_num);
+template<unsigned N> static FTYPE wgh_sch(const Vec_3D<FTYPE> &x, const Vec_3D<int>& y, int mesh_num);
+// The weighting scheme used to assign values to the mesh points or vice versa
+// Return value of assigment function on mesh point y from particle in x
 
-template<> FTYPE wgh_sch<0>(const Vec_3D<FTYPE> &x, Vec_3D<int> y, int mesh_num)
-{ // NGP: Nearest grid point
-    get_per(y, mesh_num);
-    for (int i = 0; i < 3; i++) if ((int)x[i] != y[i]) return 0;
-    return 1;
-}
+// template<> FTYPE wgh_sch<0>(const Vec_3D<FTYPE> &x, Vec_3D<int> y, int mesh_num)
+// { // NGP: Nearest grid point
+//     get_per(y, mesh_num);
+//     for (int i = 0; i < 3; i++) if ((int)x[i] != y[i]) return 0;
+//     return 1;
+// }
 
-template<> FTYPE wgh_sch<1>(const Vec_3D<FTYPE> &x, Vec_3D<int> y, int mesh_num)
+template<> FTYPE wgh_sch<1>(const Vec_3D<FTYPE> &x, const Vec_3D<int>& y, int mesh_num)
 { // CIC: Cloud in cells
     FTYPE dx, w = 1;
-    get_per(y, mesh_num);
     for (int i = 0; i < 3; i++)
     {
         dx = get_distance_1D(x[i], y[i], mesh_num);
@@ -133,10 +134,9 @@ template<> FTYPE wgh_sch<1>(const Vec_3D<FTYPE> &x, Vec_3D<int> y, int mesh_num)
     return w;
 }
 
-template<> FTYPE wgh_sch<2>(const Vec_3D<FTYPE> &x, Vec_3D<int> y, int mesh_num)
+template<> FTYPE wgh_sch<2>(const Vec_3D<FTYPE> &x, const Vec_3D<int>& y, int mesh_num)
 { // TSC: Triangular shaped clouds
     FTYPE dx, w = 1;
-    get_per(y, mesh_num);
     for (int i = 0; i < 3; i++)
     {
         dx = get_distance_1D(x[i], y[i], mesh_num);
@@ -145,12 +145,6 @@ template<> FTYPE wgh_sch<2>(const Vec_3D<FTYPE> &x, Vec_3D<int> y, int mesh_num)
         else w *= 3 / FTYPE(4) - dx*dx;
     }
     return w;
-}
-
-FTYPE wgh_sch(const Vec_3D<FTYPE> &x, Vec_3D<int> y, int mesh_num)
-{	// The weighting scheme used to assign values to the mesh points or vice versa
-	// Return value of assigment function on mesh point y from particle in x
-    return wgh_sch<ORDER>(x, y, mesh_num);
 }
 
 /**
@@ -194,7 +188,7 @@ void assign_to(Mesh* field, const Vec_3D<FTYPE> &position, const FTYPE value)
     IT<ORDER+1> it(position);
     do{
         #pragma omp atomic
-        (*field)(it.vec) += value * wgh_sch(position, it.vec, field->N);
+        (*field)(it.vec) += value * wgh_sch<ORDER>(position, it.vec, field->N);
     } while( it.iter() );
 }
 
@@ -203,7 +197,7 @@ void assign_to(vector<Mesh>* field, const Vec_3D<FTYPE> &position, const Vec_3D<
     IT<ORDER+1> it(position);
     FTYPE w;
     do{
-        w = wgh_sch(position, it.vec, (*field)[0].N); //< resuse the same weigh for every field in vector
+        w = wgh_sch<ORDER>(position, it.vec, (*field)[0].N); //< resuse the same weigh for every field in vector
         for (int i = 0; i < 3; i++)
         {
             #pragma omp atomic
@@ -217,7 +211,7 @@ void assign_from(const Mesh &field, const Vec_3D<FTYPE> &position, FTYPE* value)
 	IT<ORDER+1> it(position);
     do{
         #pragma omp atomic
-        *value += field(it.vec) * wgh_sch(position, it.vec, field.N);
+        *value += field(it.vec) * wgh_sch<ORDER>(position, it.vec, field.N);
 	} while( it.iter() );
 }
 
@@ -226,7 +220,7 @@ void assign_from(const vector<Mesh> &field, const Vec_3D<FTYPE> &position, Vec_3
     IT<ORDER+1> it(position);
     FTYPE w;
     do{
-        w = wgh_sch(position, it.vec, field[0].N); //< resuse the same weigh for every field in vector
+        w = wgh_sch<ORDER>(position, it.vec, field[0].N); //< resuse the same weigh for every field in vector
         for (int i = 0; i < 3; i++)
         {
             #pragma omp atomic
