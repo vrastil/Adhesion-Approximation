@@ -11,7 +11,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 from . import plot
-from .fastsim import Extrap_Pk_Nl
+from .fastsim import Extrap_Pk_Nl_2, Extrap_Pk_Nl_3
 from .struct import SimInfo, StackInfo, insert
 from .power import hybrid_pow_spec, get_Data_vec, corr_func
 
@@ -59,7 +59,7 @@ def try_get_zs_files(a_sim_info, subdir, patterns):
         zs, files = sort_get_fl_get_z(a_sim_info, subdir, patterns=patterns)
         return list(zs), list(files)
     except ValueError:
-        print "WARNING! Missing data in '%s'. Skipping step." % (a_sim_info.dir + subdir)
+        print "\tWARNING! Missing data. Skipping step."
         return None, None
 
 # ***************************
@@ -164,10 +164,10 @@ def load_check_plot(a_sim_info, key, patterns, # type: SimInfo, str, str,
     4) plot -- need to pass Callable function with arguments: files, zs, a_sim_info, kwargs
     5) write info about done step into a_sim_info
     """
+    print 'step: %s %s' % (key, info_str)
     subdir = key + '/' if subdir is None else subdir
     zs, files = try_get_zs_files(a_sim_info, subdir, patterns)
     if a_sim_info.rerun(rerun, key, skip, zs):
-        print 'step: %s %s' % (key, info_str)
         plot_func(files, zs, a_sim_info, **kwargs)
         a_sim_info.done(key)
 
@@ -197,6 +197,7 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
             {'subdir' : 'pwr_diff/', 'info_str' : '(input)', 'ext_title' : 'input'}),
         # Power spectrum suppression
         ("pwr_spec_supp", '*par*', get_plot_supp, {'subdir' : 'pwr_diff/'}),
+        ("pwr_spec_supp_map", '*par*', get_plot_supp_map, {'subdir' : 'pwr_diff/'}),
         # Velocity power spectrum
         ("vel_pwr_spec", '*.dat', load_plot_pwr, {'pk_type' : 'vel'}),
         # Velocity power spectrum difference
@@ -390,7 +391,8 @@ def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par):
     perr, pcor = get_perr_pcor(pcov)
 
     # get hybrid Extrap
-    Pk_par = Extrap_Pk_Nl(get_Data_vec(data), sim, popt[1], popt[0])
+    Pk_par = Extrap_Pk_Nl_3 if sigma else Extrap_Pk_Nl_2
+    Pk_par = Pk_par(get_Data_vec(data), sim, popt[1], popt[0])
 
     # return all info in dict
     return {"Pk_par" : Pk_par, "popt" : popt, "pcov" : pcov, 'perr' : perr, 'pcor' : pcor}

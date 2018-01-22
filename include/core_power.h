@@ -3,42 +3,16 @@
  * @brief:	functions handling operations with power spectra
  */
 #pragma once
- 
-#include "stdafx.h"
 #include "core.h"
 
 void norm_pwr(Cosmo_Param& cosmo);
-double norm_growth_factor(const Cosmo_Param& cosmo);
-double growth_factor(double a, const Cosmo_Param& cosmo);
-double growth_rate(double a, const Cosmo_Param& cosmo);
-double growth_change(double a, const Cosmo_Param& cosmo);
-double Omega_lambda(double a, const Cosmo_Param& cosmo);
-double lin_pow_spec(double a, double k, const Cosmo_Param& cosmo);
-double non_lin_pow_spec(double a, double k, const Cosmo_Param& cosmo);
-
-/**
- * @class:	Interp_obj
- * @brief:	linear interpolation of data [x, y]
- */
-
-class Interp_obj
-{// Steffen interpolation of data [x, y]
-public:
-    Interp_obj(): is_init(false) {}
-    template<unsigned N>
-    Interp_obj(const Data_Vec<double, N>& data);
-    ~Interp_obj();
-    double operator()(double x) const;
-    template<unsigned N>
-    void init(const Data_Vec<double, N>& data);
-
-    double x_min, x_max;
-
-private:
-    bool is_init;
-    gsl_spline* spline;
-    gsl_interp_accel* acc;
-};
+FTYPE norm_growth_factor(const Cosmo_Param& cosmo);
+FTYPE growth_factor(FTYPE a, const Cosmo_Param& cosmo);
+FTYPE growth_rate(FTYPE a, const Cosmo_Param& cosmo);
+FTYPE growth_change(FTYPE a, const Cosmo_Param& cosmo);
+FTYPE Omega_lambda(FTYPE a, const Cosmo_Param& cosmo);
+FTYPE lin_pow_spec(FTYPE a, FTYPE k, const Cosmo_Param& cosmo);
+FTYPE non_lin_pow_spec(FTYPE a, FTYPE k, const Cosmo_Param& cosmo);
 
 /**
  * @class:	ODE_Solver
@@ -58,36 +32,53 @@ public:
 };
 
 /**
+ * @class:	Interp_obj
+ * @brief:	linear interpolation of data [x, y]
+ */
+
+class Interp_obj
+{// Steffen interpolation of data [x, y]
+public:
+    Interp_obj(): is_init(false) {}
+    ~Interp_obj();
+    double operator()(double x) const;
+    template <typename T, unsigned N>
+    void init(const Data_Vec<T, N>& data);
+    double x_min, x_max;
+
+private:
+    bool is_init;
+    gsl_spline* spline;
+    gsl_interp_accel* acc;
+};
+
+/**
  * @class:	Extrap_Pk
  * @brief:	linear interpolation of data [k, P(k)] within 'useful' range
             fit to primordial P_i(k) below the 'useful' range
             fit to Padé approximant R [0/3] above the 'useful' range
  */
 
+template <typename T, unsigned N>
 class Extrap_Pk : public Interp_obj
 { /*
     Steffen interpolation of data [k, P(k)] within range k_min, k_max
     fit to primordial P_i(k) below this range, fit A*k^ns above
 */
 public:
-    template<unsigned N>
-    Extrap_Pk(const Data_Vec<double, N>& data, const Sim_Param& sim);
-    template<unsigned N>
-    Extrap_Pk(const Data_Vec<double, N>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_u);
-    template<unsigned N>
-    Extrap_Pk(const Data_Vec<double, N>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
+    Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim);
+    Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_u);
+    Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
               const unsigned m_u, const unsigned n_u);
     double operator()(double k) const;
 
-    template<unsigned N>
-    void fit_lin(const Data_Vec<double, N>& data, const unsigned m, const unsigned n, double& A);
-    template<unsigned N>
-    void fit_power_law(const Data_Vec<double, N>& data, const unsigned m, const unsigned n, double& A, double& n_s);
+    void fit_lin(const Data_Vec<T, N>& data, const unsigned m, const unsigned n, double& A);
+    void fit_power_law(const Data_Vec<T, N>& data, const unsigned m, const unsigned n, double& A, double& n_s);
 
     double A_low; // amplitude of linear power in lower range
     const Cosmo_Param& cosmo;
     double A_up, n_s; // scale-free power spectrum in upper range
-    double k_min, k_max; // interpolation range
+    T k_min, k_max; // interpolation range
 };
 
 /**
@@ -96,17 +87,16 @@ public:
             call 'operator()(k)' based on k_split (upper range of the linear)
  */
 
-class Extrap_Pk_Nl
+template <typename T, unsigned N>
+class Extrap_Pk_Nl : public Extrap_Pk<T, N>
 {
 public:
-    template<unsigned N>
-    Extrap_Pk_Nl(const Data_Vec<double, N>& data, const Sim_Param &sim, double A_nl, double a_eff);
-    const Extrap_Pk Pk_lin;
-    const double A_nl, a_eff, k_split;
+    Extrap_Pk_Nl(const Data_Vec<T, N>& data, const Sim_Param &sim, T A_nl, T a_eff);
+    const T A_nl, a_eff, k_split;
     double operator()(double k) const;
 };
 
 template<class P> // everything callable P_k(k)
-void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<double, 2>* corr_func_binned);
-void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, double a, Data_Vec<double, 2>* corr_func_binned);
-void gen_corr_func_binned_gsl_qawf_nl(const Sim_Param &sim, double a, Data_Vec<double, 2>* corr_func_binned);
+void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<FTYPE, 2>& corr_func_binned);
+void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, FTYPE a, Data_Vec<FTYPE, 2>& corr_func_binned);
+void gen_corr_func_binned_gsl_qawf_nl(const Sim_Param &sim, FTYPE a, Data_Vec<FTYPE, 2>& corr_func_binned);

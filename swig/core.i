@@ -11,5 +11,4 @@
 %include "core.h"
 
 // Instantiate templates
-%template(Data_d2) Data_Vec<double, 2>;
-%template(Data_d3) Data_Vec<double, 3>;
+TEMP_CLASS_GEN(Data_Vec)

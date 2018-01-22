@@ -138,6 +138,7 @@ class StackInfo(SimInfo):
         else:
             raise KeyError("Constructor 'StackInfo' called without arguments.")
 
+        self.save() # need to save new cosmo param for C++ to load modified parameters
         self.data = {}
         for key in RESULTS_KEYS_STACK:
             if key not in self.results:
@@ -169,10 +170,8 @@ class StackInfo(SimInfo):
                 if len(self.seeds) != len(data["seeds"]):
                     print "\tFound stack info but number of files does not seem right. Disregarding any saved data."
                     self.results = {}
-                    self.save()
         else:  # save new StackInfo
-            self.results = {}
-            self.save()     
+            self.results = {}     
 
     def save(self):
         data = self.__dict__.copy()

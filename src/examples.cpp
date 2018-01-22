@@ -1,5 +1,3 @@
-
-#include "stdafx.h"
 #include "core.h"
 #include "core_out.h"
 #include "core_app.h"

@@ -8,7 +8,6 @@
 //
 //
 
-#include "stdafx.h"
 #include "core.h"
 namespace emu
 {
@@ -97,7 +96,7 @@ void emuInit() {
                     // compute the covariance
                     cov = 0.0;
                     for(l=0; l<p; l++) {
-                        cov -= beta[ee][i][l]*pow(x[j][l] - x[k][l], 2.0);
+                        cov -= beta[ee][i][l]*pow(x[j][l] - x[k][l], 2);
                     } // for(l=0; l<p; l++)
                     cov = exp(cov) / lamz[ee][i];
                     
@@ -132,7 +131,7 @@ void emuInit() {
 } // emuInit()
 
 // Actual emulation
-void emu(double *xstar, double *ystar) {
+void emu(FTYPE *xstar, FTYPE *ystar) {
     
     static double inited=0;
     int ee, i, j, k;
@@ -211,7 +210,7 @@ void emu(double *xstar, double *ystar) {
             for(j=0; j<m[ee]; j++) {
                 logc = 0.0;
                 for(k=0; k<p; k++) {
-                    logc -= beta[ee][i][k]*pow(x[j][k] - xstarstd[k], 2.0);
+                    logc -= beta[ee][i][k]*pow(x[j][k] - xstarstd[k], 2);
                 }
                 Sigmastar[ee][i][j] = exp(logc) / lamz[ee][i];
             }
@@ -292,19 +291,19 @@ void emu(double *xstar, double *ystar) {
     }
 }
 
-Data_Vec<double, 2> init_emu(const Sim_Param &sim, double z)
+Data_Vec<FTYPE, 2> init_emu(const Sim_Param &sim, FTYPE z)
 {
     #ifndef LESSINFO
     std::cout << "Initializing emulator...\n";
     #endif
-    Data_Vec<double, 2> emu_data(nmode);
+    Data_Vec<FTYPE, 2> emu_data(nmode);
     for (unsigned i = 0; i < emu_data.size(); i++){
         emu_data[0][i] = mode[i] / sim.cosmo.h; // convert emulator k [1/Mpc] into [h/Mpc]
     }
 
-    double xstar[9];
-    xstar[0] = sim.cosmo.Omega_m*pow(sim.cosmo.h, 2); // omega_m
-    xstar[1] = sim.cosmo.Omega_b*pow(sim.cosmo.h, 2); // omega_b
+    FTYPE xstar[9];
+    xstar[0] = sim.cosmo.Omega_m*pow_(sim.cosmo.h, 2); // omega_m
+    xstar[1] = sim.cosmo.Omega_b*pow_(sim.cosmo.h, 2); // omega_b
     xstar[2] = sim.cosmo.sigma8; // sigma_8
     xstar[3] = sim.cosmo.h; // h
     xstar[4] = sim.cosmo.ns; // n_s
@@ -315,7 +314,7 @@ Data_Vec<double, 2> init_emu(const Sim_Param &sim, double z)
 
     emu(xstar, emu_data[1].data());// get P(k)
     for (unsigned i = 0; i < emu_data.size(); i++){
-        emu_data[1][i] *= pow(sim.cosmo.h, 3); // convert emulator P(k) [Mpc^3] into [(Mpc/h)^3]
+        emu_data[1][i] *= pow_(sim.cosmo.h, 3); // convert emulator P(k) [Mpc^3] into [(Mpc/h)^3]
     }
     return emu_data; // move
 }
