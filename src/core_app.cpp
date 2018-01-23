@@ -32,7 +32,7 @@ void set_unpert_pos(const Sim_Param &sim, Particle_x* particles)
 	for(unsigned i=0; i< Np; i++)
 	{
 		set_unpert_pos_one_par(unpert_pos, i, par_per_dim, Ng);		
-		particles[i] = Particle_x(Vec_3D<FTYPE>(unpert_pos));
+		particles[i] = Particle_x(unpert_pos);
 	}
 }
 
@@ -49,7 +49,7 @@ void set_unpert_pos_w_vel(const Sim_Param &sim, Particle_v* particles, const vec
 	{
 		set_unpert_pos_one_par(unpert_pos, i, par_per_dim, Ng);
 		set_velocity_one_par(unpert_pos, velocity, vel_field);
-		particles[i] = Particle_v(Vec_3D<FTYPE>(unpert_pos), velocity);
+		particles[i] = Particle_v(unpert_pos, velocity);
 	}
 }
 
@@ -69,7 +69,7 @@ void set_pert_pos(const Sim_Param &sim, const FTYPE db, Particle_x* particles, c
 	{
 		set_unpert_pos_one_par(unpert_pos, i, par_per_dim, Ng);
 		set_velocity_one_par(unpert_pos, displ_field, vel_field);
-		pert_pos = Vec_3D<FTYPE>(unpert_pos) + displ_field*db;
+		pert_pos = displ_field*db + unpert_pos;
 		get_per(pert_pos, Nm);
 		particles[i] = Particle_x(pert_pos);		
 	}
@@ -94,7 +94,7 @@ void set_pert_pos_w_vel(const Sim_Param &sim, const FTYPE a, Particle_v* particl
 	{
 		set_unpert_pos_one_par(unpert_pos, i, par_per_dim, Ng);
 		set_velocity_one_par(unpert_pos, velocity, vel_field);
-		pert_pos = Vec_3D<FTYPE>(unpert_pos) + velocity*D;
+		pert_pos = velocity*D + unpert_pos;
 		get_per(pert_pos, Nm);
 		particles[i] = Particle_v(pert_pos, velocity*dDda);		
 	}
@@ -662,7 +662,7 @@ void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, const FTYPE a)
 		potential_tmp[0] = pot_k[2*i]; // prevent overwriting if vel_field[0] == pot_k
         potential_tmp[1] = pot_k[2*i+1]; // prevent overwriting if vel_field[0] == pot_k
         get_k_vec(N, i, k_vec);
-        k_vec_phys = Vec_3D<FTYPE>(k_vec)*d_k;	
+        k_vec_phys = d_k*k_vec;	
         // no optimalization
         if (a == -1) opt = 1.;
         // optimalization for CIC and S2 shaped particle

@@ -5,6 +5,7 @@
 
 #pragma once
 #include "stdafx.h"
+#include "vec_3d.hpp"
 
 /*********************************************
  * single / double / long double definitions *
@@ -50,128 +51,9 @@ template <typename T> int sgn(T val)
 	return (T(0) < val) - (val < T(0));
 }
 
-/**
- * @class:	Vec_3D<T>
- * @brief:	class handling basic 3D-vector functions
- */
-
-template <typename T>
-class Vec_3D : public std::array<T, 3>
-{
-public:
-	// CONSTRUCTORS
-	Vec_3D(){};
-	Vec_3D(T x, T y, T z):
-	std::array<T, 3>({x, y, z}) {};
-    
-    // METHODS
-    T norm2() const;
-	FTYPE norm() const;
-		
-	// OPERATORS	
-	Vec_3D<T>& operator+=(const Vec_3D<T>& rhs);
-    Vec_3D<T>& operator-=(const Vec_3D<T>& rhs);
-    Vec_3D<T>& operator+=(T rhs);
-	Vec_3D<T>& operator-=(T rhs);
-	Vec_3D<T>& operator*=(T rhs);
-	Vec_3D<T>& operator/=(T rhs);
-	template<class U>
-    explicit operator Vec_3D<U>() const;
-};
-
-// NON-MEMBER FUNCTIONS
-template <typename T> Vec_3D<T> operator+(Vec_3D<T> lhs, const Vec_3D<T>& rhs);
-template <typename T> Vec_3D<T> operator-(Vec_3D<T> lhs, const Vec_3D<T>& rhs);
-template <typename T> Vec_3D<T> operator*(Vec_3D<T> lhs, T rhs);
-template <typename T> Vec_3D<T> operator*(T lhs, Vec_3D<T> rhs);
-template <typename T> Vec_3D<T> operator+(Vec_3D<T> lhs, T rhs);
-template <typename T> Vec_3D<T> operator+(T lhs, Vec_3D<T> rhs);
-template <typename T> Vec_3D<T> operator-(Vec_3D<T> lhs, T rhs);
-template <typename T> Vec_3D<T> operator-(T lhs, Vec_3D<T> rhs);
-template <typename T> Vec_3D<T> operator/(Vec_3D<T> lhs, T rhs);
-
-/**
- * @class:	Mesh_base<T>
- * @brief:	class handling basic mesh functions, the most important are creating and destroing the underlying data structure
- *			creates a mesh of N1*N2*N3 cells
- */
-
 // ignore following in SWIG wrapper
 #ifndef SWIG
-template <typename T>
-class Mesh_base
-{
-public:
-	// CONSTRUCTOR
-	Mesh_base(unsigned n1, unsigned n2, unsigned n3);
-	
-	// VARIABLES
-	unsigned N1, N2, N3, length; // acces dimensions and length of mesh
-    std::vector<T> data; // data stored on the mesh
-	
-	// METHODS
-    T* real() { return data.data();} // acces data through pointer
-    const T* real() const { return data.data();} // acces data through const pointer
-	void assign(T val);
-	
-	// OPERATORS
-	T &operator[](int i){ return data[i]; }
-	const T &operator[](int i) const{ return data[i]; }
-	
-	T& operator()(int i, int j, int k){ return data[i*N2*N3+j*N3+k]; }
-	const T& operator()(int i, int j, int k) const{ return data[i*N2*N3+j*N3+k]; }
-	
-	T& operator()(int i, int j){ return data[i*N3+j]; }
-	const T& operator()(int i, int j) const{ return data[i*N3+j]; }
-	
-	T& operator()(Vec_3D<int> pos);
-	const T& operator()(Vec_3D<int> pos) const;
-	
-	Mesh_base& operator+=(const T& rhs);
-	Mesh_base& operator-=(const T& rhs){ return *this+=-rhs; }
-	Mesh_base& operator*=(const T& rhs);
-	Mesh_base& operator/=(const T& rhs);
-};
-
-// template <typename T> void swap(Mesh_base<T>& first, Mesh_base<T>& second);
-
-/**
- * @class:	Mesh
- * @brief:	creates a mesh of N*N*(N+2) cells
- */
-
-class Mesh : public Mesh_base<FTYPE>
-{
-public:
-	// CONSTRUCTORS & DESTRUCTOR
-    Mesh(unsigned n);
-    // default constructors / assignemnts belowe
-    // Mesh(const Mesh& that);
-    // Mesh(Mesh&& that) noexcept;
-    // Mesh& operator=(Mesh that);
-    // friend void swap(Mesh& first, Mesh& second);
-	
-	// VARIABLES
-	unsigned N; // acces dimension of mesh
-	
-	// METHODS
-    FFTW_COMPLEX_TYPE* complex() { return reinterpret_cast<FFTW_COMPLEX_TYPE*>(data.data());}
-    const FFTW_COMPLEX_TYPE* complex() const { return reinterpret_cast<const FFTW_COMPLEX_TYPE*>(data.data());}
-
-    void reset_part(bool part);
-    void reset_re() { reset_part(0); }
-    void reset_im() { reset_part(1); }
-    
-	// OPERATORS
-	using Mesh_base<FTYPE>::operator ();
-	FTYPE& operator()(Vec_3D<int> pos);
-	const FTYPE& operator()(Vec_3D<int> pos) const;
-	
-	Mesh& operator+=(const FTYPE& rhs);
-	Mesh& operator-=(const FTYPE& rhs){ return *this+=-rhs; }
-	Mesh& operator*=(const FTYPE& rhs);
-	Mesh& operator/=(const FTYPE& rhs);
-};
+#include "mesh.hpp"
 
 /**
  * @class:	Particle_x
@@ -184,9 +66,11 @@ class Particle_x
 public:
 	// CONSTRUCTORS
 	Particle_x(){};
-	Particle_x(FTYPE x, FTYPE y, FTYPE z):
-	position(x,y,z) {};
-	Particle_x(Vec_3D<FTYPE> position):
+    // template<typename T>
+	// Particle_x(T x, T y, T z):
+	// position(x,y,z) {};
+    template<typename T>
+	Particle_x(Vec_3D<T> position):
 	position(position) {};
 	
 	// VARIABLES
@@ -209,9 +93,10 @@ class Particle_v : public Particle_x
 public:
 	// CONSTRUCTORS
 	Particle_v(){};
-	Particle_v(FTYPE x, FTYPE y, FTYPE z, FTYPE vx, FTYPE vy, FTYPE vz):
-		Particle_x(x,y,z), velocity(vx,vy,vz) {};
-	Particle_v(Vec_3D<FTYPE> position, Vec_3D<FTYPE> velocity):
+	// Particle_v(FTYPE x, FTYPE y, FTYPE z, FTYPE vx, FTYPE vy, FTYPE vz):
+	// 	Particle_x(x,y,z), velocity(vx,vy,vz) {};
+    template<typename T, typename U>
+	Particle_v(Vec_3D<T> position, Vec_3D<U> velocity):
 		Particle_x(position), velocity(velocity) {};
 	
 	// VARIABLES

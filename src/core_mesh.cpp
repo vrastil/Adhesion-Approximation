@@ -55,7 +55,8 @@ void get_per(Vec_3D<T> &position, int per)
     for (T& pos : position) pos = get_per(pos, per);
 }
 
-void get_per(Vec_3D<int> &position, int perx, int pery, int perz)
+template<typename T>
+void get_per(Vec_3D<T> &position, int perx, int pery, int perz)
 {
     position[0] = get_per(position[0], perx);
     position[1] = get_per(position[1], pery);
@@ -290,8 +291,11 @@ FTYPE max(const vector<FTYPE>& data)
     return *std::max_element(data.begin(), data.end());
 }
 
-template void get_per(Vec_3D<int> &position, int per);
-template void get_per(Vec_3D<FTYPE> &position, int per);
+template void get_per(Vec_3D<int>&, int);
+template void get_per(Vec_3D<FTYPE>&, int);
+template void get_per(Vec_3D<int>&, int, int, int);
+template void get_per(Vec_3D<FTYPE>&, int, int, int);
+
 template class IT<ORDER+1>;
 template class IT<3>;
 
