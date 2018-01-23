@@ -1,12 +1,10 @@
-
-#include "stdafx.h"
 #include "core.h"
 
 namespace po = boost::program_options;
 
 using namespace std;
 
-struct Dvector { vector<double> v; };
+struct Dvector { vector<FTYPE> v; };
 
 void validate(boost::any& v, const vector<string>& values, Dvector*, int) {
   Dvector dvalues;
@@ -35,14 +33,14 @@ void handle_cmd_line(int ac, char* av[], Sim_Param& sim){
         ("mesh_num,m", po::value<unsigned>(&sim.box_opt.mesh_num)->default_value(128), "number of mesh cells per dimension (potential)")
         ("mesh_num_pwr,M", po::value<unsigned>(&sim.box_opt.mesh_num_pwr)->default_value(256), "number of mesh cells per dimension (power spectrum)")
         ("par_num,p", po::value<unsigned>(&sim.box_opt.par_num_1d)->default_value(128), "number of particles per dimension")
-        ("box_size,L", po::value<double>(&sim.box_opt.box_size)->default_value(512, "512"), "box size in units of Mpc/h")
+        ("box_size,L", po::value<FTYPE>(&sim.box_opt.box_size)->default_value(512, "512"), "box size in units of Mpc/h")
         ;
         
     po::options_description config_integ("Integration options");
     config_integ.add_options()
-        ("redshift,z", po::value<double>(&sim.integ_opt.z_in)->default_value(200.), "redshift at the start of the simulation")
-        ("redshift_0,Z", po::value<double>(&sim.integ_opt.z_out)->default_value(10.), "redshift at the end of the simulation")
-        ("time_step,a", po::value<double>(&sim.integ_opt.db)->default_value(0.1, "0.1"), "dimensionless time-step (scale factor)")
+        ("redshift,z", po::value<FTYPE>(&sim.integ_opt.z_in)->default_value(200.), "redshift at the start of the simulation")
+        ("redshift_0,Z", po::value<FTYPE>(&sim.integ_opt.z_out)->default_value(10.), "redshift at the end of the simulation")
+        ("time_step,a", po::value<FTYPE>(&sim.integ_opt.db)->default_value(0.1, "0.1"), "dimensionless time-step (scale factor)")
         ;
     
     po::options_description config_output("Output options");
@@ -73,16 +71,16 @@ void handle_cmd_line(int ac, char* av[], Sim_Param& sim){
         
     po::options_description config_power("Cosmological parameters");
     config_power.add_options()
-        ("Omega_b,B", po::value<double>(&sim.cosmo.Omega_b)->default_value(0.05, "0.05"), "density of baryons relative to the critical density")
-        ("Omega_m,C", po::value<double>(&sim.cosmo.Omega_m)->default_value(0.25, "0.25"), "density of CDM relative to the critical density")
-        ("Hubble,H", po::value<double>(&sim.cosmo.H0)->default_value(67, "67"), "Hubble constant in units of km/s/Mpc")
+        ("Omega_b,B", po::value<FTYPE>(&sim.cosmo.Omega_b)->default_value(0.05, "0.05"), "density of baryons relative to the critical density")
+        ("Omega_m,C", po::value<FTYPE>(&sim.cosmo.Omega_m)->default_value(0.25, "0.25"), "density of CDM relative to the critical density")
+        ("Hubble,H", po::value<FTYPE>(&sim.cosmo.H0)->default_value(67, "67"), "Hubble constant in units of km/s/Mpc")
         ("transfer_function", po::value<int>(&trans_func_cmd)->default_value(3), "transfer function type")
         ("matter_power_spectrum", po::value<int>(&matter_pwr_cmd)->default_value(1), "matter power spectrum type")
         ("baryons_power_spectrum", po::value<int>(&baryons_pwr_cmd)->default_value(0), "baryons power spectrum type")
         ("mass_function", po::value<int>(&mass_func_cmd)->default_value(2), "mass function type")
-        ("n_s,n", po::value<double>(&sim.cosmo.ns)->default_value(1.), "spectral index of the scale-free power spectrum")
-        ("sigma8,s", po::value<double>(&sim.cosmo.sigma8)->default_value(1.), "normalization of the power spectrum at R = 8 Mpc/h")
-        ("smoothing_k,k", po::value<double>(&sim.cosmo.k2_G)->default_value(0.),
+        ("n_s,n", po::value<FTYPE>(&sim.cosmo.ns)->default_value(1.), "spectral index of the scale-free power spectrum")
+        ("sigma8,s", po::value<FTYPE>(&sim.cosmo.sigma8)->default_value(1.), "normalization of the power spectrum at R = 8 Mpc/h")
+        ("smoothing_k,k", po::value<FTYPE>(&sim.cosmo.k2_G)->default_value(0.),
                             "smoothing wavenumber of TZA in units of h/Mpc, set 0 for ZA")
         ;
 
@@ -96,8 +94,8 @@ void handle_cmd_line(int ac, char* av[], Sim_Param& sim){
     
     po::options_description config_other("Approximation`s options");
     config_other.add_options()
-        ("viscosity,v", po::value<double>(&sim.app_opt.nu)->default_value(1., "1.0"), "'viscozity' for adhesion approximation in units of pixel^2")
-        ("cut_radius,r", po::value<double>(&sim.app_opt.rs)->default_value(2.7, "2.7"), "short-range force cutoff radius in units of mesh cells")
+        ("viscosity,v", po::value<FTYPE>(&sim.app_opt.nu)->default_value(1., "1.0"), "'viscozity' for adhesion approximation in units of pixel^2")
+        ("cut_radius,r", po::value<FTYPE>(&sim.app_opt.rs)->default_value(2.7, "2.7"), "short-range force cutoff radius in units of mesh cells")
         ;
 
     po::options_description mod_grav("Modified Gravities");
@@ -141,15 +139,15 @@ void handle_cmd_line(int ac, char* av[], Sim_Param& sim){
 
     // !!!>>> THIS NEEDS TO BE AFTER ALL CALLS TO NOTIFY() <<<!!!
 
-    #ifdef TEST
-    cout << ">>> Debug: Sim_Param initialization\n";
-    cout << "\ttransfer_function = " << trans_func_cmd << " --> " << static_cast<transfer_function_t>(trans_func_cmd) << "\n";
-    cout << "\tsim.cosmo.config.transfer_function_method = " << sim.cosmo.config.transfer_function_method << "\n";
-    #endif
-
     sim.out_opt.print_z = print_z.v;
     sim.cosmo.config.transfer_function_method = static_cast<transfer_function_t>(trans_func_cmd);
     sim.cosmo.config.matter_power_spectrum_method = static_cast<matter_power_spectrum_t>(matter_pwr_cmd);
     sim.cosmo.config.baryons_power_spectrum_method = static_cast<baryons_power_spectrum_t>(baryons_pwr_cmd);
     sim.cosmo.config.mass_function_method = static_cast<mass_function_t>(mass_func_cmd);
+
+    #ifdef TEST
+    cout << ">>> Debug: Sim_Param initialization\n";
+    cout << "\ttransfer_function = " << trans_func_cmd << " --> " << static_cast<transfer_function_t>(trans_func_cmd) << "\n";
+    cout << "\tsim.cosmo.config.transfer_function_method = " << sim.cosmo.config.transfer_function_method << "\n";
+    #endif
 }

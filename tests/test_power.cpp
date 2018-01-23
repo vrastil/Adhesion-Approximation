@@ -6,18 +6,18 @@ TEST_CASE( "UNIT TEST: growth functions {growth_factor, growth_rate, growth_chan
     char* argv[1] = {"test"};
     try{
         Sim_Param sim(argc, argv);
-        double D, D_to_a, f, Oma, OLa, dDda, factor;
+        FTYPE D, D_to_a, f, Oma, OLa, dDda, factor;
         printf("a\t\tD\t\tf\t\tdD/da\t\tD/a*f\t\tOm\t\tOm^0.6\t\tfactor\n");
-        for (double a =0; a <= 1.0; a += 0.1)
+        for (FTYPE a =0; a <= 1.0; a += 0.1)
         {
             D = growth_factor(a, sim.cosmo);
             f = growth_rate(a, sim.cosmo);
             dDda = growth_change(a, sim.cosmo);
             D_to_a = a ? D/a : dDda;
-            OLa = 1/(1+sim.cosmo.Omega_m/(pow(a, 3)*sim.cosmo.Omega_L()));
+            OLa = 1/(1+sim.cosmo.Omega_m/(pow_(a, 3)*sim.cosmo.Omega_L()));
             Oma = 1 - OLa;
-            factor = sim.cosmo.Omega_m/(sim.cosmo.Omega_m+2.*pow(a, 3)*sim.cosmo.Omega_L())*D_to_a;
-            printf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", a, D, f, dDda, D_to_a*f, Oma, pow(Oma, 0.6), factor);
+            factor = sim.cosmo.Omega_m/(sim.cosmo.Omega_m+2*pow_(a, 3)*sim.cosmo.Omega_L())*D_to_a;
+            printf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", a, D, f, dDda, D_to_a*f, Oma, pow_(Oma, 0.6), factor);
         }
     }
     catch(const exception& e){

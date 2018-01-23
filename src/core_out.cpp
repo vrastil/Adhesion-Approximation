@@ -1,5 +1,3 @@
-
-#include "stdafx.h"
 #include "core.h"
 #include "core_out.h"
 
@@ -78,15 +76,15 @@ void print_par_pos_cut_small(T* particles, const Sim_Param &sim, string out_dir,
    
    std::cout << "Writing small cut through the box of particles into file " << file_name << "\n";
    File << "# This file contains positions of particles in units [Mpc/h].\n";
-   double x, y, z, dx;
-   const double x_0 = sim.x_0();
+   FTYPE x, y, z, dx;
+   const FTYPE x_0 = sim.x_0();
    const unsigned N = sim.box_opt.par_num;
    for(unsigned i=0; i < N; i++)
    {
        x = particles[i].position[0];
        y = particles[i].position[1];
        z = particles[i].position[2];			
-       dx = abs(y - sim.box_opt.mesh_num/2.);
+       dx = abs(y - sim.box_opt.mesh_num/2);
        if ((dx < 0.5) && (x < sim.box_opt.mesh_num/4.) && (z < sim.box_opt.mesh_num/4.))
        {
            // cut (L/4 x L/4 x 0.5)
@@ -95,7 +93,7 @@ void print_par_pos_cut_small(T* particles, const Sim_Param &sim, string out_dir,
    }
 }
 
-void print_pow_spec(const Data_Vec<double, 2> &pwr_spec_binned, string out_dir, string suffix)
+void print_pow_spec(const Data_Vec<FTYPE, 2> &pwr_spec_binned, string out_dir, string suffix)
 {
 	out_dir += "pwr_spec/";
 	string file_name = out_dir + "pwr_spec" + suffix + ".dat";
@@ -115,7 +113,7 @@ void print_pow_spec(const Data_Vec<double, 2> &pwr_spec_binned, string out_dir, 
 	}
 }
 
-void print_vel_pow_spec(const Data_Vec<double, 2> &pwr_spec_binned, string out_dir, string suffix)
+void print_vel_pow_spec(const Data_Vec<FTYPE, 2> &pwr_spec_binned, string out_dir, string suffix)
 {
 	out_dir += "vel_pwr_spec/";
 	string file_name = out_dir + "vel_pwr_spec" + suffix + ".dat";
@@ -135,7 +133,7 @@ void print_vel_pow_spec(const Data_Vec<double, 2> &pwr_spec_binned, string out_d
 	}
 }
 
-void print_corr_func(const Data_Vec<double, 2> &pwr_spec_binned, string out_dir, string suffix)
+void print_corr_func(const Data_Vec<FTYPE, 2> &pwr_spec_binned, string out_dir, string suffix)
 {
 	out_dir += "corr_func/";
 	string file_name = out_dir + "corr_func" + suffix + ".dat";
@@ -151,13 +149,29 @@ void print_corr_func(const Data_Vec<double, 2> &pwr_spec_binned, string out_dir,
 	}
 }
 
-double rel_error(double a, double b)
+template<typename T>
+T rel_error(const T& a, const T& b)
 {
     return a ? fabs((a-b)/a) : fabs(a-b);
 }
 
-void print_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Data_Vec<double, 2> &pwr_spec_binned_0,
-	double growth, string out_dir, string suffix)
+template<typename T>
+bool is_err(const vector<T>& vec1, const vector<T>& vec2, unsigned bin)
+{
+    const T err = rel_error( vec1[bin], vec2[bin]);
+    constexpr T prec_err = is_same<T, float>::value ? 1e-3f : 1e-7;
+    constexpr T prec_war = is_same<T, float>::value ? 1e-5f : 1e-12;
+
+    if (err > prec_err){
+        cout << "ERROR! Different values of k in bin " << bin << "! Relative error = " << err << "\n";
+        return true;
+    }
+    else if (err > prec_war) cout << "WARNING! Different values of k in bin " << bin << "! Relative error = " << err << "\n";
+    return false;
+}
+
+void print_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Data_Vec<FTYPE, 2> &pwr_spec_binned_0,
+	FTYPE growth, string out_dir, string suffix)
 {
     out_dir += "pwr_diff/";
     string file_name = out_dir + "pwr_spec_diff" + suffix + ".dat";
@@ -169,24 +183,19 @@ void print_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Data_
             "# depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 
-	double P_k, P_lin, err;
-    cout.precision(15);
+	FTYPE P_k, P_lin;
+    cout.precision(10);
     const unsigned size = pwr_spec_binned.size();
 	for (unsigned j = 0; j < size; j++){
-        err = rel_error(pwr_spec_binned[0][j], pwr_spec_binned_0[0][j]);
-        if (err > 1e-6){
-            cout << "ERROR! Different values of k in bin " << j << "! Relative error = " << err << "\n";
-            continue;
-        }
-        else if (err > 1e-12) cout << "WARNING! Different values of k in bin " << j << "! Relative error = " << err << "\n";
+        if (is_err(pwr_spec_binned[0], pwr_spec_binned_0[0], j)) continue;
         P_k = pwr_spec_binned[1][j];
-        P_lin = pwr_spec_binned_0[1][j] * pow(growth, 2.);
+        P_lin = pwr_spec_binned_0[1][j] * pow_(growth, 2);
         File << scientific << pwr_spec_binned_0[0][j] << "\t" << fixed << (P_k-P_lin)/P_lin << "\n";
 	}
 }
 
-void print_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Interp_obj &pwr_spec_input,
-	double growth, string out_dir, string suffix)
+void print_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Interp_obj &pwr_spec_input,
+	FTYPE growth, string out_dir, string suffix)
 {
     out_dir += "pwr_diff/";
     string file_name = out_dir + "pwr_spec_diff" + suffix + ".dat";
@@ -198,7 +207,7 @@ void print_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Inter
             "# depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 
-	double k, P_k, P_lin;
+	FTYPE k, P_k, P_lin;
     const unsigned size = pwr_spec_binned.size();
 	for (unsigned j = 0; j < size; j++){
         k = pwr_spec_binned[0][j];
@@ -207,14 +216,14 @@ void print_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Inter
         else
         {
             P_k = pwr_spec_binned[1][j];
-            P_lin = pwr_spec_input(k) * pow(growth, 2.);
+            P_lin = pwr_spec_input(k) * pow_(growth, 2);
             File << scientific << k << "\t" << fixed << (P_k-P_lin)/P_lin << "\n";
         }
 	}
 }
 
-void print_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Data_Vec<double, 2> &pwr_spec_binned_0,
-    const Interp_obj &pwr_spec_input, double growth_now, double growth_init, string out_dir, string suffix)
+void print_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Data_Vec<FTYPE, 2> &pwr_spec_binned_0,
+    const Interp_obj &pwr_spec_input, FTYPE growth_now, FTYPE growth_init, string out_dir, string suffix)
 {
     out_dir += "pwr_diff/";
     string file_name = out_dir + "pwr_spec_diff" + suffix + ".dat";
@@ -226,31 +235,26 @@ void print_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Data_
             "# depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 
-	double k, P_k, P_input, P_par, err;
-    cout.precision(15);
+	FTYPE k, P_k, P_input, P_par;
+    cout.precision(10);
     const unsigned size = pwr_spec_binned.size();
 	for (unsigned j = 0; j < size; j++){
-        err = rel_error(pwr_spec_binned[0][j], pwr_spec_binned_0[0][j]);
-        if (err > 1e-6){
-            cout << "ERROR! Different values of k in bin " << j << "! Relative error = " << err << "\n";
-            continue;
-        }
-        else if (err > 1e-12) cout << "WARNING! Different values of k in bin " << j << "! Relative error = " << err << "\n";
+        if (is_err(pwr_spec_binned[0], pwr_spec_binned_0[0], j)) continue;
         k = pwr_spec_binned_0[0][j];
         if (k < pwr_spec_input.x_min) continue;
         else if(k > pwr_spec_input.x_max) break;
         else
         {
             P_k = pwr_spec_binned[1][j];
-            P_input = pwr_spec_input(k) * pow(growth_now, 2.);
-            P_par = pwr_spec_binned_0[1][j] * pow(growth_now / growth_init, 2.);
+            P_input = pwr_spec_input(k) * pow_(growth_now, 2);
+            P_par = pwr_spec_binned_0[1][j] * pow_(growth_now / growth_init, 2);
             File << scientific << k << "\t" << fixed << P_k/P_input - P_k/P_par << "\n";
         }
 	}
 }
 
-void print_vel_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const Data_Vec<double, 2> &pwr_spec_binned_0,
-	double dDda, string out_dir, string suffix)
+void print_vel_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Data_Vec<FTYPE, 2> &pwr_spec_binned_0,
+	FTYPE dDda, string out_dir, string suffix)
 {
     out_dir += "vel_pwr_diff/";
     string file_name = out_dir + "vel_pwr_spec_diff" + suffix + ".dat";
@@ -261,18 +265,13 @@ void print_vel_pow_spec_diff(const Data_Vec<double, 2> &pwr_spec_binned, const D
             "# and lineary extrapolated velocity divergence power spectrum depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 	
-	double P_k, P_ZA, err;
-    cout.precision(15);
+	FTYPE P_k, P_ZA;
+    cout.precision(10);
     const unsigned size = pwr_spec_binned.size();
 	for (unsigned j = 0; j < size; j++){
-        err = rel_error(pwr_spec_binned[0][j], pwr_spec_binned_0[0][j]);
-        if (err > 1e-6){
-            cout << "ERROR! Different values of k in bin " << j << "! Relative error = " << err << "\n";
-            continue;
-        }
-        else if (err > 1e-12) cout << "WARNING! Different values of k in bin " << j << "! Relative error = " << err << "\n";
+        if (is_err(pwr_spec_binned[0], pwr_spec_binned_0[0], j)) continue;
         P_k = pwr_spec_binned[1][j];
-        P_ZA = pwr_spec_binned_0[1][j] * pow(dDda, 2.);
+        P_ZA = pwr_spec_binned_0[1][j] * pow_(dDda, 2);
         File << scientific << pwr_spec_binned_0[0][j] << "\t" << fixed << (P_k-P_ZA)/P_ZA << "\n";
 	}
 }
@@ -283,8 +282,8 @@ void print_track_par(const Tracking& track, const Sim_Param &sim, string out_dir
     string file_name = out_dir + "track_par_pos" + suffix + ".dat";
     Ofstream File(file_name);
 
-    double x,y,z;
-    const double x_0 = sim.x_0();
+    FTYPE x,y,z;
+    const FTYPE x_0 = sim.x_0();
 	cout << "Writing positons of " << track.num_track_par << " tracked particles into file " << file_name << "\n";
 	File << "# This file contains positions of particles in units [Mpc/h].\n"
 	        "# x [Mpc/h]\tz [Mpc/h]\n";
@@ -302,7 +301,7 @@ void print_track_par(const Tracking& track, const Sim_Param &sim, string out_dir
 void print_rho_map(const Mesh& delta, const Sim_Param &sim, string out_dir, string suffix)
 {
     out_dir += "rho_map/";
-    const double x_0 = sim.x_0_pwr();
+    const FTYPE x_0 = sim.x_0_pwr();
     string file_name = out_dir + "rho_map" + suffix + ".dat";
     Ofstream File(file_name);
 
@@ -321,14 +320,14 @@ void print_rho_map(const Mesh& delta, const Sim_Param &sim, string out_dir, stri
 void print_projected_rho(const Mesh& delta, const Sim_Param &sim, string out_dir, string suffix)
 {
     out_dir += "rho_map/";
-    const double x_0 = sim.x_0_pwr();
+    const FTYPE x_0 = sim.x_0_pwr();
     string file_name = out_dir + "rho_map_projected" + suffix + ".dat";
     Ofstream File(file_name);
     
 	cout << "Writing density map into file " << file_name << "\n";
 	File << "# This file contains density map delta(x).\n"
 	        "# x [Mpc/h]\tz [Mpc/h]\tdelta\n";
-    double rho, rho_tmp;
+    FTYPE rho, rho_tmp;
     const unsigned N = sim.box_opt.mesh_num_pwr;
 	for (unsigned i = 0; i < N; i++){
 		for (unsigned j = 0; j < N; j++){
@@ -352,7 +351,7 @@ void print_dens_bin(const vector<int> &dens_binned, string out_dir, string suffi
 	cout << "Writing binned density into file " << file_name << "\n";
 	File << "# This file contains binned density field.\n"
 	        "# dens\tbin_num\n";
-    double dens;
+    FTYPE dens;
     const unsigned N = dens_binned.size();
 	for (unsigned j = 0; j < N; j++)
 	{

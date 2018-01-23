@@ -36,12 +36,7 @@ TEST_CASE( "UNIT TEST: periodicity functions {get_per}", "[core_mesh]" )
     get_per(pos2i, 10);
 
     CHECK( posi == Vec_3D<int>(0, 0, 0) );
-    CHECK( pos2i == Vec_3D<int>(4, 3, 8) );
-
-    Vec_3D<int> pos3i(0, -10, 10);
-    Vec_3D<int> per(4, 5, 3);
-    get_per(pos3i, per);
-    CHECK( pos3i == Vec_3D<int>(0, 0, 1) );
+    CHECK( pos2i == Vec_3D<int>(4, 3, 8) );    
 
     Vec_3D<int> pos4i(0, -10, 10);
     get_per(pos4i, 5, 10, 4);
@@ -50,16 +45,16 @@ TEST_CASE( "UNIT TEST: periodicity functions {get_per}", "[core_mesh]" )
 
 TEST_CASE( "UNIT TEST: assign functions iterator {IT}", "[core_mesh]" )
 {
-    IT<1> it1(Vec_3D<double>(3.2, 7.8, 4.0));
+    IT<1> it1(Vec_3D<FTYPE>(3.2, 7.8, 4.0));
     REQUIRE( it1.vec == Vec_3D<int>(3, 8, 4) );
     CHECK( it1.counter == 0);
     CHECK_FALSE( it1.iter() );
 
-    IT<2> it2(Vec_3D<double>(3.2, 7.8, 4.0));
+    IT<2> it2(Vec_3D<FTYPE>(3.2, 7.8, 4.0));
     REQUIRE( it2.vec == Vec_3D<int>(3, 7, 4) );
     CHECK( it2.iter() );
 
-    IT<3> it3(Vec_3D<double>(3.2, 7.8, 4.0), 2);
+    IT<3> it3(Vec_3D<FTYPE>(3.2, 7.8, 4.0), 2);
     REQUIRE( it3.vec == Vec_3D<int>(0, 2, 1) );
 
     CHECK( it2.vec == Vec_3D<int>(3, 7, 5) );

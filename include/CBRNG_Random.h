@@ -16,6 +16,16 @@
 #ifndef CBRNG_Random_Header_Included
 #define CBRNG_Random_Header_Included
 
+#if PRECISION == 1
+typedef float FTYPE;
+#elif PRECISION == 2
+typedef double FTYPE;
+#elif PRECISION == 3
+typedef long double FTYPE;
+#else
+typedef double FTYPE;
+#endif
+
 // Here is where we choose our counter-based RNG
 #include <Random123/threefry.h>
 typedef r123::Threefry2x64 RNG;
@@ -26,6 +36,6 @@ typedef RNG::key_type key_type;
 const int nsize_r123 = ctr_type::static_size;
 
 void GetSlabKeys(unsigned long *keys, int x1, int numx, unsigned long seed);
-void GetRandomDoublesWhiteNoise(double &rn1, double &rn2, double &rn, unsigned long ikey, unsigned long index);
+void GetRandomDoublesWhiteNoise(FTYPE &rn1, FTYPE &rn2, FTYPE &rn, unsigned long ikey, unsigned long index);
 
 #endif

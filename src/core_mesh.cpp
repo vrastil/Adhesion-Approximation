@@ -1,5 +1,3 @@
-
-#include "stdafx.h"
 #include "core.h"
 #include "core_mesh.h"
 
@@ -27,21 +25,22 @@ void get_k_vec(int N, int index, Vec_3D<int> &k_vec)
 	for (int i =0; i<2; i++) if (k_vec[i] > N/2) k_vec[i] -= N; // k_vec[2] is ALWAYS less or equal than N/2 (real FFTW)
 }
 
-double get_k_sq(int N, int index)
+FTYPE get_k_sq(int N, int index)
 {
 	int k_vec[3];
-	double tmp = 0;
+	FTYPE tmp = 0;
 	get_k_vec(N, index, k_vec);
-	for (int i =0; i<3; i++) tmp += pow(k_vec[i],2.);
+	for (int i =0; i<3; i++) tmp += pow(k_vec[i],2);
 	return tmp;
 }
 
-double get_per(double vec, int per)
+template<typename T>
+static T get_per(T vec, int per)
 {
     return ((vec >= per) || (vec < 0) ) ? vec - per * floor( vec / per ) : vec;
 }
 
-int get_per(int vec, int per)
+static int get_per(int vec, int per)
 {
     if ((vec >= per) || (vec < 0) ){
         vec %= per;
@@ -50,25 +49,14 @@ int get_per(int vec, int per)
     else return vec;
 }
 
-void get_per(Vec_3D<double> &position, int per)
+template<typename T>
+void get_per(Vec_3D<T> &position, int per)
 {
-    for (double& pos : position) pos = get_per(pos, per);
+    for (T& pos : position) pos = get_per(pos, per);
 }
 
-void get_per(Vec_3D<int> &position, int per)
-{
-    for (int& pos : position) pos = get_per(pos, per);
-}
-
-void get_per(Vec_3D<int> &position, const Vec_3D<int> &per)
-{
-    for (int i = 0; i < 3; i++)
-	{
-        position[i] = get_per(position[i], per[i]);
-	}
-}
-
-void get_per(Vec_3D<int> &position, int perx, int pery, int perz)
+template<typename T>
+void get_per(Vec_3D<T> &position, int perx, int pery, int perz)
 {
     position[0] = get_per(position[0], perx);
     position[1] = get_per(position[1], pery);
@@ -84,54 +72,60 @@ void get_per(Particle_v* particles, const unsigned par_num, const int per)
     }
 }
 
-double get_distance_1D(double x_1, double x_2, int per)
+template<typename T>
+inline T get_distance_1D(const T x_1, const T x_2, const int per)
 {	
-	double d = abs(x_2 - x_1);
-	if (d <= per / 2.) return d; // most probable, first condition
+	T d = abs(x_2 - x_1);
+	if (d <= per / 2) return d; // most probable, first condition
 	else if (d <= per) return per - d;
-	else d = fmod(d, per); // fmod unlikely to evaluate, speed up code
-	if (d <= per / 2.) return d;
+	else d = fmod(d, T(per)); // fmod unlikely to evaluate, speed up code
+	if (d <= per / 2) return d;
 	else return per - d;
 }
 
-double get_sgn_distance_1D(double x_from, double x_to, int per)
+template<typename T>
+inline T get_distance_1D(const T x_1, const int x_2, const int per){ return get_distance_1D(x_1, (T)x_2, per); }
+
+template<typename T>
+inline T get_sgn_distance_1D(T x_from, T x_to, int per)
 {	// return signed (oriented) distance, e.g. x_to - x_from (no periodicity)
 	// periodicity makes this a little bit trickier
-	double d = x_from - x_to;
-	if (abs(d) <= per / 2.) return d; // most probable, first condition
+	T d = x_from - x_to;
+	if (abs(d) <= per / 2) return d; // most probable, first condition
 	else if (abs(d) <= per) return d-sgn(d)*per;
-	else d = fmod(d, per); // fmod unlikely to evaluate, speed up code
-	if (abs(d) <= per / 2.) return d;
+	else d = fmod(d, T(per)); // fmod unlikely to evaluate, speed up code
+	if (abs(d) <= per / 2) return d;
 	else return d-sgn(d)*per;
 }
 
-double get_distance(const Vec_3D<double> &x_1, const Vec_3D<double> &x_2, int per)
+FTYPE get_distance(const Vec_3D<FTYPE> &x_1, const Vec_3D<FTYPE> &x_2, int per)
 {
-	double dst = 0;
-	for (int i = 0; i < 3; i++) dst+= pow(get_distance_1D(x_1[i], x_2[i], per), 2.);
+	FTYPE dst = 0;
+	for (int i = 0; i < 3; i++) dst+= pow_(get_distance_1D(x_1[i], x_2[i], per), 2);
 	return sqrt(dst);
 }
 
-Vec_3D<double> get_sgn_distance(const Vec_3D<double> &x_from, const Vec_3D<double> &x_to, int per)
+Vec_3D<FTYPE> get_sgn_distance(const Vec_3D<FTYPE> &x_from, const Vec_3D<FTYPE> &x_to, int per)
 {
-	Vec_3D<double> dst;
+	Vec_3D<FTYPE> dst;
 	for (int i = 0; i < 3; i++) dst[i] = get_sgn_distance_1D(x_from[i], x_to[i], per);
 	return dst;
 }
 
-template<unsigned N> double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num);
+template<unsigned N> static FTYPE wgh_sch(const Vec_3D<FTYPE> &x, const Vec_3D<int>& y, int mesh_num);
+// The weighting scheme used to assign values to the mesh points or vice versa
+// Return value of assigment function on mesh point y from particle in x
 
-template<> double wgh_sch<0>(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num)
-{ // NGP: Nearest grid point
-    get_per(y, mesh_num);
-    for (int i = 0; i < 3; i++) if ((int)x[i] != y[i]) return 0;
-    return 1;
-}
+// template<> FTYPE wgh_sch<0>(const Vec_3D<FTYPE> &x, Vec_3D<int> y, int mesh_num)
+// { // NGP: Nearest grid point
+//     get_per(y, mesh_num);
+//     for (int i = 0; i < 3; i++) if ((int)x[i] != y[i]) return 0;
+//     return 1;
+// }
 
-template<> double wgh_sch<1>(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num)
+template<> FTYPE wgh_sch<1>(const Vec_3D<FTYPE> &x, const Vec_3D<int>& y, int mesh_num)
 { // CIC: Cloud in cells
-    double dx, w = 1;
-    get_per(y, mesh_num);
+    FTYPE dx, w = 1;
     for (int i = 0; i < 3; i++)
     {
         dx = get_distance_1D(x[i], y[i], mesh_num);
@@ -141,24 +135,17 @@ template<> double wgh_sch<1>(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_nu
     return w;
 }
 
-template<> double wgh_sch<2>(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num)
+template<> FTYPE wgh_sch<2>(const Vec_3D<FTYPE> &x, const Vec_3D<int>& y, int mesh_num)
 { // TSC: Triangular shaped clouds
-    double dx, w = 1;
-    get_per(y, mesh_num);
+    FTYPE dx, w = 1;
     for (int i = 0; i < 3; i++)
     {
         dx = get_distance_1D(x[i], y[i], mesh_num);
         if (dx > 1.5) return 0;
-        else if (dx > 0.5) w *= (1.5 - dx)*(1.5 - dx) / 2.0;
-        else w *= 3 / 4.0 - dx*dx;
+        else if (dx > 0.5) w *= pow_(1.5 - dx, 2) / 2;
+        else w *= 3 / FTYPE(4) - dx*dx;
     }
     return w;
-}
-
-double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num)
-{	// The weighting scheme used to assign values to the mesh points or vice versa
-	// Return value of assigment function on mesh point y from particle in x
-    return wgh_sch<ORDER>(x, y, mesh_num);
 }
 
 /**
@@ -166,23 +153,23 @@ double wgh_sch(const Vec_3D<double> &x, Vec_3D<int> y, int mesh_num)
  * @brief:	class for effective iteration of cube of mesch cells
  */
 
-template<unsigned points>
-IT<points>::IT(const Vec_3D<double> &pos): counter(0)
+template<int points>
+IT<points>::IT(const Vec_3D<FTYPE> &pos): counter(0)
 {
     for(unsigned i = 0; i < 3; i++){
-        vec[i] = (int)(pos[i] - 0.5*(int(points) - 2));
+        vec[i] = (int)(pos[i] - 0.5*(points - 2));
     }
 }
 
-template<unsigned points>
-IT<points>::IT(const Vec_3D<double> &pos, double Hc): counter(0)
+template<int points>
+IT<points>::IT(const Vec_3D<FTYPE> &pos, FTYPE Hc): counter(0)
 {
     for(unsigned i = 0; i < 3; i++){
         vec[i] = (int)(pos[i]/Hc) - 1;
     }
 }
 
-template<unsigned points>
+template<int points>
 bool IT<points>::iter(){
     if (++counter == (points*points*points)) return false;
     vec[2]++;
@@ -197,21 +184,21 @@ bool IT<points>::iter(){
     return true;
 }
 
-void assign_to(Mesh* field, const Vec_3D<double> &position, const double value)
+void assign_to(Mesh* field, const Vec_3D<FTYPE> &position, const FTYPE value)
 {
     IT<ORDER+1> it(position);
     do{
         #pragma omp atomic
-        (*field)(it.vec) += value * wgh_sch(position, it.vec, field->N);
+        (*field)(it.vec) += value * wgh_sch<ORDER>(position, it.vec, field->N);
     } while( it.iter() );
 }
 
-void assign_to(vector<Mesh>* field, const Vec_3D<double> &position, const Vec_3D<double>& value)
+void assign_to(vector<Mesh>* field, const Vec_3D<FTYPE> &position, const Vec_3D<FTYPE>& value)
 {
     IT<ORDER+1> it(position);
-    double w;
+    FTYPE w;
     do{
-        w = wgh_sch(position, it.vec, (*field)[0].N); //< resuse the same weigh for every field in vector
+        w = wgh_sch<ORDER>(position, it.vec, (*field)[0].N); //< resuse the same weigh for every field in vector
         for (int i = 0; i < 3; i++)
         {
             #pragma omp atomic
@@ -220,21 +207,21 @@ void assign_to(vector<Mesh>* field, const Vec_3D<double> &position, const Vec_3D
 	} while( it.iter() );
 }
 
-void assign_from(const Mesh &field, const Vec_3D<double> &position, double* value)
+void assign_from(const Mesh &field, const Vec_3D<FTYPE> &position, FTYPE* value)
 {
 	IT<ORDER+1> it(position);
     do{
         #pragma omp atomic
-        *value += field(it.vec) * wgh_sch(position, it.vec, field.N);
+        *value += field(it.vec) * wgh_sch<ORDER>(position, it.vec, field.N);
 	} while( it.iter() );
 }
 
-void assign_from(const vector<Mesh> &field, const Vec_3D<double> &position, Vec_3D<double>* value)
+void assign_from(const vector<Mesh> &field, const Vec_3D<FTYPE> &position, Vec_3D<FTYPE>* value)
 {
     IT<ORDER+1> it(position);
-    double w;
+    FTYPE w;
     do{
-        w = wgh_sch(position, it.vec, field[0].N); //< resuse the same weigh for every field in vector
+        w = wgh_sch<ORDER>(position, it.vec, field[0].N); //< resuse the same weigh for every field in vector
         for (int i = 0; i < 3; i++)
         {
             #pragma omp atomic
@@ -243,40 +230,30 @@ void assign_from(const vector<Mesh> &field, const Vec_3D<double> &position, Vec_
 	} while( it.iter() );
 }
 
-void normalize_FFT_FORWARD(Mesh& rho)
+void fftw_execute_dft_r2c(const FFTW_PLAN_TYPE &p_F, Mesh& rho)
 {
-    rho /= pow(rho.N, 3.);
+	FFTW_EXEC_R2C(p_F, rho.real(), rho.complex());
+	rho /= pow(rho.N, 3); //< normalization
 }
 
-void normalize_FFT_BACKWARD(Mesh& rho)
+void fftw_execute_dft_c2r(const FFTW_PLAN_TYPE &p_B, Mesh& rho)
 {
+	FFTW_EXEC_C2R(p_B, rho.complex(), rho.real());
 }
 
-void fftw_execute_dft_r2c(const fftw_plan &p_F, Mesh& rho)
-{
-	fftw_execute_dft_r2c(p_F, rho.real(), rho.complex());
-	normalize_FFT_FORWARD(rho);
-}
-
-void fftw_execute_dft_c2r(const fftw_plan &p_B, Mesh& rho)
-{
-	fftw_execute_dft_c2r(p_B, rho.complex(), rho.real());
-	normalize_FFT_BACKWARD(rho);
-}
-
-void fftw_execute_dft_r2c_triple(const fftw_plan &p_F, vector<Mesh>& rho)
+void fftw_execute_dft_r2c_triple(const FFTW_PLAN_TYPE &p_F, vector<Mesh>& rho)
 {
 	for (int i = 0; i < 3; i++) fftw_execute_dft_r2c(p_F, rho[i]);
 }
 
-void fftw_execute_dft_c2r_triple(const fftw_plan &p_B, vector<Mesh>& rho)
+void fftw_execute_dft_c2r_triple(const FFTW_PLAN_TYPE &p_B, vector<Mesh>& rho)
 {
 	for (int i = 0; i < 3; i++) fftw_execute_dft_c2r(p_B, rho[i]);
 }
 
-double mean(double* p_data, int len)
+FTYPE mean(FTYPE* p_data, int len)
 {
-	double tmp = 0;
+	FTYPE tmp = 0;
 	
 	#pragma omp parallel for reduction(+:tmp)
 	for (int i = 0; i < len; i++) tmp += p_data[i];
@@ -284,9 +261,9 @@ double mean(double* p_data, int len)
 	return tmp / len;
 }
 
-double std_dev(double* p_data, int len, double t_mean)
+FTYPE std_dev(FTYPE* p_data, int len, FTYPE t_mean)
 {
-	double tmp = 0;
+	FTYPE tmp = 0;
 	
 	#pragma omp parallel for reduction(+:tmp)
 	for (int i = 0; i < len; i++) tmp += (p_data[i]-t_mean)*(p_data[i]-t_mean);
@@ -294,25 +271,30 @@ double std_dev(double* p_data, int len, double t_mean)
 	return sqrt(tmp / len);
 }
 
-double min(double* p_data, int len)
+FTYPE min(FTYPE* p_data, int len)
 {
     return *std::min_element(p_data,p_data+len);
 }
 
-double max(double* p_data, int len)
+FTYPE max(FTYPE* p_data, int len)
 {
     return *std::max_element(p_data,p_data+len);
 }
 
-double min(const vector<double>& data)
+FTYPE min(const vector<FTYPE>& data)
 {
     return *std::min_element(data.begin(), data.end());
 }
 
-double max(const vector<double>& data)
+FTYPE max(const vector<FTYPE>& data)
 {
     return *std::max_element(data.begin(), data.end());
 }
+
+template void get_per(Vec_3D<int>&, int);
+template void get_per(Vec_3D<FTYPE>&, int);
+template void get_per(Vec_3D<int>&, int, int, int);
+template void get_per(Vec_3D<FTYPE>&, int, int, int);
 
 template class IT<ORDER+1>;
 template class IT<3>;

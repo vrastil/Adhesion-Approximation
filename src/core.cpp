@@ -3,7 +3,6 @@
  * @brief:	class definitions
  */
  
-#include "stdafx.h"
 #include "core.h"
 #include "core_cmd.h"
 #include "core_out.h"
@@ -29,342 +28,6 @@ const char *humanSize(uint64_t bytes){
 	static char output[200];
 	sprintf(output, "%.02lf %s", dblBytes, suffix[i]);
 	return output;
-}
-
-/**
- * @class:	Vec_3D<T>
- * @brief:	class handling basic 3D-vector functions
- */
-
- template <typename T>
- T Vec_3D<T>::norm2() const
- {
-     T tmp(0);
-     for (const T val : vec)
-     {
-         tmp += val*val;
-     }
-     return tmp;
- }
- 
- template <typename T>
- Vec_3D<T>& Vec_3D<T>::operator+=(const Vec_3D<T>& rhs)
- {
-     for(unsigned i = 0; i < 3; ++i)
-     {
-         vec[i] += rhs[i];
-     }
-     return *this;
- }
- 
- template <typename T>
- Vec_3D<T> operator+(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
- {
-     lhs += rhs;
-     return lhs;
- }
- 
- template <typename T>
- Vec_3D<T>& Vec_3D<T>::operator-=(const Vec_3D<T>& rhs)
- {
-     for(unsigned i = 0; i < 3; ++i)
-     {
-         vec[i] -= rhs[i];
-     }
-     return *this;
- }
- 
- template <typename T>
- Vec_3D<T> operator-(Vec_3D<T> lhs, const Vec_3D<T>& rhs)
- {
-     lhs -= rhs;
-     return lhs;
- }
- 
- template <typename T>
- Vec_3D<T>& Vec_3D<T>::operator+=(T rhs)
- {
-     for(T& val : vec)
-     {
-         val += rhs;
-     }
-     return *this;
- }
- 
- template <typename T>
- Vec_3D<T>& Vec_3D<T>::operator-=(T rhs)
- {
-     for(T& val : vec)
-     {
-         val -= rhs;
-     }
-     return *this;
- }
- 
- template <typename T>
- Vec_3D<T>& Vec_3D<T>::operator*=(T rhs)
- {
-     for(T& val : vec)
-     {
-         val *= rhs;
-     }
-     return *this;
- }
- 
- template <typename T>
- Vec_3D<T> operator*(Vec_3D<T> lhs, T rhs)
- {
-     lhs *= rhs;
-     return lhs;
- }
- 
- template <typename T>
- Vec_3D<T> operator*(T lhs, Vec_3D<T> rhs)
- {
-     rhs *= lhs;
-     return rhs;
- }
- 
- template <typename T>
- Vec_3D<T> operator+(Vec_3D<T> lhs, T rhs)
- {
-     lhs += rhs;
-     return lhs;
- }
- 
- template <typename T>
- Vec_3D<T> operator+(T lhs, Vec_3D<T> rhs)
- {
-     rhs += lhs;
-     return rhs;
- }
- 
- template <typename T>
- Vec_3D<T> operator-(Vec_3D<T> lhs, T rhs)
- {
-     lhs -= rhs;
-     return lhs;
- }
- 
- template <typename T>
- Vec_3D<T> operator-(T lhs, Vec_3D<T> rhs)
- {
-     rhs -= lhs;
-     return rhs;
- }
- 
- template <typename T>
- Vec_3D<T>& Vec_3D<T>::operator/=(T rhs)
- {
-     for(T& val : vec)
-     {
-         val /= rhs;
-     }
-     return *this;
- }
- 
- template <typename T>
- Vec_3D<T> operator/(Vec_3D<T> lhs, T rhs)
- {
-     lhs /= rhs;
-     return lhs;
- }
- 
- template <typename T>
- template<class U>
- Vec_3D<T>::operator Vec_3D<U>() const
- {
-     Vec_3D<U> lhs;
-     for(unsigned i = 0; i < 3; ++i)
-     {
-         lhs[i] = static_cast<U>((*this)[i]);
-     }
-     return lhs;
- }
- 
- /**
-  * @class:	Mesh_base<T>
-  * @brief:	class handling basic mesh functions, the most important are creating and destroing the underlying data structure
-  *			creates a mesh of N1*N2*N3 cells
-  */
- 
- template <class T>
- Mesh_base<T>::Mesh_base(unsigned n1, unsigned n2, unsigned n3):
-    N1(n1), N2(n2), N3(n3), length(n1*n2*n3), data(new T[length])
- {
-    #ifdef TEST
-    cout << ">>> Debug: Mesh_base NORMAL constructor: " << this
-         << ", N = (" << N1 << ", "  << N2 << ", " << N3 << ")\n";
-    #endif
- }
- 
- template <class T>
- Mesh_base<T>::Mesh_base(const Mesh_base<T>& that):
-    N1(that.N1), N2(that.N2), N3(that.N3), length(that.length), data(new T[length])
- {
-    #pragma omp parallel for
-    for (unsigned i = 0; i < length; i++) data[i] = that.data[i];
-    #ifdef TEST
-    cout << ">>> Debug: Mesh_base COPY constructor: " << this 
-         << " <-- " << &that << "\n";
-    #endif
- }
- 
- template <class T>
- void swap(Mesh_base<T>& first, Mesh_base<T>& second)
- {
-     std::swap(first.length, second.length);
-     std::swap(first.N1, second.N1);
-     std::swap(first.N2, second.N2);
-     std::swap(first.N3, second.N3);
-     std::swap(first.data, second.data);
- }
-
- template <class T>
- Mesh_base<T>::Mesh_base(Mesh_base<T>&& that) noexcept
- {
-    #ifdef TEST
-    cout << ">>> Debug: Mesh_base MOVE constructor: " << this 
-         << " <-- " << &that << "\n";
-    #endif
-    swap(*this, that);
- }
- 
- template <class T>
- Mesh_base<T>& Mesh_base<T>::operator=(Mesh_base<T> that)
- {
-    #ifdef TEST
-    cout << ">>> Debug: Mesh_base COPY or MOVE assignemnt: " << this 
-         << " <-- " << &that << "\n";
-    #endif
-    swap(*this, that);
-    return *this;
- }
- 
- template <class T>
- Mesh_base<T>::~Mesh_base<T>()
- {
-    delete[] data;
-    #ifdef TEST
-    cout << ">>> Debug: Mesh_base destructor: " << this << "\n";
-    #endif
- }
- 
- template <class T>
- T& Mesh_base<T>::operator()(Vec_3D<int> pos)
- {
-     get_per(pos, N1, N2, N3);
-     return data[pos[0]*N2*N3+pos[1]*N3+pos[2]]; 
- }
- 
- template <class T>
- const T& Mesh_base<T>::operator()(Vec_3D<int> pos) const
- {
-     get_per(pos, N1, N2, N3);
-     return data[pos[0]*N2*N3+pos[1]*N3+pos[2]];
- }
- 
- template <class T>
- Mesh_base<T>& Mesh_base<T>::operator+=(const T& rhs)
- {
-     #pragma omp parallel for
-         for (unsigned i = 0; i < length; i++) this->data[i]+=rhs;
-         
-     return *this;
- }
- 
- template <class T>
- Mesh_base<T>& Mesh_base<T>::operator*=(const T& rhs)
- {
-     #pragma omp parallel for
-         for (unsigned i = 0; i < length; i++) this->data[i]*=rhs;
-         
-     return *this;
- }
- 
- template <class T>
- Mesh_base<T>& Mesh_base<T>::operator/=(const T& rhs)
- {
-     #pragma omp parallel for
-         for (unsigned i = 0; i < length; i++) this->data[i]/=rhs;
-         
-     return *this;
- }
- 
- template <class T>
- void Mesh_base<T>::assign(T val)
- {
-     #pragma omp parallel for
-     for (unsigned i = 0; i < length; i++) this->data[i]=val;
- }
-
-/**
- * @class:	Mesh
- * @brief:	creates a mesh of N*N*(N+2) cells
- */
-
-Mesh::Mesh(unsigned n): Mesh_base(n, n, n+2), N(n) {}
-
-// Mesh::Mesh(const Mesh& that): Mesh_base(that), N(that.N) {}
-
-// Mesh::Mesh(Mesh&& that) noexcept: Mesh_base(that), N(that.N) {}
-
-// Mesh& Mesh::operator=(Mesh that)
-// {
-//     printf("Copy or move assignemnt: %p <-- %p\n", this, &that);
-//     swap(*this, that);
-//     return *this;
-// }
-
-// void swap(Mesh& first, Mesh& second)
-// {
-//     std::swap(first.N, second.N);
-//     swap<Mesh_base<double>>(first, second);
-// }
-
-void Mesh::reset_part(bool part)
-{
-    /* nullify real (part = 0) or complex (part = 1) part of a field */
-    #pragma omp parallel for
-    for (unsigned i = part; i < this->length; i+=2){
-        data[i] = 0;
-    }
-}
-
-double& Mesh::operator()(Vec_3D<int> pos)
-{
-	get_per(pos, N);
-	return data[pos[0]*N2*N3+pos[1]*N3+pos[2]]; 
-}
-
-const double & Mesh::operator()(Vec_3D<int> pos) const
-{
-	get_per(pos, N);
-	return data[pos[0]*N2*N3+pos[1]*N3+pos[2]];
-}
-
-Mesh& Mesh::operator+=(const double& rhs)
-{
-	#pragma omp parallel for
-		for (unsigned i = 0; i < length; i++) this->data[i]+=rhs;
-		
-	return *this;
-}
-
-Mesh& Mesh::operator*=(const double& rhs)
-{
-	#pragma omp parallel for
-		for (unsigned i = 0; i < length; i++) this->data[i]*=rhs;
-		
-	return *this;
-}
-
-Mesh& Mesh::operator/=(const double& rhs)
-{
-	#pragma omp parallel for
-		for (unsigned i = 0; i < length; i++) this->data[i]/=rhs;
-		
-	return *this;
 }
 
 /**
@@ -395,7 +58,7 @@ void Cosmo_Param::init()
     // create flat LCDM cosmology
     int status = 0;
     cosmo = ccl_cosmology_create_with_lcdm_params(Omega_c(), Omega_b, 0, h, sigma8, ns, config, &status);
-    if (!status) throw_ccl(cosmo, status);
+    if (status) throw std::runtime_error(cosmo->status_message);
 
     #ifdef TEST
     cout << ">>> Debug: Created ccl_cosmology*: " << cosmo << "\n";
@@ -489,13 +152,13 @@ void from_json(const json& j, Cosmo_Param& cosmo)
     #ifdef TEST
     cout << ">>> Debug: Loading 'Cosmo_Param& cosmo' from json file\n";
     #endif
-    cosmo.A = j.at("A").get<double>();
-    cosmo.ns = j.at("index").get<double>();
-    cosmo.sigma8 = j.at("sigma8").get<double>();
-    cosmo.k2_G = j.at("smoothing_k").get<double>();
-    cosmo.Omega_b = j.at("Omega_b").get<double>();
-    cosmo.Omega_m = j.at("Omega_m").get<double>();
-    cosmo.h = j.at("h").get<double>();
+    cosmo.A = j.at("A").get<FTYPE>();
+    cosmo.ns = j.at("index").get<FTYPE>();
+    cosmo.sigma8 = j.at("sigma8").get<FTYPE>();
+    cosmo.k2_G = j.at("smoothing_k").get<FTYPE>();
+    cosmo.Omega_b = j.at("Omega_b").get<FTYPE>();
+    cosmo.Omega_m = j.at("Omega_m").get<FTYPE>();
+    cosmo.h = j.at("h").get<FTYPE>();
     cosmo.H0 = cosmo.h * 100;
     
     string tmp;
@@ -537,9 +200,9 @@ Tracking::Tracking(int sqr_num_track_par, int par_num_per_dim):
 	printf("Initializing IDs of tracked particles...\n");
 	par_ids.reserve(num_track_par);
 	int x, y, z;
-	double s;
+	FTYPE s;
 	y = par_num_per_dim / 2; // middle of the cube
-	s = par_num_per_dim / (4.*(sqr_num_track_par+1.)); // quarter of the cube
+	s = par_num_per_dim / FTYPE(4*(sqr_num_track_par+1)); // quarter of the cube
 	for (int i=1; i<=sqr_num_track_par;i++)
 	{
 		z = (int)(s*i);
@@ -582,8 +245,8 @@ void Box_Opt::init()
 
 void Integ_Opt::init()
 {
-    b_in = 1./(z_in + 1);
-	b_out = 1./(z_out + 1);
+    b_in = 1/(z_in + 1);
+	b_out = 1/(z_out + 1);
 }
 
 void Out_Opt::init()
@@ -595,16 +258,16 @@ void Out_Opt::init()
 
 void App_Opt::init(const Box_Opt& box_opt)
 {
-    a = rs / 0.735;
+    a = rs / FTYPE(0.735);
     M = (int)(box_opt.mesh_num / rs);
-    Hc = double(box_opt.mesh_num) / M;
+    Hc = FTYPE(box_opt.mesh_num) / M;
     nu_dim = nu;
-    nu /= pow(box_opt.box_size/box_opt.mesh_num, 2.); // converting to dimensionless units
+    nu /= pow_(box_opt.box_size/box_opt.mesh_num, 2); // converting to dimensionless units
 }
 
 void Other_par::init(const Box_Opt& box_opt)
 {
-    double tmp = PI/box_opt.box_size;
+    FTYPE tmp = PI/box_opt.box_size;
 
     nyquist["analysis"] = tmp*box_opt.mesh_num_pwr;
     nyquist["potential"] = tmp*box_opt.mesh_num;
@@ -694,7 +357,7 @@ void from_json(const json& j, Box_Opt& box_opt)
     box_opt.mesh_num = j.at("mesh_num").get<unsigned>();
     box_opt.mesh_num_pwr = j.at("mesh_num_pwr").get<unsigned>();
     box_opt.par_num_1d = j.at("par_num").get<unsigned>();
-    box_opt.box_size = j.at("box_size").get<double>();
+    box_opt.box_size = j.at("box_size").get<FTYPE>();
 
     box_opt.init();
 }
@@ -710,9 +373,9 @@ void to_json(json& j, const Integ_Opt& integ_opt)
 
 void from_json(const json& j, Integ_Opt& integ_opt)
 {
-    integ_opt.z_in = j.at("redshift").get<double>();
-    integ_opt.z_out = j.at("redshift_0").get<double>();
-    integ_opt.db = j.at("time_step").get<double>();
+    integ_opt.z_in = j.at("redshift").get<FTYPE>();
+    integ_opt.z_out = j.at("redshift_0").get<FTYPE>();
+    integ_opt.db = j.at("time_step").get<FTYPE>();
 
     integ_opt.init();
 }
@@ -727,9 +390,9 @@ void to_json(json& j, const App_Opt& app_opt)
 
 void from_json(const json& j, App_Opt& app_op)
 {
-    app_op.nu_dim = j.at("viscosity").get<double>();
+    app_op.nu_dim = j.at("viscosity").get<FTYPE>();
     app_op.nu = app_op.nu_dim;
-    app_op.rs = j.at("cut_radius").get<double>();
+    app_op.rs = j.at("cut_radius").get<FTYPE>();
 }
 
 void to_json(json& j, const Run_Opt& run_opt)
@@ -864,7 +527,7 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
         app_field.emplace_back(sim.box_opt.mesh_num);
         power_aux.emplace_back(sim.box_opt.mesh_num_pwr);
     }
-    memory_alloc = sizeof(double)*(app_field[0].length*app_field.size()+power_aux[0].length*power_aux.size());
+    memory_alloc = sizeof(FTYPE)*(app_field[0].length*app_field.size()+power_aux[0].length*power_aux.size());
 
     // RESERVE MEMORY FOR BINNED POWER SPECTRA
     unsigned bin_num = (unsigned)ceil(log10(sim.box_opt.mesh_num_pwr)*sim.out_opt.bins_per_decade);
@@ -885,17 +548,17 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
     memory_alloc += sizeof(T)*sim.box_opt.par_num;
 
 	// FFTW PREPARATION
-	if (!fftw_init_threads()){
+	if (!FFTW_PLAN_OMP_INIT()){
 		throw runtime_error("Errors during multi-thread initialization");
 	}
-	fftw_plan_with_nthreads(sim.run_opt.nt);
-	p_F = fftw_plan_dft_r2c_3d(sim.box_opt.mesh_num, sim.box_opt.mesh_num, sim.box_opt.mesh_num, app_field[0].real(),
+	FFTW_PLAN_OMP(sim.run_opt.nt);
+	p_F = FFTW_PLAN_R2C(sim.box_opt.mesh_num, sim.box_opt.mesh_num, sim.box_opt.mesh_num, app_field[0].real(),
         app_field[0].complex(), FFTW_ESTIMATE);
-	p_B = fftw_plan_dft_c2r_3d(sim.box_opt.mesh_num, sim.box_opt.mesh_num, sim.box_opt.mesh_num, app_field[0].complex(),
+	p_B = FFTW_PLAN_C2R(sim.box_opt.mesh_num, sim.box_opt.mesh_num, sim.box_opt.mesh_num, app_field[0].complex(),
         app_field[0].real(), FFTW_ESTIMATE);
-    p_F_pwr = fftw_plan_dft_r2c_3d(sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, power_aux[0].real(),
+    p_F_pwr = FFTW_PLAN_R2C(sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, power_aux[0].real(),
 		power_aux[0].complex(), FFTW_ESTIMATE);
-	p_B_pwr = fftw_plan_dft_c2r_3d(sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, power_aux[0].complex(),
+	p_B_pwr = FFTW_PLAN_C2R(sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, power_aux[0].complex(),
 		power_aux[0].real(), FFTW_ESTIMATE);
 }
 
@@ -905,11 +568,11 @@ App_Var<T>::~App_Var()
     delete[] particles;
 
 	// FFTW CLEANUP
-	fftw_destroy_plan(p_F);
-    fftw_destroy_plan(p_B);
-    fftw_destroy_plan(p_F_pwr);
-	fftw_destroy_plan(p_B_pwr);
-	fftw_cleanup_threads();
+	FFTW_DEST_PLAN(p_F);
+    FFTW_DEST_PLAN(p_B);
+    FFTW_DEST_PLAN(p_F_pwr);
+	FFTW_DEST_PLAN(p_B_pwr);
+	FFTW_PLAN_OMP_CLEAN();
 }
 
 template <class T> 
@@ -963,7 +626,7 @@ void App_Var<T>::print_output()
             D_init = growth_factor(b, sim.cosmo);
             is_init_pwr_spec_0 = true;
         }
-        double D_now = growth_factor(b, sim.cosmo);
+        FTYPE D_now = growth_factor(b, sim.cosmo);
         print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, D_now / D_init, out_dir_app, "_par" + z_suffix());
         print_pow_spec_diff(pwr_spec_binned, pwr_spec_input, D_now, out_dir_app, "_input" + z_suffix());
         print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, pwr_spec_input, D_now, D_init,
@@ -972,7 +635,7 @@ void App_Var<T>::print_output()
 
     /* Extrapolate power spectrum beyond range of simulation box */
     if (sim.out_opt.get_pk_extrap){
-        Extrap_Pk P_k(pwr_spec_binned, sim);
+        Extrap_Pk<FTYPE, 2> P_k(pwr_spec_binned, sim);
     /* Print extrapolated power spectrum */
         if (sim.out_opt.print_extrap_pwr){
             gen_pow_spec_binned_from_extrap(sim, P_k, &pwr_spec_binned);
@@ -980,9 +643,9 @@ void App_Var<T>::print_output()
         }
     /* Printing correlation function */
         if (sim.out_opt.print_corr){
-            gen_corr_func_binned_gsl_qawf(sim, P_k, &corr_func_binned);
+            gen_corr_func_binned_gsl_qawf(sim, P_k, corr_func_binned);
             print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_par" + z_suffix());
-            gen_corr_func_binned_gsl_qawf_lin(sim, b, &corr_func_binned);
+            gen_corr_func_binned_gsl_qawf_lin(sim, b, corr_func_binned);
             print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_lin" + z_suffix());
         }
     }
@@ -1022,7 +685,7 @@ void App_Var<T>::print_info() const
  App_Var_AA::App_Var_AA(const Sim_Param &sim, string app_str):
     App_Var<Particle_v>(sim, app_str), expotential (sim.box_opt.mesh_num)
 {
-    memory_alloc += sizeof(double)*expotential.length;
+    memory_alloc += sizeof(FTYPE)*expotential.length;
 }
 
 /**
@@ -1037,16 +700,16 @@ void App_Var<T>::print_info() const
 
     // precompute short range force
     size_t res = size_t(sim.app_opt.rs/0.05)+1; // force resolution 5% of mesh cell
-    const double r0 = sim.app_opt.rs / (res-1);
-    Data_Vec<double, 2> data(res);
-    double r;
-    const double e2 = pow(sim.box_opt.Ng*0.1, 2); // softening of 10% of average interparticle length
+    const FTYPE r0 = sim.app_opt.rs / (res-1);
+    Data_Vec<FTYPE, 2> data(res);
+    FTYPE r;
+    const FTYPE e2 = pow_(sim.box_opt.Ng*0.1, 2); // softening of 10% of average interparticle length
 
     #pragma omp parallel for private(r)
     for(unsigned i = 0; i < res; i++)
     {
         r = i*r0;
-        data[0][i] = pow(r, 2); // store square of r
+        data[0][i] = pow_(r, 2); // store square of r
         data[1][i] = (force_tot(r, e2) - force_ref(r, sim.app_opt.a))/(4*PI);
     }
     fs_interp.init(data);
@@ -1058,7 +721,7 @@ void App_Var<T>::print_info() const
  */
 
 
-LinkedList::LinkedList(unsigned par_num, int m, double hc):
+LinkedList::LinkedList(unsigned par_num, int m, FTYPE hc):
 	par_num(par_num), Hc(hc), LL(par_num), HOC(m, m, m) {}
 	
 void LinkedList::get_linked_list(Particle_v* particles)
@@ -1066,22 +729,11 @@ void LinkedList::get_linked_list(Particle_v* particles)
 	HOC.assign(-1);
 	for (unsigned i = 0; i < par_num; i++)
 	{
-		LL[i] = HOC(Vec_3D<int>(particles[i].position/Hc));
-		HOC(Vec_3D<int>(particles[i].position/Hc)) = i;
+		LL[i] = HOC(particles[i].position/Hc);
+		HOC(particles[i].position/Hc) = i;
 	}
 }
 
-template class Vec_3D<int>;
-template class Vec_3D<double>;
-template Vec_3D<double> operator+ (Vec_3D<double>, const Vec_3D<double>&);
-template Vec_3D<double> operator- (Vec_3D<double>, const Vec_3D<double>&);
-template Vec_3D<double> operator* (Vec_3D<double>, double);
-template Vec_3D<double> operator* (double, Vec_3D<double>);
-template Vec_3D<double> operator/ (Vec_3D<double>, double);
-template Vec_3D<int>::operator Vec_3D<double>() const;
-template Vec_3D<double>::operator Vec_3D<int>() const;
-template class Mesh_base<int>;
-template class Mesh_base<double>;
 template void Tracking::update_track_par(Particle_x* particles);
 template void Tracking::update_track_par(Particle_v* particles);
 template class App_Var<Particle_x>;

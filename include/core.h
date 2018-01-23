@@ -4,174 +4,56 @@
  */
 
 #pragma once
-
 #include "stdafx.h"
+#include "vec_3d.hpp"
 
-inline void throw_ccl(ccl_cosmology *cosmo, int status)
-{
-    if (!status) return;
-    throw std::runtime_error(cosmo->status_message);
-}
+/*********************************************
+ * single / double / long double definitions *
+ ********************************************/
 
-constexpr double PI = M_PI;
-constexpr double MPL = 2.435E18; // Reduced Planck mass, [GeV/c^2]
+#ifndef PRECISION
+#define PRECISION 2 // default double precision
+#endif
 
-/**
- * @class:	Vec_3D<T>
- * @brief:	class handling basic 3D-vector functions
- */
- 
+#if PRECISION == 1
+typedef float FTYPE;
+#define MAKE_FFTW_NAME(FUNC_NAME) fftwf_ ## FUNC_NAME
+#elif PRECISION == 2
+typedef double FTYPE;
+#define MAKE_FFTW_NAME(FUNC_NAME) fftw_ ## FUNC_NAME
+#elif PRECISION == 3
+typedef long double FTYPE;
+#define MAKE_FFTW_NAME(FUNC_NAME) fftwl_ ## FUNC_NAME
+#endif
+
+#define FFTW_PLAN_TYPE MAKE_FFTW_NAME(plan)
+#define FFTW_DEST_PLAN MAKE_FFTW_NAME(destroy_plan)
+#define FFTW_COMPLEX_TYPE MAKE_FFTW_NAME(complex)
+#define FFTW_PLAN_R2C MAKE_FFTW_NAME(plan_dft_r2c_3d)
+#define FFTW_PLAN_C2R MAKE_FFTW_NAME(plan_dft_c2r_3d)
+#define FFTW_PLAN_OMP MAKE_FFTW_NAME(plan_with_nthreads)
+#define FFTW_PLAN_OMP_INIT MAKE_FFTW_NAME(init_threads)
+#define FFTW_PLAN_OMP_CLEAN MAKE_FFTW_NAME(cleanup_threads)
+#define FFTW_EXEC_R2C MAKE_FFTW_NAME(execute_dft_r2c)
+#define FFTW_EXEC_C2R MAKE_FFTW_NAME(execute_dft_c2r)
+
+constexpr FTYPE PI = (FTYPE)M_PI;
+
+template <typename T>
+inline double pow_(double base, T exp){ return pow(base, exp); } // std::pow is OK for <double>
+#if PRECISION != 2
+template <typename T>
+inline FTYPE pow_(FTYPE base, T exp){ return pow(base, FTYPE(exp)); } // recast exponent to call right overloaded version
+#endif
+
 template <typename T> int sgn(T val)
 {
 	return (T(0) < val) - (val < T(0));
 }
 
-template <typename T>
-class Vec_3D
-{
-public:
-	// CONSTRUCTORS
-	Vec_3D(){};
-	Vec_3D(T x, T y, T z):
-	vec({x, y, z}) {};
-    
-    // VARIABLES
-    std::array<T, 3> vec;
-
-    // ELEMENT ACCESS
-    T& operator[](int i){ return vec[i]; }
-    const T& operator[](int i) const { return vec[i]; }
-
-    // ITERATORS
-    typedef typename std::array<T, 3>::iterator iterator;
-    typedef typename std::array<T, 3>::const_iterator const_iterator;
-
-    iterator begin() noexcept { return vec.begin(); }
-    const_iterator cbegin() const noexcept { return vec.cbegin(); }
-    iterator end() noexcept { return vec.end(); }
-    const_iterator cend() const noexcept { return vec.end(); }
-    
-    // METHODS
-    T norm2() const;
-	double norm() const { return sqrt(norm2()); }
-	void fill(const T& value){ vec.fill(value); }
-		
-	// OPERATORS	
-	Vec_3D<T>& operator+=(const Vec_3D<T>& rhs);
-    Vec_3D<T>& operator-=(const Vec_3D<T>& rhs);
-    Vec_3D<T>& operator+=(T rhs);
-	Vec_3D<T>& operator-=(T rhs);
-	Vec_3D<T>& operator*=(T rhs);
-	Vec_3D<T>& operator/=(T rhs);
-	template<class U>
-    explicit operator Vec_3D<U>() const;
-};
-
-// NON-MEMBER FUNCTIONS
-template <typename T> Vec_3D<T> operator+(Vec_3D<T> lhs, const Vec_3D<T>& rhs);
-template <typename T> Vec_3D<T> operator-(Vec_3D<T> lhs, const Vec_3D<T>& rhs);
-template <typename T> Vec_3D<T> operator*(Vec_3D<T> lhs, T rhs);
-template <typename T> Vec_3D<T> operator*(T lhs, Vec_3D<T> rhs);
-template <typename T> Vec_3D<T> operator+(Vec_3D<T> lhs, T rhs);
-template <typename T> Vec_3D<T> operator+(T lhs, Vec_3D<T> rhs);
-template <typename T> Vec_3D<T> operator-(Vec_3D<T> lhs, T rhs);
-template <typename T> Vec_3D<T> operator-(T lhs, Vec_3D<T> rhs);
-template <typename T> Vec_3D<T> operator/(Vec_3D<T> lhs, T rhs);
-
-template <typename T> bool operator==(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){return lhs.vec == rhs.vec; }
-template <typename T> bool operator!=(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec != rhs.vec; }
-template <typename T> bool operator<(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec < rhs.vec; }
-template <typename T> bool operator<=(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec <= rhs.vec; }
-template <typename T> bool operator>(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec > rhs.vec; }
-template <typename T> bool operator>=(const Vec_3D<T>& lhs, const Vec_3D<T>& rhs){ return lhs.vec >= rhs.vec; }
-
-/**
- * @class:	Mesh_base<T>
- * @brief:	class handling basic mesh functions, the most important are creating and destroing the underlying data structure
- *			creates a mesh of N1*N2*N3 cells
- */
-
 // ignore following in SWIG wrapper
 #ifndef SWIG
-template <typename T>
-class Mesh_base
-{
-public:
-	// CONSTRUCTORS & DESTRUCTOR
-	Mesh_base(unsigned n1, unsigned n2, unsigned n3);
-    Mesh_base(const Mesh_base& that);
-    Mesh_base(Mesh_base<T>&& that) noexcept;
-    Mesh_base& operator=(Mesh_base that);
-    template <class U> friend void swap(Mesh_base<U>& first, Mesh_base<U>& second);
-	~Mesh_base();
-	
-	// VARIABLES
-	unsigned N1, N2, N3, length; // acces dimensions and length of mesh
-	
-	// METHODS
-	T* real() const { return data;} // acces data
-	void assign(T val);
-	
-	// OPERATORS
-	T &operator[](int i){ return data[i]; }
-	const T &operator[](int i) const{ return data[i]; }
-	
-	T& operator()(int i, int j, int k){ return data[i*N2*N3+j*N3+k]; }
-	const T& operator()(int i, int j, int k) const{ return data[i*N2*N3+j*N3+k]; }
-	
-	T& operator()(int i, int j){ return data[i*N3+j]; }
-	const T& operator()(int i, int j) const{ return data[i*N3+j]; }
-	
-	T& operator()(Vec_3D<int> pos);
-	const T& operator()(Vec_3D<int> pos) const;
-	
-	Mesh_base& operator+=(const T& rhs);
-	Mesh_base& operator-=(const T& rhs){ return *this+=-rhs; }
-	Mesh_base& operator*=(const T& rhs);
-	Mesh_base& operator/=(const T& rhs);
-
-protected:
-	// VARIABLES
-	T* data;
-};
-
-// template <typename T> void swap(Mesh_base<T>& first, Mesh_base<T>& second);
-
-/**
- * @class:	Mesh
- * @brief:	creates a mesh of N*N*(N+2) cells
- */
-
-class Mesh : public Mesh_base<double>
-{
-public:
-	// CONSTRUCTORS & DESTRUCTOR
-    Mesh(unsigned n);
-    // default constructors / assignemnts belowe
-    // Mesh(const Mesh& that);
-    // Mesh(Mesh&& that) noexcept;
-    // Mesh& operator=(Mesh that);
-    // friend void swap(Mesh& first, Mesh& second);
-	
-	// VARIABLES
-	unsigned N; // acces dimension of mesh
-	
-	// METHODS
-    fftw_complex* complex() const { return reinterpret_cast<fftw_complex*>(data);}
-    void reset_part(bool part);
-    void reset_re() { reset_part(0); }
-    void reset_im() { reset_part(1); }
-    
-	// OPERATORS
-	using Mesh_base<double>::operator ();
-	double& operator()(Vec_3D<int> pos);
-	const double& operator()(Vec_3D<int> pos) const;
-	
-	Mesh& operator+=(const double& rhs);
-	Mesh& operator-=(const double& rhs){ return *this+=-rhs; }
-	Mesh& operator*=(const double& rhs);
-	Mesh& operator/=(const double& rhs);
-};
+#include "mesh.hpp"
 
 /**
  * @class:	Particle_x
@@ -184,17 +66,19 @@ class Particle_x
 public:
 	// CONSTRUCTORS
 	Particle_x(){};
-	Particle_x(double x, double y, double z):
-	position(x,y,z) {};
-	Particle_x(Vec_3D<double> position):
+    // template<typename T>
+	// Particle_x(T x, T y, T z):
+	// position(x,y,z) {};
+    template<typename T>
+	Particle_x(Vec_3D<T> position):
 	position(position) {};
 	
 	// VARIABLES
-	Vec_3D<double> position;
+	Vec_3D<FTYPE> position;
 	
 	// OPERATORS
-	double &operator[](int i){ return position[i]; }
-	const double& operator[](int i) const{ return position[i]; }
+	FTYPE &operator[](int i){ return position[i]; }
+	const FTYPE& operator[](int i) const{ return position[i]; }
 };
 
 /**
@@ -209,17 +93,18 @@ class Particle_v : public Particle_x
 public:
 	// CONSTRUCTORS
 	Particle_v(){};
-	Particle_v(double x, double y, double z, double vx, double vy, double vz):
-		Particle_x(x,y,z), velocity(vx,vy,vz) {};
-	Particle_v(Vec_3D<double> position, Vec_3D<double> velocity):
+	// Particle_v(FTYPE x, FTYPE y, FTYPE z, FTYPE vx, FTYPE vy, FTYPE vz):
+	// 	Particle_x(x,y,z), velocity(vx,vy,vz) {};
+    template<typename T, typename U>
+	Particle_v(Vec_3D<T> position, Vec_3D<U> velocity):
 		Particle_x(position), velocity(velocity) {};
 	
 	// VARIABLES
-	Vec_3D<double> velocity;
+	Vec_3D<FTYPE> velocity;
 
 	// OPERATORS
-	double &operator()(int i){ return velocity[i]; }
-	const double& operator()(int i) const{ return velocity[i]; }
+	FTYPE &operator()(int i){ return velocity[i]; }
+	const FTYPE& operator()(int i) const{ return velocity[i]; }
 };
 #endif
 
@@ -236,13 +121,13 @@ public:
     ccl_cosmology* cosmo;
 
     // COSMOLOGY (flat LCDM)
-    double A = 1, ns, k2_G, sigma8;
-    double Omega_m, Omega_b, H0, h;
-    double Omega_c() const { return Omega_m - Omega_b; }
-    double Omega_L() const { return 1 - Omega_m; }
+    FTYPE A = 1, ns, k2_G, sigma8;
+    FTYPE Omega_m, Omega_b, H0, h;
+    FTYPE Omega_c() const { return Omega_m - Omega_b; }
+    FTYPE Omega_L() const { return 1 - Omega_m; }
 
     // PRECOMPUTED VALUES
-    double D_norm;
+    FTYPE D_norm;
 
     // DEALING WITH GSL 'void* param'
     explicit operator void*() const;
@@ -296,7 +181,7 @@ struct Box_Opt {
     void init();
     /* cmd args */
     unsigned par_num_1d, mesh_num, mesh_num_pwr;
-    double box_size;
+    FTYPE box_size;
     /* derived param*/
     unsigned par_num, Ng, Ng_pwr;
 };
@@ -306,9 +191,9 @@ struct Box_Opt {
 struct Integ_Opt {
     void init();
     /* cmd args */
-    double z_in, z_out, db;
+    FTYPE z_in, z_out, db;
     /* derived param*/
-    double b_in, b_out;
+    FTYPE b_in, b_out;
 };
 
 
@@ -317,7 +202,7 @@ struct Out_Opt {
     void init();
     /* cmd args */
     unsigned print_every, bins_per_decade, points_per_10_Mpc;
-    std::vector<double> print_z; //< for which redshifts print output on top of print_every (optional)
+    std::vector<FTYPE> print_z; //< for which redshifts print output on top of print_every (optional)
     std::string out_dir; //< where to save output of the simulation
     bool print_par_pos, print_dens, print_pwr, print_extrap_pwr, print_corr, print_vel_pwr;
     /* derived param*/
@@ -337,9 +222,9 @@ struct Comp_App {
 struct App_Opt {
     void init(const Box_Opt&);
     /* cmd args */
-    double nu, rs;
+    FTYPE nu, rs;
     /* derived param*/
-    double Hc, a, nu_dim;
+    FTYPE Hc, a, nu_dim;
     unsigned M;
 };
 
@@ -357,7 +242,7 @@ struct Run_Opt {
 };
 
 // define Range outside because of SWIG
-struct Range { double lower, upper; };
+struct Range { FTYPE lower, upper; };
 
 /* OTHER PARAMETERS */
 struct Other_par {
@@ -365,7 +250,7 @@ struct Other_par {
     // k-range where to use (linear) interpolation and k-range in which print 'pwr_spec_extrap_*'
     ///range in which compute the correlation function 
     Range k_print, x_corr;
-    std::map<std::string,double> nyquist; //< Nyquist frequencies of potential mesh, analyses mesh and particle separation
+    std::map<std::string,FTYPE> nyquist; //< Nyquist frequencies of potential mesh, analyses mesh and particle separation
 };
 
 /* CHAMELEON */
@@ -403,8 +288,8 @@ public:
 	// METHODS
     void print_info(std::string out, std::string app) const;
 	void print_info() const;
-	const double x_0() const{return box_opt.box_size/box_opt.mesh_num;}
-    const double x_0_pwr() const{return box_opt.box_size/box_opt.mesh_num_pwr;}
+	const FTYPE x_0() const{return box_opt.box_size/box_opt.mesh_num;}
+    const FTYPE x_0_pwr() const{return box_opt.box_size/box_opt.mesh_num_pwr;}
     bool simulate() { return run_opt.simulate(); }
 };
 
@@ -446,7 +331,7 @@ public:
     void resize (size_t n){
         for (auto &vec : data) vec.resize(n);
     }
-    void resize (size_t n, double val){
+    void resize (size_t n, FTYPE val){
         for (auto &vec : data) vec.resize(n, val);
     }
     void reserve(size_t n){
@@ -485,8 +370,8 @@ public:
     const Sim_Param &sim;
 
 	int step, print_every;
-    double b, b_out, db;
-    double D_init, dDda_init;
+    FTYPE b, b_out, db;
+    FTYPE D_init, dDda_init;
     const std::string app_str, z_suffix_const, out_dir_app;
     
     // LARGE FIELDS
@@ -495,15 +380,15 @@ public:
     T* particles;
 
     // OTHER VARIABLES
-    Data_Vec<double, 2> corr_func_binned, pwr_spec_binned, pwr_spec_binned_0, vel_pwr_spec_binned_0;
+    Data_Vec<FTYPE, 2> corr_func_binned, pwr_spec_binned, pwr_spec_binned_0, vel_pwr_spec_binned_0;
     Interp_obj pwr_spec_input;
-	fftw_plan p_F, p_B, p_F_pwr, p_B_pwr;
+	FFTW_PLAN_TYPE p_F, p_B, p_F_pwr, p_B_pwr;
 	Tracking track;
 	std::vector<int> dens_binned;
 	
 	// METHODS
-	double z() const{ return 1./b - 1.;}
-	double b_half() const { return b - db/2.; }
+	FTYPE z() const{ return 1/b - 1;}
+	FTYPE b_half() const { return b - db/2; }
 	bool integrate() const { return (b <= b_out) && (db > 0);}
 	bool printing() const { return print_every ? ((step % print_every) == 0) or (b == b_out) : print_every ; }
     void print_output();
@@ -541,11 +426,11 @@ class LinkedList
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR
-	LinkedList(unsigned par_num, int m, double hc);
+	LinkedList(unsigned par_num, int m, FTYPE hc);
 	
 	// VARIABLES
 	unsigned par_num;
-	double Hc;
+	FTYPE Hc;
 	std::vector<int> LL;
 	Mesh_base<int> HOC;
 	
