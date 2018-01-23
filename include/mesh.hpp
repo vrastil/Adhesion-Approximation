@@ -117,9 +117,4 @@ public:
         get_per(pos, N);
         return data[int(pos[0])*N2*N3+int(pos[1])*N3+int(pos[2])]; 
     }
-	
-	// Mesh& operator+=(const FTYPE& rhs);
-	// Mesh& operator-=(const FTYPE& rhs){ return *this+=-rhs; }
-	// Mesh& operator*=(const FTYPE& rhs);
-	// Mesh& operator/=(const FTYPE& rhs);
 };

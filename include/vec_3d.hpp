@@ -11,9 +11,6 @@ public:
 	Vec_3D(){};
     Vec_3D(const Vec_3D<int>& vec):
     std::array<T, 3>({T(vec[0]), T(vec[1]), T(vec[2])}) {}
-    // template<typename U>
-	// Vec_3D(U x, U y, U z):
-	// std::array<T, 3>({x, y, z}) {};
     
     // METHODS
     T norm2() const
@@ -39,20 +36,6 @@ public:
         for(unsigned i = 0; i < 3; ++i) (*this)[i] -= rhs[i];
         return *this;
     }
-
-    // template<typename U>
-    // Vec_3D<T>& operator+=(U rhs)
-    // {
-    //     for(T& val : *this) val += rhs;
-    //     return *this;
-    // }
-
-    // template<typename U>
-	// Vec_3D<T>& operator-=(U rhs)
-    // {
-    //     for(T& val : *this) val -= rhs;
-    //     return *this;
-    // }
 
     template<typename U>
 	Vec_3D<T>& operator*=(U rhs)
@@ -98,34 +81,6 @@ Vec_3D<T> operator*(T lhs, const Vec_3D<U>& rhs)
     for(unsigned i = 0; i < 3; ++i) tmp[i] = lhs*rhs[i];
     return tmp;
 }
-
-// template <typename T, typename U>
-// Vec_3D<T> operator+(Vec_3D<T> lhs, U rhs)
-// {
-//     lhs += rhs;
-//     return lhs;
-// }
-
-// template <typename T, typename U>
-// Vec_3D<T> operator+(T lhs, Vec_3D<U> rhs)
-// {
-//     rhs += lhs;
-//     return rhs;
-// }
-
-// template <typename T, typename U>
-// Vec_3D<T> operator-(Vec_3D<T> lhs, U rhs)
-// {
-//     lhs -= rhs;
-//     return lhs;
-// }
-
-// template <typename T, typename U>
-// Vec_3D<T> operator-(T lhs, Vec_3D<U> rhs)
-// {
-//     rhs -= lhs;
-//     return rhs;
-// }
 
 template <typename T, typename U>
 Vec_3D<T> operator/(Vec_3D<T> lhs, U rhs)
