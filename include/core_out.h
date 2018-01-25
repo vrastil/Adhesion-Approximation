@@ -48,7 +48,7 @@ void print_vel_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Da
     FTYPE b, std::string out_dir, std::string suffix);
 
 template <class T>
-void print_par_pos_cut_small(T* particles, const Sim_Param &sim, std::string out_dir, std::string suffix);
+void print_par_pos_cut_small(const std::vector<T>& particles, const Sim_Param &sim, std::string out_dir, std::string suffix);
 void print_track_par(const Tracking& track, const Sim_Param &sim, std::string out_dir, std::string suffix);
 void print_rho_map(const Mesh& rho, const Sim_Param &sim, std::string out_dir, std::string suffix);
 void print_projected_rho(const Mesh& delta, const Sim_Param &sim, std::string out_dir, std::string suffix);

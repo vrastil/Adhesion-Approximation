@@ -215,7 +215,7 @@ Tracking::Tracking(int sqr_num_track_par, int par_num_per_dim):
 }
 
  template <class T>
- void Tracking::update_track_par(T* particles)
+ void Tracking::update_track_par(const std::vector<T>& particles)
  {
      std::vector<Particle_x> par_pos_step;
      par_pos_step.reserve(num_track_par);
@@ -543,8 +543,8 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
     if (print_every) work_dir_over(out_dir_app);
     else create_dir(out_dir_app);
 
-    // PARTICLES INITIALIZATION
-    particles = new T[sim.box_opt.par_num];
+    // PARTICLES ALLOCATION
+    particles.reserve(sim.box_opt.par_num);
     memory_alloc += sizeof(T)*sim.box_opt.par_num;
 
 	// FFTW PREPARATION
@@ -564,10 +564,7 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
 
 template <class T> 
 App_Var<T>::~App_Var()
-{
-    delete[] particles;
-
-	// FFTW CLEANUP
+{	// FFTW CLEANUP
 	FFTW_DEST_PLAN(p_F);
     FFTW_DEST_PLAN(p_B);
     FFTW_DEST_PLAN(p_F_pwr);
@@ -724,7 +721,7 @@ void App_Var<T>::print_info() const
 LinkedList::LinkedList(unsigned par_num, int m, FTYPE hc):
 	par_num(par_num), Hc(hc), LL(par_num), HOC(m, m, m) {}
 	
-void LinkedList::get_linked_list(Particle_v* particles)
+void LinkedList::get_linked_list(const std::vector<Particle_v>& particles)
 {
 	HOC.assign(-1);
 	for (unsigned i = 0; i < par_num; i++)
@@ -734,8 +731,8 @@ void LinkedList::get_linked_list(Particle_v* particles)
 	}
 }
 
-template void Tracking::update_track_par(Particle_x* particles);
-template void Tracking::update_track_par(Particle_v* particles);
+template void Tracking::update_track_par(const std::vector<Particle_x>& particles);
+template void Tracking::update_track_par(const std::vector<Particle_v>& particles);
 template class App_Var<Particle_x>;
 template class App_Var<Particle_v>;
 

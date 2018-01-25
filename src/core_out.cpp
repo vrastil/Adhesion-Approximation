@@ -68,7 +68,7 @@ void work_dir_over(string out_dir)
 }
 
 template <class T>
-void print_par_pos_cut_small(T* particles, const Sim_Param &sim, string out_dir, string suffix)
+void print_par_pos_cut_small(const std::vector<T>& particles, const Sim_Param &sim, string out_dir, string suffix)
 {
    out_dir += "par_cut/";
    string file_name = out_dir + "par_cut" + suffix + ".dat";
@@ -360,5 +360,5 @@ void print_dens_bin(const vector<int> &dens_binned, string out_dir, string suffi
 	}
 }
 
-template void print_par_pos_cut_small(Particle_x*, const Sim_Param&, string, string);
-template void print_par_pos_cut_small(Particle_v*, const Sim_Param&, string, string);
+template void print_par_pos_cut_small(const std::vector<Particle_x>&, const Sim_Param&, string, string);
+template void print_par_pos_cut_small(const std::vector<Particle_v>&, const Sim_Param&, string, string);

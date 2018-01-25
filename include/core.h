@@ -154,7 +154,7 @@ public:
 	
 	// METHODS
 	const unsigned num_step() const{return par_pos.size();};
-	template <class T>  void update_track_par(T* particles);
+	template <class T>  void update_track_par(const std::vector<T>& particles);
 };
 
 /**
@@ -378,7 +378,7 @@ public:
     // LARGE FIELDS
 	std::vector<Mesh> app_field;
     std::vector<Mesh> power_aux;
-    T* particles;
+    std::vector<T> particles;
 
     // OTHER VARIABLES
     Data_Vec<FTYPE, 2> corr_func_binned, pwr_spec_binned, pwr_spec_binned_0, vel_pwr_spec_binned_0;
@@ -436,7 +436,7 @@ public:
 	Mesh_base<int> HOC;
 	
 	// METHODS
-	void get_linked_list(Particle_v* particles);
+	void get_linked_list(const std::vector<Particle_v>& particles);
 };
 
 /**

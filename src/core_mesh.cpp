@@ -63,7 +63,7 @@ void get_per(Vec_3D<T> &position, int perx, int pery, int perz)
     position[2] = get_per(position[2], perz);
 }
 
-void get_per(Particle_v* particles, const unsigned par_num, const int per)
+void get_per(std::vector<Particle_v>& particles, const unsigned par_num, const int per)
 {
     #pragma omp parallel for
     for (unsigned i = 0; i < par_num; i++)

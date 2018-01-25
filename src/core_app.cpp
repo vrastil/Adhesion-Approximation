@@ -21,7 +21,7 @@ static void set_velocity_one_par(const Vec_3D<int>& unpert_pos, Vec_3D<FTYPE>& d
 	for (unsigned i = 0; i < 3; i++) displ_field[i] = vel_field[i](unpert_pos);
 }
 
-void set_unpert_pos(const Sim_Param &sim, Particle_x* particles)
+void set_unpert_pos(const Sim_Param &sim, vector<Particle_x>& particles)
 {
 	Vec_3D<int> unpert_pos;
     const unsigned par_per_dim = sim.box_opt.par_num_1d;
@@ -36,7 +36,7 @@ void set_unpert_pos(const Sim_Param &sim, Particle_x* particles)
 	}
 }
 
-void set_unpert_pos_w_vel(const Sim_Param &sim, Particle_v* particles, const vector<Mesh> &vel_field)
+void set_unpert_pos_w_vel(const Sim_Param &sim, vector<Particle_v>& particles, const vector<Mesh> &vel_field)
 {
 	Vec_3D<int> unpert_pos;
 	Vec_3D<FTYPE> velocity;
@@ -53,7 +53,7 @@ void set_unpert_pos_w_vel(const Sim_Param &sim, Particle_v* particles, const vec
 	}
 }
 
-void set_pert_pos(const Sim_Param &sim, const FTYPE db, Particle_x* particles, const vector< Mesh> &vel_field)
+void set_pert_pos(const Sim_Param &sim, const FTYPE db, vector<Particle_x>& particles, const vector< Mesh> &vel_field)
 {
 	Vec_3D<int> unpert_pos;
 	Vec_3D<FTYPE> displ_field;
@@ -75,7 +75,7 @@ void set_pert_pos(const Sim_Param &sim, const FTYPE db, Particle_x* particles, c
 	}
 }
 
-void set_pert_pos_w_vel(const Sim_Param &sim, const FTYPE a, Particle_v* particles, const vector< Mesh> &vel_field)
+void set_pert_pos_w_vel(const Sim_Param &sim, const FTYPE a, vector<Particle_v>& particles, const vector< Mesh> &vel_field)
 {
 	Vec_3D<int> unpert_pos;
 	Vec_3D<FTYPE> velocity;
@@ -100,7 +100,7 @@ void set_pert_pos_w_vel(const Sim_Param &sim, const FTYPE a, Particle_v* particl
 	}
 }
 
-void stream_step(const Sim_Param &sim, const FTYPE da, Particle_v* particles)
+void stream_step(const Sim_Param &sim, const FTYPE da, vector<Particle_v>& particles)
 {
     const unsigned Np = sim.box_opt.par_num;
     #pragma omp parallel for
@@ -110,7 +110,7 @@ void stream_step(const Sim_Param &sim, const FTYPE da, Particle_v* particles)
     }
 }
 
-void kick_step_no_momentum(const Sim_Param &sim, const FTYPE a, Particle_v* particles, const vector< Mesh> &vel_field)
+void kick_step_no_momentum(const Sim_Param &sim, const FTYPE a, vector<Particle_v>& particles, const vector< Mesh> &vel_field)
 {
     // no memory of previus velocity, 1st order ODE
     const unsigned Np = sim.box_opt.par_num;
@@ -126,7 +126,7 @@ void kick_step_no_momentum(const Sim_Param &sim, const FTYPE a, Particle_v* part
     }
 }
 
-void kick_step_w_momentum(const Sim_Param &sim, const FTYPE a, const FTYPE da, Particle_v* particles, const vector< Mesh> &force_field)
+void kick_step_w_momentum(const Sim_Param &sim, const FTYPE a, const FTYPE da, vector<Particle_v>& particles, const vector< Mesh> &force_field)
 {
     // classical 2nd order ODE
     const unsigned Np = sim.box_opt.par_num;
@@ -161,7 +161,7 @@ FTYPE force_tot(const FTYPE r, const FTYPE e2){
 	return 1 / (r*r+e2);
 }
 
-void force_short(const Sim_Param &sim, const FTYPE D, const LinkedList& linked_list, Particle_v *particles,
+void force_short(const Sim_Param &sim, const FTYPE D, const LinkedList& linked_list, const vector<Particle_v>& particles,
 				 const Vec_3D<FTYPE>& position, Vec_3D<FTYPE>* force, Interp_obj* fs_interp)
 {	// Calculate short range force in position, force is added
     #define FORCE_SHORT_NO_INTER
@@ -194,7 +194,7 @@ void force_short(const Sim_Param &sim, const FTYPE D, const LinkedList& linked_l
     } while( it.iter() );
 }
 
-void kick_step_w_pp(const Sim_Param &sim, const FTYPE a, const FTYPE da, Particle_v* particles, const vector< Mesh> &force_field,
+void kick_step_w_pp(const Sim_Param &sim, const FTYPE a, const FTYPE da, vector<Particle_v>& particles, const vector< Mesh> &force_field,
                     LinkedList* linked_list, Interp_obj* fs_interp)
 {    // 2nd order ODE with long & short range potential
     const unsigned Np = sim.box_opt.par_num;
@@ -222,7 +222,7 @@ void kick_step_w_pp(const Sim_Param &sim, const FTYPE a, const FTYPE da, Particl
     }
 }
 
-void upd_pos_first_order(const Sim_Param &sim, const FTYPE da, const FTYPE a, Particle_v* particles, const vector< Mesh> &vel_field)
+void upd_pos_first_order(const Sim_Param &sim, const FTYPE da, const FTYPE a, vector<Particle_v>& particles, const vector< Mesh> &vel_field)
 {
     /// Leapfrog method for frozen-flow / adhesion
     stream_step(sim, da/2, particles);
@@ -231,7 +231,7 @@ void upd_pos_first_order(const Sim_Param &sim, const FTYPE da, const FTYPE a, Pa
     get_per(particles, sim.box_opt.par_num, sim.box_opt.mesh_num);
 }
 
-void upd_pos_second_order(const Sim_Param &sim, const FTYPE da, const FTYPE a, Particle_v* particles, const vector< Mesh> &force_field)
+void upd_pos_second_order(const Sim_Param &sim, const FTYPE da, const FTYPE a, vector<Particle_v>& particles, const vector< Mesh> &force_field)
 {
     // Leapfrog method for frozen-potential
     stream_step(sim, da/2, particles);
@@ -240,7 +240,7 @@ void upd_pos_second_order(const Sim_Param &sim, const FTYPE da, const FTYPE a, P
     get_per(particles, sim.box_opt.par_num, sim.box_opt.mesh_num);
 }
 
-void upd_pos_second_order_w_pp(const Sim_Param &sim, const FTYPE da, const FTYPE a, Particle_v* particles, const vector< Mesh> &force_field,
+void upd_pos_second_order_w_pp(const Sim_Param &sim, const FTYPE da, const FTYPE a, vector<Particle_v>& particles, const vector< Mesh> &force_field,
                                LinkedList* linked_list, Interp_obj* fs_interp)
 {
     // Leapfrog method for modified frozen-potential
@@ -336,7 +336,7 @@ void gen_rho_dist_k(const Sim_Param &sim, Mesh* rho, const FFTW_PLAN_TYPE &p_F)
 }
 
 template <class T>
-void get_rho_from_par(T* particles, Mesh* rho, const Sim_Param &sim)
+void get_rho_from_par(const vector<T>& particles, Mesh* rho, const Sim_Param &sim)
 {
     printf("Computing the density field from particle positions...\n");
     const FTYPE m = pow(sim.box_opt.Ng_pwr, 3);
@@ -352,7 +352,7 @@ void get_rho_from_par(T* particles, Mesh* rho, const Sim_Param &sim)
     }
 }
 
-int get_vel_from_par(Particle_v* particles, vector<Mesh>* vel_field, const Sim_Param &sim)
+int get_vel_from_par(const vector<Particle_v>& particles, vector<Mesh>* vel_field, const Sim_Param &sim)
 {
     printf("Computing the velocity field from particle positions...\n");
     const FTYPE mesh_mod = (FTYPE)sim.box_opt.mesh_num_pwr/sim.box_opt.mesh_num;
@@ -370,7 +370,7 @@ int get_vel_from_par(Particle_v* particles, vector<Mesh>* vel_field, const Sim_P
     return 1;
 }
 
-int get_vel_from_par(Particle_x* particles, vector<Mesh>* vel_field, const Sim_Param &sim)
+int get_vel_from_par(const vector<Particle_x>& particles, vector<Mesh>* vel_field, const Sim_Param &sim)
 {
     printf("WARNING! Trying to compute velocity divergence with particle positions only! Skipping...\n");
     return 0;
@@ -720,6 +720,6 @@ void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param 
 	}
 }
 
-template void get_rho_from_par(Particle_x*, Mesh*, const Sim_Param&);
-template void get_rho_from_par(Particle_v*, Mesh*, const Sim_Param&);
+template void get_rho_from_par(const vector<Particle_x>&, Mesh*, const Sim_Param&);
+template void get_rho_from_par(const vector<Particle_v>&, Mesh*, const Sim_Param&);
 template void gen_pow_spec_binned_from_extrap(const Sim_Param&, const Extrap_Pk<FTYPE, 2>&, Data_Vec<FTYPE, 2>*);
