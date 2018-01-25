@@ -437,9 +437,9 @@ void to_json(json& j, const Chi_Opt& chi_opt)
 
 void from_json(const json& j, Chi_Opt& chi_opt)
 {
-    chi_opt.beta = j.at("beta").get<double>();
-    chi_opt.n = j.at("n").get<double>();
-    chi_opt.phi = j.at("phi").get<double>();
+    chi_opt.beta = j.at("beta").get<FTYPE>();
+    chi_opt.n = j.at("n").get<FTYPE>();
+    chi_opt.phi = j.at("phi").get<FTYPE>();
 }
 
 void Sim_Param::print_info(string out, string app) const

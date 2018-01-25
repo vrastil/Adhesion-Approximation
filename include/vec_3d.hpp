@@ -10,13 +10,13 @@ public:
 	// CONSTRUCTORS
 	Vec_3D(){};
     Vec_3D(const Vec_3D<int>& vec):
-    std::array<T, 3>({T(vec[0]), T(vec[1]), T(vec[2])}) {}
+    std::array<T, 3>({T(std::get<0>(vec)), T(std::get<1>(vec)), T(std::get<2>(vec))}) {}
     
     // METHODS
     T norm2() const
     {
         T tmp(0);
-        for (const T& val : *this) tmp += val*val;
+        for (T val : *this) tmp += val*val;
         return tmp;
     }
 

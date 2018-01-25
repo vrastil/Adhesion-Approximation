@@ -105,9 +105,9 @@ void handle_cmd_line(int ac, char* av[], Sim_Param& sim){
     
     po::options_description config_cham("Chameleon parameters");
     config_cham.add_options()
-        ("chi_beta", po::value<double>(&sim.chi_opt.beta)->default_value(1/sqrt(6), "(1/6)^1/2"), "coupling constant")
-        ("chi_n", po::value<double>(&sim.chi_opt.n)->default_value(0.5, "1/2"), "chameleon power-law potential exponent,\n0 < n < 1")
-        ("chi_phi", po::value<double>(&sim.chi_opt.phi)->default_value(1E-6, "1E-6"), "screening potential")
+        ("chi_beta", po::value<FTYPE>(&sim.chi_opt.beta)->default_value(1/sqrt(6), "(1/6)^1/2"), "coupling constant")
+        ("chi_n", po::value<FTYPE>(&sim.chi_opt.n)->default_value(0.5, "1/2"), "chameleon power-law potential exponent,\n0 < n < 1")
+        ("chi_phi", po::value<FTYPE>(&sim.chi_opt.phi)->default_value(1E-6, "1E-6"), "screening potential")
         ;
     mod_grav.add(config_cham);
     

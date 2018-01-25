@@ -38,6 +38,7 @@ typedef long double FTYPE;
 #define FFTW_EXEC_C2R MAKE_FFTW_NAME(execute_dft_c2r)
 
 constexpr FTYPE PI = (FTYPE)M_PI;
+constexpr FTYPE MPL = 2.435E18; // Reduced Planck mass, [GeV/c^2]
 
 template <typename T>
 inline double pow_(double base, T exp){ return pow(base, exp); } // std::pow is OK for <double>
@@ -257,9 +258,9 @@ struct Other_par {
 struct Chi_Opt {
     void init();
     /* cmd args */
-    double beta, n, phi;
+    FTYPE beta, n, phi;
     /* derived param*/
-    double chi_prefix;
+    FTYPE chi_prefix;
 };
 
 /**
