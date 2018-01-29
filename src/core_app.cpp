@@ -121,7 +121,7 @@ void kick_step_no_momentum(const Sim_Param &sim, const FTYPE a, vector<Particle_
     for (unsigned i = 0; i < Np; i++)
 	{
         vel.fill(0.);
-        assign_from(vel_field, particles[i].position, &vel);
+        assign_from(vel_field, particles[i].position, vel);
         particles[i].velocity = vel*dDda;
     }
 }
@@ -142,7 +142,7 @@ void kick_step_w_momentum(const Sim_Param &sim, const FTYPE a, const FTYPE da, v
     for (unsigned i = 0; i < Np; i++)
 	{
         force.fill(0.);
-        assign_from(force_field, particles[i].position, &force);
+        assign_from(force_field, particles[i].position, force);
         force = force*f2 - particles[i].velocity*f1;		
         particles[i].velocity += force*da;
     }
@@ -162,7 +162,7 @@ FTYPE force_tot(const FTYPE r, const FTYPE e2){
 }
 
 void force_short(const Sim_Param &sim, const FTYPE D, const LinkedList& linked_list, const vector<Particle_v>& particles,
-				 const Vec_3D<FTYPE>& position, Vec_3D<FTYPE>* force, Interp_obj* fs_interp)
+				 const Vec_3D<FTYPE>& position, Vec_3D<FTYPE>& force, Interp_obj& fs_interp)
 {	// Calculate short range force in position, force is added
     #define FORCE_SHORT_NO_INTER
 	int p;
@@ -184,9 +184,9 @@ void force_short(const Sim_Param &sim, const FTYPE D, const LinkedList& linked_l
             {
                 #ifdef FORCE_SHORT_NO_INTER
                 dr = sqrt(dr2);
-                (*force) += dr_vec*(force_tot(dr, e2) - force_ref(dr, sim.app_opt.a))*m/(dr*4*PI);
+                force += dr_vec*(force_tot(dr, e2) - force_ref(dr, sim.app_opt.a))*m/(dr*4*PI);
                 #else
-                (*force) += dr_vec*(m/sqrt(dr2)*fs_interp->eval(dr2));
+                force += dr_vec*(m/sqrt(dr2)*fs_interp.eval(dr2));
                 #endif
             }
             p = linked_list.LL[p];
@@ -195,7 +195,7 @@ void force_short(const Sim_Param &sim, const FTYPE D, const LinkedList& linked_l
 }
 
 void kick_step_w_pp(const Sim_Param &sim, const FTYPE a, const FTYPE da, vector<Particle_v>& particles, const vector< Mesh> &force_field,
-                    LinkedList* linked_list, Interp_obj* fs_interp)
+                    LinkedList& linked_list, Interp_obj& fs_interp)
 {    // 2nd order ODE with long & short range potential
     const unsigned Np = sim.box_opt.par_num;
     Vec_3D<FTYPE> force;
@@ -207,15 +207,15 @@ void kick_step_w_pp(const Sim_Param &sim, const FTYPE a, const FTYPE da, vector<
     const FTYPE f2 = 3/(2*a)*Om/(Om+OL)*D/a;
     
     printf("Creating linked list...\n");
-	linked_list->get_linked_list(particles);
+	linked_list.get_linked_list(particles);
 
     cout << "Computing short and long range parts of the potential...\n";
     #pragma omp parallel for private(force)
     for (unsigned i = 0; i < Np; i++)
 	{
         force.fill(0.);
-        assign_from(force_field, particles[i].position, &force); // long-range force
-        force_short(sim, D, *linked_list, particles, particles[i].position, &force, fs_interp); // short range force
+        assign_from(force_field, particles[i].position, force); // long-range force
+        force_short(sim, D, linked_list, particles, particles[i].position, force, fs_interp); // short range force
 
         force = force*f2 - particles[i].velocity*f1;		
         particles[i].velocity += force*da;
@@ -241,7 +241,7 @@ void upd_pos_second_order(const Sim_Param &sim, const FTYPE da, const FTYPE a, v
 }
 
 void upd_pos_second_order_w_pp(const Sim_Param &sim, const FTYPE da, const FTYPE a, vector<Particle_v>& particles, const vector< Mesh> &force_field,
-                               LinkedList* linked_list, Interp_obj* fs_interp)
+                               LinkedList& linked_list, Interp_obj& fs_interp)
 {
     // Leapfrog method for modified frozen-potential
     stream_step(sim, da/2, particles);
@@ -250,16 +250,16 @@ void upd_pos_second_order_w_pp(const Sim_Param &sim, const FTYPE da, const FTYPE
     get_per(particles, sim.box_opt.par_num, sim.box_opt.mesh_num);
 }
 
-static void gen_gauss_white_noise(const Sim_Param &sim, Mesh* rho)
+static void gen_gauss_white_noise(const Sim_Param &sim, Mesh& rho)
 {
 	// Get keys for each slab in the x axis that this rank contains
 	vector<unsigned long> slab_keys;
-	slab_keys.resize(rho->N1);
-	GetSlabKeys(slab_keys.data(), 0, rho->N1, sim.run_opt.seed);
+	slab_keys.resize(rho.N1);
+	GetSlabKeys(slab_keys.data(), 0, rho.N1, sim.run_opt.seed);
 	
 	unsigned long ikey, index;
     FTYPE rn1, rn2, rn, tmp;
-    const unsigned N = rho->N;
+    const unsigned N = rho.N;
 		
 	#pragma omp parallel for private(ikey, index, rn1, rn2, rn, tmp)
 	for(unsigned long i=0; i < N; ++i)
@@ -273,7 +273,7 @@ static void gen_gauss_white_noise(const Sim_Param &sim, Mesh* rho)
                 index = j*N + k; 
 				GetRandomDoublesWhiteNoise(rn1, rn2, rn, ikey, index);
                 tmp = sqrt(-2*log(rn)/rn);
-                (*rho)(i, j, k) = rn2 * tmp;
+                rho(i, j, k) = rn2 * tmp;
             }
             #else
             for(unsigned long k=0; k < N/2; ++k) // go over half, use both random numbers
@@ -281,46 +281,46 @@ static void gen_gauss_white_noise(const Sim_Param &sim, Mesh* rho)
                 index = j*N + k;
 				GetRandomDoublesWhiteNoise(rn1, rn2, rn, ikey, index);
                 tmp = sqrt(-2*log(rn)/rn);
-                (*rho)(i, j, 2*k) = rn2 * tmp;
-                (*rho)(i, j, 2*k+1) = rn1 * tmp;
+                rho(i, j, 2*k) = rn2 * tmp;
+                rho(i, j, 2*k+1) = rn1 * tmp;
             }
             #endif
 		}
     }     
     FTYPE t_mean;
 	#ifdef CORR
-	t_mean = mean(rho->real(), rho->length);
-	FTYPE t_std_dev = std_dev(rho->real(), rho->length, t_mean);
+	t_mean = mean(rho.real(), rho.length);
+	FTYPE t_std_dev = std_dev(rho.real(), rho.length, t_mean);
 	printf("\t[mean = %.12f, stdDev = %.12f]\t-->", t_mean, t_std_dev);
-	(*rho)-=t_mean;
-	(*rho)/=t_std_dev;
+	rho-=t_mean;
+	rho/=t_std_dev;
 	#endif
 	
-	t_mean = mean(rho->real(), rho->length);
-    printf("\t[mean = %.12f, stdDev = %.12f]\n", t_mean, std_dev(rho->real(), rho->length, t_mean));
-    printf("\t[min = %.12f, max = %.12f]\n", min(rho->real(), rho->length), max(rho->real(), rho->length));
+	t_mean = mean(rho.real(), rho.length);
+    printf("\t[mean = %.12f, stdDev = %.12f]\n", t_mean, std_dev(rho.real(), rho.length, t_mean));
+    printf("\t[min = %.12f, max = %.12f]\n", min(rho.real(), rho.length), max(rho.real(), rho.length));
 }
 
-static void gen_rho_w_pow_k(const Sim_Param &sim, Mesh* rho)
+static void gen_rho_w_pow_k(const Sim_Param &sim, Mesh& rho)
 {
     FTYPE k;
     const FTYPE L = sim.box_opt.box_size;
     const FTYPE k0 = 2*PI/L;
     const int phase = sim.run_opt.phase ? 1 : -1;
-    const unsigned N = rho->N;
-    const unsigned len = rho->length / 2;
+    const unsigned N = rho.N;
+    const unsigned len = rho.length / 2;
     const FTYPE mod = phase * pow_(N / L, 3/2.); // pair sim, gaussian real -> fourier factor, dimension trans. Pk -> Pk*
     
 	#pragma omp parallel for private(k)
 	for(unsigned i=0; i < len; i++)
 	{
         k = k0*sqrt(get_k_sq(N, i));
-        (*rho)[2*i] *= mod*sqrt(lin_pow_spec(1, k, sim.cosmo));
-        (*rho)[2*i+1] *= mod*sqrt(lin_pow_spec(1, k, sim.cosmo));
+        rho[2*i] *= mod*sqrt(lin_pow_spec(1, k, sim.cosmo));
+        rho[2*i+1] *= mod*sqrt(lin_pow_spec(1, k, sim.cosmo));
 	}
 }
 
-void gen_rho_dist_k(const Sim_Param &sim, Mesh* rho, const FFTW_PLAN_TYPE &p_F)
+void gen_rho_dist_k(const Sim_Param &sim, Mesh& rho, const FFTW_PLAN_TYPE &p_F)
 	/**
 	Generate density distributions \rho(k) in k-space.
 	At first, a gaussian white noise (mean = 0, stdDev = 1) is generated,
@@ -329,21 +329,21 @@ void gen_rho_dist_k(const Sim_Param &sim, Mesh* rho, const FFTW_PLAN_TYPE &p_F)
 {
 	printf("Generating gaussian white noise...\n");
 	gen_gauss_white_noise(sim, rho);
-    fftw_execute_dft_r2c(p_F, *rho);
+    fftw_execute_dft_r2c(p_F, rho);
 
 	printf("Generating density distributions with given power spectrum...\n");
 	gen_rho_w_pow_k(sim, rho);
 }
 
 template <class T>
-void get_rho_from_par(const vector<T>& particles, Mesh* rho, const Sim_Param &sim)
+void get_rho_from_par(const vector<T>& particles, Mesh& rho, const Sim_Param &sim)
 {
     printf("Computing the density field from particle positions...\n");
     const FTYPE m = pow(sim.box_opt.Ng_pwr, 3);
     const FTYPE mesh_mod = (FTYPE)sim.box_opt.mesh_num_pwr/sim.box_opt.mesh_num;
     const unsigned Np = sim.box_opt.par_num;
 
-    rho->assign(-1.);
+    rho.assign(-1.);
     
     #pragma omp parallel for
     for (unsigned i = 0; i < Np; i++)
@@ -352,14 +352,14 @@ void get_rho_from_par(const vector<T>& particles, Mesh* rho, const Sim_Param &si
     }
 }
 
-int get_vel_from_par(const vector<Particle_v>& particles, vector<Mesh>* vel_field, const Sim_Param &sim)
+int get_vel_from_par(const vector<Particle_v>& particles, vector<Mesh>& vel_field, const Sim_Param &sim)
 {
     printf("Computing the velocity field from particle positions...\n");
     const FTYPE mesh_mod = (FTYPE)sim.box_opt.mesh_num_pwr/sim.box_opt.mesh_num;
     const FTYPE m = pow(sim.box_opt.Ng_pwr, 3);
     const unsigned Np = sim.box_opt.par_num;
 
-    for(Mesh& field : *vel_field){
+    for(Mesh& field : vel_field){
         field.assign(0.);
     }
     #pragma omp parallel for
@@ -370,13 +370,13 @@ int get_vel_from_par(const vector<Particle_v>& particles, vector<Mesh>* vel_fiel
     return 1;
 }
 
-int get_vel_from_par(const vector<Particle_x>& particles, vector<Mesh>* vel_field, const Sim_Param &sim)
+int get_vel_from_par(const vector<Particle_x>& particles, vector<Mesh>& vel_field, const Sim_Param &sim)
 {
     printf("WARNING! Trying to compute velocity divergence with particle positions only! Skipping...\n");
     return 0;
 }
 
-void pwr_spec_k(const Mesh &rho_k, Mesh* power_aux)
+void pwr_spec_k(const Mesh &rho_k, Mesh& power_aux)
 {
     /* Computing the power spectrum P(k)/L^3 -- dimensionLESS!
 
@@ -396,12 +396,12 @@ void pwr_spec_k(const Mesh &rho_k, Mesh* power_aux)
 		w_k = 1.;
 		get_k_vec(NM, i, k_vec);
 		for (int j = 0; j < 3; j++) if (k_vec[j] != 0) w_k *= pow_(sin(k_vec[j]*PI/NM)/(k_vec[j]*PI/NM), ORDER + 1);
-        (*power_aux)[2*i] = (rho_k[2*i]*rho_k[2*i] + rho_k[2*i+1]*rho_k[2*i+1])/(w_k*w_k);
-		(*power_aux)[2*i+1] = k_vec.norm();
+        power_aux[2*i] = (rho_k[2*i]*rho_k[2*i] + rho_k[2*i+1]*rho_k[2*i+1])/(w_k*w_k);
+		power_aux[2*i+1] = k_vec.norm();
 	}
 }
 
-void pwr_spec_k_init(const Mesh &rho_k, Mesh* power_aux)
+void pwr_spec_k_init(const Mesh &rho_k, Mesh& power_aux)
 {
     /* same as above but now there is NO w_k correction */
 
@@ -413,12 +413,12 @@ void pwr_spec_k_init(const Mesh &rho_k, Mesh* power_aux)
 	for(unsigned i=0; i < half_length;i++)
 	{
 		get_k_vec(NM, i, k_vec);
-        (*power_aux)[2*i] = rho_k[2*i]*rho_k[2*i] + rho_k[2*i+1]*rho_k[2*i+1];
-		(*power_aux)[2*i+1] = k_vec.norm();
+        power_aux[2*i] = rho_k[2*i]*rho_k[2*i] + rho_k[2*i+1]*rho_k[2*i+1];
+		power_aux[2*i+1] = k_vec.norm();
 	}
 }
 
-void vel_pwr_spec_k(const vector<Mesh> &vel_field, Mesh* power_aux)
+void vel_pwr_spec_k(const vector<Mesh> &vel_field, Mesh& power_aux)
 {
     /* Computing the velocity power spectrum divergence P(k)/L^3 -- dimensionLESS!
 
@@ -448,8 +448,8 @@ void vel_pwr_spec_k(const vector<Mesh> &vel_field, Mesh* power_aux)
             vel_div_im += vel_field[j][2*i+1]*k;
         } 
         
-        (*power_aux)[2*i] = (vel_div_re*vel_div_re + vel_div_im*vel_div_im)/(w_k*w_k);
-		(*power_aux)[2*i+1] = k_vec.norm();
+        power_aux[2*i] = (vel_div_re*vel_div_re + vel_div_im*vel_div_im)/(w_k*w_k);
+		power_aux[2*i+1] = k_vec.norm();
 	}
 }
 
@@ -512,43 +512,43 @@ void gen_cqty_binned(const FTYPE x_min, const FTYPE x_max, const unsigned bins_p
     gen_cqty_binned(x_min, x_max, bins_per_decade, qty_mesh, qty_mesh.length / 2, qty_binned, mod_q, mod_x);
 }
 
-void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_Vec<FTYPE, 2>* pwr_spec_binned)
+void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_Vec<FTYPE, 2>& pwr_spec_binned)
 {
     const FTYPE mod_pk = pow_(sim.box_opt.box_size, 3); // P(k) -> dimensionFULL!
     const FTYPE mod_k = 2*PI/sim.box_opt.box_size;
     printf("Computing binned power spectrum...\n");
-	gen_cqty_binned(1, sim.box_opt.mesh_num_pwr,  sim.out_opt.bins_per_decade, power_aux, *pwr_spec_binned, mod_pk, mod_k);
+	gen_cqty_binned(1, sim.box_opt.mesh_num_pwr,  sim.out_opt.bins_per_decade, power_aux, pwr_spec_binned, mod_pk, mod_k);
 }
 
-void gen_pow_spec_binned_init(const Sim_Param &sim, const Mesh &power_aux, const unsigned half_length, Data_Vec<FTYPE, 2>* pwr_spec_binned)
+void gen_pow_spec_binned_init(const Sim_Param &sim, const Mesh &power_aux, const unsigned half_length, Data_Vec<FTYPE, 2>& pwr_spec_binned)
 {
     /* same as above but now  power_aux is storing only data [0...mesh_num], NOT mesh_num_pwr */
     const FTYPE mod_pk = pow_(sim.box_opt.box_size, 3); // P(k) -> dimensionFULL!
     const FTYPE mod_k = 2*PI/sim.box_opt.box_size;
     printf("Computing binned initial power spectrum...\n");
-	gen_cqty_binned(1, sim.box_opt.mesh_num,  sim.out_opt.bins_per_decade, power_aux, half_length, *pwr_spec_binned, mod_pk, mod_k);
+	gen_cqty_binned(1, sim.box_opt.mesh_num,  sim.out_opt.bins_per_decade, power_aux, half_length, pwr_spec_binned, mod_pk, mod_k);
 }
 
 template<class P, typename T, unsigned N> // P = everything callable P_k(k), T = float-type, N = number
-void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const P &P_k, Data_Vec<T, N>* pwr_spec_binned)
+void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const P &P_k, Data_Vec<T, N>& pwr_spec_binned)
 {
     const T k_max = sim.other_par.k_print.upper;
     const T k_min = sim.other_par.k_print.lower;
     const T log_bin = T(1) / sim.out_opt.bins_per_decade;
     T k;
     unsigned req_size = (unsigned)ceil( sim.out_opt.bins_per_decade*log10(k_max/k_min));
-    pwr_spec_binned->resize(req_size);
+    pwr_spec_binned.resize(req_size);
 
     #pragma omp parallel for private(k)
-	for (unsigned j = 0; j < pwr_spec_binned->size(); j++){
+	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
         k = k_min*pow(T(10), j*log_bin);
-		(*pwr_spec_binned)[0][j] = k;
-        (*pwr_spec_binned)[1][j] = P_k(k);
+		pwr_spec_binned[0][j] = k;
+        pwr_spec_binned[1][j] = P_k(k);
     }
 }
 
 
-void gen_pot_k(const Mesh& rho_k, Mesh* pot_k)
+void gen_pot_k(const Mesh& rho_k, Mesh& pot_k)
 {   /*
     pot_k can be Mesh of differen (bigger) size rho_k,
     !!!> ALL physical FACTORS ARE therefore TAKEN FROM rho_k <!!!
@@ -563,16 +563,16 @@ void gen_pot_k(const Mesh& rho_k, Mesh* pot_k)
 	for(unsigned i=0; i < l_half;i++){				
 		k2 = get_k_sq(N, i);
 		if (k2 == 0){
-			(*pot_k)[2*i] = 0;
-			(*pot_k)[2*i+1] = 0;
+			pot_k[2*i] = 0;
+			pot_k[2*i+1] = 0;
 		} else{
-			(*pot_k)[2*i] = -rho_k[2*i]/(k2*d2_k);
-			(*pot_k)[2*i+1] = -rho_k[2*i+1]/(k2*d2_k);
+			pot_k[2*i] = -rho_k[2*i]/(k2*d2_k);
+			pot_k[2*i+1] = -rho_k[2*i+1]/(k2*d2_k);
 		}
 	}
 }
 
-void gen_pot_k(Mesh* rho_k){ gen_pot_k(*rho_k, rho_k); }
+void gen_pot_k(Mesh& rho_k){ gen_pot_k(rho_k, rho_k); }
 
 static FTYPE S2_shape(const FTYPE k2, const FTYPE a)
 {
@@ -638,7 +638,7 @@ static FTYPE CIC_opt(Vec_3D<FTYPE> k_vec, const FTYPE a)
 #endif
 }
 
-void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, const FTYPE a)
+void gen_displ_k_S2(vector<Mesh>& vel_field, const Mesh& pot_k, const FTYPE a)
 {   /*
     pot_k can be Mesh of differen (bigger) size than each vel_field,
     !!!> ALL physical FACTORS ARE therefore TAKEN FROM vel_field[0] <!!!
@@ -652,9 +652,9 @@ void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, const FTYPE a)
     Vec_3D<FTYPE> k_vec_phys;
     FTYPE potential_tmp[2];
     
-    const unsigned N = (*vel_field)[0].N; // for case when pot_k is different mesh than vel_field
+    const unsigned N = vel_field[0].N; // for case when pot_k is different mesh than vel_field
     const FTYPE d_k = 2*PI/N;  // 2*PI/N comes from derivative WITH RESPECT to the mesh coordinates
-    const unsigned l_half = (*vel_field)[0].length/2;
+    const unsigned l_half = vel_field[0].length/2;
 	
 	#pragma omp parallel for private(opt, k_vec, k_vec_phys, potential_tmp)
 	for(unsigned i=0; i < l_half;i++)
@@ -669,15 +669,15 @@ void gen_displ_k_S2(vector<Mesh>* vel_field, const Mesh& pot_k, const FTYPE a)
         else opt = CIC_opt(k_vec_phys, a);
 		for(unsigned j=0; j<3;j++)
 		{
-			(*vel_field)[j][2*i] = k_vec_phys[j]*potential_tmp[1]*opt;
-			(*vel_field)[j][2*i+1] = -k_vec_phys[j]*potential_tmp[0]*opt;
+			vel_field[j][2*i] = k_vec_phys[j]*potential_tmp[1]*opt;
+			vel_field[j][2*i+1] = -k_vec_phys[j]*potential_tmp[0]*opt;
 		}
 	}
 }
 
-void gen_displ_k(vector<Mesh>* vel_field, const Mesh& pot_k) {gen_displ_k_S2(vel_field, pot_k, -1);}
+void gen_displ_k(vector<Mesh>& vel_field, const Mesh& pot_k) {gen_displ_k_S2(vel_field, pot_k, -1);}
 
-void gen_displ_k_cic(vector<Mesh>* vel_field, const Mesh& pot_k) {gen_displ_k_S2(vel_field, pot_k, 0.);}
+void gen_displ_k_cic(vector<Mesh>& vel_field, const Mesh& pot_k) {gen_displ_k_S2(vel_field, pot_k, 0.);}
 
 void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param &sim)
 {
@@ -720,6 +720,6 @@ void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param 
 	}
 }
 
-template void get_rho_from_par(const vector<Particle_x>&, Mesh*, const Sim_Param&);
-template void get_rho_from_par(const vector<Particle_v>&, Mesh*, const Sim_Param&);
-template void gen_pow_spec_binned_from_extrap(const Sim_Param&, const Extrap_Pk<FTYPE, 2>&, Data_Vec<FTYPE, 2>*);
+template void get_rho_from_par(const vector<Particle_x>&, Mesh&, const Sim_Param&);
+template void get_rho_from_par(const vector<Particle_v>&, Mesh&, const Sim_Param&);
+template void gen_pow_spec_binned_from_extrap(const Sim_Param&, const Extrap_Pk<FTYPE, 2>&, Data_Vec<FTYPE, 2>&);

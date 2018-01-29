@@ -599,7 +599,7 @@ void App_Var<T>::print_output()
 
     /* Get discrete density from particles */
     if (sim.out_opt.get_rho)
-        get_rho_from_par(particles, &power_aux[0], sim);
+        get_rho_from_par(particles, power_aux[0], sim);
     
     /* Printing density */
     if (sim.out_opt.print_dens){
@@ -611,8 +611,8 @@ void App_Var<T>::print_output()
     /* Compute power spectrum and bin it */
     if (sim.out_opt.get_pwr){
         fftw_execute_dft_r2c(p_F_pwr, power_aux[0]);
-        pwr_spec_k(power_aux[0], &power_aux[0]);
-        gen_pow_spec_binned(sim, power_aux[0], &pwr_spec_binned);
+        pwr_spec_k(power_aux[0], power_aux[0]);
+        gen_pow_spec_binned(sim, power_aux[0], pwr_spec_binned);
     }
 
     /* Printing power spectrum */
@@ -635,7 +635,7 @@ void App_Var<T>::print_output()
         Extrap_Pk<FTYPE, 2> P_k(pwr_spec_binned, sim);
     /* Print extrapolated power spectrum */
         if (sim.out_opt.print_extrap_pwr){
-            gen_pow_spec_binned_from_extrap(sim, P_k, &pwr_spec_binned);
+            gen_pow_spec_binned_from_extrap(sim, P_k, pwr_spec_binned);
             print_pow_spec(pwr_spec_binned, out_dir_app, "_extrap" + z_suffix());
         }
     /* Printing correlation function */
@@ -648,10 +648,10 @@ void App_Var<T>::print_output()
     }
 
     /* Velocity power spectrum */
-    if (sim.out_opt.print_vel_pwr && get_vel_from_par(particles, &power_aux, sim)){
+    if (sim.out_opt.print_vel_pwr && get_vel_from_par(particles, power_aux, sim)){
         fftw_execute_dft_r2c_triple(p_F_pwr, power_aux);
-        vel_pwr_spec_k(power_aux, &power_aux[0]);
-        gen_pow_spec_binned(sim, power_aux[0], &pwr_spec_binned);
+        vel_pwr_spec_k(power_aux, power_aux[0]);
+        gen_pow_spec_binned(sim, power_aux[0], pwr_spec_binned);
         print_vel_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
         if (!is_init_vel_pwr_spec_0){
             vel_pwr_spec_binned_0 = pwr_spec_binned;

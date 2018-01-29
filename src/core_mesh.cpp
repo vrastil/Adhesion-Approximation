@@ -184,25 +184,25 @@ bool IT<points>::iter(){
     return true;
 }
 
-void assign_to(Mesh* field, const Vec_3D<FTYPE> &position, const FTYPE value)
+void assign_to(Mesh& field, const Vec_3D<FTYPE> &position, const FTYPE value)
 {
     IT<ORDER+1> it(position);
     do{
         #pragma omp atomic
-        (*field)(it.vec) += value * wgh_sch<ORDER>(position, it.vec, field->N);
+        field(it.vec) += value * wgh_sch<ORDER>(position, it.vec, field.N);
     } while( it.iter() );
 }
 
-void assign_to(vector<Mesh>* field, const Vec_3D<FTYPE> &position, const Vec_3D<FTYPE>& value)
+void assign_to(vector<Mesh>& field, const Vec_3D<FTYPE> &position, const Vec_3D<FTYPE>& value)
 {
     IT<ORDER+1> it(position);
     FTYPE w;
     do{
-        w = wgh_sch<ORDER>(position, it.vec, (*field)[0].N); //< resuse the same weigh for every field in vector
-        for (int i = 0; i < 3; i++)
+        w = wgh_sch<ORDER>(position, it.vec, field[0].N); //< resuse the same weigh for every field in vector
+        for (unsigned i = 0; i < 3; i++)
         {
             #pragma omp atomic
-            (*field)[i](it.vec) += value[i] * w;
+            field[i](it.vec) += value[i] * w;
         }
 	} while( it.iter() );
 }
@@ -216,7 +216,7 @@ void assign_from(const Mesh &field, const Vec_3D<FTYPE> &position, FTYPE* value)
 	} while( it.iter() );
 }
 
-void assign_from(const vector<Mesh> &field, const Vec_3D<FTYPE> &position, Vec_3D<FTYPE>* value)
+void assign_from(const vector<Mesh> &field, const Vec_3D<FTYPE> &position, Vec_3D<FTYPE>& value)
 {
     IT<ORDER+1> it(position);
     FTYPE w;
@@ -225,7 +225,7 @@ void assign_from(const vector<Mesh> &field, const Vec_3D<FTYPE> &position, Vec_3
         for (int i = 0; i < 3; i++)
         {
             #pragma omp atomic
-            (*value)[i] += field[i](it.vec) * w;
+            value[i] += field[i](it.vec) * w;
         }
 	} while( it.iter() );
 }

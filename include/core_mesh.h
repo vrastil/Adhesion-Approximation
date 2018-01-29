@@ -17,10 +17,10 @@ void get_per(std::vector<Particle_v>& particles, const unsigned par_num, const i
 FTYPE get_distance(const Vec_3D<FTYPE> &x_1, const Vec_3D<FTYPE> &x_2, int per);
 Vec_3D<FTYPE> get_sgn_distance(const Vec_3D<FTYPE> &x_from, const Vec_3D<FTYPE> &x_to, int per);
 
-void assign_to(Mesh* field, const Vec_3D<FTYPE> &position, const FTYPE value);
-void assign_to(std::vector<Mesh>* field, const Vec_3D<FTYPE> &position, const Vec_3D<FTYPE>& value);
-void assign_from(const Mesh &field, const Vec_3D<FTYPE> &position, FTYPE* value);
-void assign_from(const std::vector<Mesh> &field, const Vec_3D<FTYPE> &position, Vec_3D<FTYPE>* value);
+void assign_to(Mesh& field, const Vec_3D<FTYPE> &position, const FTYPE value);
+void assign_to(std::vector<Mesh>& field, const Vec_3D<FTYPE> &position, const Vec_3D<FTYPE>& value);
+void assign_from(const Mesh &field, const Vec_3D<FTYPE> &position, FTYPE& value);
+void assign_from(const std::vector<Mesh> &field, const Vec_3D<FTYPE> &position, Vec_3D<FTYPE>& value);
 
 void fftw_execute_dft_r2c(const FFTW_PLAN_TYPE &p_F, Mesh& rho);
 void fftw_execute_dft_c2r(const FFTW_PLAN_TYPE &p_B, Mesh& rho);
