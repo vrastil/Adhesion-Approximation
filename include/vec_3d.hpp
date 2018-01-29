@@ -11,7 +11,8 @@ public:
 	Vec_3D(){};
     Vec_3D(const Vec_3D<int>& vec):
     std::array<T, 3>({T(std::get<0>(vec)), T(std::get<1>(vec)), T(std::get<2>(vec))}) {}
-    
+    Vec_3D(T x, T y, T z): std::array<T, 3>({x, y, z}) {}
+
     // METHODS
     T norm2() const
     {

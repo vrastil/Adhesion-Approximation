@@ -132,7 +132,7 @@ void kick_step_w_momentum(const Sim_Param &sim, const FTYPE a, const FTYPE da, v
     const unsigned Np = sim.box_opt.par_num;
     Vec_3D<FTYPE> force;
     const FTYPE D = growth_factor(a, sim.cosmo);
-    const FTYPE OL = sim.cosmo.Omega_L()*pow_(a,3);
+    const FTYPE OL = sim.cosmo.Omega_L()*pow(a,3);
     const FTYPE Om = sim.cosmo.Omega_m;
     // -3/2a represents usual EOM, the rest are LCDM corrections
     const FTYPE f1 = 3/(2*a)*(Om+2*OL)/(Om+OL);
@@ -152,9 +152,9 @@ FTYPE force_ref(const FTYPE r, const FTYPE a){
 	// Reference force for an S_2-shaped particle
 	FTYPE z = 2 * r / a;
 	if (z > 2) return 1 / (r*r);
-	else if (z > 1) return (12 / (z*z) - 224 + 896 * z - 840 * z*z + 224 * pow_(z, 3) +
-							70 * pow_(z, 4) - 48 * pow_(z, 5) + 7 * pow_(z, 6)) / (35 * a*a);
-	else return (224 * z - 224 * pow_(z, 3) + 70 * pow_(z, 4) + 48 * pow_(z, 5) - 21 * pow_(z, 7)) / (35 * a*a);
+	else if (z > 1) return (12 / (z*z) - 224 + 896 * z - 840 * z*z + 224 * pow(z, 3) +
+							70 * pow(z, 4) - 48 * pow(z, 5) + 7 * pow(z, 6)) / (35 * a*a);
+	else return (224 * z - 224 * pow(z, 3) + 70 * pow(z, 4) + 48 * pow(z, 5) - 21 * pow(z, 7)) / (35 * a*a);
 }
 
 FTYPE force_tot(const FTYPE r, const FTYPE e2){
@@ -171,8 +171,8 @@ void force_short(const Sim_Param &sim, const FTYPE D, const LinkedList& linked_l
     FTYPE dr; // <-- #ifdef FORCE_SHORT_NO_INTER
     const FTYPE m = pow(sim.box_opt.Ng, 3) / D;
     const unsigned Nm = sim.box_opt.mesh_num;
-    const FTYPE rs2 = pow_(sim.app_opt.rs, 2);
-    const FTYPE e2 = pow_(sim.box_opt.Ng*0.1, 2); // <-- #ifdef FORCE_SHORT_NO_INTER
+    const FTYPE rs2 = pow2(sim.app_opt.rs);
+    const FTYPE e2 = pow2(sim.box_opt.Ng*0.1); // <-- #ifdef FORCE_SHORT_NO_INTER
 
     IT<3> it(position, sim.app_opt.Hc);
     do{
@@ -200,7 +200,7 @@ void kick_step_w_pp(const Sim_Param &sim, const FTYPE a, const FTYPE da, vector<
     const unsigned Np = sim.box_opt.par_num;
     Vec_3D<FTYPE> force;
     const FTYPE D = growth_factor(a, sim.cosmo);
-    const FTYPE OL = sim.cosmo.Omega_L()*pow_(a,3);
+    const FTYPE OL = sim.cosmo.Omega_L()*pow(a,3);
     const FTYPE Om = sim.cosmo.Omega_m;
     // -3/2a represents usual EOM, the rest are LCDM corrections
     const FTYPE f1 = 3/(2*a)*(Om+2*OL)/(Om+OL);
@@ -309,7 +309,7 @@ static void gen_rho_w_pow_k(const Sim_Param &sim, Mesh& rho)
     const int phase = sim.run_opt.phase ? 1 : -1;
     const unsigned N = rho.N;
     const unsigned len = rho.length / 2;
-    const FTYPE mod = phase * pow_(N / L, 3/2.); // pair sim, gaussian real -> fourier factor, dimension trans. Pk -> Pk*
+    const FTYPE mod = phase * pow(N / L, 3/2.); // pair sim, gaussian real -> fourier factor, dimension trans. Pk -> Pk*
     
 	#pragma omp parallel for private(k)
 	for(unsigned i=0; i < len; i++)
@@ -395,7 +395,7 @@ void pwr_spec_k(const Mesh &rho_k, Mesh& power_aux)
 	{
 		w_k = 1.;
 		get_k_vec(NM, i, k_vec);
-		for (int j = 0; j < 3; j++) if (k_vec[j] != 0) w_k *= pow_(sin(k_vec[j]*PI/NM)/(k_vec[j]*PI/NM), ORDER + 1);
+		for (int j = 0; j < 3; j++) if (k_vec[j] != 0) w_k *= pow(sin(k_vec[j]*PI/NM)/(k_vec[j]*PI/NM), ORDER + 1);
         power_aux[2*i] = (rho_k[2*i]*rho_k[2*i] + rho_k[2*i+1]*rho_k[2*i+1])/(w_k*w_k);
 		power_aux[2*i+1] = k_vec.norm();
 	}
@@ -443,7 +443,7 @@ void vel_pwr_spec_k(const vector<Mesh> &vel_field, Mesh& power_aux)
 		get_k_vec(NM, i, k_vec);
         for (int j = 0; j < 3; j++){
             k = k_vec[j]*2*PI / NM;
-            if (k != 0) w_k *= pow_(sin(k/2)/(k/2), ORDER + 1);
+            if (k != 0) w_k *= pow(sin(k/2)/(k/2), ORDER + 1);
             vel_div_re += vel_field[j][2*i]*k; // do not care about Re <-> Im in 2*PI*i/N, norm only
             vel_div_im += vel_field[j][2*i+1]*k;
         } 
@@ -514,7 +514,7 @@ void gen_cqty_binned(const FTYPE x_min, const FTYPE x_max, const unsigned bins_p
 
 void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_Vec<FTYPE, 2>& pwr_spec_binned)
 {
-    const FTYPE mod_pk = pow_(sim.box_opt.box_size, 3); // P(k) -> dimensionFULL!
+    const FTYPE mod_pk = pow(sim.box_opt.box_size, 3); // P(k) -> dimensionFULL!
     const FTYPE mod_k = 2*PI/sim.box_opt.box_size;
     printf("Computing binned power spectrum...\n");
 	gen_cqty_binned(1, sim.box_opt.mesh_num_pwr,  sim.out_opt.bins_per_decade, power_aux, pwr_spec_binned, mod_pk, mod_k);
@@ -523,7 +523,7 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_Vec<F
 void gen_pow_spec_binned_init(const Sim_Param &sim, const Mesh &power_aux, const unsigned half_length, Data_Vec<FTYPE, 2>& pwr_spec_binned)
 {
     /* same as above but now  power_aux is storing only data [0...mesh_num], NOT mesh_num_pwr */
-    const FTYPE mod_pk = pow_(sim.box_opt.box_size, 3); // P(k) -> dimensionFULL!
+    const FTYPE mod_pk = pow(sim.box_opt.box_size, 3); // P(k) -> dimensionFULL!
     const FTYPE mod_k = 2*PI/sim.box_opt.box_size;
     printf("Computing binned initial power spectrum...\n");
 	gen_cqty_binned(1, sim.box_opt.mesh_num,  sim.out_opt.bins_per_decade, power_aux, half_length, pwr_spec_binned, mod_pk, mod_k);
@@ -556,7 +556,7 @@ void gen_pot_k(const Mesh& rho_k, Mesh& pot_k)
 	printf("Computing potential in k-space...\n");
     FTYPE k2;
     const unsigned N = rho_k.N; // for case when pot_k is different mesh than vel_field
-    const FTYPE d2_k = pow_(2*PI/N, 2); // factor from second derivative with respect to the mesh coordinates
+    const FTYPE d2_k = pow2(2*PI/N); // factor from second derivative with respect to the mesh coordinates
     const unsigned l_half = rho_k.length/2;
 
 	#pragma omp parallel for private(k2)
@@ -580,17 +580,17 @@ static FTYPE S2_shape(const FTYPE k2, const FTYPE a)
 	
     FTYPE t = sqrt(k2)*a / 2;
     if (t == 0) return 1.;
-	return 12 / pow_(t, 4)*(2 - 2 * cos(t) - t*sin(t));
+	return 12 / pow(t, 4)*(2 - 2 * cos(t) - t*sin(t));
 }
 
 static FTYPE CIC_opt(Vec_3D<FTYPE> k_vec, const FTYPE a)
 {
 #define N_MAX 1
 #ifndef N_MAX
-    FTYPE s2 = pow_(S2_shape(k_vec.norm2(), a), 2);
+    FTYPE s2 = pow2(S2_shape(k_vec.norm2(), a));
     for(int j=0; j<3; j++)
     {
-        if (k_vec[j] != 0) s2 /= pow_(sin(k_vec[j] / 2) / (k_vec[j] / 2), 2); //W (k) for CIC (order 1)
+        if (k_vec[j] != 0) s2 /= pow2(sin(k_vec[j] / 2) / (k_vec[j] / 2)); //W (k) for CIC (order 1)
     }
     return s2;
 #else
@@ -599,7 +599,7 @@ static FTYPE CIC_opt(Vec_3D<FTYPE> k_vec, const FTYPE a)
 	
 	G_n = 0;
 	U2 = 1;
-	for (int j = 0; j < 3; j++) U2 *= (1+2*pow_(cos(k_vec[j]/2), 2))/3; // inf sum of U_n^2 for CIC
+	for (int j = 0; j < 3; j++) U2 *= (1+2*pow2(cos(k_vec[j]/2)))/3; // inf sum of U_n^2 for CIC
 	for (int n1 = -N_MAX; n1 < N_MAX + 1; n1++)
 	{
 		k_n[0] = k_vec[0] + 2 * PI*n1;
@@ -614,15 +614,15 @@ static FTYPE CIC_opt(Vec_3D<FTYPE> k_vec, const FTYPE a)
 				for(int j=0; j<3; j++)
 				{
 					if (k_n[j] != 0) U_n *= sin(k_n[j] / 2) / (k_n[j] / 2);
-					k2n += pow_(k_n[j],2);
+					k2n += pow2(k_n[j]);
                 }
-                U_n = pow_(U_n, 2); // W(k) for CIC (order 1)
+                U_n = pow2(U_n); // W(k) for CIC (order 1)
 				if (k2n != 0)
 				{
 					for(int j=0; j<3; j++)
 					{										
 						G_n += k_vec[j]* // i.D(k)
-						k_n[j]/k2n*pow_(S2_shape(k2n, a), 2)* // R*(k_n) /i
+						k_n[j]/k2n*pow2(S2_shape(k2n, a))* // R*(k_n) /i
 						U_n; // U_n
 					}
 				}
@@ -714,7 +714,7 @@ void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param 
                 // if (bin >= dens_binned.capacity()) dens_binned.resize(bin+1);
                 #pragma omp atomic
                 dens_binned[bin]++;
-                //dens_binned[bin] += pow_(sim.box_opt.Ng_pwr, 3);
+                //dens_binned[bin] += pow(sim.box_opt.Ng_pwr, 3);
 			}
 		}
 	}

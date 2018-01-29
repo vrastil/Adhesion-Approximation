@@ -302,8 +302,8 @@ Data_Vec<FTYPE, 2> init_emu(const Sim_Param &sim, FTYPE z)
     }
 
     FTYPE xstar[9];
-    xstar[0] = sim.cosmo.Omega_m*pow_(sim.cosmo.h, 2); // omega_m
-    xstar[1] = sim.cosmo.Omega_b*pow_(sim.cosmo.h, 2); // omega_b
+    xstar[0] = sim.cosmo.Omega_m*pow2(sim.cosmo.h); // omega_m
+    xstar[1] = sim.cosmo.Omega_b*pow2(sim.cosmo.h); // omega_b
     xstar[2] = sim.cosmo.sigma8; // sigma_8
     xstar[3] = sim.cosmo.h; // h
     xstar[4] = sim.cosmo.ns; // n_s
@@ -314,7 +314,7 @@ Data_Vec<FTYPE, 2> init_emu(const Sim_Param &sim, FTYPE z)
 
     emu(xstar, emu_data[1].data());// get P(k)
     for (unsigned i = 0; i < emu_data.size(); i++){
-        emu_data[1][i] *= pow_(sim.cosmo.h, 3); // convert emulator P(k) [Mpc^3] into [(Mpc/h)^3]
+        emu_data[1][i] *= pow(sim.cosmo.h, 3); // convert emulator P(k) [Mpc^3] into [(Mpc/h)^3]
     }
     return emu_data; // move
 }

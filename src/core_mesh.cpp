@@ -101,7 +101,7 @@ inline T get_sgn_distance_1D(T x_from, T x_to, int per)
 FTYPE get_distance(const Vec_3D<FTYPE> &x_1, const Vec_3D<FTYPE> &x_2, int per)
 {
 	FTYPE dst = 0;
-	for (int i = 0; i < 3; i++) dst+= pow_(get_distance_1D(x_1[i], x_2[i], per), 2);
+	for (int i = 0; i < 3; i++) dst+= pow2(get_distance_1D(x_1[i], x_2[i], per));
 	return sqrt(dst);
 }
 
@@ -142,7 +142,7 @@ template<> FTYPE wgh_sch<2>(const Vec_3D<FTYPE> &x, const Vec_3D<int>& y, int me
     {
         dx = get_distance_1D(x[i], y[i], mesh_num);
         if (dx > 1.5) return 0;
-        else if (dx > 0.5) w *= pow_(1.5 - dx, 2) / 2;
+        else if (dx > 0.5) w *= pow2(1.5 - dx) / 2;
         else w *= 3 / FTYPE(4) - dx*dx;
     }
     return w;

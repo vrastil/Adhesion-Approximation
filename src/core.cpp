@@ -262,7 +262,7 @@ void App_Opt::init(const Box_Opt& box_opt)
     M = (int)(box_opt.mesh_num / rs);
     Hc = FTYPE(box_opt.mesh_num) / M;
     nu_dim = nu;
-    nu /= pow_(box_opt.box_size/box_opt.mesh_num, 2); // converting to dimensionless units
+    nu /= pow2(box_opt.box_size/box_opt.mesh_num); // converting to dimensionless units
 }
 
 void Other_par::init(const Box_Opt& box_opt)
@@ -700,13 +700,13 @@ void App_Var<T>::print_info() const
     const FTYPE r0 = sim.app_opt.rs / (res-1);
     Data_Vec<FTYPE, 2> data(res);
     FTYPE r;
-    const FTYPE e2 = pow_(sim.box_opt.Ng*0.1, 2); // softening of 10% of average interparticle length
+    const FTYPE e2 = pow2(sim.box_opt.Ng*0.1); // softening of 10% of average interparticle length
 
     #pragma omp parallel for private(r)
     for(unsigned i = 0; i < res; i++)
     {
         r = i*r0;
-        data[0][i] = pow_(r, 2); // store square of r
+        data[0][i] = pow2(r); // store square of r
         data[1][i] = (force_tot(r, e2) - force_ref(r, sim.app_opt.a))/(4*PI);
     }
     fs_interp.init(data);

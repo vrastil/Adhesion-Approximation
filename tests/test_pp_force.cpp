@@ -43,7 +43,7 @@ void force_test(Sim_Param& sim)
 
     Vec_3D<FTYPE> f_long, f_short, f_total, dr_vec, cur_pos;
     FTYPE dr;
-    FTYPE m = pow_(sim.Ng, 3);
+    FTYPE m = pow(sim.Ng, 3);
 
     // cout << "\n\nr_vec\t\tr\t|\tshort\t\t\t\tlong\t\t\t\ttotal\t\t\t|\ts\tl\tt\tm/4PIr2\n";
     string file_name = "/home/vrastil/Documents/GIT/Adhesion-Approximation/output/test_runs/test_pp_run/data_rs_" + to_string(sim.rs) + ".dat";

@@ -25,7 +25,6 @@ TEST_CASE( "UNIT TEST: vector class {Vec_3D<T>}", "[core]" )
     vec_d.fill(-1.345E1);
     REQUIRE( vec_d[0] == -1.345E1 );
     REQUIRE( vec_d[2] == -13.45 );
-    REQUIRE( Vec_3D<int>(vec_d)[1] == -13 );
 
     vec_i.fill(0);
     vec_i+=Vec_3D<int>(2, 3, -4);
@@ -159,17 +158,13 @@ TEST_CASE( "UNIT TEST: mesh class {Mesh}", "[core]" )
     
 TEST_CASE( "UNIT TEST: particle class {Particle_x}", "[core]" )
 {
-    Particle_x par1(0., -3.14, 4E5);
     Vec_3D<FTYPE> position(0., -3.14, 4E5);
-    Particle_x par2(position);
+    Particle_x par1(position);
 
     CHECK( par1.position[0] == 0. );
     CHECK( par1.position[1] == (FTYPE)-3.14 );
     CHECK( par1.position[2] == (FTYPE)4E5 );
     CHECK( par1[1] == (FTYPE)-3.14 );
-    CHECK( par1.position[0] == par2[0] );
-    CHECK( par1.position[1] == par2[1] );
-    CHECK( par1.position[2] == par2[2] );
 
     par1.position[0] = par1.position[1]*2+6.28;
     CHECK( par1[0] == Approx(0) );
@@ -181,18 +176,17 @@ TEST_CASE( "UNIT TEST: particle class {Particle_x}", "[core]" )
     CHECK( par3[2] == (FTYPE)4E5 );
 
     // assign operator
-    par2 = par3;
-    CHECK( par2[0] == Approx(0) );
-    CHECK( par2[1] == (FTYPE)-3.14 );
-    CHECK( par2[2] == (FTYPE)4E5 );
+    par1 = par3;
+    CHECK( par1[0] == Approx(0) );
+    CHECK( par1[1] == (FTYPE)-3.14 );
+    CHECK( par1[2] == (FTYPE)4E5 );
 }
 
 TEST_CASE( "UNIT TEST: particle class {Particle_v}", "[core]" )
 {    
-    Particle_v par1(0., -3.14, 4E5, 2.3E-6, -4.56E-7, 6.87903E-6);
     Vec_3D<FTYPE> position(0., -3.14, 4E5);
     Vec_3D<FTYPE> velocity(2.3E-6, -4.56E-7, 6.87903E-6);
-    Particle_v par2(position, velocity);
+    Particle_v par1(position, velocity);
 
     CHECK( par1[0] == (FTYPE)0. );
     CHECK( par1[1] == (FTYPE)-3.14 );
@@ -200,13 +194,6 @@ TEST_CASE( "UNIT TEST: particle class {Particle_v}", "[core]" )
     CHECK( par1(0) == (FTYPE)2.3E-6 );
     CHECK( par1(1) == (FTYPE)-4.56E-7 );
     CHECK( par1(2) == (FTYPE)6.87903E-6 );
-
-    CHECK( par1.position[0] == par2[0] );
-    CHECK( par1.position[1] == par2[1] );
-    CHECK( par1.position[2] == par2[2] );
-    CHECK( par1.velocity[0] == par2(0) );
-    CHECK( par1.velocity[1] == par2(1) );
-    CHECK( par1.velocity[2] == par2(2) );
     
     // copy constructor
     Particle_v par3(par1);
@@ -214,9 +201,9 @@ TEST_CASE( "UNIT TEST: particle class {Particle_v}", "[core]" )
     CHECK( par3(1) == (FTYPE)-4.56E-7 );
 
     // assign operator
-    par2 = par3;
-    CHECK( par2[1] == (FTYPE)-3.14 );
-    CHECK( par2(1) == (FTYPE)-4.56E-7 );
+    par1 = par3;
+    CHECK( par1[1] == (FTYPE)-3.14 );
+    CHECK( par1(1) == (FTYPE)-4.56E-7 );
 }
 
 TEST_CASE( "UNIT TEST: tracking class {Tracking}", "[core]" )

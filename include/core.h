@@ -40,16 +40,22 @@ typedef long double FTYPE;
 constexpr FTYPE PI = (FTYPE)M_PI;
 constexpr FTYPE MPL = 2.435E18; // Reduced Planck mass, [GeV/c^2]
 
-template <typename T>
-inline double pow_(double base, T exp){ return pow(base, exp); } // std::pow is OK for <double>
-#if PRECISION != 2
-template <typename T>
-inline FTYPE pow_(FTYPE base, T exp){ return pow(base, FTYPE(exp)); } // recast exponent to call right overloaded version
-#endif
+inline float pow(float base, unsigned exp)
+{
+    float result = 1.f;
+    while (exp)
+    {
+        if (exp & 1)
+            result *= base;
+        exp >>= 1;
+        base *= base;
+    }
+    return result;
+}
 
-template <typename T> inline T pow2(T base){ return base*base; }
+template <typename T> inline T pow2(T base){ return base*base; } //< most often used
 
-template <typename T> int sgn(T val)
+template <typename T> inline int sgn(T val)
 {
 	return (T(0) < val) - (val < T(0));
 }

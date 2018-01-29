@@ -168,7 +168,7 @@ void norm_pwr(Cosmo_Param& cosmo)
 template<typename T>
 static T hubble_param(T a, const Cosmo_Param& cosmo)
 {   // hubble normalize to H(a = 1) == 1
-    return sqrt(cosmo.Omega_m*pow_(a, -3) + cosmo.Omega_L());
+    return sqrt(cosmo.Omega_m/pow(a, 3) + cosmo.Omega_L());
 }
 
 FTYPE Omega_lambda(FTYPE a, const Cosmo_Param& cosmo)
@@ -180,12 +180,12 @@ FTYPE Omega_lambda(FTYPE a, const Cosmo_Param& cosmo)
 
     // compute outside range
     OL = cosmo.Omega_L();
-    return OL/(cosmo.Omega_m*pow_(a, -3) + OL);
+    return OL/(cosmo.Omega_m/pow(a, 3) + OL);
 }
 
 static double growth_factor_integrand(double a, void* params)
 {    
-    return pow_(a*hubble_param(a, *static_cast<const Cosmo_Param*>(params)), -3);
+    return pow(a*hubble_param(a, *static_cast<const Cosmo_Param*>(params)), -3);
 }
 
 FTYPE growth_factor(FTYPE a, const Cosmo_Param& cosmo)
@@ -255,10 +255,10 @@ FTYPE growth_change(FTYPE a, const Cosmo_Param& cosmo)
 FTYPE lin_pow_spec(FTYPE a, FTYPE k, const Cosmo_Param& cosmo)
 {
     int status = 0;
-    FTYPE pk = ccl_linear_matter_power(cosmo.cosmo, k*cosmo.h, a, &status)*pow_(cosmo.h, 3);
+    FTYPE pk = ccl_linear_matter_power(cosmo.cosmo, k*cosmo.h, a, &status)*pow(cosmo.h, 3);
     if (!status) return pk;
     status = 0;
-    pk = ccl_linear_matter_power(cosmo.cosmo, k*cosmo.h, 1, &status)*pow_(cosmo.h, 3);
+    pk = ccl_linear_matter_power(cosmo.cosmo, k*cosmo.h, 1, &status)*pow(cosmo.h, 3);
     FTYPE D = growth_factor(a, cosmo);
     if (!status) return D*D*pk;
     else throw std::runtime_error(cosmo.cosmo->status_message);
@@ -268,7 +268,7 @@ FTYPE non_lin_pow_spec(FTYPE a, FTYPE k, const Cosmo_Param& cosmo)
 {
     if (a < 1e-3) return lin_pow_spec(a, k, cosmo);
     int status = 0;
-    FTYPE pk = ccl_nonlin_matter_power(cosmo.cosmo, k*cosmo.h, a, &status)*pow_(cosmo.h, 3);
+    FTYPE pk = ccl_nonlin_matter_power(cosmo.cosmo, k*cosmo.h, a, &status)*pow(cosmo.h, 3);
     if (!status) return pk;
     else throw std::runtime_error(cosmo.cosmo->status_message);
 }
@@ -372,7 +372,7 @@ void Extrap_Pk<T, N>::fit_lin(const Data_Vec<T, N>& data, const unsigned m, cons
     for(unsigned i = m; i < n; i++){
         Pk = lin_pow_spec(1, data[0][i], cosmo);
         Pk_res.push_back(data[1][i] / Pk);
-        if (N == 3) w.push_back(pow_(Pk/data[2][i], 2));
+        if (N == 3) w.push_back(pow2(Pk/data[2][i]));
     }
     double A_sigma2, sumsq;
 
@@ -402,7 +402,7 @@ void Extrap_Pk<T, N>::fit_power_law(const Data_Vec<T, N>& data, const unsigned m
     for(unsigned i = m; i < n; i++){
         k.push_back(log(data[0][i]));
         Pk.push_back(log(data[1][i]));
-        if (N == 3)w.push_back(pow_(data[1][i]/data[2][i], 2)); // weight = 1/sigma^2, approx log(1+x) = x for x rel. error
+        if (N == 3)w.push_back(pow2(data[1][i]/data[2][i])); // weight = 1/sigma^2, approx log(1+x) = x for x rel. error
     }
     double cov00, cov01, cov11, sumsq;
     int gsl_errno;
@@ -425,7 +425,7 @@ double Extrap_Pk<T, N>::operator()(double k) const
         return A_low*lin_pow_spec(1, k, cosmo);
     }
     else if (k <= k_max) return Interp_obj::operator()(k);
-    else return A_up*pow_(k, n_s);
+    else return A_up*pow(k, n_s);
 }
 
 /**

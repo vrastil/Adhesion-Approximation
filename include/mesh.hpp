@@ -15,7 +15,7 @@ public:
     N1(n1), N2(n2), N3(n3), length(n1*n2*n3), data(length) {}
 	
 	// VARIABLES
-	const unsigned N1, N2, N3, length; // acces dimensions and length of mesh
+	unsigned N1, N2, N3, length; // acces dimensions and length of mesh
     std::vector<T> data; // data stored on the mesh
 	
 	// METHODS

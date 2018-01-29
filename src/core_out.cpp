@@ -189,7 +189,7 @@ void print_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Data_V
 	for (unsigned j = 0; j < size; j++){
         if (is_err(pwr_spec_binned[0], pwr_spec_binned_0[0], j)) continue;
         P_k = pwr_spec_binned[1][j];
-        P_lin = pwr_spec_binned_0[1][j] * pow_(growth, 2);
+        P_lin = pwr_spec_binned_0[1][j] * pow2(growth);
         File << scientific << pwr_spec_binned_0[0][j] << "\t" << fixed << (P_k-P_lin)/P_lin << "\n";
 	}
 }
@@ -216,7 +216,7 @@ void print_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Interp
         else
         {
             P_k = pwr_spec_binned[1][j];
-            P_lin = pwr_spec_input(k) * pow_(growth, 2);
+            P_lin = pwr_spec_input(k) * pow2(growth);
             File << scientific << k << "\t" << fixed << (P_k-P_lin)/P_lin << "\n";
         }
 	}
@@ -246,8 +246,8 @@ void print_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Data_V
         else
         {
             P_k = pwr_spec_binned[1][j];
-            P_input = pwr_spec_input(k) * pow_(growth_now, 2);
-            P_par = pwr_spec_binned_0[1][j] * pow_(growth_now / growth_init, 2);
+            P_input = pwr_spec_input(k) * pow2(growth_now);
+            P_par = pwr_spec_binned_0[1][j] * pow2(growth_now / growth_init);
             File << scientific << k << "\t" << fixed << P_k/P_input - P_k/P_par << "\n";
         }
 	}
@@ -271,7 +271,7 @@ void print_vel_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Da
 	for (unsigned j = 0; j < size; j++){
         if (is_err(pwr_spec_binned[0], pwr_spec_binned_0[0], j)) continue;
         P_k = pwr_spec_binned[1][j];
-        P_ZA = pwr_spec_binned_0[1][j] * pow_(dDda, 2);
+        P_ZA = pwr_spec_binned_0[1][j] * pow2(dDda);
         File << scientific << pwr_spec_binned_0[0][j] << "\t" << fixed << (P_k-P_ZA)/P_ZA << "\n";
 	}
 }
