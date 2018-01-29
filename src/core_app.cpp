@@ -289,16 +289,16 @@ static void gen_gauss_white_noise(const Sim_Param &sim, Mesh& rho)
     }     
     FTYPE t_mean;
 	#ifdef CORR
-	t_mean = mean(rho.real(), rho.length);
-	FTYPE t_std_dev = std_dev(rho.real(), rho.length, t_mean);
+	t_mean = mean(rho);
+	FTYPE t_std_dev = std_dev(rho, t_mean);
 	printf("\t[mean = %.12f, stdDev = %.12f]\t-->", t_mean, t_std_dev);
 	rho-=t_mean;
 	rho/=t_std_dev;
 	#endif
 	
-	t_mean = mean(rho.real(), rho.length);
-    printf("\t[mean = %.12f, stdDev = %.12f]\n", t_mean, std_dev(rho.real(), rho.length, t_mean));
-    printf("\t[min = %.12f, max = %.12f]\n", min(rho.real(), rho.length), max(rho.real(), rho.length));
+	t_mean = mean(rho);
+    printf("\t[mean = %.12f, stdDev = %.12f]\n", t_mean, std_dev(rho, t_mean));
+    printf("\t[min = %.12f, max = %.12f]\n", min(rho), max(rho));
 }
 
 static void gen_rho_w_pow_k(const Sim_Param &sim, Mesh& rho)

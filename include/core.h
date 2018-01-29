@@ -47,6 +47,8 @@ template <typename T>
 inline FTYPE pow_(FTYPE base, T exp){ return pow(base, FTYPE(exp)); } // recast exponent to call right overloaded version
 #endif
 
+template <typename T> inline T pow2(T base){ return base*base; }
+
 template <typename T> int sgn(T val)
 {
 	return (T(0) < val) - (val < T(0));

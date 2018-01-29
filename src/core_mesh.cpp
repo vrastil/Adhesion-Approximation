@@ -251,46 +251,6 @@ void fftw_execute_dft_c2r_triple(const FFTW_PLAN_TYPE &p_B, vector<Mesh>& rho)
 	for (int i = 0; i < 3; i++) fftw_execute_dft_c2r(p_B, rho[i]);
 }
 
-FTYPE mean(FTYPE* p_data, int len)
-{
-	FTYPE tmp = 0;
-	
-	#pragma omp parallel for reduction(+:tmp)
-	for (int i = 0; i < len; i++) tmp += p_data[i];
-	
-	return tmp / len;
-}
-
-FTYPE std_dev(FTYPE* p_data, int len, FTYPE t_mean)
-{
-	FTYPE tmp = 0;
-	
-	#pragma omp parallel for reduction(+:tmp)
-	for (int i = 0; i < len; i++) tmp += (p_data[i]-t_mean)*(p_data[i]-t_mean);
-	
-	return sqrt(tmp / len);
-}
-
-FTYPE min(FTYPE* p_data, int len)
-{
-    return *std::min_element(p_data,p_data+len);
-}
-
-FTYPE max(FTYPE* p_data, int len)
-{
-    return *std::max_element(p_data,p_data+len);
-}
-
-FTYPE min(const vector<FTYPE>& data)
-{
-    return *std::min_element(data.begin(), data.end());
-}
-
-FTYPE max(const vector<FTYPE>& data)
-{
-    return *std::max_element(data.begin(), data.end());
-}
-
 template void get_per(Vec_3D<int>&, int);
 template void get_per(Vec_3D<FTYPE>&, int);
 template void get_per(Vec_3D<int>&, int, int, int);

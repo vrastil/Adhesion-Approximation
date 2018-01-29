@@ -27,12 +27,43 @@ void fftw_execute_dft_c2r(const FFTW_PLAN_TYPE &p_B, Mesh& rho);
 void fftw_execute_dft_r2c_triple(const FFTW_PLAN_TYPE &p_F, std::vector<Mesh>& rho);
 void fftw_execute_dft_c2r_triple(const FFTW_PLAN_TYPE &p_B, std::vector<Mesh>& rho);
 
-FTYPE mean(FTYPE* p_data, int len);
-FTYPE std_dev(FTYPE* p_data, int len, FTYPE t_mean);
-FTYPE min(FTYPE* p_data, int len);
-FTYPE max(FTYPE* p_data, int len);
-FTYPE min(const std::vector<FTYPE>& data);
-FTYPE max(const std::vector<FTYPE>& data);
+template<typename T> T mean(const std::vector<T>& data)
+{
+    T tmp(0);
+	
+	#pragma omp parallel for reduction(+:tmp)
+	for (auto it = data.begin(); it < data.end(); ++it) tmp += *it;
+	
+	return tmp / data.size();
+}
+
+inline FTYPE mean(const Mesh& data){ return mean(data.data); }
+
+template<typename T> T std_dev(const std::vector<T>& data, T mean)
+{
+    T tmp(0);
+	
+	#pragma omp parallel for reduction(+:tmp)
+	for (auto it = data.begin(); it < data.end(); ++it) tmp += pow2(*it-mean);
+	
+	return sqrt(tmp / data.size());
+}
+
+inline FTYPE std_dev(const Mesh& data, FTYPE mean){ return std_dev(data.data, mean); }
+
+template<typename T> T min(const std::vector<T>& data)
+{
+    return *std::min_element(data.begin(), data.end());
+}
+
+inline FTYPE min(const Mesh& data){ return min(data.data); }
+
+template<typename T> T max(const std::vector<T>& data)
+{
+    return *std::max_element(data.begin(), data.end());
+}
+
+inline FTYPE max(const Mesh& data){ return max(data.data); }
 
 template<int points>
 class IT
