@@ -9,9 +9,12 @@ class Vec_3D : public std::array<T, 3>
 public:
 	// CONSTRUCTORS
 	Vec_3D(){};
+
+    template<typename ...U> Vec_3D(U...init):
+    std::array<T, 3>{init...} {}
+
     Vec_3D(const Vec_3D<int>& vec):
     std::array<T, 3>({T(std::get<0>(vec)), T(std::get<1>(vec)), T(std::get<2>(vec))}) {}
-    Vec_3D(T x, T y, T z): std::array<T, 3>({x, y, z}) {}
 
     // METHODS
     T norm2() const
