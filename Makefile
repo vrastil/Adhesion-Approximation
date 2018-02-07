@@ -24,7 +24,7 @@ CXXLIB +=-lccl
 COMPILE.cc = $(CXX) $(CXXFLAGS) -c -I./include
 COMPILE.fin = $(CXX) $(CXXFLAGS) $(CXXLIB_PATH)
 
-OBJ_FILES = $(filter-out src/unity_build.o, $(patsubst %.cpp,%.o,$(wildcard src/*.cpp)))
+OBJ_FILES = $(patsubst %.cpp,%.o,$(wildcard src/*.cpp) $(wildcard src/**/*.cpp))
 TEST_OBJ_FILES = $(patsubst src/%,tests/%, $(filter-out src/main.o,$(OBJ_FILES))) tests/test_main.o
 LIB = lib/fastsim.a
 PCH = include/stdafx.h
@@ -34,16 +34,11 @@ adh_app: CXXFLAGS +=-Ofast -march=native -D PRECISION=$(PRECISION)
 adh_app: CXXLIB += $(CXXLIBP)
 adh_app: $(OBJ_FILES)
 	$(COMPILE.fin) -o $@ $^ $(CXXLIB)
-
+	
 debug: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -Wfloat-conversion -D PRECISION=$(PRECISION)
 debug: CXXLIB += $(CXXLIBP)
 debug: $(OBJ_FILES)
 	$(COMPILE.fin) -o $@ $^ $(CXXLIB)
-
-unit: CXXFLAGS +=-Ofast -march=native -D PRECISION=$(PRECISION)
-unit: CXXLIB += $(CXXLIBP)
-unit: src/unity_build.cpp $(PCH_O)
-	$(COMPILE.fin) -I./include -o adh_app src/unity_build.cpp $(CXXLIB)
 
 # SWIG wrapper build always in double precision, single precision not working now with scipy optimization
 swig: CXXFLAGS +=-Ofast -march=native -D LESSINFO -D PRECISION=2
@@ -59,29 +54,27 @@ swig: $(LIB) swig/*.i
 $(LIB): $(OBJ_FILES)
 	gcc-ar rcs $@ $^
 
-src/%.o: src/%.cpp $(PCH_O)
-	$(COMPILE.cc) -o $@ $<
-
 check: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -Wfloat-conversion -D TEST
+check: COMPILE.cc += -I./tests
 check: tests/test
 	./tests/test
 
 tests/test: $(TEST_OBJ_FILES)
 	$(COMPILE.fin) -o tests/test $^ $(CXXLIB)
 
+%.o: %.cpp $(PCH_O)
+	$(COMPILE.cc) -o $@ $<
+
 tests/%.o: src/%.cpp
-	$(COMPILE.cc) -I./tests -o $@ $<
+	$(COMPILE.cc) -o $@ $<
 
 $(PCH_O): $(PCH)
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
 # keep libraries
 clean:
-	rm -f src/*~ src/*.o src/*.d \
-		swig/*~ swig/*.o swig/*.d swig/*.cpp \
-		tests/*~ tests/*.o tests/*.d tests/test \
-		include/*~ include/*.o include/*.d include/*.gch \
-		adh_app ~adh_app adh_app.d debug ~debug debug.d
+	find . -type f \( -name *~ -o -name *.o -o -name *.d -o -name *.gch \) -exec rm -f {} \;
+	rm -f swig/*.cpp adh_app debug tests/test
 
 cleanall: clean
 		rm -f swig/*.py swig/*.pyc swig/*.so lib/*
@@ -90,4 +83,4 @@ cleanall: clean
 -include $(TEST_OBJ_FILES:.o=.d)
 -include $(PCH_O:.gch=.d)
 
-.PHONY: unit swig check clean
+.PHONY: swig check clean
