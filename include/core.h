@@ -278,7 +278,7 @@ class Sim_Param
 {
 public:
     // CONSTRUCTOR
-    Sim_Param(int ac, char* av[]); //< load from command line arguments
+    Sim_Param(int ac, const char* const av[]); //< load from command line arguments
     Sim_Param(std::string file_name); //< load from sim_param.json file
 
     // VARIABLES

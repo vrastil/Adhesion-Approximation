@@ -3,7 +3,7 @@
 TEST_CASE( "UNIT TEST: growth functions {growth_factor, growth_rate, growth_change}", "[core_power]" )
 {
     int argc = 1;
-    char* argv[1] = {"test"};
+    const char* const argv[1] = {"test"};
     try{
         Sim_Param sim(argc, argv);
         FTYPE D, D_to_a, f, Oma, OLa, dDda, factor;

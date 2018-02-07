@@ -2,4 +2,4 @@
 
 #include "core.h"
 
-void handle_cmd_line(int ac, char* av[], Sim_Param& sim);
+void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim);

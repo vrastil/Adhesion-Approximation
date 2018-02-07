@@ -15,7 +15,7 @@ void validate(boost::any& v, const vector<string>& values, Dvector*, int) {
   v = dvalues;
 }
 
-void handle_cmd_line(int ac, char* av[], Sim_Param& sim){
+void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
     string config_file;
     Dvector print_z;
     int trans_func_cmd, matter_pwr_cmd, baryons_pwr_cmd, mass_func_cmd;

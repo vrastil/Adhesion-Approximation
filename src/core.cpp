@@ -288,7 +288,7 @@ void Chi_Opt::init()
  * @brief:	class storing simulation parameters
  */
 
-Sim_Param::Sim_Param(int ac, char* av[])
+Sim_Param::Sim_Param(int ac, const char* const av[])
 {
 	handle_cmd_line(ac, av, *this);//< throw if anything happend
     run_opt.init();
