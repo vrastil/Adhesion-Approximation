@@ -42,6 +42,7 @@ class MultiGrid {
 
     // Fetch a pointer to the underlying array at each level
     T* operator[](unsigned int level);
+    const T* operator[](unsigned int level) const;
     T* get_y(unsigned int level);
 
     // Fetch the value in the grid at a given level and index
@@ -51,11 +52,11 @@ class MultiGrid {
     T get_y(unsigned int level, std::vector<unsigned int>& coord_list);
 
     // Fetch info about the grid
-    unsigned int get_N(unsigned int level = 0);
-    unsigned int get_Ntot(unsigned int level = 0);
-    unsigned int get_Ndim();
-    unsigned int get_Nlevel();
-    unsigned int get_Nmin();
+    unsigned int get_N(unsigned int level = 0) const;
+    unsigned int get_Ntot(unsigned int level = 0) const;
+    unsigned int get_Ndim() const;
+    unsigned int get_Nlevel() const;
+    unsigned int get_Nmin() const;
   
     // Set the value of y at given level and index (save way to define value)
     void set_y(unsigned int level, unsigned int i, T value);

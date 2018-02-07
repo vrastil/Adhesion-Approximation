@@ -35,9 +35,11 @@ class Grid {
 
     // Get a pointer to the T-array
     T* get_y();
+    T const* const get_y() const;
 
     // Allow syntax grid[i] to get/set the index = i'th element
     T& operator[](unsigned int i);
+    const T& operator[](unsigned int i) const;
 
     // Fetch the index = i element in the grid
     T get_y(unsigned int i);
@@ -50,8 +52,8 @@ class Grid {
     std::vector<unsigned int> index_list(unsigned int i);
 
     // Get some info about the grid
-    unsigned int get_N();
-    unsigned int get_Ntot();
+    unsigned int get_N() const;
+    unsigned int get_Ntot() const;
 
     // Convert coordiates -> index in the grid
     unsigned int grid_index(std::vector<unsigned int> &index_list);

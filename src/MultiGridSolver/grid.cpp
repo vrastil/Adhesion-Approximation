@@ -38,9 +38,22 @@ T* Grid<NDIM,T>::get_y() {
   return &_y[0]; 
 }
 
+template<unsigned int NDIM, typename T>
+T const* const Grid<NDIM,T>::get_y() const { 
+  return &_y[0]; 
+}
+
 // Allow to fetch value using f[i] syntax
 template<unsigned int NDIM, typename T>
 T& Grid<NDIM,T>::operator[](unsigned int i){ 
+#ifdef _BOUNDSCHECK
+  assert(i < _Ntot);
+#endif
+  return _y[i]; 
+}
+
+template<unsigned int NDIM, typename T>
+const T& Grid<NDIM,T>::operator[](unsigned int i) const { 
 #ifdef _BOUNDSCHECK
   assert(i < _Ntot);
 #endif
@@ -109,13 +122,13 @@ unsigned int Grid<NDIM,T>::grid_index_2d(unsigned int ix, unsigned int iy){
 }
 // Returns number of cells per dim
 template<unsigned int NDIM, typename T>
-unsigned int Grid<NDIM,T>::get_N(){
+unsigned int Grid<NDIM,T>::get_N() const{
   return _N;
 }
 
 // Return total number of cells
 template<unsigned int NDIM, typename T>
-unsigned int Grid<NDIM,T>::get_Ntot(){
+unsigned int Grid<NDIM,T>::get_Ntot() const{
   return _Ntot;
 }
 

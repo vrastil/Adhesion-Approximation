@@ -155,12 +155,12 @@ void MultiGridSolver<NDIM,T>::set_ngs_sweeps(unsigned int ngs_fine, unsigned int
 }
 
 template<unsigned int NDIM, typename T>
-unsigned int  MultiGridSolver<NDIM,T>::get_N(unsigned int level){ 
+unsigned int  MultiGridSolver<NDIM,T>::get_N(unsigned int level) const{ 
   return _f.get_N(level); 
 }
 
 template<unsigned int NDIM, typename T>
-unsigned int  MultiGridSolver<NDIM,T>::get_Ntot(unsigned int level){ 
+unsigned int  MultiGridSolver<NDIM,T>::get_Ntot(unsigned int level) const{ 
   return _f.get_Ntot(level); 
 }
 

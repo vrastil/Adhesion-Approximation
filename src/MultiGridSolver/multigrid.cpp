@@ -29,6 +29,14 @@ T* MultiGrid<NDIM,T>::operator[](unsigned int level){
 }
 
 template<unsigned int NDIM, typename T>
+const T* MultiGrid<NDIM,T>::operator[](unsigned int level) const{ 
+#ifdef _BOUNDSCHECK
+  assert(level < _Nlevel);
+#endif
+  return _y[level].get_y(); 
+}
+
+template<unsigned int NDIM, typename T>
 T* MultiGrid<NDIM,T>::get_y(unsigned int level){ 
 #ifdef _BOUNDSCHECK
   assert(level < _Nlevel);
@@ -62,7 +70,7 @@ void MultiGrid<NDIM,T>::set_y(unsigned int level, unsigned int i, T value){
 }
 
 template<unsigned int NDIM, typename T>
-unsigned int MultiGrid<NDIM,T>::get_N(unsigned int level){
+unsigned int MultiGrid<NDIM,T>::get_N(unsigned int level) const{
 #ifdef _BOUNDSCHECK
   assert(level < _Nlevel);
 #endif
@@ -70,7 +78,7 @@ unsigned int MultiGrid<NDIM,T>::get_N(unsigned int level){
 }
 
 template<unsigned int NDIM, typename T>
-unsigned int MultiGrid<NDIM,T>::get_Ntot(unsigned int level){
+unsigned int MultiGrid<NDIM,T>::get_Ntot(unsigned int level) const{
 #ifdef _BOUNDSCHECK
   assert(level < _Nlevel);
 #endif
@@ -78,17 +86,17 @@ unsigned int MultiGrid<NDIM,T>::get_Ntot(unsigned int level){
 }
 
 template<unsigned int NDIM, typename T>
-unsigned int MultiGrid<NDIM,T>::get_Ndim(){ 
+unsigned int MultiGrid<NDIM,T>::get_Ndim() const{ 
   return NDIM; 
 }
 
 template<unsigned int NDIM, typename T>
-unsigned int MultiGrid<NDIM,T>::get_Nlevel(){ 
+unsigned int MultiGrid<NDIM,T>::get_Nlevel() const{ 
   return _Nlevel; 
 }
 
 template<unsigned int NDIM, typename T>
-unsigned int MultiGrid<NDIM,T>::get_Nmin(){ 
+unsigned int MultiGrid<NDIM,T>::get_Nmin() const{ 
   return _NinLevel[_Nlevel-1]; 
 }
 

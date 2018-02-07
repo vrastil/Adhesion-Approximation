@@ -122,8 +122,8 @@ class MultiGridSolver {
     void set_convergence_criterion_residual(bool use_residual);
     
     // Fetch info about the grids
-    unsigned int get_N(unsigned int level = 0);
-    unsigned int get_Ntot(unsigned int level = 0);
+    unsigned int get_N(unsigned int level = 0) const;
+    unsigned int get_Ntot(unsigned int level = 0) const;
 
     // Add a pointer to an external grid if this grid is needed to define the PDE
     void add_external_grid(MultiGrid<NDIM,T> *field);
