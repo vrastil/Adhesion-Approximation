@@ -37,9 +37,7 @@ typedef long double FTYPE;
 #define FFTW_EXEC_R2C MAKE_FFTW_NAME(execute_dft_r2c)
 #define FFTW_EXEC_C2R MAKE_FFTW_NAME(execute_dft_c2r)
 
-constexpr FTYPE PI = (FTYPE)M_PI;
-constexpr FTYPE MPL = 2.435E18; // Reduced Planck mass, [GeV/c^2]
-
+#include "constants.hpp"
 inline float pow(float base, unsigned exp)
 {
     float result = 1.f;
@@ -268,7 +266,7 @@ struct Chi_Opt {
     /* cmd args */
     FTYPE beta, n, phi;
     /* derived param*/
-    FTYPE chi_prefix;
+    FTYPE chi_0;
 };
 
 /**

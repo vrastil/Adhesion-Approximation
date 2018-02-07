@@ -280,7 +280,7 @@ void Other_par::init(const Box_Opt& box_opt)
 
 void Chi_Opt::init()
 {
-    chi_prefix = 2*beta*MPL*phi;
+    chi_0 = 2*beta*MPL*phi;
 }
 
 /**
