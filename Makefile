@@ -54,7 +54,7 @@ swig: $(LIB) swig/*.i
 $(LIB): $(OBJ_FILES)
 	gcc-ar rcs $@ $^
 
-check: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -Wfloat-conversion -D TEST
+check: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -Wfloat-conversion -D TEST -D PRECISION=$(PRECISION)
 check: COMPILE.cc += -I./tests
 check: tests/test
 	./tests/test

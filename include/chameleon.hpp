@@ -25,7 +25,7 @@ private:
     // Parameters
     const T n;        // Hu-Sawicki paramater
     const T chi_0;    // 2*beta*Mpl*phi_scr
-    const T chi_prefactor; // beta*rho_m,0 / Mpl, [(h/Mpc)^3]
+    const T chi_prefactor; // beta*rho_m,0 / Mpl, [1]
     T a_3;  // prec-compute a^3
     T D;    // pre-compute D(a)
 

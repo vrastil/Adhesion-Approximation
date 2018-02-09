@@ -37,7 +37,9 @@ typedef long double FTYPE;
 #define FFTW_EXEC_R2C MAKE_FFTW_NAME(execute_dft_r2c)
 #define FFTW_EXEC_C2R MAKE_FFTW_NAME(execute_dft_c2r)
 
-#include "constants.hpp"
+
+constexpr FTYPE PI = (FTYPE)M_PI;
+
 inline float pow(float base, unsigned exp)
 {
     float result = 1.f;
@@ -262,11 +264,8 @@ struct Other_par {
 
 /* CHAMELEON */
 struct Chi_Opt {
-    void init();
     /* cmd args */
     FTYPE beta, n, phi;
-    /* derived param*/
-    FTYPE chi_0;
 };
 
 /**

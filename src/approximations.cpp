@@ -351,7 +351,7 @@ static void gen_expot(Mesh& potential,  const Mesh& expotential_0, FTYPE nu, FTY
 
 	#pragma omp parallel for
 	for (unsigned i = 0; i < expotential_0.N; i++){
-		gaussian[i]=-i*i/(4.*b*nu);
+		gaussian[i]=-i*i/(4*b*nu);
 	}
 
 	convolution_y1(potential, gaussian, expotential_0);

@@ -82,6 +82,7 @@ Cosmo_Param::~Cosmo_Param()
         cout << ">>> Debug: Free space after ccl_cosmology: " << cosmo << "\n";
         #endif
         ccl_cosmology_free(cosmo);
+        cosmo = NULL;
     }
 }
 
@@ -278,11 +279,6 @@ void Other_par::init(const Box_Opt& box_opt)
     x_corr.upper = 200;
 }
 
-void Chi_Opt::init()
-{
-    chi_0 = 2*beta*MPL*phi;
-}
-
 /**
  * @class:	Sim_Param
  * @brief:	class storing simulation parameters
@@ -298,8 +294,6 @@ Sim_Param::Sim_Param(int ac, const char* const av[])
     app_opt.init(box_opt);
     cosmo.init();
     other_par.init(box_opt);
-
-    if (comp_app.chi) chi_opt.init();
 }
 
 Sim_Param::Sim_Param(string file_name)
@@ -330,7 +324,6 @@ Sim_Param::Sim_Param(string file_name)
 
         try{
             chi_opt = j.at("chi_opt");
-            chi_opt.init();
             comp_app.chi = true;
         } catch(const out_of_range& oor){ comp_app.chi = false; }
         

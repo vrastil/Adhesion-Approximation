@@ -5,6 +5,14 @@
 
 using namespace std;
 
+constexpr FTYPE MPL = (FTYPE)1; // chi in units of Planck mass
+// (FTYPE)2.435E18; // reduced Planck mass, [GeV/c^2]
+// constexpr FTYPE fm_to_Mpc = (FTYPE)3.2407792896664E-38; // 1 fm = ? Mpc
+// constexpr FTYPE hbarc = (FTYPE)197.327053; // reduced Planck constant times speed of light, [MeV fm]
+// constexpr FTYPE hbarc_cosmo = hbarc*FTYPE(1E-9)*fm_to_Mpc; // [GeV Mpc]
+// constexpr FTYPE G_N = hbarc_cosmo*FTYPE(6.70711*1E-39); // gravitational constant, [GeV Mpc / (GeV/c^2)^2]
+ constexpr FTYPE c_kms = (FTYPE)299792.458; // speed of light [km / s]
+
 template<typename T>
 inline T chi_min(T chi_0, T a, T n, T delta){ return chi_0*pow(pow(a, 3)/(1+delta), 1/(1-n)); }
 
@@ -12,8 +20,10 @@ template<typename T>
 void transform_Mesh_to_Grid(const Mesh& mesh, MultiGrid<3, T> &grid)
 {/* copy data in Mesh 'N*N*(N+2)' onto MultiGrid 'N*N*N' */
     unsigned int ix, iy, iz;
-    const unsigned N_tot = grid.get_N_tot(0);
-    const unsigned N = grid.get_N(0);
+    const unsigned N_tot = grid.get_Ntot();
+    const unsigned N = grid.get_N();
+
+    if (mesh.N != N) throw std::range_error("Mesh of a different size than MultiGrid!");
 
     #pragma omp parallel for private(ix, iy, iz)
     for (unsigned i = 0; i < N_tot; ++i)
@@ -21,7 +31,7 @@ void transform_Mesh_to_Grid(const Mesh& mesh, MultiGrid<3, T> &grid)
         ix = i % N;
         iy = i / N % N;
         iz = i / (N*N) % N;
-        grid[i] = mesh(ix, iy, iz);
+        grid[0][i] = mesh(ix, iy, iz);
     }
     grid.restrict_down_all();
 }
@@ -30,8 +40,10 @@ template<typename T>
 void transform_Grid_to_Mesh(Mesh& mesh, const MultiGrid<3, T> &grid)
 {/* copy data in MultiGrid 'N*N*N' onto Mesh 'N*N*(N+2)' */
     unsigned int ix, iy, iz;
-    const unsigned N_tot = grid.get_N_tot(0);
-    const unsigned N = grid.get_N(0);
+    const unsigned N_tot = grid.get_Ntot();
+    const unsigned N = grid.get_N();
+
+    if (mesh.N != N) throw std::range_error("Mesh of a different size than MultiGrid!");
 
     #pragma omp parallel for private(ix, iy, iz)
     for (unsigned i = 0; i < N_tot; ++i)
@@ -39,19 +51,20 @@ void transform_Grid_to_Mesh(Mesh& mesh, const MultiGrid<3, T> &grid)
         ix = i % N;
         iy = i / N % N;
         iz = i / (N*N) % N;
-        mesh(ix, iy, iz) = grid[i];
+        mesh(ix, iy, iz) = grid[0][i];
     }
 }
 
 template<typename T>
 ChiSolver<T>::ChiSolver(unsigned int N, int Nmin, const Sim_Param& sim, bool verbose):
-    MultiGridSolver<3, T>(N, Nmin, verbose), n(sim.chi_opt.n), chi_0(sim.chi_opt.chi_0),
-    chi_prefactor( // beta*rho_m,0 / Mpl, [(h/Mpc)^3]
-        3*sim.chi_opt.beta*sim.cosmo.H0*sim.cosmo.H0*sim.cosmo.Omega_m/(8*PI*G_N*MPL)
-        /(c_kms*c_kms*pow(sim.cosmo.h, 3))) // units factor
-{       
-        
-}
+    MultiGridSolver<3, T>(N, Nmin, verbose), n(sim.chi_opt.n), chi_0(2*sim.chi_opt.beta*MPL*sim.chi_opt.phi),
+    chi_prefactor( // beta*rho_m,0 / Mpl^2 + computing units, e.g. dimensionless
+        3*sim.chi_opt.beta*sim.cosmo.Omega_m
+        *pow(sim.cosmo.H0 // Hubble constant
+        / (sim.cosmo.h * c_kms) // units factor for 'c = 1' and [L] = Mpc / h
+        * sim.x_0() // dimension factor for laplacian
+        ,2))
+{}
 
 template<typename T>
 void ChiSolver<T>::set_time(T a, const Cosmo_Param& cosmo)
@@ -84,7 +97,7 @@ T  ChiSolver<T>::l_operator(unsigned int level, std::vector<unsigned int>& index
 
     // The right hand side of the PDE 
     T source = (1+D*rho_0)/a_3 - pow(chi_0/chi, 1-n);
-    source *= chi_prefactor; // beta*rho_m,0 / Mpl, [(h/Mpc)^3]
+    source *= chi_prefactor; // beta*rho_m,0 / Mpl^2, [dimensionless]
 
     // source term arising rom restricting the equation down to the lower level
     if( level > 0 && addsource ) source += MultiGridSolver<3, T>::get_multigrid_source(level, i);
@@ -112,3 +125,7 @@ T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& inde
 
     return dkinetic/(h*h) - dsource;
 }
+
+#ifdef TEST
+#include "test_chameleon.cpp"
+#endif
