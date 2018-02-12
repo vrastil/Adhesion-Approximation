@@ -52,22 +52,15 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field ", "[ch
         transform_Mesh_to_Grid(rho, rho_grid);
     }
 
+    // check density
     for(unsigned i : some_indices) CHECK( rho_grid[0][i] == 0. );
 
     // initialize chi_A -- bulk field
     MultiGrid<3, FTYPE> chi_A(N);
-    const unsigned N_tot = chi_A.get_Ntot();
-    const FTYPE chi_0 = 2*sim.chi_opt.beta*MPL*sim.chi_opt.phi;
-    const FTYPE n = sim.chi_opt.n;
-    auto chi_min_ = [chi_0, a, n](FTYPE delta){ return chi_min<FTYPE>(chi_0, a, n, delta); };
-    #pragma omp parallel for
-    for (unsigned i = 0; i < N_tot; ++i)
-    {
-        chi_A[0][i] = chi_min_(rho_grid[0][i]);
-    }
-    chi_A.restrict_down_all();
+    set_bulk(chi_A, rho_grid, a, sim.chi_opt);
 
-    const FTYPE chi_bulk = chi_min(chi_0, a, n, FTYPE(0));
+    // check bulk field
+    const FTYPE chi_bulk = chi_min(2*sim.chi_opt.beta*MPL*sim.chi_opt.phi, a, sim.chi_opt.n, FTYPE(0));
     for(unsigned i : some_indices) REQUIRE( chi_A[0][i] == Approx(chi_bulk));
 
     // set ChiSolver

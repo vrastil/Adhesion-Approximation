@@ -126,6 +126,25 @@ T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& inde
     return dkinetic/(h*h) - dsource;
 }
 
+template<typename T>
+void set_bulk(MultiGrid<3, T>& chi_A, const MultiGrid<3, T>& rho, const T a, const Chi_Opt& chi_opt)
+{
+    const unsigned N_tot = chi_A.get_Ntot();
+    const T chi_0 = 2*chi_opt.beta*MPL*chi_opt.phi;
+    const T n = chi_opt.n;
+
+    #pragma omp parallel for
+    for (unsigned i = 0; i < N_tot; ++i)
+    {
+        chi_A[0][i] = chi_min(chi_0, a, n, rho[0][i]);
+    }
+
+    chi_A.restrict_down_all();
+}
+
+
+template void set_bulk(MultiGrid<3, FTYPE>&, const MultiGrid<3, FTYPE>&, const FTYPE, const Chi_Opt&);
+
 #ifdef TEST
 #include "test_chameleon.cpp"
 #endif

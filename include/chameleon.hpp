@@ -42,3 +42,6 @@ public:
     // Differential of the L operator: dL_{ijk...}/dphi_{ijk...}
     T dl_operator(unsigned int level, std::vector<unsigned int>& index_list);
 };
+
+template<typename T>
+void set_bulk(MultiGrid<3, T>& chi_A, const MultiGrid<3, T>& rho, const T a, const Chi_Opt& chi_opt);
