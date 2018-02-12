@@ -94,7 +94,6 @@ T  ChiSolver<T>::l_operator(unsigned int level, std::vector<unsigned int>& index
     // go through all surrounding points
     for(auto it = index_list.begin() + 1; it < index_list.end(); ++it) kinetic += dchi[*it] + chi_A[*it];
         
-
     // The right hand side of the PDE 
     T source = (1+D*rho_0)/a_3 - pow(chi_0/chi, 1-n);
     source *= chi_prefactor; // beta*rho_m,0 / Mpl^2, [dimensionless]
