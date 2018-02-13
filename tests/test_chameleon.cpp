@@ -1,8 +1,11 @@
 #include <catch.hpp>
 #include "core_mesh.h"
+#include "core_out.h"
 
 TEST_CASE( "UNIT TEST: create Multigrid and copy data to/from Mesh", "[multigrid]" )
 {
+    print_unit_msg("create Multigrid and copy data to/from Mesh");
+
     constexpr unsigned N = 32;
     srand(time(0));
     MultiGrid<3, FTYPE> grid(N);
@@ -31,8 +34,10 @@ void get_neighbor_gridindex(std::vector<unsigned int>& index_list, unsigned int 
     }
 }
 
-TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field ", "[chameleon]" )
+TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[chameleon]" )
 {
+    print_unit_msg("create and initialize ChiSolver, check bulk field");
+
     constexpr unsigned N = 32;
     constexpr FTYPE a = 0.5;
     const std::vector<unsigned> some_indices = {4, N*2+5, N*N*4+8*N+5};
@@ -79,11 +84,15 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field ", "[ch
     }
 }
 
-TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve thick-shell sphere ", "[chameleon]" )
+TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chameleon]" )
 {
-    constexpr unsigned N = 32;
-    constexpr FTYPE R2 = N/16;
-    constexpr FTYPE rho_0 = 1;
+    print_unit_msg("create and initialize ChiSolver, solve sphere");
+
+    constexpr int N = 64;
+    constexpr FTYPE R2 = (N/8)*(N/8);
+    int ix0 = N/2, iy0 = N/2, iz0 = N/2;
+
+    constexpr FTYPE rho_0 = 1E-8;
 
     // initialize Sim_Param
     const int argc = 1;
@@ -93,23 +102,26 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve thick-shell sphere
     // initialize ChiSolver
     ChiSolver<FTYPE> sol(N, sim);
 
-    // initialize overdensity -- constant density in sphere of radius R, center at N/2
+    // initialize overdensity -- constant density in sphere of radius R, center at x0, y0, z0
     MultiGrid<3, FTYPE> rho_grid(N);
+    FTYPE mean_rho;
     {
         Mesh rho(N);
-        const unsigned N_tot = rho.length;
-        unsigned ix, iy, iz;
+        const int N_tot = rho.length;
         FTYPE R2_;
-        #pragma omp parallel for private(R2_, ix, iy, iz)
-        for (unsigned i = 0; i < N_tot; ++i)
+        #pragma omp parallel for private(R2_)
+        for (int ix = 0; ix < N; ++ix)
         {
-            iz = i % (N+2) - N/2;
-            iy = i / (N+2) % N - N/2;
-            ix = i / (N*(N+2)) % N - N/2;
-            R2_ = iz*iz + iy*iy + iz*iz;
-            rho[i] = R2_ < R2 ? rho_0 : 0;
+            for (int iy = 0; iy < N; ++iy)
+            {
+                for (int iz = 0; iz < N; ++iz)
+                {
+                    R2_ = pow(ix - ix0, 2) + pow(iy - iy0, 2) + pow(iz - iz0, 2);
+                    rho(ix, iy, iz) = R2_ < R2 ? rho_0 : 0;
+                }
+            }
         }
-        const FTYPE mean_rho = mean(rho);
+        mean_rho = mean(rho);
         rho -= mean_rho;
         transform_Mesh_to_Grid(rho, rho_grid);
 
@@ -124,11 +136,53 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve thick-shell sphere
     set_bulk(chi_A, rho_grid, FTYPE(1), sim.chi_opt);
 
     // set ChiSolver
-    sol.set_epsilon(1e-8);
+    sol.set_epsilon(1e-16);
     sol.set_time(1, sim.cosmo);
     sol.add_external_grid(&chi_A);
     sol.add_external_grid(&rho_grid);
 
     // Solve the equation
     sol.solve();
+
+    // add solution to bulk field
+    {
+        FTYPE* dchi = sol.get_y();
+        const unsigned N_tot = chi_A.get_Ntot();
+        #pragma omp parallel for
+        for (unsigned i = 0; i < N_tot; ++i) chi_A[0][i] += dchi[i];
+    }
+    
+    // copy onto Mesh
+    Mesh chi_full(N);
+    transform_Grid_to_Mesh(chi_full, chi_A);
+
+    // create directory structure and open file
+    std::string out_dir = sim.out_opt.out_dir + "test_ChiSolver/";
+    string file_name = out_dir + "chi_values.dat";
+    create_dir(out_dir);
+    Ofstream File(file_name);
+
+    // print chi_full
+    File << setprecision(12);
+    File << "# N :=\t" << N << "\n";
+    File << "# R :=\t" << sqrt(R2) << "\n";
+    File << "# rho_0 :=\t" << rho_0 << "\n";
+    File << "# phi screening :=\t" << sim.chi_opt.phi << "\n";
+    File << "# phi gravitational :=\t" << R2*rho_0/(4*MPL*MPL) << "\n";
+    File << "# r\tchi(r)-chi_0\n";
+    FTYPE r;
+    const FTYPE chi_0 = chi_min(2*sim.chi_opt.beta*MPL*sim.chi_opt.phi, 1.0, sim.chi_opt.n, -mean_rho);
+    //const FTYPE chi_0 = 2*sim.chi_opt.beta*MPL*sim.chi_opt.phi;
+
+    for (int i = 0; i < N; ++i)
+    {
+        for (int j = i; j < i + 2; ++j)
+        {
+            for (int k = i; k < i + 2; ++k)
+            {
+                r = sqrt(pow(i - ix0, 2) + pow(j - iy0, 2) + pow(k - iz0, 2));
+                File << r << "\t" << chi_full(i, j, k) - chi_0 << "\n";
+            }
+        }   
+    }
 }
