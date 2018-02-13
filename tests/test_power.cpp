@@ -2,6 +2,8 @@
 
 TEST_CASE( "UNIT TEST: growth functions {growth_factor, growth_rate, growth_change}", "[core_power]" )
 {
+    print_unit_msg("growth functions {growth_factor, growth_rate, growth_change}");
+
     int argc = 1;
     const char* const argv[1] = {"test"};
     try{

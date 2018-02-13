@@ -2,6 +2,8 @@
 
 TEST_CASE( "UNIT TEST: sign function {sgn<T>}", "[core]" )
 {
+    print_unit_msg("sign function {sgn<T>}");
+
     CHECK( sgn(0) == 0 );
     CHECK( sgn(10) == 1 );
     CHECK( sgn(-5) == -1 );
@@ -12,6 +14,8 @@ TEST_CASE( "UNIT TEST: sign function {sgn<T>}", "[core]" )
 
 TEST_CASE( "UNIT TEST: vector class {Vec_3D<T>}", "[core]" )
 {
+    print_unit_msg("vector class {Vec_3D<T>}");
+
     Vec_3D<double> vec_d(sqrt(2.), -sqrt(2.), sqrt(5.));
     Vec_3D<float> vec_f(sqrt(2.f), -sqrt(2.f), sqrt(5.f));
     Vec_3D<int> vec_i(3,0,-4);
@@ -52,6 +56,8 @@ TEST_CASE( "UNIT TEST: vector class {Vec_3D<T>}", "[core]" )
 
 TEST_CASE( "UNIT TEST: mesh class {Mesh_base<T>}", "[core]" )
 {
+    print_unit_msg("mesh class {Mesh_base<T>}");
+
     // dimension
     Mesh_base<double> mesh(8, 16, 20);
     CHECK( mesh.N1 == 8 );
@@ -107,6 +113,8 @@ TEST_CASE( "UNIT TEST: mesh class {Mesh_base<T>}", "[core]" )
 
 TEST_CASE( "UNIT TEST: mesh class {Mesh}", "[core]" )
 {
+    print_unit_msg("mesh class {Mesh}");
+
     // dimension
     Mesh mesh_c(8);
     mesh_c.assign(0.);
@@ -158,6 +166,8 @@ TEST_CASE( "UNIT TEST: mesh class {Mesh}", "[core]" )
     
 TEST_CASE( "UNIT TEST: particle class {Particle_x}", "[core]" )
 {
+    print_unit_msg("particle class {Particle_x}");
+
     Vec_3D<FTYPE> position(0., -3.14, 4E5);
     Particle_x par1(position);
 
@@ -183,7 +193,9 @@ TEST_CASE( "UNIT TEST: particle class {Particle_x}", "[core]" )
 }
 
 TEST_CASE( "UNIT TEST: particle class {Particle_v}", "[core]" )
-{    
+{
+    print_unit_msg("particle class {Particle_v}");
+
     Vec_3D<FTYPE> position(0., -3.14, 4E5);
     Vec_3D<FTYPE> velocity(2.3E-6, -4.56E-7, 6.87903E-6);
     Particle_v par1(position, velocity);
@@ -208,6 +220,8 @@ TEST_CASE( "UNIT TEST: particle class {Particle_v}", "[core]" )
 
 TEST_CASE( "UNIT TEST: tracking class {Tracking}", "[core]" )
 {
+    print_unit_msg("tracking class {Tracking}");
+
     // 2, 12, 2
     Tracking track(2, 24);
 

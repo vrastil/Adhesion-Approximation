@@ -2,6 +2,8 @@
 
 TEST_CASE( "UNIT TEST: periodicity functions {get_per}", "[core_mesh]" )
 {
+    print_unit_msg("periodicity functions {get_per}");
+
     CHECK( get_per(9.4, 10) == Approx(9.4) );
     CHECK( get_per(31.4, 10) == Approx(1.4) );
     CHECK( get_per(-7.4, 10) == Approx(2.6) );
@@ -45,6 +47,8 @@ TEST_CASE( "UNIT TEST: periodicity functions {get_per}", "[core_mesh]" )
 
 TEST_CASE( "UNIT TEST: assign functions iterator {IT}", "[core_mesh]" )
 {
+    print_unit_msg("assign functions iterator {IT}");
+
     IT<1> it1(Vec_3D<FTYPE>(3.2, 7.8, 4.0));
     REQUIRE( it1.vec == Vec_3D<int>(3, 8, 4) );
     CHECK( it1.counter == 0);
