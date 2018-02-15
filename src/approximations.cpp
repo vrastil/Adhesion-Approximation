@@ -14,21 +14,21 @@ static void aa_convolution(App_Var_AA& APP);
 *********************/
 
 template<class T>
-void init_cond_no_vel(T& APP)
+static void init_cond_no_vel(T& APP)
 {
     printf("\nSetting initial positions of particles...\n");
     set_pert_pos(APP.sim, APP.integ_opt.b_in, APP.particles, APP.app_field);
 }
 
 template<class T>
-void init_cond_w_vel(T& APP)
+static void init_cond_w_vel(T& APP)
 {
     printf("\nSetting initial positions and velocitis of particles...\n");
 	set_pert_pos_w_vel(APP.sim, APP.sim.integ_opt.b_in, APP.particles, APP.app_field);
 }
 
 template<class T>
-void init_pot_w_s2(T& APP)
+static void init_pot_w_s2(T& APP)
 {
     /* Computing displacement in k-space with S2 shaped particles */
 	gen_displ_k_S2(APP.app_field, APP.power_aux[0], APP.sim.app_opt.a);
@@ -39,7 +39,7 @@ void init_pot_w_s2(T& APP)
 }
 
 template<class T>
-void init_pot_w_cic(T& APP)
+static void init_pot_w_cic(T& APP)
 {
     /* Computing displacement in k-space with CIC opt */
     gen_displ_k_cic(APP.app_field, APP.power_aux[0]);
@@ -50,7 +50,7 @@ void init_pot_w_cic(T& APP)
 }
 
 template<class T>
-void init_adhesion(T& APP)
+static void init_adhesion(T& APP)
 {
     /* Computing initial expotential */
 	fftw_execute_dft_c2r(APP.p_B, APP.power_aux[0]);
@@ -58,7 +58,7 @@ void init_adhesion(T& APP)
 }
 
 template<class T>
-void print_init(T& APP)
+static void print_init(T& APP)
 {
     /* Setting initial (binned) power spectrum, WARNING: power_aux[0] is modified */
     APP.track.update_track_par(APP.particles);
@@ -67,7 +67,7 @@ void print_init(T& APP)
 }
 
 template<class T>
-void print_input_realisation(T& APP)
+static void print_input_realisation(T& APP)
 {
     /* Print input power spectrum (one realisation), before Zel`dovich push */
     pwr_spec_k_init(APP.app_field[0], APP.power_aux[0]);
@@ -81,7 +81,7 @@ void print_input_realisation(T& APP)
 ***************************************/
 
 template<class T>
-void standard_preparation(T& APP)
+static void standard_preparation(T& APP)
 {
     /* Generating the right density distribution in k-space */	
     gen_rho_dist_k(APP.sim, APP.app_field[0], APP.p_F);
@@ -105,7 +105,7 @@ void standard_preparation(T& APP)
 **************/
 
 template<class T>
-void integration(T& APP, function<void()> upd_pos)
+static void integration(T& APP, function<void()> upd_pos)
 {
     print_init(APP); // WARNING: power_aux[0] is modified
 	while(APP.integrate())
