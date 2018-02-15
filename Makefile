@@ -9,6 +9,7 @@ CXXFLAGS +=-MMD
 CXXFLAGS +=-fopenmp -flto -fPIC
 #CXXFLAGS +=-D CORR
 CXXFLAGS +=-D NOISE_HALF
+CXXFLAGS +=-D OPENMP # for multigrid_solver
 
 CXXLIB +=-lboost_program_options -lboost_filesystem -lboost_system
 ifeq ($(PRECISION),1)

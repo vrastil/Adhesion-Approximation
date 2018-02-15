@@ -88,16 +88,21 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
 {
     print_unit_msg("create and initialize ChiSolver, solve sphere");
 
-    constexpr int N = 64;
-    constexpr FTYPE R2 = (N/8)*(N/8);
+    constexpr int N = 128;
+    constexpr FTYPE R2 = 4*4;
     int ix0 = N/2, iy0 = N/2, iz0 = N/2;
 
-    constexpr FTYPE rho_0 = 1E-8;
+    constexpr FTYPE rho_0 = 1E-6;
 
     // initialize Sim_Param
     const int argc = 1;
     const char* const argv[1] = {"test"};
     Sim_Param sim(argc, argv);
+
+    // chi prefactor
+    const FTYPE chi_prefactor = 3*sim.chi_opt.beta*sim.cosmo.Omega_m*pow(sim.cosmo.H0
+            / (sim.cosmo.h * c_kms)* sim.x_0(),2);
+    cout << "chi_prefactor := " << chi_prefactor << "\n";
 
     // initialize ChiSolver
     ChiSolver<FTYPE> sol(N, sim);
@@ -127,7 +132,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
 
         // check density
         REQUIRE( mean(rho) == Approx(0.) );
-        REQUIRE( rho(N/2, N/2, N/2) == Approx(rho_0 - mean_rho) );
+        REQUIRE( rho(ix0, iy0, iz0) == Approx(rho_0 - mean_rho) );
         REQUIRE( rho(0, 0, 0) == Approx(-mean_rho) );
     }
 
@@ -136,7 +141,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     set_bulk(chi_A, rho_grid, FTYPE(1), sim.chi_opt);
 
     // set ChiSolver
-    sol.set_epsilon(1e-16);
+    sol.set_epsilon(1e-15);
     sol.set_time(1, sim.cosmo);
     sol.add_external_grid(&chi_A);
     sol.add_external_grid(&rho_grid);
@@ -169,20 +174,21 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     File << "# rho_0 :=\t" << rho_0 << "\n";
     File << "# phi screening :=\t" << sim.chi_opt.phi << "\n";
     File << "# phi gravitational :=\t" << R2*rho_0/(4*MPL*MPL) << "\n";
-    File << "# r\tchi(r)-chi_0\n";
-    FTYPE r;
+    File << "# r\t(chi(r)-chi_0)/chi_prefactor\n";
     const FTYPE chi_0 = chi_min(2*sim.chi_opt.beta*MPL*sim.chi_opt.phi, 1.0, sim.chi_opt.n, -mean_rho);
-    //const FTYPE chi_0 = 2*sim.chi_opt.beta*MPL*sim.chi_opt.phi;
+    // const FTYPE chi_0 = max(chi_full);
+    // const FTYPE chi_0 = chi_full(0, 0, 0);
+    // const FTYPE chi_0 = 2*sim.chi_opt.beta*MPL*sim.chi_opt.phi;
 
-    for (int i = 0; i < N; ++i)
+    auto print_r_chi = [&File, ix0, iy0, iz0,&chi_full, chi_0, chi_prefactor]
+                       (int i, int j, int k){
+        File << sqrt(pow(i - ix0, 2) + pow(j - iy0, 2) + pow(k - iz0, 2)) << "\t" << (chi_full(i, j, k) - chi_0) / chi_prefactor << "\n";
+    };
+
+    for (int i = 0; i < N - 1; ++i)
     {
-        for (int j = i; j < i + 2; ++j)
-        {
-            for (int k = i; k < i + 2; ++k)
-            {
-                r = sqrt(pow(i - ix0, 2) + pow(j - iy0, 2) + pow(k - iz0, 2));
-                File << r << "\t" << chi_full(i, j, k) - chi_0 << "\n";
-            }
-        }   
+        print_r_chi(i, i, i);
+        print_r_chi(i, i, i + 1);
+        print_r_chi(i, i + 1, i + 1);
     }
 }
