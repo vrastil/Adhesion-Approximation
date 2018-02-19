@@ -14,16 +14,13 @@ constexpr FTYPE MPL = (FTYPE)1; // chi in units of Planck mass
  constexpr FTYPE c_kms = (FTYPE)299792.458; // speed of light [km / s]
 
 template<typename T>
-inline T chi_min(T chi_0, T a, T n, T delta){ return chi_0*pow(pow(a, 3)/(1+delta), 1/(1-n)); }
-
-template<typename T>
-void transform_Mesh_to_Grid(const Mesh& mesh, MultiGrid<3, T> &grid)
+void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
 {/* copy data in Mesh 'N*N*(N+2)' onto MultiGrid 'N*N*N' */
     unsigned int ix, iy, iz;
     const unsigned N_tot = grid.get_Ntot();
     const unsigned N = grid.get_N();
 
-    if (mesh.N != N) throw std::range_error("Mesh of a different size than MultiGrid!");
+    if (mesh.N != N) throw std::range_error("Mesh of a different size than Grid!");
 
     #pragma omp parallel for private(ix, iy, iz)
     for (unsigned i = 0; i < N_tot; ++i)
@@ -31,13 +28,19 @@ void transform_Mesh_to_Grid(const Mesh& mesh, MultiGrid<3, T> &grid)
         ix = i % N;
         iy = i / N % N;
         iz = i / (N*N) % N;
-        grid[0][i] = mesh(ix, iy, iz);
+        grid[i] = mesh(ix, iy, iz);
     }
+}
+
+template<typename T>
+void transform_Mesh_to_Grid(const Mesh& mesh, MultiGrid<3, T> &grid)
+{
+    transform_Mesh_to_Grid(mesh, grid.get_grid());
     grid.restrict_down_all();
 }
 
 template<typename T>
-void transform_Grid_to_Mesh(Mesh& mesh, const MultiGrid<3, T> &grid)
+void transform_Grid_to_Mesh(Mesh& mesh, const Grid<3, T> &grid)
 {/* copy data in MultiGrid 'N*N*N' onto Mesh 'N*N*(N+2)' */
     unsigned int ix, iy, iz;
     const unsigned N_tot = grid.get_Ntot();
@@ -51,8 +54,14 @@ void transform_Grid_to_Mesh(Mesh& mesh, const MultiGrid<3, T> &grid)
         ix = i % N;
         iy = i / N % N;
         iz = i / (N*N) % N;
-        mesh(ix, iy, iz) = grid[0][i];
+        mesh(ix, iy, iz) = grid[i];
     }
+}
+
+template<typename T>
+void transform_Grid_to_Mesh(Mesh& mesh, const MultiGrid<3, T> &grid)
+{
+    transform_Grid_to_Mesh(mesh, grid.get_grid());
 }
 
 template<typename T>
@@ -64,13 +73,33 @@ ChiSolver<T>::ChiSolver(unsigned int N, int Nmin, const Sim_Param& sim, bool ver
         / (sim.cosmo.h * c_kms) // units factor for 'c = 1' and [L] = Mpc / h
         * sim.x_0() // dimension factor for laplacian
         ,2))
-{}
+{
+    if ((n <= 0) || (n >= 1)) throw out_of_range("invalid value of chameleon power-law potential exponent");
+}
 
 template<typename T>
-void ChiSolver<T>::set_time(T a, const Cosmo_Param& cosmo)
+void ChiSolver<T>::set_time(T a_, const Cosmo_Param& cosmo)
 {
-    a_3 = pow(a, 3);
-    D = growth_factor(a, cosmo);
+    a = a;
+    a_3 = pow(a_, 3);
+    D = growth_factor(a_, cosmo);
+}
+
+template<typename T>
+void ChiSolver<T>::set_initial_guess()
+{
+    if (!a_3) throw out_of_range("invalid value of scale factor");
+    if (!MultiGridSolver<3, T>::get_external_field_size()) throw out_of_range("initial overdensity not set"); 
+
+    T* const f = MultiGridSolver<3, T>::get_y(); // initial guess
+    T const* const rho = MultiGridSolver<3,T>::get_external_field(0, 0); // overdensity
+    const unsigned N_tot = MultiGridSolver<3, T>::get_Ntot();
+
+    #pragma omp parallel for
+    for (unsigned i = 0; i < N_tot; ++i)
+    {
+        f[i] = chi_min(rho[i]);
+    }
 }
 
 // The dicretized equation L(phi)
@@ -83,19 +112,16 @@ T  ChiSolver<T>::l_operator(unsigned int level, std::vector<unsigned int>& index
     const T h = 1.0/T( MultiGridSolver<3, T>::get_N(level) );
 
     // Solution and pde-source grid at current level
-    T *const dchi = MultiGridSolver<3, T>::get_y(level); // chi = dchi + chi_A
-    T *const chi_A = MultiGridSolver<3,T>::get_external_field(level, 0); // solution from previus time-step
-
-    const T rho_0 = MultiGridSolver<3,T>::get_external_field(level, 1)[i]; // initial overdensity
-    const T chi = dchi[i] + chi_A[i]; // full solution
+    T const* const chi = MultiGridSolver<3, T>::get_y(level); // solution
+    const T rho_0 = MultiGridSolver<3,T>::get_external_field(level, 0)[i]; // initial overdensity
 
     // Compute the standard kinetic term [D^2 phi] (in 1D this is phi''_i =  phi_{i+1} + phi_{i-1} - 2 phi_{i} )
-    T kinetic = -2*chi*3; // chi, '-2*3' is factor in 3D discrete laplacian
+    T kinetic = -2*chi[i]*3; // chi, '-2*3' is factor in 3D discrete laplacian
     // go through all surrounding points
-    for(auto it = index_list.begin() + 1; it < index_list.end(); ++it) kinetic += dchi[*it] + chi_A[*it];
+    for(auto it = index_list.begin() + 1; it < index_list.end(); ++it) kinetic += chi[*it];
         
     // The right hand side of the PDE 
-    T source = (1+D*rho_0)/a_3 - pow(chi_0/chi, 1-n);
+    T source = (1+D*rho_0)/a_3 - pow(chi_0/chi[i], 1-n);
     source *= chi_prefactor; // beta*rho_m,0 / Mpl^2, [dimensionless]
 
     // source term arising rom restricting the equation down to the lower level
@@ -108,10 +134,8 @@ T  ChiSolver<T>::l_operator(unsigned int level, std::vector<unsigned int>& index
 // Differential of the L operator: dL_{ijk...}/dphi_{ijk...}
 template<typename T>
 T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& index_list){
-    const unsigned int i = index_list[0];
-    T *const dchi = MultiGridSolver<3, T>::get_y(level); // chi = dchi + chi_A
-    T *const chi_A = MultiGridSolver<3,T>::get_external_field(level, 0); // solution from previus time-step
-    const T chi = dchi[i] + chi_A[i]; // full solution
+    // solution
+    const T chi = MultiGridSolver<3, T>::get_y(level)[ index_list[0] ];
 
     // Gridspacing
     const T h = 1.0/T( MultiGridSolver<3, T>::get_N(level) );
@@ -125,24 +149,11 @@ T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& inde
     return dkinetic/(h*h) - dsource;
 }
 
-template<typename T>
-void set_bulk(MultiGrid<3, T>& chi_A, const MultiGrid<3, T>& rho, const T a, const Chi_Opt& chi_opt)
+App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
+    App_Var<Particle_v>(sim, app_str), sol(sim.box_opt.mesh_num, sim), drho(sim.box_opt.mesh_num)
 {
-    const unsigned N_tot = chi_A.get_Ntot();
-    const T chi_0 = 2*chi_opt.beta*MPL*chi_opt.phi;
-    const T n = chi_opt.n;
 
-    #pragma omp parallel for
-    for (unsigned i = 0; i < N_tot; ++i)
-    {
-        chi_A[0][i] = chi_min(chi_0, a, n, rho[0][i]);
-    }
-
-    chi_A.restrict_down_all();
 }
-
-
-template void set_bulk(MultiGrid<3, FTYPE>&, const MultiGrid<3, FTYPE>&, const FTYPE, const Chi_Opt&);
 
 #ifdef TEST
 #include "test_chameleon.cpp"

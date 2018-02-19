@@ -111,6 +111,7 @@ class MultiGridSolver {
 
     // Fetch values in externally added fields
     T* get_external_field(unsigned int level, unsigned int field);
+    size_t get_external_field_size() const;
     
     // Get values of the multigrid-source used to store the restricted residual during the solve step
     T get_multigrid_source(unsigned int level, unsigned int i);

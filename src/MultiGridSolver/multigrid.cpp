@@ -21,6 +21,14 @@ Grid<NDIM,T>& MultiGrid<NDIM,T>::get_grid(unsigned int level){
 }
 
 template<unsigned int NDIM, typename T>
+const Grid<NDIM,T>& MultiGrid<NDIM,T>::get_grid(unsigned int level) const{
+#ifdef _BOUNDSCHECK
+  assert(level < _Nlevel);
+#endif
+  return _y[level];
+}
+
+template<unsigned int NDIM, typename T>
 T* MultiGrid<NDIM,T>::operator[](unsigned int level){ 
 #ifdef _BOUNDSCHECK
   assert(level < _Nlevel);

@@ -596,6 +596,11 @@ T* MultiGridSolver<NDIM,T>::get_external_field(unsigned int level, unsigned int 
 }
 
 template<unsigned int NDIM, typename T>
+size_t MultiGridSolver<NDIM,T>::get_external_field_size() const{ 
+  return _ext_field.size();
+}
+
+template<unsigned int NDIM, typename T>
 void  MultiGridSolver<NDIM,T>::clear() {
   _N = _Ntot = _Nlevel = 0;
   _f.clear();

@@ -39,6 +39,7 @@ class MultiGrid {
     
     // Fetch a reference to the solution grid at a given level
     Grid<NDIM,T>& get_grid(unsigned int level = 0);
+    const Grid<NDIM,T>& get_grid(unsigned int level = 0) const;
 
     // Fetch a pointer to the underlying array at each level
     T* operator[](unsigned int level);
