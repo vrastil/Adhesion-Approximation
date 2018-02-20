@@ -190,6 +190,8 @@ void Grid<NDIM,T>::clear(){
 }
 
 // Explicit template specialisation
+template class Grid<3,long double>;
+
 template class Grid<3,double>;
 template class Grid<2,double>;
 template class Grid<1,double>;

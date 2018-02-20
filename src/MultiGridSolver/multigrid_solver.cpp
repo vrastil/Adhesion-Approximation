@@ -611,6 +611,8 @@ void  MultiGridSolver<NDIM,T>::clear() {
 }
 
 // Explicit template specialisation
+template class MultiGridSolver<3,long double>;
+
 template class MultiGridSolver<3,double>;
 template class MultiGridSolver<2,double>;
 template class MultiGridSolver<1,double>;

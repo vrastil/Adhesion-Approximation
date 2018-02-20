@@ -40,7 +40,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[cha
 
     constexpr unsigned N = 32;
     constexpr FTYPE a = 0.5;
-    constexpr FTYPE rho_0 = 0.;
+    constexpr FTYPE rho_0 = 0.3;
     const std::vector<unsigned> some_indices = {4, N*2+5, N*N*4+8*N+5};
 
     // initialize Sim_Param
@@ -93,7 +93,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     constexpr FTYPE R2 = 4*4;
     int ix0 = N/2, iy0 = N/2, iz0 = N/2;
 
-    constexpr FTYPE rho_0 = 1E-6;
+    constexpr FTYPE rho_0 = 1E-2;
 
     // initialize Sim_Param
     const int argc = 1;
@@ -101,15 +101,15 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     Sim_Param sim(argc, argv);
 
     // chi prefactor
-    const FTYPE chi_prefactor = 3*sim.chi_opt.beta*sim.cosmo.Omega_m*pow(sim.cosmo.H0
+    const long double chi_prefactor = 3*sim.chi_opt.beta*sim.cosmo.Omega_m*pow(sim.cosmo.H0
             / (sim.cosmo.h * c_kms)* sim.x_0(),2);
-    cout << "chi_prefactor := " << chi_prefactor << "\n";
+    cout << "8*PI*G*rho_0*beta := " << chi_prefactor << "\n";
 
     // initialize ChiSolver
-    ChiSolver<FTYPE> sol(N, sim);
+    ChiSolver<long double> sol(N, sim);
 
     // initialize overdensity -- constant density in sphere of radius R, center at x0, y0, z0
-    MultiGrid<3, FTYPE> rho_grid(N);
+    MultiGrid<3, long double> rho_grid(N);
     FTYPE mean_rho;
     {
         Mesh rho(N);
@@ -139,7 +139,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
 
 
     // set ChiSolver
-    sol.set_epsilon(1e-15);
+    sol.set_epsilon(2e-7*sim.chi_opt.phi);
     sol.set_time(1, sim.cosmo);
     sol.add_external_grid(&rho_grid);
     sol.set_initial_guess();
@@ -158,14 +158,14 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     Ofstream File(file_name);
 
     // print chi_full
-    File << setprecision(12);
+    File << setprecision(18);
     File << "# N :=\t" << N << "\n";
     File << "# R :=\t" << sqrt(R2) << "\n";
     File << "# rho_0 :=\t" << rho_0 << "\n";
     File << "# phi screening :=\t" << sim.chi_opt.phi << "\n";
-    File << "# phi gravitational :=\t" << R2*rho_0/(4*MPL*MPL) << "\n";
+    File << "# phi gravitational :=\t" << 3./2.*R2*rho_0 << "\n";
     File << "# r\t(chi(r)-chi_0)/chi_prefactor\n";
-    const FTYPE chi_0 = sol.chi_min(-mean_rho);
+    const long double chi_0 = sol.chi_min(-mean_rho);
     // const FTYPE chi_0 = max(chi_full);
     // const FTYPE chi_0 = chi_full(0, 0, 0);
     // const FTYPE chi_0 = 2*sim.chi_opt.beta*MPL*sim.chi_opt.phi;

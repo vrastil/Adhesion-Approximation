@@ -232,6 +232,8 @@ void  MultiGrid<NDIM,T>::clear(){
 }
 
 // Explicit template specialisation
+template class MultiGrid<3,long double>;
+
 template class MultiGrid<3,double>;
 template class MultiGrid<2,double>;
 template class MultiGrid<1,double>;
