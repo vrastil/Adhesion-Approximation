@@ -580,79 +580,106 @@ void App_Var<T>::upd_time()
 	if ((b_out - b) < db) db = b_out - b;
 	b += db;
 }
- 
+
+template <class T> 
+void App_Var<T>::print_position()
+{/* Printing positions */
+    print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
+    print_track_par(track, sim, out_dir_app, z_suffix());
+}
+
+template <class T> 
+void App_Var<T>::print_density()
+{/* Printing density */
+    gen_dens_binned(power_aux[0], dens_binned, sim);    
+    print_rho_map(power_aux[0], sim, out_dir_app, z_suffix());
+    print_dens_bin(dens_binned, out_dir_app, z_suffix());
+}
+
+template <class T> 
+void App_Var<T>::get_binned_power_spec()
+{/* Compute power spectrum and bin it */
+    fftw_execute_dft_r2c(p_F_pwr, power_aux[0]);
+    pwr_spec_k(power_aux[0], power_aux[0]);
+    gen_pow_spec_binned(sim, power_aux[0], pwr_spec_binned);
+}
+
+template <class T> 
+void App_Var<T>::print_power_spec()
+{/* Printing power spectrum */
+    print_pow_spec(pwr_spec_binned, out_dir_app, "_par" + z_suffix());
+    if (!is_init_pwr_spec_0){
+        pwr_spec_binned_0 = pwr_spec_binned;
+        D_init = growth_factor(b, sim.cosmo);
+        is_init_pwr_spec_0 = true;
+    }
+    FTYPE D_now = growth_factor(b, sim.cosmo);
+    print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, D_now / D_init, out_dir_app, "_par" + z_suffix());
+    print_pow_spec_diff(pwr_spec_binned, pwr_spec_input, D_now, out_dir_app, "_input" + z_suffix());
+    print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, pwr_spec_input, D_now, D_init,
+                        out_dir_app, "_hybrid" + z_suffix());
+}
+
+template <class T> 
+void App_Var<T>::print_extrap_pwr(const Extrap_Pk<FTYPE, 2>& P_k)
+{/* Print extrapolated power spectrum */
+    gen_pow_spec_binned_from_extrap(sim, P_k, pwr_spec_binned);
+    print_pow_spec(pwr_spec_binned, out_dir_app, "_extrap" + z_suffix());
+}
+
+template <class T> 
+void App_Var<T>::print_corr(const Extrap_Pk<FTYPE, 2>& P_k)
+{/* Printing correlation function */
+    gen_corr_func_binned_gsl_qawf(sim, P_k, corr_func_binned);
+    print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_par" + z_suffix());
+    gen_corr_func_binned_gsl_qawf_lin(sim, b, corr_func_binned);
+    print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_lin" + z_suffix());
+}
+
+template <class T> 
+void App_Var<T>::print_vel_pwr()
+{/* Print velocity power spectrum */
+    fftw_execute_dft_r2c_triple(p_F_pwr, power_aux);
+    vel_pwr_spec_k(power_aux, power_aux[0]);
+    gen_pow_spec_binned(sim, power_aux[0], pwr_spec_binned);
+    print_vel_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
+    if (!is_init_vel_pwr_spec_0){
+        vel_pwr_spec_binned_0 = pwr_spec_binned;
+        is_init_vel_pwr_spec_0 = true;
+        dDda_init = growth_change(b, sim.cosmo);
+    }
+    print_vel_pow_spec_diff(pwr_spec_binned, vel_pwr_spec_binned_0, growth_change(b, sim.cosmo) / dDda_init, out_dir_app, z_suffix());
+}
+
 template <class T> 
 void App_Var<T>::print_output()
 {
     /* Printing positions */
-    if (sim.out_opt.print_par_pos){
-        print_par_pos_cut_small(particles, sim, out_dir_app, z_suffix());
-        print_track_par(track, sim, out_dir_app, z_suffix());
-    }
+    if (sim.out_opt.print_par_pos) print_position();
 
     /* Get discrete density from particles */
-    if (sim.out_opt.get_rho)
-        get_rho_from_par(particles, power_aux[0], sim);
+    if (sim.out_opt.get_rho) get_rho_from_par(particles, power_aux[0], sim);
     
     /* Printing density */
-    if (sim.out_opt.print_dens){
-        gen_dens_binned(power_aux[0], dens_binned, sim);    
-        print_rho_map(power_aux[0], sim, out_dir_app, z_suffix());
-        print_dens_bin(dens_binned, out_dir_app, z_suffix());
-    }
+    if (sim.out_opt.print_dens) print_density();
 
     /* Compute power spectrum and bin it */
-    if (sim.out_opt.get_pwr){
-        fftw_execute_dft_r2c(p_F_pwr, power_aux[0]);
-        pwr_spec_k(power_aux[0], power_aux[0]);
-        gen_pow_spec_binned(sim, power_aux[0], pwr_spec_binned);
-    }
+    if (sim.out_opt.get_pwr) get_binned_power_spec();
 
     /* Printing power spectrum */
-    if (sim.out_opt.print_pwr){
-        print_pow_spec(pwr_spec_binned, out_dir_app, "_par" + z_suffix());
-        if (!is_init_pwr_spec_0){
-            pwr_spec_binned_0 = pwr_spec_binned;
-            D_init = growth_factor(b, sim.cosmo);
-            is_init_pwr_spec_0 = true;
-        }
-        FTYPE D_now = growth_factor(b, sim.cosmo);
-        print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, D_now / D_init, out_dir_app, "_par" + z_suffix());
-        print_pow_spec_diff(pwr_spec_binned, pwr_spec_input, D_now, out_dir_app, "_input" + z_suffix());
-        print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, pwr_spec_input, D_now, D_init,
-                            out_dir_app, "_hybrid" + z_suffix());
-    }
+    if (sim.out_opt.print_pwr) print_power_spec();
 
     /* Extrapolate power spectrum beyond range of simulation box */
     if (sim.out_opt.get_pk_extrap){
-        Extrap_Pk<FTYPE, 2> P_k(pwr_spec_binned, sim);
-    /* Print extrapolated power spectrum */
-        if (sim.out_opt.print_extrap_pwr){
-            gen_pow_spec_binned_from_extrap(sim, P_k, pwr_spec_binned);
-            print_pow_spec(pwr_spec_binned, out_dir_app, "_extrap" + z_suffix());
-        }
-    /* Printing correlation function */
-        if (sim.out_opt.print_corr){
-            gen_corr_func_binned_gsl_qawf(sim, P_k, corr_func_binned);
-            print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_par" + z_suffix());
-            gen_corr_func_binned_gsl_qawf_lin(sim, b, corr_func_binned);
-            print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_lin" + z_suffix());
-        }
+        const Extrap_Pk<FTYPE, 2> P_k(pwr_spec_binned, sim);
+        /* Print extrapolated power spectrum */
+        if (sim.out_opt.print_extrap_pwr) print_extrap_pwr(P_k);
+        /* Printing correlation function */
+        if (sim.out_opt.print_corr) print_corr(P_k);
     }
 
     /* Velocity power spectrum */
-    if (sim.out_opt.print_vel_pwr && get_vel_from_par(particles, power_aux, sim)){
-        fftw_execute_dft_r2c_triple(p_F_pwr, power_aux);
-        vel_pwr_spec_k(power_aux, power_aux[0]);
-        gen_pow_spec_binned(sim, power_aux[0], pwr_spec_binned);
-        print_vel_pow_spec(pwr_spec_binned, out_dir_app, z_suffix());
-        if (!is_init_vel_pwr_spec_0){
-            vel_pwr_spec_binned_0 = pwr_spec_binned;
-            is_init_vel_pwr_spec_0 = true;
-            dDda_init = growth_change(b, sim.cosmo);
-        }
-        print_vel_pow_spec_diff(pwr_spec_binned, vel_pwr_spec_binned_0, growth_change(b, sim.cosmo) / dDda_init, out_dir_app, z_suffix());
-    }
+    if (sim.out_opt.print_vel_pwr && get_vel_from_par(particles, power_aux, sim)) print_vel_pwr();
 }
 
 template <class T> 

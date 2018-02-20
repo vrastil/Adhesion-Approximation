@@ -403,9 +403,19 @@ public:
     void print_info() const;	
 	std::string z_suffix();
 	bool is_init_pwr_spec_0, is_init_vel_pwr_spec_0; //< be careful about setting these to true
+
 protected:	
     std::stringstream z_suffix_num;
     uint64_t memory_alloc; // only the largest chunks
+
+private:
+    void print_position();
+    void print_density();
+    void get_binned_power_spec();
+    void print_power_spec();
+    void print_extrap_pwr(const Extrap_Pk<FTYPE, 2>& P_k);
+    void print_corr(const Extrap_Pk<FTYPE, 2>& P_k);
+    void print_vel_pwr();
 };
 
 /**
