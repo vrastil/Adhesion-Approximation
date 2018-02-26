@@ -6,7 +6,7 @@ PRECISION = 2
 
 CXXFLAGS =-std=c++11 -pipe
 CXXFLAGS +=-MMD
-CXXFLAGS +=-fopenmp -flto -fPIC
+CXXFLAGS +=-fopenmp -flto=jobserver -fPIC
 #CXXFLAGS +=-D CORR
 CXXFLAGS +=-D NOISE_HALF
 CXXFLAGS +=-D OPENMP # for multigrid_solver
@@ -34,12 +34,12 @@ PCH_O = $(PCH).gch
 adh_app: CXXFLAGS +=-Ofast -march=native -D PRECISION=$(PRECISION)
 adh_app: CXXLIB += $(CXXLIBP)
 adh_app: $(OBJ_FILES)
-	$(COMPILE.fin) -o $@ $^ $(CXXLIB)
+	+$(COMPILE.fin) -o $@ $^ $(CXXLIB)
 	
 debug: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -Wfloat-conversion -D PRECISION=$(PRECISION)
 debug: CXXLIB += $(CXXLIBP)
 debug: $(OBJ_FILES)
-	$(COMPILE.fin) -o $@ $^ $(CXXLIB)
+	+$(COMPILE.fin) -o $@ $^ $(CXXLIB)
 
 # SWIG wrapper build always in double precision, single precision not working now with scipy optimization
 swig: CXXFLAGS +=-Ofast -march=native -D LESSINFO -D PRECISION=2
@@ -47,7 +47,7 @@ swig: CXXLIB += -lfftw3 -lfftw3_omp
 swig: $(LIB) swig/*.i
 	swig -python -c++ -DPRECISION=2 -I/usr/local/include/ -I./include -o swig/swig_wrap.cpp swig/all.i
 	$(COMPILE.cc) -c -I/usr/include/python2.7 -o swig/swig_wrap.o swig/swig_wrap.cpp
-	$(COMPILE.fin) -shared -o swig/_fastsim.so swig/swig_wrap.o $(LIB) $(CXXLIB)
+	+$(COMPILE.fin) -fuse-linker-plugin -shared -o swig/_fastsim.so swig/swig_wrap.o $(LIB) $(CXXLIB)
 	ln -sf ${CURDIR}/swig/_fastsim.so simpy/
 	ln -sf ${CURDIR}/swig/_fastsim.so lib/
 	ln -sf ${CURDIR}/swig/fastsim.py simpy/
@@ -61,7 +61,7 @@ check: tests/test
 	./tests/test
 
 tests/test: $(TEST_OBJ_FILES)
-	$(COMPILE.fin) -o tests/test $^ $(CXXLIB)
+	+$(COMPILE.fin) -o tests/test $^ $(CXXLIB)
 
 %.o: %.cpp $(PCH_O)
 	$(COMPILE.cc) -o $@ $<
