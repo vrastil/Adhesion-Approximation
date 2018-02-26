@@ -49,4 +49,7 @@ public:
 	// VARIABLES
     ChiSolver<FTYPE> sol;
     MultiGrid<3, FTYPE> drho;
+
+    // METHODS
+    void save_init_drho_k(const Mesh& dro, Mesh& aux_field);
 };

@@ -89,11 +89,11 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
 {
     print_unit_msg("create and initialize ChiSolver, solve sphere");
 
-    constexpr int N = 128;
+    constexpr int N = 64;
     constexpr FTYPE R2 = 4*4;
     int ix0 = N/2, iy0 = N/2, iz0 = N/2;
 
-    constexpr FTYPE rho_0 = 1E-2;
+    constexpr FTYPE rho_0 = 1E-5;
 
     // initialize Sim_Param
     const int argc = 1;
@@ -139,7 +139,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
 
 
     // set ChiSolver
-    sol.set_epsilon(2e-7*sim.chi_opt.phi);
+    sol.set_epsilon(2e-5*sim.chi_opt.phi);
     sol.set_time(1, sim.cosmo);
     sol.add_external_grid(&rho_grid);
     sol.set_initial_guess();

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "core.h"
 #include "core_power.h"
+#include "core_mesh.h"
 #include "chameleon.hpp"
 
 using namespace std;
@@ -80,7 +81,7 @@ ChiSolver<T>::ChiSolver(unsigned int N, int Nmin, const Sim_Param& sim, bool ver
 template<typename T>
 void ChiSolver<T>::set_time(T a_, const Cosmo_Param& cosmo)
 {
-    a = a;
+    a = a_;
     a_3 = pow(a_, 3);
     D = growth_factor(a_, cosmo);
 }
@@ -152,7 +153,22 @@ T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& inde
 App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
     App_Var<Particle_v>(sim, app_str), sol(sim.box_opt.mesh_num, sim), drho(sim.box_opt.mesh_num)
 {
+    sol.set_epsilon(2e-5*sim.chi_opt.phi);
+    sol.add_external_grid(&drho);
+}
 
+void  App_Var_chi::save_init_drho_k(const Mesh& dro_k, Mesh& aux_field)
+{
+    // save initial overdensity
+    cout << "Storing initial density distribution...\n";
+    aux_field = dro_k;
+    fftw_execute_dft_c2r(p_B, aux_field);
+    transform_Mesh_to_Grid(aux_field, drho);
+
+    // set initial guess to bulk field
+    cout << "Setting initial guess for chameleon field...\n";
+    sol.set_time(b, sim.cosmo);
+    sol.set_initial_guess();
 }
 
 #ifdef TEST

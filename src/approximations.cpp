@@ -2,6 +2,7 @@
 #include "core_app.h"
 #include "core_mesh.h"
 #include "core_out.h"
+#include "chameleon.hpp"
 
 using namespace std;
 
@@ -85,6 +86,28 @@ static void standard_preparation(T& APP)
 {
     /* Generating the right density distribution in k-space */	
     gen_rho_dist_k(APP.sim, APP.app_field[0], APP.p_F);
+
+    /* Print input power spectrum (one realisation), before Zel`dovich push */
+    if (APP.print_every) print_input_realisation(APP);
+    
+	/* Computing initial potential in k-space */
+	gen_pot_k(APP.app_field[0], APP.power_aux[0]);
+	
+	/* Computing displacement in k-space */
+	gen_displ_k(APP.app_field, APP.power_aux[0]);
+    
+    /* Computing displacement in q-space */
+    printf("Computing displacement in q-space...\n");
+    fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
+}
+
+static void chameleon_preparation(App_Var_chi& APP)
+{
+    /* Generating the right density distribution in k-space */	
+    gen_rho_dist_k(APP.sim, APP.app_field[0], APP.p_F);
+
+    /* Save initial density field */
+    APP.save_init_drho_k(APP.app_field[0], APP.power_aux[0]);
 
     /* Print input power spectrum (one realisation), before Zel`dovich push */
     if (APP.print_every) print_input_realisation(APP);
@@ -213,6 +236,28 @@ void adhesion_approximation(const Sim_Param &sim)
     };
     integration(APP, upd_pos);
 	printf("Adhesion approximation ended successfully.\n");
+}
+
+/**********************
+ * MODIFIED GRAVITIES *
+ *********************/
+
+void chameleon_gravity(const Sim_Param &sim)
+{
+    cout << "\n"
+	"*****************\n"
+	"CHAMELEON GRAVITY\n"
+    "*****************\n";
+    App_Var_chi APP(sim, "CHI");
+    APP.print_mem();
+    chameleon_preparation(APP);
+    init_cond_w_vel(APP); //< with velocities
+    init_pot_w_cic(APP); //< force interpolation corrections
+    auto upd_pos = [&](){
+        upd_pos_second_order(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< FP specific
+    };
+    integration(APP, upd_pos);
+    printf("Chameleon gravity simulation ended successfully.\n");
 }
 
 /***********************************

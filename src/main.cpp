@@ -33,6 +33,10 @@ int main(int argc, char* argv[]){
             
             /* MODIFIED FROZEN-POTENTIAL APPROXIMATION */
             if(sim.comp_app.FP_pp)	mod_frozen_potential(sim);
+
+            /* CHAMELEON GRAVITY (FROZEN-POTENTIAL APPROXIMATION) */
+            if(sim.comp_app.chi) chameleon_gravity(sim);
+
         } while (sim.simulate());
 
         clock_gettime(CLOCK_MONOTONIC, &finish);
