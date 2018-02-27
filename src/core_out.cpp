@@ -1,4 +1,5 @@
-#include "core.h"
+#include "stdafx.h"
+#include "params.hpp"
 #include "core_out.h"
 
 namespace fs = boost::filesystem;
@@ -276,28 +277,6 @@ void print_vel_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Da
 	}
 }
 
-void print_track_par(const Tracking& track, const Sim_Param &sim, string out_dir, string suffix)
-{
-	out_dir += "par_cut/";
-    string file_name = out_dir + "track_par_pos" + suffix + ".dat";
-    Ofstream File(file_name);
-
-    FTYPE x,y,z;
-    const FTYPE x_0 = sim.x_0();
-	cout << "Writing positons of " << track.num_track_par << " tracked particles into file " << file_name << "\n";
-	File << "# This file contains positions of particles in units [Mpc/h].\n"
-	        "# x [Mpc/h]\tz [Mpc/h]\n";
-	for (int i=0; i<track.num_track_par; i++){
-		for (unsigned j=0; j<track.num_step();j++){
-			x = track.par_pos[j][i].position[0];
-			y = track.par_pos[j][i].position[1];
-            z = track.par_pos[j][i].position[2];
-            File << x*x_0 << "\t" << z*x_0 << "\t" << y*x_0 << "\n";
-		}
-		File << "\n\n";
-	}
-}
-
 void print_rho_map(const Mesh& delta, const Sim_Param &sim, string out_dir, string suffix)
 {
     out_dir += "rho_map/";
@@ -360,5 +339,5 @@ void print_dens_bin(const vector<int> &dens_binned, string out_dir, string suffi
 	}
 }
 
-template void print_par_pos_cut_small(const std::vector<Particle_x>&, const Sim_Param&, string, string);
-template void print_par_pos_cut_small(const std::vector<Particle_v>&, const Sim_Param&, string, string);
+template void print_par_pos_cut_small(const std::vector<Particle_x<FTYPE>>&, const Sim_Param&, string, string);
+template void print_par_pos_cut_small(const std::vector<Particle_v<FTYPE>>&, const Sim_Param&, string, string);

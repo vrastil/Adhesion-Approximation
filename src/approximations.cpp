@@ -1,4 +1,5 @@
-#include "core.h"
+#include "stdafx.h"
+#include "params.hpp"
 #include "core_app.h"
 #include "core_mesh.h"
 #include "core_out.h"
@@ -152,7 +153,7 @@ void zel_app(const Sim_Param &sim)
 	"************************\n"
 	"ZEL`DOVICH APPROXIMATION\n"
     "************************\n";
-    App_Var<Particle_v> APP(sim, "ZA");
+    App_Var<Particle_v<FTYPE>> APP(sim, "ZA");
     APP.print_mem();
     standard_preparation(APP);
     init_cond_w_vel(APP); //< with velocities
@@ -169,7 +170,7 @@ void frozen_flow(const Sim_Param &sim)
 	"*************************\n"
 	"FROZEN-FLOW APPROXIMATION\n"
 	"*************************\n";
-    App_Var<Particle_v> APP(sim, "FF");
+    App_Var<Particle_v<FTYPE>> APP(sim, "FF");
     APP.print_mem();
     standard_preparation(APP);
     init_cond_w_vel(APP); //< with velocities
@@ -187,7 +188,7 @@ void frozen_potential(const Sim_Param &sim)
 	"******************************\n"
 	"FROZEN-POTENTIAL APPROXIMATION\n"
     "******************************\n";
-    App_Var<Particle_v> APP(sim, "FP");
+    App_Var<Particle_v<FTYPE>> APP(sim, "FP");
     APP.print_mem();
     standard_preparation(APP);
     init_cond_w_vel(APP); //< with velocities

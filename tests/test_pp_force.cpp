@@ -1,4 +1,6 @@
-#include "core.h"
+#include "stdafx.h"
+#include "params.hpp"
+
 #include "core_app.h"
 #include "core_mesh.h"
 
@@ -15,7 +17,7 @@ void force_test(Sim_Param& sim)
     APP.print_mem();
 
     cout << "Place particle in the middle of the box.\n";
-    APP.particles[0] = Particle_v(sim.mesh_num/2, sim.mesh_num/2., sim.mesh_num/2., 0, 0, 0); // middle, no velocity
+    APP.particles[0] = Particle_v<FTYPE>(sim.mesh_num/2, sim.mesh_num/2., sim.mesh_num/2., 0, 0, 0); // middle, no velocity
     get_rho_from_par(APP.particles, &APP.app_field[0], sim); // assign density
     printf("Transforming density into k-sapce...\n");
     fftw_execute_dft_r2c(APP.p_F_pwr, APP.app_field[0]); // get \rho(k)

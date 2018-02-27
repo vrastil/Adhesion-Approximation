@@ -4,7 +4,7 @@
  */
 
 #pragma once
-#include "core.h"
+#include "params.hpp"
 namespace emu
 {
     extern const int nmode;

@@ -1,4 +1,5 @@
-#include "core.h"
+#include "stdafx.h"
+#include "params.hpp"
 
 namespace po = boost::program_options;
 

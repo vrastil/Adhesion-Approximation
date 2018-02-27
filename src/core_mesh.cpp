@@ -1,4 +1,5 @@
-#include "core.h"
+#include "stdafx.h"
+#include "params.hpp"
 #include "core_mesh.h"
 
 #ifndef ORDER
@@ -6,6 +7,11 @@
 #endif
 
 using namespace std;
+
+template <typename T> static int sgn(T val)
+{
+	return (T(0) < val) - (val < T(0));
+}
 
 void get_k_vec(int N, int index, int* k_vec)
 {
@@ -63,7 +69,7 @@ void get_per(Vec_3D<T> &position, int perx, int pery, int perz)
     position[2] = get_per(position[2], perz);
 }
 
-void get_per(std::vector<Particle_v>& particles, const unsigned par_num, const int per)
+void get_per(std::vector<Particle_v<FTYPE>>& particles, const unsigned par_num, const int per)
 {
     #pragma omp parallel for
     for (unsigned i = 0; i < par_num; i++)

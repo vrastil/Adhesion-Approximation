@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "core.h"
+#include "params.hpp"
 #include "core_power.h"
 #include "core_mesh.h"
 #include "chameleon.hpp"
@@ -151,7 +151,7 @@ T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& inde
 }
 
 App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
-    App_Var<Particle_v>(sim, app_str), sol(sim.box_opt.mesh_num, sim), drho(sim.box_opt.mesh_num)
+    App_Var<Particle_v<FTYPE>>(sim, app_str), sol(sim.box_opt.mesh_num, sim), drho(sim.box_opt.mesh_num)
 {
     sol.set_epsilon(2e-5*sim.chi_opt.phi);
     sol.add_external_grid(&drho);

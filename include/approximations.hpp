@@ -1,5 +1,5 @@
 #pragma once
-#include "core.h"
+#include "params.hpp"
 
 // approximations in standard gravity
 

@@ -1,6 +1,8 @@
 #pragma once
 
-#include "core.h"
+#include "stdafx.h"
+#include "params.hpp"
+#include "app_var.hpp"
 #include "MultiGridSolver/multigrid_solver.h"
 
 template<typename T>
@@ -40,7 +42,7 @@ public:
  * @brief:	class containing variables for chameleon gravity
  */
  
- class App_Var_chi: public App_Var<Particle_v>
+ class App_Var_chi: public App_Var<Particle_v<FTYPE>>
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR

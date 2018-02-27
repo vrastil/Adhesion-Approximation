@@ -3,7 +3,8 @@
  * @brief:	functions handling operations with power spectra
  */
 #pragma once
-#include "core.h"
+#include "stdafx.h"
+#include "params.hpp"
 
 void norm_pwr(Cosmo_Param& cosmo);
 FTYPE norm_growth_factor(const Cosmo_Param& cosmo);

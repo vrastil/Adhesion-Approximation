@@ -1,4 +1,5 @@
-#include "core.h"
+#include "stdafx.h"
+#include "params.hpp"
 #include "core_mesh.h"
 #include "core_power.h"
 

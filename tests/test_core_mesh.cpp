@@ -1,5 +1,17 @@
 #include <catch.hpp>
 
+TEST_CASE( "UNIT TEST: sign function {sgn<T>}", "[core]" )
+{
+    print_unit_msg("sign function {sgn<T>}");
+
+    CHECK( sgn(0) == 0 );
+    CHECK( sgn(10) == 1 );
+    CHECK( sgn(-5) == -1 );
+    CHECK( sgn(0.) == 0 );
+    CHECK( sgn(0.34534f) == 1 );
+    CHECK( sgn(-1.34534E16) == -1 );
+}
+
 TEST_CASE( "UNIT TEST: periodicity functions {get_per}", "[core_mesh]" )
 {
     print_unit_msg("periodicity functions {get_per}");

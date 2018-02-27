@@ -4,7 +4,9 @@
  */
 
 #pragma once
-#include "core.h"
+#include "stdafx.h"
+#include "params.hpp"
+#include "core_power.h"
 
 /**
  * class  Ofstream handles opening and closing files, has 16MB buffer for output 
@@ -49,7 +51,6 @@ void print_vel_pow_spec_diff(const Data_Vec<FTYPE, 2> &pwr_spec_binned, const Da
 
 template <class T>
 void print_par_pos_cut_small(const std::vector<T>& particles, const Sim_Param &sim, std::string out_dir, std::string suffix);
-void print_track_par(const Tracking& track, const Sim_Param &sim, std::string out_dir, std::string suffix);
 void print_rho_map(const Mesh& rho, const Sim_Param &sim, std::string out_dir, std::string suffix);
 void print_projected_rho(const Mesh& delta, const Sim_Param &sim, std::string out_dir, std::string suffix);
 void print_dens_bin(const std::vector<int> &dens_binned, std::string out_dir, std::string suffix);

@@ -1,4 +1,6 @@
-#include "core.h"
+#include "stdafx.h"
+#include "params.hpp"
+
 #include "core_power.h"
 #include "approximations.hpp"
 

@@ -4,7 +4,8 @@
  */
 
 #pragma once
-#include "core.h"
+#include "stdafx.h"
+#include "params.hpp"
 
 void get_k_vec(int N, int index, int* k_vec);
 void get_k_vec(int N, int index, Vec_3D<int> &k_vec);
@@ -12,7 +13,7 @@ FTYPE get_k_sq(int N, int index);
 
 template<typename T> void get_per(Vec_3D<T> &position, int per);
 template<typename T> void get_per(Vec_3D<T> &position, int perx, int pery, int perz);
-void get_per(std::vector<Particle_v>& particles, const unsigned par_num, const int per);
+void get_per(std::vector<Particle_v<FTYPE>>& particles, const unsigned par_num, const int per);
 
 FTYPE get_distance(const Vec_3D<FTYPE> &x_1, const Vec_3D<FTYPE> &x_2, int per);
 Vec_3D<FTYPE> get_sgn_distance(const Vec_3D<FTYPE> &x_from, const Vec_3D<FTYPE> &x_to, int per);

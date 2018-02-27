@@ -1,10 +1,18 @@
+/**
+ * @file:	mesh.hpp
+ * @brief:	mesh data structure definitions
+ */
+
+#pragma once
+#include <vector>
+#include "../precision.hpp"
+#include "class_vec_3d.hpp"
 
 /**
- * @class:	Mesh_base<T>
+ * @class:	Mesh_base
  * @brief:	class handling basic mesh functions, the most important are creating and destroing the underlying data structure
  *			creates a mesh of N1*N2*N3 cells
  */
-
 
 template <typename T>
 class Mesh_base
@@ -118,3 +126,7 @@ public:
         return data[int(pos[0])*N2*N3+int(pos[1])*N3+int(pos[2])]; 
     }
 };
+
+#ifdef TEST
+#include "test_mesh.cpp"
+#endif

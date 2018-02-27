@@ -8,7 +8,9 @@
 //
 //
 
-#include "core.h"
+#include "stdafx.h"
+#include "params.hpp"
+
 namespace emu
 {
 #include "params.h"

@@ -28,6 +28,16 @@
 #include <vector>
 
 /*******************
+ * PROJECT HEADERS *
+ *******************/
+
+#include "precision.hpp"
+#include "templates/class_data_vec.hpp"
+#include "templates/class_mesh.hpp"
+#include "templates/class_particles.hpp"
+#include "templates/class_vec_3d.hpp"
+
+/*******************
  * OTHER LIBRARIES *
  *******************/
 
@@ -36,8 +46,6 @@
 #include <boost/any.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
-
-#include <fftw3.h>
 
 #include <gsl/gsl_deriv.h>
 #include <gsl/gsl_errno.h>
