@@ -108,7 +108,7 @@ static void chameleon_preparation(App_Var_chi& APP)
     gen_rho_dist_k(APP.sim, APP.app_field[0], APP.p_F);
 
     /* Save initial density field */
-    APP.save_init_drho_k(APP.app_field[0], APP.power_aux[0]);
+    APP.save_init_drho_k(APP.app_field[0], APP.app_field[1]);
 
     /* Print input power spectrum (one realisation), before Zel`dovich push */
     if (APP.print_every) print_input_realisation(APP);

@@ -159,6 +159,9 @@ App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
 
 void  App_Var_chi::save_init_drho_k(const Mesh& dro_k, Mesh& aux_field)
 {
+    // do not overwrite aux_field if Mesh of different type
+    if (dro_k.N != aux_field.N) throw std::range_error("Meshes of a different sizes!");
+
     // save initial overdensity
     cout << "Storing initial density distribution...\n";
     aux_field = dro_k;
