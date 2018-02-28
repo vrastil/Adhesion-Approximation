@@ -19,6 +19,7 @@ void upd_pos_first_order(const Sim_Param &sim, const FTYPE da, const FTYPE a, st
 void upd_pos_second_order(const Sim_Param &sim, const FTYPE da, const FTYPE a, std::vector<Particle_v<FTYPE>>& particles, const std::vector< Mesh> &force_field);
 void upd_pos_second_order_w_pp(const Sim_Param &sim, const FTYPE da, const FTYPE a, std::vector<Particle_v<FTYPE>>& particles, const std::vector< Mesh> &force_field,
                                LinkedList& linked_list, Interp_obj& fs_interp);
+void upd_pos_second_order_w_chi(const Sim_Param &sim, const FTYPE da, const FTYPE a, std::vector<Particle_v<FTYPE>>& particles, const std::vector< Mesh> &force_field);
 
 void gen_rho_dist_k(const Sim_Param &sim, Mesh& rho, const FFTW_PLAN_TYPE &p_F);
 void gen_pot_k(const Mesh& rho_k, Mesh& pot_k);

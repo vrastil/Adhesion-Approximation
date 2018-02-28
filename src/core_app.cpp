@@ -275,32 +275,41 @@ void kick_step_w_pp(const Sim_Param &sim, const FTYPE a, const FTYPE da, vector<
     }
 }
 
-void upd_pos_first_order(const Sim_Param &sim, const FTYPE da, const FTYPE a, vector<Particle_v<FTYPE>>& particles, const vector< Mesh> &vel_field)
-{
-    /// Leapfrog method for frozen-flow / adhesion
+static void stream_kick_stream(const Sim_Param &sim, const FTYPE da, vector<Particle_v<FTYPE>>& particles, function<void()> kick_step)
+{// general Leapfrog method: Stream-Kick-Stream & ensure periodicity
     stream_step(sim, da/2, particles);
-    kick_step_no_momentum(sim, a-da/2, particles, vel_field);
+    kick_step();
     stream_step(sim, da/2, particles);
     get_per(particles, sim.box_opt.par_num, sim.box_opt.mesh_num);
+}
+
+void upd_pos_first_order(const Sim_Param &sim, const FTYPE da, const FTYPE a, vector<Particle_v<FTYPE>>& particles, const vector< Mesh> &vel_field)
+{
+    // Leapfrog method for frozen-flow / adhesion
+    auto kick_step = [&](){ kick_step_no_momentum(sim, a-da/2, particles, vel_field); };
+    stream_kick_stream(sim, da, particles, kick_step);
 }
 
 void upd_pos_second_order(const Sim_Param &sim, const FTYPE da, const FTYPE a, vector<Particle_v<FTYPE>>& particles, const vector< Mesh> &force_field)
 {
     // Leapfrog method for frozen-potential
-    stream_step(sim, da/2, particles);
-    kick_step_w_momentum(sim, a-da/2, da, particles, force_field);
-    stream_step(sim, da/2, particles);
-    get_per(particles, sim.box_opt.par_num, sim.box_opt.mesh_num);
+    auto kick_step = [&](){ kick_step_w_momentum(sim, a-da/2, da, particles, force_field); };
+    stream_kick_stream(sim, da, particles, kick_step);
 }
 
 void upd_pos_second_order_w_pp(const Sim_Param &sim, const FTYPE da, const FTYPE a, vector<Particle_v<FTYPE>>& particles, const vector< Mesh> &force_field,
                                LinkedList& linked_list, Interp_obj& fs_interp)
 {
     // Leapfrog method for modified frozen-potential
-    stream_step(sim, da/2, particles);
-    kick_step_w_pp(sim, a-da/2, da, particles, force_field, linked_list, fs_interp);
-    stream_step(sim, da/2, particles);
-    get_per(particles, sim.box_opt.par_num, sim.box_opt.mesh_num);
+    auto kick_step = [&](){ kick_step_w_pp(sim, a-da/2, da, particles, force_field, linked_list, fs_interp); };
+    stream_kick_stream(sim, da, particles, kick_step);
+}
+
+void upd_pos_second_order_w_chi(const Sim_Param &sim, const FTYPE da, const FTYPE a, vector<Particle_v<FTYPE>>& particles, const vector< Mesh> &force_field)
+{
+    // Leapfrog method for chameleon gravity (frozen-potential)
+    auto kick_step = [&](){ kick_step_w_momentum(sim, a-da/2, da, particles, force_field); };
+    stream_kick_stream(sim, da, particles, kick_step);
 }
 
 static void gen_gauss_white_noise(const Sim_Param &sim, Mesh& rho)

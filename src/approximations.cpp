@@ -254,7 +254,7 @@ void chameleon_gravity(const Sim_Param &sim)
     init_cond_w_vel(APP); //< with velocities
     init_pot_w_cic(APP); //< force interpolation corrections
     auto upd_pos = [&](){
-        upd_pos_second_order(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< FP specific
+        upd_pos_second_order_w_chi(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< CHI specific
     };
     integration(APP, upd_pos);
     printf("Chameleon gravity simulation ended successfully.\n");
