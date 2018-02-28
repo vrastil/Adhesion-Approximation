@@ -8,12 +8,14 @@
 //
 //
 
-#include "stdafx.h"
-#include "params.hpp"
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_linalg.h>
+#include <gsl/gsl_spline.h>
+#include "emu.h"
 
 namespace emu
 {
-#include "params.h"
+#include "emu_params.h"
 
 // Sizes of stuff
 static int m[2] = {111, 36}, neta=2808, peta[2]={7, 28}, rs=8, p=8;

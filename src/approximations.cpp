@@ -1,5 +1,4 @@
-#include "stdafx.h"
-#include "params.hpp"
+#include "approximations.hpp"
 #include "core_app.h"
 #include "core_mesh.h"
 #include "core_out.h"

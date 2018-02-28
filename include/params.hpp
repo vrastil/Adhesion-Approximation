@@ -5,6 +5,11 @@
 
 #pragma once
 #include "stdafx.h"
+#include <ccl_config.h>
+#include <ccl_core.h>
+#include <json.hpp>
+#include <map>
+#include "precision.hpp"
 
 /* COSMOLOGICAL & CCL PARAMETERS*/
 class Cosmo_Param

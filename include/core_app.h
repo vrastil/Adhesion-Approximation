@@ -5,9 +5,10 @@
  
 #pragma once
 #include "stdafx.h"
-#include "params.hpp"
-#include "core_power.h"
 #include "app_var.hpp"
+#include "core_power.h"
+#include "params.hpp"
+#include "precision.hpp"
 
 void set_unpert_pos(const Sim_Param &sim, std::vector<Particle_x<FTYPE>>& particles);
 void set_unpert_pos_w_vel(const Sim_Param &sim, std::vector<Particle_v<FTYPE>>& particles, const std::vector< Mesh> &vel_field);

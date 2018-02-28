@@ -5,57 +5,7 @@
 
 #pragma once
 
-/**********************
- * STANDARD LIBRARIES *
- **********************/
-
-#include <algorithm>
 #include <cmath>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
-#include <fstream>
-#include <functional>
-#include <iomanip>
-#include <iostream>
-#include <iterator>
-#include <limits>
-#include <map>
-#include <random>
-#include <omp.h>
-#include <sstream>
+#include <fftw3.h>
+#include <string>
 #include <vector>
-
-/*******************
- * PROJECT HEADERS *
- *******************/
-
-#include "precision.hpp"
-#include "templates/class_data_vec.hpp"
-#include "templates/class_mesh.hpp"
-#include "templates/class_particles.hpp"
-#include "templates/class_vec_3d.hpp"
-
-/*******************
- * OTHER LIBRARIES *
- *******************/
-
-#include <ccl.h>
-
-#include <boost/any.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/program_options.hpp>
-
-#include <gsl/gsl_deriv.h>
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_fit.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_linalg.h>
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_min.h>
-#include <gsl/gsl_odeiv2.h>
-#include <gsl/gsl_sf_bessel.h>
-#include <gsl/gsl_spline.h>
-
-#include <json.hpp>

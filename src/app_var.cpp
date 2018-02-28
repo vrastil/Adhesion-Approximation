@@ -1,11 +1,7 @@
-#include "stdafx.h"
-
-#include "core_cmd.h"
+#include "app_var.hpp"
 #include "core_out.h"
 #include "core_app.h"
 #include "core_mesh.h"
-#include "core_power.h"
-#include "app_var.hpp"
 
 using namespace std;
 

@@ -3,6 +3,7 @@
  * @brief:	various parameter classes definitions
  */
 
+#include <omp.h>
 #include "params.hpp"
 #include "core_cmd.h"
 #include "core_out.h"

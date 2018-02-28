@@ -1,11 +1,11 @@
 #ifndef _GRID_HEADER
 #define _GRID_HEADER
+#include "stdafx.h"
 #include <assert.h>
 #include <cstring>  
 #include <iostream> 
 #include <fstream>
 #include <complex>
-#include <vector>
 #include <climits>
 
     //=========================================

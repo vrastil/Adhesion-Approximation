@@ -31,14 +31,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #ifndef __Engine_dot_hpp_
 #define __Engine_dot_hpp_
-
+#include "stdafx.h"
 #include "../features/compilerfeatures.h"
 #include "../array.h"
 #include <limits>
 #include <stdexcept>
 #include <sstream>
 #include <algorithm>
-#include <vector>
 #if R123_USE_CXX11_TYPE_TRAITS
 #include <type_traits>
 #endif

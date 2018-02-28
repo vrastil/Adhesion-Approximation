@@ -1,6 +1,9 @@
-#include "stdafx.h"
-#include "params.hpp"
-#include "core_mesh.h"
+#include <ccl_background.h>
+#include <ccl_power.h>
+#include <gsl/gsl_deriv.h>
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_fit.h>
+#include <gsl/gsl_integration.h>
 #include "core_power.h"
 
 using namespace std;

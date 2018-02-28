@@ -6,7 +6,10 @@
 #pragma once
 #include "stdafx.h"
 #include "core_power.h"
-
+#include "templates/class_data_vec.hpp"
+#include "templates/class_mesh.hpp"
+#include "templates/class_particles.hpp"
+#include "templates/class_vec_3d.hpp"
 
 /**
  * @class:	Tracking

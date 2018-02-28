@@ -5,8 +5,11 @@
 
 #pragma once
 #include "stdafx.h"
+#include <fstream>
 #include "params.hpp"
 #include "core_power.h"
+#include "templates/class_data_vec.hpp"
+#include "templates/class_mesh.hpp"
 
 /**
  * class  Ofstream handles opening and closing files, has 16MB buffer for output 

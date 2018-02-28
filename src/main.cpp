@@ -1,7 +1,8 @@
-#include "stdafx.h"
-#include "params.hpp"
 
-#include "core_power.h"
+#include <ctime>
+#include "stdafx.h"
+
+#include "params.hpp"
 #include "approximations.hpp"
 
 using namespace std;

@@ -1,5 +1,3 @@
-#include "stdafx.h"
-#include "params.hpp"
 #include "core_power.h"
 #include "core_mesh.h"
 #include "chameleon.hpp"

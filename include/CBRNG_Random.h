@@ -16,15 +16,8 @@
 #ifndef CBRNG_Random_Header_Included
 #define CBRNG_Random_Header_Included
 
-#if PRECISION == 1
-typedef float FTYPE;
-#elif PRECISION == 2
-typedef double FTYPE;
-#elif PRECISION == 3
-typedef long double FTYPE;
-#else
-typedef double FTYPE;
-#endif
+// define FTYPE
+#include "precision.hpp"
 
 // Here is where we choose our counter-based RNG
 #include <Random123/threefry.h>

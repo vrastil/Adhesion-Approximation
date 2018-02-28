@@ -1,5 +1,8 @@
 #include "stdafx.h"
-#include "params.hpp"
+#include <boost/any.hpp>
+#include <boost/program_options.hpp>
+#include <fstream>
+#include "core_cmd.h"
 
 namespace po = boost::program_options;
 

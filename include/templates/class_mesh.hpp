@@ -4,7 +4,7 @@
  */
 
 #pragma once
-#include <vector>
+#include "stdafx.h"
 #include "../precision.hpp"
 #include "class_vec_3d.hpp"
 

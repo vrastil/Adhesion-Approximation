@@ -1,14 +1,14 @@
 #ifndef _MULTIGRIDSOLVER_HEADER
 #define _MULTIGRIDSOLVER_HEADER
+#include "stdafx.h"
 #include <bitset>
 #include <assert.h>
 #include <iostream>
-#include <vector>
 #include <climits>
 #include <iomanip>
 #include <complex>
-#include "MultiGridSolver/grid.h"
-#include "MultiGridSolver/multigrid.h"
+#include "grid.h"
+#include "multigrid.h"
 
     //=============================================
     //                                           //

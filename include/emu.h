@@ -5,6 +5,9 @@
 
 #pragma once
 #include "params.hpp"
+#include "precision.hpp"
+#include "templates/class_data_vec.hpp"
+
 namespace emu
 {
     extern const int nmode;

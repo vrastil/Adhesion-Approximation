@@ -4,7 +4,6 @@
  */
 
 #pragma once
-#include <fftw3.h>
 
 #ifndef PRECISION
 #define PRECISION 2 // default double precision
@@ -32,7 +31,7 @@ typedef long double FTYPE;
 #define FFTW_EXEC_R2C MAKE_FFTW_NAME(execute_dft_r2c)
 #define FFTW_EXEC_C2R MAKE_FFTW_NAME(execute_dft_c2r)
 
-constexpr FTYPE PI = (FTYPE)M_PI;
+constexpr FTYPE PI = FTYPE(3.14159265358979323846); // 20 digits
 
 inline float pow(float base, unsigned exp)
 {

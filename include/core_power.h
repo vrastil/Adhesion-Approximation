@@ -3,8 +3,11 @@
  * @brief:	functions handling operations with power spectra
  */
 #pragma once
-#include "stdafx.h"
+#include <gsl/gsl_odeiv2.h>
+#include <gsl/gsl_spline.h>
+#include "templates/class_data_vec.hpp"
 #include "params.hpp"
+#include "precision.hpp"
 
 void norm_pwr(Cosmo_Param& cosmo);
 FTYPE norm_growth_factor(const Cosmo_Param& cosmo);

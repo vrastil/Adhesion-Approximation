@@ -1,5 +1,3 @@
-#include "stdafx.h"
-#include "params.hpp"
 #include "core_mesh.h"
 
 #ifndef ORDER

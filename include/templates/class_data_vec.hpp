@@ -1,6 +1,6 @@
 #pragma once
+#include "stdafx.h"
 #include <array>
-#include <vector>
 
 /**
  * @class:	Data_Vec
@@ -28,7 +28,7 @@ public:
     void resize (size_t n){
         for (auto &vec : data) vec.resize(n);
     }
-    void resize (size_t n, FTYPE val){
+    void resize (size_t n, T val){
         for (auto &vec : data) vec.resize(n, val);
     }
     void reserve(size_t n){
@@ -38,7 +38,7 @@ public:
         for (auto &vec : data) vec.erase(vec.begin() + index);
     }
     // MODIFIERS
-    void fill(const T& val){
+    void fill(T val){
         for (auto &vec : data) std::fill(vec.begin(), vec.end(), val);
     }
 };

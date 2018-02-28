@@ -1,6 +1,6 @@
-#include "stdafx.h"
-#include "params.hpp"
+#include <boost/filesystem.hpp>
 #include "core_out.h"
+#include "templates/class_particles.hpp"
 
 namespace fs = boost::filesystem;
 using namespace std;

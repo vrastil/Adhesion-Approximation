@@ -1,8 +1,6 @@
-#include "stdafx.h"
-#include "params.hpp"
+#include <algorithm>
+#include "core_app.h"
 #include "core_mesh.h"
-#include "core_power.h"
-#include "app_var.hpp"
 #include "CBRNG_Random.h"
 
 #ifndef ORDER
@@ -10,6 +8,59 @@
 #endif
 
 using namespace std;
+
+
+template<typename T>
+static T mean(const std::vector<T>& data)
+{
+    T tmp(0);
+	
+	#pragma omp parallel for reduction(+:tmp)
+	for (auto it = data.begin(); it < data.end(); ++it) tmp += *it;
+	
+	return tmp / data.size();
+}
+
+static FTYPE mean(const Mesh& data)
+{
+    return mean(data.data);
+}
+
+template<typename T>
+static T std_dev(const std::vector<T>& data, T mean)
+{
+    T tmp(0);
+	
+	#pragma omp parallel for reduction(+:tmp)
+	for (auto it = data.begin(); it < data.end(); ++it) tmp += pow2(*it-mean);
+	
+	return sqrt(tmp / data.size());
+}
+
+static FTYPE std_dev(const Mesh& data, FTYPE mean)
+{
+    return std_dev(data.data, mean);
+}
+
+template<typename T>
+static T min(const std::vector<T>& data)
+{
+    return *std::min_element(data.begin(), data.end());
+}
+
+static FTYPE min(const Mesh& data){
+    return min(data.data);
+}
+
+template<typename T>
+static T max(const std::vector<T>& data)
+{
+    return *std::max_element(data.begin(), data.end());
+}
+
+static FTYPE max(const Mesh& data){
+    return max(data.data);
+}
 
 static void set_unpert_pos_one_par(Vec_3D<int>& unpert_pos, const unsigned par_index, const unsigned par_per_dim, const unsigned Ng)
 {
