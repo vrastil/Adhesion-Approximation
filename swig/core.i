@@ -1,6 +1,8 @@
 // C++ code to wrap
 %{
-#include "core.h"
+#include "precision.hpp"
+#include "templates/class_data_vec.hpp"
+#include "params.hpp"
 %}
 
 %rename(__assign__) *::operator=;
@@ -8,7 +10,9 @@
 
 // Parse original header file
 %ignore Cosmo_Param::operator void*;
-%include "core.h"
+%include "precision.hpp"
+%include "templates/class_data_vec.hpp"
+%include "params.hpp"
 
 // Instantiate templates
 TEMP_CLASS_GEN(Data_Vec)
