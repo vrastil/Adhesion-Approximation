@@ -95,7 +95,3 @@ Vec_3D<T> operator/(Vec_3D<T> lhs, U rhs)
     for(T& val : lhs) val /= rhs;
     return lhs;
 }
-
-#ifdef TEST
-#include "test_vec_3d.cpp"
-#endif

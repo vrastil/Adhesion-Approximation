@@ -34,7 +34,7 @@ public:
     void set_initial_guess();
 
     // get chi_bulk for given initial overdensity
-    T chi_min(T delta_0) const { return chi_0*pow(a_3/(1+D*delta_0), 1/(1-n)); }
+    T chi_min(T delta_0) const { return chi_0*std::pow(a_3/(1+D*delta_0), 1/(1-n)); }
 };
 
 /**

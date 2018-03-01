@@ -1,4 +1,5 @@
 #include <catch.hpp>
+#include "test.hpp"
 
 TEST_CASE( "UNIT TEST: vector class {Vec_3D<T>}", "[core]" )
 {

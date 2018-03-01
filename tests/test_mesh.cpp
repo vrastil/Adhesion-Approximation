@@ -1,4 +1,5 @@
 #include <catch.hpp>
+#include "test.hpp"
 
 TEST_CASE( "UNIT TEST: mesh class {Mesh_base<T>}", "[core]" )
 {

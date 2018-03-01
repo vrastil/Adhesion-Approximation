@@ -339,6 +339,7 @@ template class App_Var<Particle_v<FTYPE>>;
 #ifdef TEST
 
 #include <catch.hpp>
+#include "test.hpp"
 
 TEST_CASE( "UNIT TEST: tracking class {Tracking}", "[core]" )
 {

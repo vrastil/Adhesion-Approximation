@@ -3,6 +3,7 @@
 
 #include "core_app.h"
 #include "core_mesh.h"
+#include "test.hpp"
 
 using namespace std;
 void force_test(Sim_Param& sim)

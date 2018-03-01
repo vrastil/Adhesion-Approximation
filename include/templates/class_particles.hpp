@@ -55,7 +55,3 @@ public:
 	T &operator()(int i){ return velocity[i]; }
 	const T& operator()(int i) const{ return velocity[i]; }
 };
-
-#ifdef TEST
-#include "test_particles.cpp"
-#endif

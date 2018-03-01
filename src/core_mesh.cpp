@@ -264,5 +264,8 @@ template class IT<ORDER+1>;
 template class IT<3>;
 
 #ifdef TEST
+#include "test_vec_3d.cpp"
+#include "test_particles.cpp"
+#include "test_mesh.cpp"
 #include "test_core_mesh.cpp"
 #endif

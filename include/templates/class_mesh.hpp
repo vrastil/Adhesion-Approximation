@@ -8,6 +8,10 @@
 #include "../precision.hpp"
 #include "class_vec_3d.hpp"
 
+// from "core_mesh.hpp"
+template<typename T> void get_per(Vec_3D<T> &position, int per);
+template<typename T> void get_per(Vec_3D<T> &position, int perx, int pery, int perz);
+
 /**
  * @class:	Mesh_base
  * @brief:	class handling basic mesh functions, the most important are creating and destroing the underlying data structure
@@ -126,7 +130,3 @@ public:
         return data[int(pos[0])*N2*N3+int(pos[1])*N3+int(pos[2])]; 
     }
 };
-
-#ifdef TEST
-#include "test_mesh.cpp"
-#endif

@@ -1,6 +1,7 @@
 #include <catch.hpp>
 #include "core_mesh.h"
 #include "core_out.h"
+#include "test.hpp"
 
 TEST_CASE( "UNIT TEST: create Multigrid and copy data to/from Mesh", "[multigrid]" )
 {
@@ -83,6 +84,22 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[cha
         get_neighbor_gridindex(index_list, i, N);
         CHECK( sol.l_operator(level, index_list, true) == Approx(0.));
     }
+}
+
+template<typename T>
+static T mean(const std::vector<T>& data)
+{
+    T tmp(0);
+	
+	#pragma omp parallel for reduction(+:tmp)
+	for (auto it = data.begin(); it < data.end(); ++it) tmp += *it;
+	
+	return tmp / data.size();
+}
+
+static FTYPE mean(const Mesh& data)
+{
+    return mean(data.data);
 }
 
 TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chameleon]" )

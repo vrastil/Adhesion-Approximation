@@ -1,4 +1,5 @@
 #include <catch.hpp>
+#include "test.hpp"
 
 TEST_CASE( "UNIT TEST: growth functions {growth_factor, growth_rate, growth_change}", "[core_power]" )
 {
