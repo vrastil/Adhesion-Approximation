@@ -14,15 +14,13 @@ static void aa_convolution(App_Var_AA& APP);
 * INITIAL CONDITIONS *
 *********************/
 
-template<class T>
-static void init_cond_no_vel(T& APP)
+static void init_cond(App_Var<Particle_x<FTYPE>>& APP)
 {
     printf("\nSetting initial positions of particles...\n");
-    set_pert_pos(APP.sim, APP.integ_opt.b_in, APP.particles, APP.app_field);
+    set_pert_pos(APP.sim, APP.sim.integ_opt.b_in, APP.particles, APP.app_field);
 }
 
-template<class T>
-static void init_cond_w_vel(T& APP)
+static void init_cond(App_Var<Particle_v<FTYPE>>& APP)
 {
     printf("\nSetting initial positions and velocitis of particles...\n");
 	set_pert_pos_w_vel(APP.sim, APP.sim.integ_opt.b_in, APP.particles, APP.app_field);
@@ -101,7 +99,7 @@ static void standard_preparation(T& APP)
     fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
 }
 
-static void chameleon_preparation(App_Var_chi& APP)
+static void standard_preparation(App_Var_chi& APP)
 {
     /* Generating the right density distribution in k-space */	
     gen_rho_dist_k(APP.sim, APP.app_field[0], APP.p_F);
@@ -128,13 +126,13 @@ static void chameleon_preparation(App_Var_chi& APP)
 **************/
 
 template<class T>
-static void integration(T& APP, function<void()> upd_pos)
+static void integration(T& APP, function<void(T&)> upd_pos)
 {
     print_init(APP); // WARNING: power_aux[0] is modified
 	while(APP.integrate())
 	{
 		printf("\nStarting computing step with z = %.2f (b = %.3f)\n", APP.z(), APP.b);
-		upd_pos();
+		upd_pos(APP);
         APP.track.update_track_par(APP.particles);
 		if (APP.printing()) APP.print_output();
 		APP.upd_time();
@@ -146,96 +144,88 @@ static void integration(T& APP, function<void()> upd_pos)
 * APPROXIMATIONS *
 *****************/
 
+template<class T>
+static void general_sim_flow(const Sim_Param &sim, const string& app_short, const string& app_long,
+                             function<void(T&)> upd_pos, function<void(T&)> pot_corr = [](T&){;})
+{
+    // print simulation name
+    string app_long_upper(app_long);
+    transform(app_long_upper.begin(), app_long_upper.end(), app_long_upper.begin(), ::toupper);
+    cout << "\n" << std::string(app_long_upper.length(), '*') << "\n"
+         << app_long_upper
+         << "\n" << std::string(app_long_upper.length(), '*') << "\n";
+
+    // initialize approximation & print memory
+    T APP(sim, app_short);
+    APP.print_mem();
+
+    // standard preparation & init conditions & possible corrections
+    standard_preparation(APP);
+    init_cond(APP); //< with or without velocities
+    pot_corr(APP);
+
+    // integration
+    integration(APP, upd_pos);
+
+    cout << app_long << " ended successfully.\n";
+}
+
 void zel_app(const Sim_Param &sim)
 {
-    cout << "\n"
-	"************************\n"
-	"ZEL`DOVICH APPROXIMATION\n"
-    "************************\n";
-    App_Var<Particle_v<FTYPE>> APP(sim, "ZA");
-    APP.print_mem();
-    standard_preparation(APP);
-    init_cond_w_vel(APP); //< with velocities
-    auto upd_pos = [&](){
+    typedef App_Var<Particle_v<FTYPE>> APP_t;
+    auto upd_pos = [](APP_t& APP){
         set_pert_pos_w_vel(APP.sim, APP.b, APP.particles, APP.app_field); //< ZA with velocitites
     };
-    integration(APP, upd_pos);
-	printf("Zel`dovich approximation ended successfully.\n");
+    general_sim_flow<APP_t>(sim, "ZA", "Zel`dovich approximation", upd_pos);
 }
 
 void frozen_flow(const Sim_Param &sim)
 {
-	cout << "\n"
-	"*************************\n"
-	"FROZEN-FLOW APPROXIMATION\n"
-	"*************************\n";
-    App_Var<Particle_v<FTYPE>> APP(sim, "FF");
-    APP.print_mem();
-    standard_preparation(APP);
-    init_cond_w_vel(APP); //< with velocities
-    init_pot_w_cic(APP); //< force interpolation corrections
-    auto upd_pos = [&](){
+    typedef App_Var<Particle_v<FTYPE>> APP_t;
+    auto upd_pos = [](APP_t& APP){
         upd_pos_first_order(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< FF specific
     };
-    integration(APP, upd_pos);
-    printf("Frozen-flow approximation ended successfully.\n");
+     auto pot_corr = [](APP_t& APP){
+        init_pot_w_cic(APP); //< force interpolation corrections
+    };
+    general_sim_flow<APP_t>(sim, "FF", "Frozen-flow approximation", upd_pos, pot_corr);
 }
 
 void frozen_potential(const Sim_Param &sim)
 {
-	cout << "\n"
-	"******************************\n"
-	"FROZEN-POTENTIAL APPROXIMATION\n"
-    "******************************\n";
-    App_Var<Particle_v<FTYPE>> APP(sim, "FP");
-    APP.print_mem();
-    standard_preparation(APP);
-    init_cond_w_vel(APP); //< with velocities
-    init_pot_w_cic(APP); //< force interpolation corrections
-    auto upd_pos = [&](){
+    typedef App_Var<Particle_v<FTYPE>> APP_t;
+    auto upd_pos = [](APP_t& APP){
         upd_pos_second_order(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< FP specific
     };
-    integration(APP, upd_pos);
-    printf("Frozen-potential approximation ended successfully.\n");
+     auto pot_corr = [](APP_t& APP){
+        init_pot_w_cic(APP); //< force interpolation corrections
+    };
+    general_sim_flow<APP_t>(sim, "FP", "Frozen-potential approximation", upd_pos, pot_corr);
 }
 
 void mod_frozen_potential(const Sim_Param &sim)
 {
-	cout << "\n"
-	"***************************************\n"
-	"MODIFIED FROZEN-POTENTIAL APPROXIMATION\n"
-	"***************************************\n";
-    
-    App_Var_FP_mod APP(sim, "FP_pp");
-    APP.print_mem();
-    standard_preparation(APP);
-    init_cond_w_vel(APP); //< with velocities
-    init_pot_w_s2(APP); //< force interpolation corrections, long range potential for S2-shaped particles
-    auto upd_pos = [&](){
+    typedef App_Var_FP_mod APP_t;
+    auto upd_pos = [](APP_t& APP){
         upd_pos_second_order_w_pp(APP.sim, APP.db, APP.b, APP.particles, APP.app_field, APP.linked_list, APP.fs_interp); //< FP_pp specific
     };
-    integration(APP, upd_pos);
-    printf("Modified Frozen-potential approximation ended successfully.\n");
+     auto pot_corr = [](APP_t& APP){
+        init_pot_w_s2(APP); //< force interpolation corrections, long range potential for S2-shaped particles
+    };
+    general_sim_flow<APP_t>(sim, "FP_pp", "Modified Frozen-potential approximation", upd_pos, pot_corr);
 }
 
 void adhesion_approximation(const Sim_Param &sim)
 {
-	cout << "\n"
-	"**********************\n"
-	"ADHESION APPROXIMATION\n"
-    "**********************\n";
-
-    App_Var_AA APP(sim, "AA");
-    APP.print_mem();
-    standard_preparation(APP);
-    init_cond_w_vel(APP); //< with velocities
-    init_adhesion(APP); //< AA specific
-    auto upd_pos = [&](){
+    typedef App_Var_AA APP_t;
+    auto upd_pos = [](APP_t& APP){
         aa_convolution(APP); //< AA specific
         upd_pos_first_order(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< AA specific
     };
-    integration(APP, upd_pos);
-	printf("Adhesion approximation ended successfully.\n");
+     auto pot_corr = [](APP_t& APP){
+        init_adhesion(APP); //< AA specific
+    };
+    general_sim_flow<APP_t>(sim, "AA", "Adhesion approximation", upd_pos, pot_corr);
 }
 
 /**********************
@@ -244,20 +234,14 @@ void adhesion_approximation(const Sim_Param &sim)
 
 void chameleon_gravity(const Sim_Param &sim)
 {
-    cout << "\n"
-	"*****************\n"
-	"CHAMELEON GRAVITY\n"
-    "*****************\n";
-    App_Var_chi APP(sim, "CHI");
-    APP.print_mem();
-    chameleon_preparation(APP);
-    init_cond_w_vel(APP); //< with velocities
-    init_pot_w_cic(APP); //< force interpolation corrections
-    auto upd_pos = [&](){
+    typedef App_Var_chi APP_t;
+    auto upd_pos = [](APP_t& APP){
         upd_pos_second_order_w_chi(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< CHI specific
     };
-    integration(APP, upd_pos);
-    printf("Chameleon gravity simulation ended successfully.\n");
+     auto pot_corr = [](APP_t& APP){
+        init_pot_w_cic(APP); //< force interpolation corrections
+    };
+    general_sim_flow<APP_t>(sim, "CHI", "Chameleon gravity", upd_pos, pot_corr);
 }
 
 /***********************************
