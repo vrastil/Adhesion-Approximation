@@ -10,13 +10,13 @@
 #include "precision.hpp"
 
 void norm_pwr(Cosmo_Param& cosmo);
-FTYPE norm_growth_factor(const Cosmo_Param& cosmo);
-FTYPE growth_factor(FTYPE a, const Cosmo_Param& cosmo);
-FTYPE growth_rate(FTYPE a, const Cosmo_Param& cosmo);
-FTYPE growth_change(FTYPE a, const Cosmo_Param& cosmo);
-FTYPE Omega_lambda(FTYPE a, const Cosmo_Param& cosmo);
-FTYPE lin_pow_spec(FTYPE a, FTYPE k, const Cosmo_Param& cosmo);
-FTYPE non_lin_pow_spec(FTYPE a, FTYPE k, const Cosmo_Param& cosmo);
+FTYPE_t norm_growth_factor(const Cosmo_Param& cosmo);
+FTYPE_t growth_factor(FTYPE_t a, const Cosmo_Param& cosmo);
+FTYPE_t growth_rate(FTYPE_t a, const Cosmo_Param& cosmo);
+FTYPE_t growth_change(FTYPE_t a, const Cosmo_Param& cosmo);
+FTYPE_t Omega_lambda(FTYPE_t a, const Cosmo_Param& cosmo);
+FTYPE_t lin_pow_spec(FTYPE_t a, FTYPE_t k, const Cosmo_Param& cosmo);
+FTYPE_t non_lin_pow_spec(FTYPE_t a, FTYPE_t k, const Cosmo_Param& cosmo);
 
 /**
  * @class:	ODE_Solver
@@ -101,6 +101,6 @@ public:
 };
 
 template<class P> // everything callable P_k(k)
-void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<FTYPE, 2>& corr_func_binned);
-void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, FTYPE a, Data_Vec<FTYPE, 2>& corr_func_binned);
-void gen_corr_func_binned_gsl_qawf_nl(const Sim_Param &sim, FTYPE a, Data_Vec<FTYPE, 2>& corr_func_binned);
+void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<FTYPE_t, 2>& corr_func_binned);
+void gen_corr_func_binned_gsl_qawf_lin(const Sim_Param &sim, FTYPE_t a, Data_Vec<FTYPE_t, 2>& corr_func_binned);
+void gen_corr_func_binned_gsl_qawf_nl(const Sim_Param &sim, FTYPE_t a, Data_Vec<FTYPE_t, 2>& corr_func_binned);

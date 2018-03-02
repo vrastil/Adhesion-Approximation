@@ -6,7 +6,7 @@
    into C++ functions for speed
  - handles numpy arrays
  - cosmo == C++ class Cosmo_Param, accessible through SimInfo.sim.cosmo
- - FTYPE=[float, double, long double]
+ - FTYPE_t=[float, double, long double]
 """
 
 import numpy as np
@@ -20,13 +20,13 @@ def get_a_from_A(cosmo, A):
     return brentq(f, 0, 1)
 
 def get_ndarray(Data_Vec):
-    """ copy C++ class Data_Vec<FTYPE, N> into numpy array """
+    """ copy C++ class Data_Vec<FTYPE_t, N> into numpy array """
     dim = Data_Vec.dim()
     data = [[x for x in Data_Vec[i]] for i in xrange(dim)]
     return np.array(data)
 
 def get_Data_vec(data):
-    """ copy 2D data 'dim x size' into C++ class Data_Vec<FTYPE, dim> """
+    """ copy 2D data 'dim x size' into C++ class Data_Vec<FTYPE_t, dim> """
     dim = len(data)
     size = len(data[0])
     if dim == 2:
@@ -34,7 +34,7 @@ def get_Data_vec(data):
     elif dim == 3:
         Data_Vec = fs.Data_Vec_3(size)
     else:
-        raise IndexError("only Data_Vec<FTYPE, dim> of 'dim' 2 or 3 supported")
+        raise IndexError("only Data_Vec<FTYPE_t, dim> of 'dim' 2 or 3 supported")
     for j in xrange(dim):
         for i in xrange(size):
             Data_Vec[j][i] = data[j][i]

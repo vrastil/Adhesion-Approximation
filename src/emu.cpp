@@ -135,7 +135,7 @@ void emuInit() {
 } // emuInit()
 
 // Actual emulation
-void emu(FTYPE *xstar, FTYPE *ystar) {
+void emu(FTYPE_t *xstar, FTYPE_t *ystar) {
     
     static double inited=0;
     int ee, i, j, k;
@@ -295,17 +295,17 @@ void emu(FTYPE *xstar, FTYPE *ystar) {
     }
 }
 
-Data_Vec<FTYPE, 2> init_emu(const Sim_Param &sim, FTYPE z)
+Data_Vec<FTYPE_t, 2> init_emu(const Sim_Param &sim, FTYPE_t z)
 {
     #ifndef LESSINFO
     std::cout << "Initializing emulator...\n";
     #endif
-    Data_Vec<FTYPE, 2> emu_data(nmode);
+    Data_Vec<FTYPE_t, 2> emu_data(nmode);
     for (unsigned i = 0; i < emu_data.size(); i++){
         emu_data[0][i] = mode[i] / sim.cosmo.h; // convert emulator k [1/Mpc] into [h/Mpc]
     }
 
-    FTYPE xstar[9];
+    FTYPE_t xstar[9];
     xstar[0] = sim.cosmo.Omega_m*pow2(sim.cosmo.h); // omega_m
     xstar[1] = sim.cosmo.Omega_b*pow2(sim.cosmo.h); // omega_b
     xstar[2] = sim.cosmo.sigma8; // sigma_8

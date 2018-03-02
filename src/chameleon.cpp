@@ -4,13 +4,13 @@
 
 using namespace std;
 
-constexpr FTYPE MPL = (FTYPE)1; // chi in units of Planck mass
-// (FTYPE)2.435E18; // reduced Planck mass, [GeV/c^2]
-// constexpr FTYPE fm_to_Mpc = (FTYPE)3.2407792896664E-38; // 1 fm = ? Mpc
-// constexpr FTYPE hbarc = (FTYPE)197.327053; // reduced Planck constant times speed of light, [MeV fm]
-// constexpr FTYPE hbarc_cosmo = hbarc*FTYPE(1E-9)*fm_to_Mpc; // [GeV Mpc]
-// constexpr FTYPE G_N = hbarc_cosmo*FTYPE(6.70711*1E-39); // gravitational constant, [GeV Mpc / (GeV/c^2)^2]
- constexpr FTYPE c_kms = (FTYPE)299792.458; // speed of light [km / s]
+constexpr FTYPE_t MPL = (FTYPE_t)1; // chi in units of Planck mass
+// (FTYPE_t)2.435E18; // reduced Planck mass, [GeV/c^2]
+// constexpr FTYPE_t fm_to_Mpc = (FTYPE_t)3.2407792896664E-38; // 1 fm = ? Mpc
+// constexpr FTYPE_t hbarc = (FTYPE_t)197.327053; // reduced Planck constant times speed of light, [MeV fm]
+// constexpr FTYPE_t hbarc_cosmo = hbarc*FTYPE_t(1E-9)*fm_to_Mpc; // [GeV Mpc]
+// constexpr FTYPE_t G_N = hbarc_cosmo*FTYPE_t(6.70711*1E-39); // gravitational constant, [GeV Mpc / (GeV/c^2)^2]
+ constexpr FTYPE_t c_kms = (FTYPE_t)299792.458; // speed of light [km / s]
 
 template<typename T>
 void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
@@ -149,7 +149,7 @@ T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& inde
 }
 
 App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
-    App_Var<Particle_v<FTYPE>>(sim, app_str), sol(sim.box_opt.mesh_num, sim), drho(sim.box_opt.mesh_num)
+    App_Var<Particle_v<FTYPE_t>>(sim, app_str), sol(sim.box_opt.mesh_num, sim), drho(sim.box_opt.mesh_num)
 {
     sol.set_epsilon(2e-5*sim.chi_opt.phi);
     sol.add_external_grid(&drho);

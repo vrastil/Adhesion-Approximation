@@ -91,7 +91,7 @@ public:
  * @brief:	creates a mesh of N*N*(N+2) cells
  */
 
-class Mesh : public Mesh_base<FTYPE>
+class Mesh : public Mesh_base<FTYPE_t>
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR
@@ -116,15 +116,15 @@ public:
     void reset_im() { reset_part(1); }
     
 	// OPERATORS
-	using Mesh_base<FTYPE>::operator ();
+	using Mesh_base<FTYPE_t>::operator ();
 
-    template<typename U> FTYPE& operator()(Vec_3D<U> pos)
+    template<typename U> FTYPE_t& operator()(Vec_3D<U> pos)
     {
         get_per(pos, N);
         return data[int(pos[0])*N2*N3+int(pos[1])*N3+int(pos[2])]; 
     }
 
-	template<typename U> const FTYPE& operator()(Vec_3D<U> pos) const
+	template<typename U> const FTYPE_t& operator()(Vec_3D<U> pos) const
     {
         get_per(pos, N);
         return data[int(pos[0])*N2*N3+int(pos[1])*N3+int(pos[2])]; 

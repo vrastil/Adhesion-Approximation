@@ -9,7 +9,7 @@ TEST_CASE( "UNIT TEST: create Multigrid and copy data to/from Mesh", "[multigrid
 
     constexpr unsigned N = 32;
     srand(time(0));
-    MultiGrid<3, FTYPE> grid(N);
+    MultiGrid<3, FTYPE_t> grid(N);
     Mesh mesh_from(N);
     Mesh mesh_to(N);
 
@@ -40,8 +40,8 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[cha
     print_unit_msg("create and initialize ChiSolver, check bulk field");
 
     constexpr unsigned N = 32;
-    constexpr FTYPE a = 0.5;
-    constexpr FTYPE rho_0 = 0.3;
+    constexpr FTYPE_t a = 0.5;
+    constexpr FTYPE_t rho_0 = 0.3;
     const std::vector<unsigned> some_indices = {4, N*2+5, N*N*4+8*N+5};
 
     // initialize Sim_Param
@@ -50,13 +50,13 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[cha
     Sim_Param sim(argc, argv);
 
     // initialize ChiSolver
-    ChiSolver<FTYPE> sol(N, sim);
+    ChiSolver<FTYPE_t> sol(N, sim);
 
     // check thowing of exceptions in uninitialised state
     CHECK_THROWS_AS( sol.set_initial_guess(), std::out_of_range );
 
     // initialize overdensity -- constant density
-    MultiGrid<3, FTYPE> rho_grid(N);
+    MultiGrid<3, FTYPE_t> rho_grid(N);
     {
         Mesh rho(N);
         rho.assign(rho_0);
@@ -72,8 +72,8 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[cha
     sol.set_initial_guess();
 
     // check bulk field
-    const FTYPE chi_bulk = sol.chi_min(rho_0);
-    FTYPE const* const chi = sol.get_y();
+    const FTYPE_t chi_bulk = sol.chi_min(rho_0);
+    FTYPE_t const* const chi = sol.get_y();
     for(unsigned i : some_indices) REQUIRE( chi[i] == Approx(chi_bulk));
 
     // check that EOM is satisfied
@@ -97,7 +97,7 @@ static T mean(const std::vector<T>& data)
 	return tmp / data.size();
 }
 
-static FTYPE mean(const Mesh& data)
+static FTYPE_t mean(const Mesh& data)
 {
     return mean(data.data);
 }
@@ -107,10 +107,10 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     print_unit_msg("create and initialize ChiSolver, solve sphere");
 
     constexpr int N = 64;
-    constexpr FTYPE R2 = 4*4;
+    constexpr FTYPE_t R2 = 4*4;
     int ix0 = N/2, iy0 = N/2, iz0 = N/2;
 
-    constexpr FTYPE rho_0 = 1E-5;
+    constexpr FTYPE_t rho_0 = 1E-5;
 
     // initialize Sim_Param
     const int argc = 1;
@@ -127,11 +127,11 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
 
     // initialize overdensity -- constant density in sphere of radius R, center at x0, y0, z0
     MultiGrid<3, long double> rho_grid(N);
-    FTYPE mean_rho;
+    FTYPE_t mean_rho;
     {
         Mesh rho(N);
         const int N_tot = rho.length;
-        FTYPE R2_;
+        FTYPE_t R2_;
         #pragma omp parallel for private(R2_)
         for (int ix = 0; ix < N; ++ix)
         {
@@ -183,9 +183,9 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     File << "# phi gravitational :=\t" << 3./2.*R2*rho_0 << "\n";
     File << "# r\t(chi(r)-chi_0)/chi_prefactor\n";
     const long double chi_0 = sol.chi_min(-mean_rho);
-    // const FTYPE chi_0 = max(chi_full);
-    // const FTYPE chi_0 = chi_full(0, 0, 0);
-    // const FTYPE chi_0 = 2*sim.chi_opt.beta*MPL*sim.chi_opt.phi;
+    // const FTYPE_t chi_0 = max(chi_full);
+    // const FTYPE_t chi_0 = chi_full(0, 0, 0);
+    // const FTYPE_t chi_0 = 2*sim.chi_opt.beta*MPL*sim.chi_opt.phi;
 
     auto print_r_chi = [&File, ix0, iy0, iz0,&chi_full, chi_0, chi_prefactor]
                        (int i, int j, int k){

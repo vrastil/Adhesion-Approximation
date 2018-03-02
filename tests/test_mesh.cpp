@@ -72,22 +72,22 @@ TEST_CASE( "UNIT TEST: mesh class {Mesh}", "[core]" )
 
     // writing, reading
     mesh_c[90] = 3.14;
-    REQUIRE( mesh_c[90] == (FTYPE)3.14 );
-    CHECK( mesh_c(1,1,0) == (FTYPE)3.14 );
+    REQUIRE( mesh_c[90] == (FTYPE_t)3.14 );
+    CHECK( mesh_c(1,1,0) == (FTYPE_t)3.14 );
 
     Vec_3D<int> pos(1,1,0);
-    CHECK( mesh_c(pos) == (FTYPE)3.14 );
+    CHECK( mesh_c(pos) == (FTYPE_t)3.14 );
     pos = Vec_3D<int>(9,-7,8);
-    CHECK( mesh_c(pos) == (FTYPE)3.14 );
+    CHECK( mesh_c(pos) == (FTYPE_t)3.14 );
     pos = Vec_3D<int>(-6,10,0);
-    mesh_c(pos) = (FTYPE)2.5;
-    CHECK( mesh_c(2,2,0) == (FTYPE)2.5 );
-    CHECK( mesh_c[180] == (FTYPE)2.5 );
+    mesh_c(pos) = (FTYPE_t)2.5;
+    CHECK( mesh_c(2,2,0) == (FTYPE_t)2.5 );
+    CHECK( mesh_c[180] == (FTYPE_t)2.5 );
 
     // copy constructor
     Mesh mesh2_c(mesh_c);
-    CHECK( mesh2_c[90] == (FTYPE)3.14 );
-    CHECK( mesh2_c[180] == (FTYPE)2.5 );
+    CHECK( mesh2_c[90] == (FTYPE_t)3.14 );
+    CHECK( mesh2_c[180] == (FTYPE_t)2.5 );
 
     // assign operator
     Mesh mesh3_c(14);
@@ -96,8 +96,8 @@ TEST_CASE( "UNIT TEST: mesh class {Mesh}", "[core]" )
     CHECK( mesh3_c.N2 == 8 );
     CHECK( mesh3_c.N3 == 10 );
     CHECK( mesh3_c.N == 8 );
-    CHECK( mesh3_c[90] == (FTYPE)3.14 );
-    CHECK( mesh3_c[180] == (FTYPE)2.5 );
+    CHECK( mesh3_c[90] == (FTYPE_t)3.14 );
+    CHECK( mesh3_c[180] == (FTYPE_t)2.5 );
 
     // operations
     mesh3_c*=2.;

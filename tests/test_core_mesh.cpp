@@ -62,16 +62,16 @@ TEST_CASE( "UNIT TEST: assign functions iterator {IT}", "[core_mesh]" )
 {
     print_unit_msg("assign functions iterator {IT}");
 
-    IT<1> it1(Vec_3D<FTYPE>(3.2, 7.8, 4.0));
+    IT<1> it1(Vec_3D<FTYPE_t>(3.2, 7.8, 4.0));
     REQUIRE( it1.vec == Vec_3D<int>(3, 8, 4) );
     CHECK( it1.counter == 0);
     CHECK_FALSE( it1.iter() );
 
-    IT<2> it2(Vec_3D<FTYPE>(3.2, 7.8, 4.0));
+    IT<2> it2(Vec_3D<FTYPE_t>(3.2, 7.8, 4.0));
     REQUIRE( it2.vec == Vec_3D<int>(3, 7, 4) );
     CHECK( it2.iter() );
 
-    IT<3> it3(Vec_3D<FTYPE>(3.2, 7.8, 4.0), 2);
+    IT<3> it3(Vec_3D<FTYPE_t>(3.2, 7.8, 4.0), 2);
     REQUIRE( it3.vec == Vec_3D<int>(0, 2, 1) );
 
     CHECK( it2.vec == Vec_3D<int>(3, 7, 5) );

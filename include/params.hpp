@@ -25,13 +25,13 @@ public:
     ccl_cosmology* cosmo;
 
     // COSMOLOGY (flat LCDM)
-    FTYPE A = 1, ns, k2_G, sigma8;
-    FTYPE Omega_m, Omega_b, H0, h;
-    FTYPE Omega_c() const { return Omega_m - Omega_b; }
-    FTYPE Omega_L() const { return 1 - Omega_m; }
+    FTYPE_t A = 1, ns, k2_G, sigma8;
+    FTYPE_t Omega_m, Omega_b, H0, h;
+    FTYPE_t Omega_c() const { return Omega_m - Omega_b; }
+    FTYPE_t Omega_L() const { return 1 - Omega_m; }
 
     // PRECOMPUTED VALUES
-    FTYPE D_norm;
+    FTYPE_t D_norm;
 
     // DEALING WITH GSL 'void* param'
     explicit operator void*() const;
@@ -42,7 +42,7 @@ struct Box_Opt {
     void init();
     /* cmd args */
     unsigned par_num_1d, mesh_num, mesh_num_pwr;
-    FTYPE box_size;
+    FTYPE_t box_size;
     /* derived param*/
     unsigned par_num, Ng, Ng_pwr;
 };
@@ -52,9 +52,9 @@ struct Box_Opt {
 struct Integ_Opt {
     void init();
     /* cmd args */
-    FTYPE z_in, z_out, db;
+    FTYPE_t z_in, z_out, db;
     /* derived param*/
-    FTYPE b_in, b_out;
+    FTYPE_t b_in, b_out;
 };
 
 
@@ -63,7 +63,7 @@ struct Out_Opt {
     void init();
     /* cmd args */
     unsigned print_every, bins_per_decade, points_per_10_Mpc;
-    std::vector<FTYPE> print_z; //< for which redshifts print output on top of print_every (optional)
+    std::vector<FTYPE_t> print_z; //< for which redshifts print output on top of print_every (optional)
     std::string out_dir; //< where to save output of the simulation
     bool print_par_pos, print_dens, print_pwr, print_extrap_pwr, print_corr, print_vel_pwr;
     /* derived param*/
@@ -83,9 +83,9 @@ struct Comp_App {
 struct App_Opt {
     void init(const Box_Opt&);
     /* cmd args */
-    FTYPE nu, rs;
+    FTYPE_t nu, rs;
     /* derived param*/
-    FTYPE Hc, a, nu_dim;
+    FTYPE_t Hc, a, nu_dim;
     unsigned M;
 };
 
@@ -103,7 +103,7 @@ struct Run_Opt {
 };
 
 // define Range outside because of SWIG
-struct Range { FTYPE lower, upper; };
+struct Range { FTYPE_t lower, upper; };
 
 /* OTHER PARAMETERS */
 struct Other_par {
@@ -111,13 +111,13 @@ struct Other_par {
     // k-range where to use (linear) interpolation and k-range in which print 'pwr_spec_extrap_*'
     ///range in which compute the correlation function 
     Range k_print, x_corr;
-    std::map<std::string,FTYPE> nyquist; //< Nyquist frequencies of potential mesh, analyses mesh and particle separation
+    std::map<std::string,FTYPE_t> nyquist; //< Nyquist frequencies of potential mesh, analyses mesh and particle separation
 };
 
 /* CHAMELEON */
 struct Chi_Opt {
     /* cmd args */
-    FTYPE beta, n, phi;
+    FTYPE_t beta, n, phi;
 };
 
 /**
@@ -146,8 +146,8 @@ public:
 	// METHODS
     void print_info(std::string out, std::string app) const;
 	void print_info() const;
-	FTYPE x_0() const{return box_opt.box_size/box_opt.mesh_num;}
-    FTYPE x_0_pwr() const{return box_opt.box_size/box_opt.mesh_num_pwr;}
+	FTYPE_t x_0() const{return box_opt.box_size/box_opt.mesh_num;}
+    FTYPE_t x_0_pwr() const{return box_opt.box_size/box_opt.mesh_num_pwr;}
     bool simulate() { return run_opt.simulate(); }
 };
 

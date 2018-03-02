@@ -6,21 +6,21 @@
 
 using namespace std;
 
-static void gen_init_expot(const Mesh& potential, Mesh& expotential, FTYPE nu);
-static void gen_expot(Mesh& potential,  const Mesh& expotential, FTYPE nu, FTYPE b);
+static void gen_init_expot(const Mesh& potential, Mesh& expotential, FTYPE_t nu);
+static void gen_expot(Mesh& potential,  const Mesh& expotential, FTYPE_t nu, FTYPE_t b);
 static void aa_convolution(App_Var_AA& APP);
 
 /*********************
 * INITIAL CONDITIONS *
 *********************/
 
-static void init_cond(App_Var<Particle_x<FTYPE>>& APP)
+static void init_cond(App_Var<Particle_x<FTYPE_t>>& APP)
 {
     printf("\nSetting initial positions of particles...\n");
     set_pert_pos(APP.sim, APP.sim.integ_opt.b_in, APP.particles, APP.app_field);
 }
 
-static void init_cond(App_Var<Particle_v<FTYPE>>& APP)
+static void init_cond(App_Var<Particle_v<FTYPE_t>>& APP)
 {
     printf("\nSetting initial positions and velocitis of particles...\n");
 	set_pert_pos_w_vel(APP.sim, APP.sim.integ_opt.b_in, APP.particles, APP.app_field);
@@ -160,7 +160,7 @@ static void general_sim_flow(const Sim_Param &sim, const string& app_short, cons
 
 void zel_app(const Sim_Param &sim)
 {
-    typedef App_Var<Particle_v<FTYPE>> APP_t;
+    typedef App_Var<Particle_v<FTYPE_t>> APP_t;
     auto upd_pos = [](APP_t& APP){
         set_pert_pos_w_vel(APP.sim, APP.b, APP.particles, APP.app_field); //< ZA with velocitites
     };
@@ -169,7 +169,7 @@ void zel_app(const Sim_Param &sim)
 
 void frozen_flow(const Sim_Param &sim)
 {
-    typedef App_Var<Particle_v<FTYPE>> APP_t;
+    typedef App_Var<Particle_v<FTYPE_t>> APP_t;
     auto upd_pos = [](APP_t& APP){
         upd_pos_first_order(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< FF specific
     };
@@ -181,7 +181,7 @@ void frozen_flow(const Sim_Param &sim)
 
 void frozen_potential(const Sim_Param &sim)
 {
-    typedef App_Var<Particle_v<FTYPE>> APP_t;
+    typedef App_Var<Particle_v<FTYPE_t>> APP_t;
     auto upd_pos = [](APP_t& APP){
         upd_pos_second_order(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< FP specific
     };
@@ -236,8 +236,8 @@ void chameleon_gravity(const Sim_Param &sim)
 * ADHESION APPROXIMATION FUNCTIONS *
 ***********************************/
 
-const FTYPE ACC = 1e-10;
-const FTYPE log_acc = log(ACC);
+const FTYPE_t ACC = 1e-10;
+const FTYPE_t log_acc = log(ACC);
 
 static void aa_convolution(App_Var_AA& APP)
 {
@@ -252,7 +252,7 @@ static void aa_convolution(App_Var_AA& APP)
 	fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
 }
 
-static void gen_init_expot(const Mesh& potential, Mesh& expotential, FTYPE nu)
+static void gen_init_expot(const Mesh& potential, Mesh& expotential, FTYPE_t nu)
 {
 	printf("Storing initial expotenital in q-space...\n");
     // store exponent only
@@ -261,22 +261,22 @@ static void gen_init_expot(const Mesh& potential, Mesh& expotential, FTYPE nu)
     for (unsigned i = 0; i < expotential.length; i++) expotential[i] = -potential[i] / (2*nu);
 }
 
-static FTYPE get_summation(const vector<FTYPE>& exp_aux)
+static FTYPE_t get_summation(const vector<FTYPE_t>& exp_aux)
 {
-    FTYPE max_exp = *max_element(exp_aux.begin(), exp_aux.end());
-    FTYPE sum = 0;
+    FTYPE_t max_exp = *max_element(exp_aux.begin(), exp_aux.end());
+    FTYPE_t sum = 0;
     for(auto const& a_exp: exp_aux) {
         if ((a_exp - max_exp) > log_acc) sum+= exp(a_exp - max_exp);
     }
     return max_exp + log(sum);
 }
 
-static void convolution_y1(Mesh& potential, const vector<FTYPE>& gaussian, const Mesh& expotential_0){
+static void convolution_y1(Mesh& potential, const vector<FTYPE_t>& gaussian, const Mesh& expotential_0){
 	// multi-thread index is y3
     // compute f1 (x1, y2, y3)
 
     const int N = potential.N;
-    vector<FTYPE> exp_aux;
+    vector<FTYPE_t> exp_aux;
     
 	#pragma omp parallel for private(exp_aux)
 	for (int x1 = 0; x1 < N; x1++){
@@ -294,12 +294,12 @@ static void convolution_y1(Mesh& potential, const vector<FTYPE>& gaussian, const
 	}
 }
 
-static void convolution_y2(Mesh& potential, const vector<FTYPE>& gaussian){
+static void convolution_y2(Mesh& potential, const vector<FTYPE_t>& gaussian){
     // compute f2 (x1, x2, y3)
 
     const int N = potential.N;
-	vector<FTYPE> sum_aux;
-	vector<FTYPE> exp_aux;
+	vector<FTYPE_t> sum_aux;
+	vector<FTYPE_t> exp_aux;
 
 	#pragma omp parallel for private(sum_aux, exp_aux)
 	for (int x1 = 0; x1 < N; x1++){
@@ -323,12 +323,12 @@ static void convolution_y2(Mesh& potential, const vector<FTYPE>& gaussian){
 	}
 }
 
-static void convolution_y3(Mesh& potential, const vector<FTYPE>& gaussian){
+static void convolution_y3(Mesh& potential, const vector<FTYPE_t>& gaussian){
     // compute f3 (x1, x2, x3) == expotential(x, b)
 
     const int N = potential.N;
-	vector<FTYPE> sum_aux;
-    vector<FTYPE> exp_aux;
+	vector<FTYPE_t> sum_aux;
+    vector<FTYPE_t> exp_aux;
 
 	#pragma omp parallel for private(sum_aux, exp_aux)
 	for (int x1 = 0; x1 < N; x1++){
@@ -351,7 +351,7 @@ static void convolution_y3(Mesh& potential, const vector<FTYPE>& gaussian){
 	}
 }
 
-static void gen_expot(Mesh& potential,  const Mesh& expotential_0, FTYPE nu, FTYPE b)
+static void gen_expot(Mesh& potential,  const Mesh& expotential_0, FTYPE_t nu, FTYPE_t b)
 {
 	/* Computing convolution using direct sum */
 	printf("Computing expotential in q-space...\n");
@@ -364,7 +364,7 @@ static void gen_expot(Mesh& potential,  const Mesh& expotential_0, FTYPE nu, FTY
 	*/
 
 	// store values of exponential - every convolution uses the same exp(-r^2/4bv)
-	vector<FTYPE> gaussian(expotential_0.N);
+	vector<FTYPE_t> gaussian(expotential_0.N);
 
 	#pragma omp parallel for
 	for (unsigned i = 0; i < expotential_0.N; i++){

@@ -107,7 +107,7 @@ void GetSlabKeys(unsigned long *keys, int x1, int numx, unsigned long seed)
 
   }
 
-void GetRandomDoublesWhiteNoise(FTYPE &rn1, FTYPE &rn2, FTYPE &rn, unsigned long input_key, unsigned long input_counter)
+void GetRandomDoublesWhiteNoise(FTYPE_t &rn1, FTYPE_t &rn2, FTYPE_t &rn, unsigned long input_key, unsigned long input_counter)
   {
     /* Returns two random numbers in rn1 and rn2 for the construction of a white noise field in real space */
 
@@ -121,20 +121,20 @@ void GetRandomDoublesWhiteNoise(FTYPE &rn1, FTYPE &rn2, FTYPE &rn, unsigned long
     do 
     {
         r = rng(cindex, key);
-        rn1 = -1 + 2*r123::u01<FTYPE>(r[0]);
-        rn2 = -1 + 2*r123::u01<FTYPE>(r[1]);
+        rn1 = -1 + 2*r123::u01<FTYPE_t>(r[0]);
+        rn2 = -1 + 2*r123::u01<FTYPE_t>(r[1]);
         rn = rn1*rn1 + rn2*rn2;
         cindex.incr();        
     } while (rn > 1.0 || rn == 0);
  
   }
   
-void GetRandomDouble(FTYPE *u, long input_key, long input_counter)
+void GetRandomDouble(FTYPE_t *u, long input_key, long input_counter)
   {
     /* Draws random doubles from the family funcion with input_key and index input_counter.
        Uses the u01<double> routine specified in CBRNG_Uniform.h to convert form ulong's to doubles. */ 
 
     ctr_type r = GetRandomUnsignedLong(input_key, input_counter);
-    for (int i=0; i<nsize_r123; i++) u[i] = r123::u01<FTYPE>(r[i]);
+    for (int i=0; i<nsize_r123; i++) u[i] = r123::u01<FTYPE_t>(r[i]);
   }
 

@@ -18,7 +18,7 @@ void force_test(Sim_Param& sim)
     APP.print_mem();
 
     cout << "Place particle in the middle of the box.\n";
-    APP.particles[0] = Particle_v<FTYPE>(sim.mesh_num/2, sim.mesh_num/2., sim.mesh_num/2., 0, 0, 0); // middle, no velocity
+    APP.particles[0] = Particle_v<FTYPE_t>(sim.mesh_num/2, sim.mesh_num/2., sim.mesh_num/2., 0, 0, 0); // middle, no velocity
     get_rho_from_par(APP.particles, &APP.app_field[0], sim); // assign density
     printf("Transforming density into k-sapce...\n");
     fftw_execute_dft_r2c(APP.p_F_pwr, APP.app_field[0]); // get \rho(k)
@@ -44,21 +44,21 @@ void force_test(Sim_Param& sim)
         }
     }
 
-    Vec_3D<FTYPE> f_long, f_short, f_total, dr_vec, cur_pos;
-    FTYPE dr;
-    FTYPE m = pow(sim.Ng, 3);
+    Vec_3D<FTYPE_t> f_long, f_short, f_total, dr_vec, cur_pos;
+    FTYPE_t dr;
+    FTYPE_t m = pow(sim.Ng, 3);
 
     // cout << "\n\nr_vec\t\tr\t|\tshort\t\t\t\tlong\t\t\t\ttotal\t\t\t|\ts\tl\tt\tm/4PIr2\n";
     string file_name = "/home/vrastil/Documents/GIT/Adhesion-Approximation/output/test_runs/test_pp_run/data_rs_" + to_string(sim.rs) + ".dat";
     ofstream File(file_name);
     File << "#r\ts\tl\tt\tm/4PIr2\n";
     File << setprecision(8);
-    FTYPE inc = sim.rs/3.;
-    for (FTYPE i = 5; i < sim.mesh_num-5; i += inc)
+    FTYPE_t inc = sim.rs/3.;
+    for (FTYPE_t i = 5; i < sim.mesh_num-5; i += inc)
     {
         f_long.fill(0.);
         f_short.fill(0.);
-        cur_pos = Vec_3D<FTYPE>(i, i, i);
+        cur_pos = Vec_3D<FTYPE_t>(i, i, i);
         dr_vec = get_sgn_distance(APP.particles[0].position, cur_pos, sim.mesh_num);
         dr = dr_vec.norm();
         if (dr > 5*sim.rs) inc = sim.rs/3.;

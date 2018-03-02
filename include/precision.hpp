@@ -10,13 +10,13 @@
 #endif
 
 #if PRECISION == 1
-typedef float FTYPE;
+typedef float FTYPE_t;
 #define MAKE_FFTW_NAME(FUNC_NAME) fftwf_ ## FUNC_NAME
 #elif PRECISION == 2
-typedef double FTYPE;
+typedef double FTYPE_t;
 #define MAKE_FFTW_NAME(FUNC_NAME) fftw_ ## FUNC_NAME
 #elif PRECISION == 3
-typedef long double FTYPE;
+typedef long double FTYPE_t;
 #define MAKE_FFTW_NAME(FUNC_NAME) fftwl_ ## FUNC_NAME
 #endif
 
@@ -31,7 +31,7 @@ typedef long double FTYPE;
 #define FFTW_EXEC_R2C MAKE_FFTW_NAME(execute_dft_r2c)
 #define FFTW_EXEC_C2R MAKE_FFTW_NAME(execute_dft_c2r)
 
-constexpr FTYPE PI = FTYPE(3.14159265358979323846); // 20 digits
+constexpr FTYPE_t PI = FTYPE_t(3.14159265358979323846); // 20 digits
 
 inline float pow(float base, unsigned exp)
 {

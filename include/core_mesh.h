@@ -13,19 +13,19 @@
 
 void get_k_vec(int N, int index, int* k_vec);
 void get_k_vec(int N, int index, Vec_3D<int> &k_vec);
-FTYPE get_k_sq(int N, int index);
+FTYPE_t get_k_sq(int N, int index);
 
 template<typename T> void get_per(Vec_3D<T> &position, int per);
 template<typename T> void get_per(Vec_3D<T> &position, int perx, int pery, int perz);
-void get_per(std::vector<Particle_v<FTYPE>>& particles, const unsigned par_num, const int per);
+void get_per(std::vector<Particle_v<FTYPE_t>>& particles, const unsigned par_num, const int per);
 
-FTYPE get_distance(const Vec_3D<FTYPE> &x_1, const Vec_3D<FTYPE> &x_2, int per);
-Vec_3D<FTYPE> get_sgn_distance(const Vec_3D<FTYPE> &x_from, const Vec_3D<FTYPE> &x_to, int per);
+FTYPE_t get_distance(const Vec_3D<FTYPE_t> &x_1, const Vec_3D<FTYPE_t> &x_2, int per);
+Vec_3D<FTYPE_t> get_sgn_distance(const Vec_3D<FTYPE_t> &x_from, const Vec_3D<FTYPE_t> &x_to, int per);
 
-void assign_to(Mesh& field, const Vec_3D<FTYPE> &position, const FTYPE value);
-void assign_to(std::vector<Mesh>& field, const Vec_3D<FTYPE> &position, const Vec_3D<FTYPE>& value);
-void assign_from(const Mesh &field, const Vec_3D<FTYPE> &position, FTYPE& value);
-void assign_from(const std::vector<Mesh> &field, const Vec_3D<FTYPE> &position, Vec_3D<FTYPE>& value);
+void assign_to(Mesh& field, const Vec_3D<FTYPE_t> &position, const FTYPE_t value);
+void assign_to(std::vector<Mesh>& field, const Vec_3D<FTYPE_t> &position, const Vec_3D<FTYPE_t>& value);
+void assign_from(const Mesh &field, const Vec_3D<FTYPE_t> &position, FTYPE_t& value);
+void assign_from(const std::vector<Mesh> &field, const Vec_3D<FTYPE_t> &position, Vec_3D<FTYPE_t>& value);
 
 void fftw_execute_dft_r2c(const FFTW_PLAN_TYPE &p_F, Mesh& rho);
 void fftw_execute_dft_c2r(const FFTW_PLAN_TYPE &p_B, Mesh& rho);
@@ -36,8 +36,8 @@ template<int points>
 class IT
 {
 public:
-    IT(const Vec_3D<FTYPE> &pos); // ctor for assignment scheme
-    IT(const Vec_3D<FTYPE> &pos, FTYPE Hc); // ctor for chaining mesh
+    IT(const Vec_3D<FTYPE_t> &pos); // ctor for assignment scheme
+    IT(const Vec_3D<FTYPE_t> &pos, FTYPE_t Hc); // ctor for chaining mesh
 
     unsigned counter;
     Vec_3D<int> vec;

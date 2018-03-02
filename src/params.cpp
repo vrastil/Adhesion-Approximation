@@ -154,16 +154,16 @@ void Out_Opt::init()
 
 void App_Opt::init(const Box_Opt& box_opt)
 {
-    a = rs / FTYPE(0.735);
+    a = rs / FTYPE_t(0.735);
     M = (int)(box_opt.mesh_num / rs);
-    Hc = FTYPE(box_opt.mesh_num) / M;
+    Hc = FTYPE_t(box_opt.mesh_num) / M;
     nu_dim = nu;
     nu /= pow2(box_opt.box_size/box_opt.mesh_num); // converting to dimensionless units
 }
 
 void Other_par::init(const Box_Opt& box_opt)
 {
-    FTYPE tmp = PI/box_opt.box_size;
+    FTYPE_t tmp = PI/box_opt.box_size;
 
     nyquist["analysis"] = tmp*box_opt.mesh_num_pwr;
     nyquist["potential"] = tmp*box_opt.mesh_num;
@@ -306,13 +306,13 @@ void from_json(const json& j, Cosmo_Param& cosmo)
     #ifdef TEST
     cout << ">>> Debug: Loading 'Cosmo_Param& cosmo' from json file\n";
     #endif
-    cosmo.A = j.at("A").get<FTYPE>();
-    cosmo.ns = j.at("index").get<FTYPE>();
-    cosmo.sigma8 = j.at("sigma8").get<FTYPE>();
-    cosmo.k2_G = j.at("smoothing_k").get<FTYPE>();
-    cosmo.Omega_b = j.at("Omega_b").get<FTYPE>();
-    cosmo.Omega_m = j.at("Omega_m").get<FTYPE>();
-    cosmo.h = j.at("h").get<FTYPE>();
+    cosmo.A = j.at("A").get<FTYPE_t>();
+    cosmo.ns = j.at("index").get<FTYPE_t>();
+    cosmo.sigma8 = j.at("sigma8").get<FTYPE_t>();
+    cosmo.k2_G = j.at("smoothing_k").get<FTYPE_t>();
+    cosmo.Omega_b = j.at("Omega_b").get<FTYPE_t>();
+    cosmo.Omega_m = j.at("Omega_m").get<FTYPE_t>();
+    cosmo.h = j.at("h").get<FTYPE_t>();
     cosmo.H0 = cosmo.h * 100;
     
     string tmp;
@@ -359,7 +359,7 @@ void from_json(const json& j, Box_Opt& box_opt)
     box_opt.mesh_num = j.at("mesh_num").get<unsigned>();
     box_opt.mesh_num_pwr = j.at("mesh_num_pwr").get<unsigned>();
     box_opt.par_num_1d = j.at("par_num").get<unsigned>();
-    box_opt.box_size = j.at("box_size").get<FTYPE>();
+    box_opt.box_size = j.at("box_size").get<FTYPE_t>();
 
     box_opt.init();
 }
@@ -375,9 +375,9 @@ void to_json(json& j, const Integ_Opt& integ_opt)
 
 void from_json(const json& j, Integ_Opt& integ_opt)
 {
-    integ_opt.z_in = j.at("redshift").get<FTYPE>();
-    integ_opt.z_out = j.at("redshift_0").get<FTYPE>();
-    integ_opt.db = j.at("time_step").get<FTYPE>();
+    integ_opt.z_in = j.at("redshift").get<FTYPE_t>();
+    integ_opt.z_out = j.at("redshift_0").get<FTYPE_t>();
+    integ_opt.db = j.at("time_step").get<FTYPE_t>();
 
     integ_opt.init();
 }
@@ -392,9 +392,9 @@ void to_json(json& j, const App_Opt& app_opt)
 
 void from_json(const json& j, App_Opt& app_op)
 {
-    app_op.nu_dim = j.at("viscosity").get<FTYPE>();
+    app_op.nu_dim = j.at("viscosity").get<FTYPE_t>();
     app_op.nu = app_op.nu_dim;
-    app_op.rs = j.at("cut_radius").get<FTYPE>();
+    app_op.rs = j.at("cut_radius").get<FTYPE_t>();
 }
 
 void to_json(json& j, const Run_Opt& run_opt)
@@ -439,7 +439,7 @@ void to_json(json& j, const Chi_Opt& chi_opt)
 
 void from_json(const json& j, Chi_Opt& chi_opt)
 {
-    chi_opt.beta = j.at("beta").get<FTYPE>();
-    chi_opt.n = j.at("n").get<FTYPE>();
-    chi_opt.phi = j.at("phi").get<FTYPE>();
+    chi_opt.beta = j.at("beta").get<FTYPE_t>();
+    chi_opt.n = j.at("n").get<FTYPE_t>();
+    chi_opt.phi = j.at("phi").get<FTYPE_t>();
 }

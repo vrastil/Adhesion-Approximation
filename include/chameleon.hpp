@@ -42,15 +42,15 @@ public:
  * @brief:	class containing variables for chameleon gravity
  */
  
- class App_Var_chi: public App_Var<Particle_v<FTYPE>>
+ class App_Var_chi: public App_Var<Particle_v<FTYPE_t>>
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR
 	App_Var_chi(const Sim_Param &sim, std::string app_str);
 
 	// VARIABLES
-    ChiSolver<FTYPE> sol;
-    MultiGrid<3, FTYPE> drho;
+    ChiSolver<FTYPE_t> sol;
+    MultiGrid<3, FTYPE_t> drho;
 
     // METHODS
     void save_init_drho_k(const Mesh& dro, Mesh& aux_field);

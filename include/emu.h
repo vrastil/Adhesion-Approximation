@@ -11,6 +11,6 @@
 namespace emu
 {
     extern const int nmode;
-    void emu(FTYPE *xstar, FTYPE *ystar);
-    Data_Vec<FTYPE, 2> init_emu(const Sim_Param &sim, FTYPE z);
+    void emu(FTYPE_t *xstar, FTYPE_t *ystar);
+    Data_Vec<FTYPE_t, 2> init_emu(const Sim_Param &sim, FTYPE_t z);
 }

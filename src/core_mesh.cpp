@@ -29,10 +29,10 @@ void get_k_vec(int N, int index, Vec_3D<int> &k_vec)
 	for (int i =0; i<2; i++) if (k_vec[i] > N/2) k_vec[i] -= N; // k_vec[2] is ALWAYS less or equal than N/2 (real FFTW)
 }
 
-FTYPE get_k_sq(int N, int index)
+FTYPE_t get_k_sq(int N, int index)
 {
 	int k_vec[3];
-	FTYPE tmp = 0;
+	FTYPE_t tmp = 0;
 	get_k_vec(N, index, k_vec);
 	for (int i =0; i<3; i++) tmp += pow(k_vec[i],2);
 	return tmp;
@@ -67,7 +67,7 @@ void get_per(Vec_3D<T> &position, int perx, int pery, int perz)
     position[2] = get_per(position[2], perz);
 }
 
-void get_per(std::vector<Particle_v<FTYPE>>& particles, const unsigned par_num, const int per)
+void get_per(std::vector<Particle_v<FTYPE_t>>& particles, const unsigned par_num, const int per)
 {
     #pragma omp parallel for
     for (unsigned i = 0; i < par_num; i++)
@@ -102,34 +102,34 @@ inline T get_sgn_distance_1D(T x_from, T x_to, int per)
 	else return d-sgn(d)*per;
 }
 
-FTYPE get_distance(const Vec_3D<FTYPE> &x_1, const Vec_3D<FTYPE> &x_2, int per)
+FTYPE_t get_distance(const Vec_3D<FTYPE_t> &x_1, const Vec_3D<FTYPE_t> &x_2, int per)
 {
-	FTYPE dst = 0;
+	FTYPE_t dst = 0;
 	for (int i = 0; i < 3; i++) dst+= pow2(get_distance_1D(x_1[i], x_2[i], per));
 	return sqrt(dst);
 }
 
-Vec_3D<FTYPE> get_sgn_distance(const Vec_3D<FTYPE> &x_from, const Vec_3D<FTYPE> &x_to, int per)
+Vec_3D<FTYPE_t> get_sgn_distance(const Vec_3D<FTYPE_t> &x_from, const Vec_3D<FTYPE_t> &x_to, int per)
 {
-	Vec_3D<FTYPE> dst;
+	Vec_3D<FTYPE_t> dst;
 	for (int i = 0; i < 3; i++) dst[i] = get_sgn_distance_1D(x_from[i], x_to[i], per);
 	return dst;
 }
 
-template<unsigned N> static FTYPE wgh_sch(const Vec_3D<FTYPE> &x, const Vec_3D<int>& y, int mesh_num);
+template<unsigned N> static FTYPE_t wgh_sch(const Vec_3D<FTYPE_t> &x, const Vec_3D<int>& y, int mesh_num);
 // The weighting scheme used to assign values to the mesh points or vice versa
 // Return value of assigment function on mesh point y from particle in x
 
-// template<> FTYPE wgh_sch<0>(const Vec_3D<FTYPE> &x, Vec_3D<int> y, int mesh_num)
+// template<> FTYPE_t wgh_sch<0>(const Vec_3D<FTYPE_t> &x, Vec_3D<int> y, int mesh_num)
 // { // NGP: Nearest grid point
 //     get_per(y, mesh_num);
 //     for (int i = 0; i < 3; i++) if ((int)x[i] != y[i]) return 0;
 //     return 1;
 // }
 
-template<> FTYPE wgh_sch<1>(const Vec_3D<FTYPE> &x, const Vec_3D<int>& y, int mesh_num)
+template<> FTYPE_t wgh_sch<1>(const Vec_3D<FTYPE_t> &x, const Vec_3D<int>& y, int mesh_num)
 { // CIC: Cloud in cells
-    FTYPE dx, w = 1;
+    FTYPE_t dx, w = 1;
     for (int i = 0; i < 3; i++)
     {
         dx = get_distance_1D(x[i], y[i], mesh_num);
@@ -139,15 +139,15 @@ template<> FTYPE wgh_sch<1>(const Vec_3D<FTYPE> &x, const Vec_3D<int>& y, int me
     return w;
 }
 
-template<> FTYPE wgh_sch<2>(const Vec_3D<FTYPE> &x, const Vec_3D<int>& y, int mesh_num)
+template<> FTYPE_t wgh_sch<2>(const Vec_3D<FTYPE_t> &x, const Vec_3D<int>& y, int mesh_num)
 { // TSC: Triangular shaped clouds
-    FTYPE dx, w = 1;
+    FTYPE_t dx, w = 1;
     for (int i = 0; i < 3; i++)
     {
         dx = get_distance_1D(x[i], y[i], mesh_num);
         if (dx > 1.5) return 0;
         else if (dx > 0.5) w *= pow2(1.5 - dx) / 2;
-        else w *= 3 / FTYPE(4) - dx*dx;
+        else w *= 3 / FTYPE_t(4) - dx*dx;
     }
     return w;
 }
@@ -158,7 +158,7 @@ template<> FTYPE wgh_sch<2>(const Vec_3D<FTYPE> &x, const Vec_3D<int>& y, int me
  */
 
 template<int points>
-IT<points>::IT(const Vec_3D<FTYPE> &pos): counter(0)
+IT<points>::IT(const Vec_3D<FTYPE_t> &pos): counter(0)
 {
     for(unsigned i = 0; i < 3; i++){
         vec[i] = (int)(pos[i] - 0.5*(points - 2));
@@ -166,7 +166,7 @@ IT<points>::IT(const Vec_3D<FTYPE> &pos): counter(0)
 }
 
 template<int points>
-IT<points>::IT(const Vec_3D<FTYPE> &pos, FTYPE Hc): counter(0)
+IT<points>::IT(const Vec_3D<FTYPE_t> &pos, FTYPE_t Hc): counter(0)
 {
     for(unsigned i = 0; i < 3; i++){
         vec[i] = (int)(pos[i]/Hc) - 1;
@@ -188,7 +188,7 @@ bool IT<points>::iter(){
     return true;
 }
 
-void assign_to(Mesh& field, const Vec_3D<FTYPE> &position, const FTYPE value)
+void assign_to(Mesh& field, const Vec_3D<FTYPE_t> &position, const FTYPE_t value)
 {
     IT<ORDER+1> it(position);
     do{
@@ -197,10 +197,10 @@ void assign_to(Mesh& field, const Vec_3D<FTYPE> &position, const FTYPE value)
     } while( it.iter() );
 }
 
-void assign_to(vector<Mesh>& field, const Vec_3D<FTYPE> &position, const Vec_3D<FTYPE>& value)
+void assign_to(vector<Mesh>& field, const Vec_3D<FTYPE_t> &position, const Vec_3D<FTYPE_t>& value)
 {
     IT<ORDER+1> it(position);
-    FTYPE w;
+    FTYPE_t w;
     do{
         w = wgh_sch<ORDER>(position, it.vec, field[0].N); //< resuse the same weigh for every field in vector
         for (unsigned i = 0; i < 3; i++)
@@ -211,7 +211,7 @@ void assign_to(vector<Mesh>& field, const Vec_3D<FTYPE> &position, const Vec_3D<
 	} while( it.iter() );
 }
 
-void assign_from(const Mesh &field, const Vec_3D<FTYPE> &position, FTYPE* value)
+void assign_from(const Mesh &field, const Vec_3D<FTYPE_t> &position, FTYPE_t* value)
 {
 	IT<ORDER+1> it(position);
     do{
@@ -220,10 +220,10 @@ void assign_from(const Mesh &field, const Vec_3D<FTYPE> &position, FTYPE* value)
 	} while( it.iter() );
 }
 
-void assign_from(const vector<Mesh> &field, const Vec_3D<FTYPE> &position, Vec_3D<FTYPE>& value)
+void assign_from(const vector<Mesh> &field, const Vec_3D<FTYPE_t> &position, Vec_3D<FTYPE_t>& value)
 {
     IT<ORDER+1> it(position);
-    FTYPE w;
+    FTYPE_t w;
     do{
         w = wgh_sch<ORDER>(position, it.vec, field[0].N); //< resuse the same weigh for every field in vector
         for (int i = 0; i < 3; i++)
@@ -256,9 +256,9 @@ void fftw_execute_dft_c2r_triple(const FFTW_PLAN_TYPE &p_B, vector<Mesh>& rho)
 }
 
 template void get_per(Vec_3D<int>&, int);
-template void get_per(Vec_3D<FTYPE>&, int);
+template void get_per(Vec_3D<FTYPE_t>&, int);
 template void get_per(Vec_3D<int>&, int, int, int);
-template void get_per(Vec_3D<FTYPE>&, int, int, int);
+template void get_per(Vec_3D<FTYPE_t>&, int, int, int);
 
 template class IT<ORDER+1>;
 template class IT<3>;

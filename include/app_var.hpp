@@ -25,7 +25,7 @@ public:
 	// VARIABLES
 	const int sqr_num_track_par, num_track_par; // square root of number of tracking particles
 	std::vector<int> par_ids;
-	std::vector<std::vector<Particle_x<FTYPE>>> par_pos;
+	std::vector<std::vector<Particle_x<FTYPE_t>>> par_pos;
 	
 	// METHODS
 	const unsigned num_step() const{ return par_pos.size(); };
@@ -52,8 +52,8 @@ public:
     const Sim_Param &sim;
 
 	int step, print_every;
-    FTYPE b, b_out, db;
-    FTYPE D_init, dDda_init;
+    FTYPE_t b, b_out, db;
+    FTYPE_t D_init, dDda_init;
     const std::string app_str, z_suffix_const, out_dir_app;
     
     // LARGE FIELDS
@@ -62,15 +62,15 @@ public:
     std::vector<T> particles;
 
     // OTHER VARIABLES
-    Data_Vec<FTYPE, 2> corr_func_binned, pwr_spec_binned, pwr_spec_binned_0, vel_pwr_spec_binned_0;
+    Data_Vec<FTYPE_t, 2> corr_func_binned, pwr_spec_binned, pwr_spec_binned_0, vel_pwr_spec_binned_0;
     Interp_obj pwr_spec_input;
 	FFTW_PLAN_TYPE p_F, p_B, p_F_pwr, p_B_pwr;
 	Tracking track;
 	std::vector<int> dens_binned;
 	
 	// METHODS
-	FTYPE z() const{ return 1/b - 1;}
-	FTYPE b_half() const { return b - db/2; }
+	FTYPE_t z() const{ return 1/b - 1;}
+	FTYPE_t b_half() const { return b - db/2; }
 	bool integrate() const { return (b <= b_out) && (db > 0);}
 	bool printing() const { return print_every ? ((step % print_every) == 0) or (b == b_out) : print_every ; }
     void print_output();
@@ -89,8 +89,8 @@ private:
     void print_density();
     void get_binned_power_spec();
     void print_power_spec();
-    void print_extrap_pwr(const Extrap_Pk<FTYPE, 2>& P_k);
-    void print_corr(const Extrap_Pk<FTYPE, 2>& P_k);
+    void print_extrap_pwr(const Extrap_Pk<FTYPE_t, 2>& P_k);
+    void print_corr(const Extrap_Pk<FTYPE_t, 2>& P_k);
     void print_vel_pwr();
 };
 
@@ -99,7 +99,7 @@ private:
  * @brief:	class containing variables for adhesion approximation
  */
  
- class App_Var_AA: public App_Var<Particle_v<FTYPE>>
+ class App_Var_AA: public App_Var<Particle_v<FTYPE_t>>
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR
@@ -118,16 +118,16 @@ class LinkedList
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR
-	LinkedList(unsigned par_num, int m, FTYPE hc);
+	LinkedList(unsigned par_num, int m, FTYPE_t hc);
 	
 	// VARIABLES
 	unsigned par_num;
-	FTYPE Hc;
+	FTYPE_t Hc;
 	std::vector<int> LL;
 	Mesh_base<int> HOC;
 	
 	// METHODS
-	void get_linked_list(const std::vector<Particle_v<FTYPE>>& particles);
+	void get_linked_list(const std::vector<Particle_v<FTYPE_t>>& particles);
 };
 
 /**
@@ -135,7 +135,7 @@ public:
  * @brief:	class containing variables for modified Frozen-potential approximation
  */
 
-class App_Var_FP_mod: public App_Var<Particle_v<FTYPE>>
+class App_Var_FP_mod: public App_Var<Particle_v<FTYPE_t>>
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR

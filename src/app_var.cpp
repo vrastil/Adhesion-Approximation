@@ -34,9 +34,9 @@ sqr_num_track_par(sqr_num_track_par), num_track_par(sqr_num_track_par*sqr_num_tr
     printf("Initializing IDs of tracked particles...\n");
     par_ids.reserve(num_track_par);
     int x, y, z;
-    FTYPE s;
+    FTYPE_t s;
     y = par_num_per_dim / 2; // middle of the cube
-    s = par_num_per_dim / FTYPE(4*(sqr_num_track_par+1)); // quarter of the cube
+    s = par_num_per_dim / FTYPE_t(4*(sqr_num_track_par+1)); // quarter of the cube
     for (int i=1; i<=sqr_num_track_par;i++)
     {
         z = (int)(s*i);
@@ -50,7 +50,7 @@ sqr_num_track_par(sqr_num_track_par), num_track_par(sqr_num_track_par*sqr_num_tr
 
 template <class T> void Tracking::update_track_par(const std::vector<T>& particles)
 {
-    std::vector<Particle_x<FTYPE>> par_pos_step;
+    std::vector<Particle_x<FTYPE_t>> par_pos_step;
     par_pos_step.reserve(num_track_par);
     for (int i=0; i<num_track_par; i++){
         par_pos_step.emplace_back(particles[par_ids[i]].position);
@@ -64,8 +64,8 @@ void Tracking::print_track_par(const Sim_Param &sim, string out_dir, string suff
     string file_name = out_dir + "track_par_pos" + suffix + ".dat";
     Ofstream File(file_name);
 
-    FTYPE x,y,z;
-    const FTYPE x_0 = sim.x_0();
+    FTYPE_t x,y,z;
+    const FTYPE_t x_0 = sim.x_0();
     cout << "Writing positons of " << num_track_par << " tracked particles into file " << file_name << "\n";
     File << "# This file contains positions of particles in units [Mpc/h].\n"
             "# x [Mpc/h]\tz [Mpc/h]\n";
@@ -100,7 +100,7 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
         app_field.emplace_back(sim.box_opt.mesh_num);
         power_aux.emplace_back(sim.box_opt.mesh_num_pwr);
     }
-    memory_alloc = sizeof(FTYPE)*(app_field[0].length*app_field.size()+power_aux[0].length*power_aux.size());
+    memory_alloc = sizeof(FTYPE_t)*(app_field[0].length*app_field.size()+power_aux[0].length*power_aux.size());
 
     // RESERVE MEMORY FOR BINNED POWER SPECTRA
     unsigned bin_num = (unsigned)ceil(log10(sim.box_opt.mesh_num_pwr)*sim.out_opt.bins_per_decade);
@@ -193,7 +193,7 @@ void App_Var<T>::print_power_spec()
         D_init = growth_factor(b, sim.cosmo);
         is_init_pwr_spec_0 = true;
     }
-    FTYPE D_now = growth_factor(b, sim.cosmo);
+    FTYPE_t D_now = growth_factor(b, sim.cosmo);
     print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, D_now / D_init, out_dir_app, "_par" + z_suffix());
     print_pow_spec_diff(pwr_spec_binned, pwr_spec_input, D_now, out_dir_app, "_input" + z_suffix());
     print_pow_spec_diff(pwr_spec_binned, pwr_spec_binned_0, pwr_spec_input, D_now, D_init,
@@ -201,14 +201,14 @@ void App_Var<T>::print_power_spec()
 }
 
 template <class T> 
-void App_Var<T>::print_extrap_pwr(const Extrap_Pk<FTYPE, 2>& P_k)
+void App_Var<T>::print_extrap_pwr(const Extrap_Pk<FTYPE_t, 2>& P_k)
 {/* Print extrapolated power spectrum */
     gen_pow_spec_binned_from_extrap(sim, P_k, pwr_spec_binned);
     print_pow_spec(pwr_spec_binned, out_dir_app, "_extrap" + z_suffix());
 }
 
 template <class T> 
-void App_Var<T>::print_corr(const Extrap_Pk<FTYPE, 2>& P_k)
+void App_Var<T>::print_corr(const Extrap_Pk<FTYPE_t, 2>& P_k)
 {/* Printing correlation function */
     gen_corr_func_binned_gsl_qawf(sim, P_k, corr_func_binned);
     print_corr_func(corr_func_binned, out_dir_app, "_gsl_qawf_par" + z_suffix());
@@ -251,7 +251,7 @@ void App_Var<T>::print_output()
 
     /* Extrapolate power spectrum beyond range of simulation box */
     if (sim.out_opt.get_pk_extrap){
-        const Extrap_Pk<FTYPE, 2> P_k(pwr_spec_binned, sim);
+        const Extrap_Pk<FTYPE_t, 2> P_k(pwr_spec_binned, sim);
         /* Print extrapolated power spectrum */
         if (sim.out_opt.print_extrap_pwr) print_extrap_pwr(P_k);
         /* Printing correlation function */
@@ -280,9 +280,9 @@ void App_Var<T>::print_info() const
  */
  
  App_Var_AA::App_Var_AA(const Sim_Param &sim, string app_str):
-    App_Var<Particle_v<FTYPE>>(sim, app_str), expotential (sim.box_opt.mesh_num)
+    App_Var<Particle_v<FTYPE_t>>(sim, app_str), expotential (sim.box_opt.mesh_num)
 {
-    memory_alloc += sizeof(FTYPE)*expotential.length;
+    memory_alloc += sizeof(FTYPE_t)*expotential.length;
 }
 
 /**
@@ -291,16 +291,16 @@ void App_Var<T>::print_info() const
  */
  
  App_Var_FP_mod::App_Var_FP_mod(const Sim_Param &sim, string app_str):
-    App_Var<Particle_v<FTYPE>>(sim, app_str), linked_list(sim.box_opt.par_num, sim.app_opt.M, sim.app_opt.Hc)
+    App_Var<Particle_v<FTYPE_t>>(sim, app_str), linked_list(sim.box_opt.par_num, sim.app_opt.M, sim.app_opt.Hc)
 {
     memory_alloc += sizeof(int)*(linked_list.HOC.length+linked_list.par_num);
 
     // precompute short range force
     size_t res = size_t(sim.app_opt.rs/0.05)+1; // force resolution 5% of mesh cell
-    const FTYPE r0 = sim.app_opt.rs / (res-1);
-    Data_Vec<FTYPE, 2> data(res);
-    FTYPE r;
-    const FTYPE e2 = pow2(sim.box_opt.Ng*0.1); // softening of 10% of average interparticle length
+    const FTYPE_t r0 = sim.app_opt.rs / (res-1);
+    Data_Vec<FTYPE_t, 2> data(res);
+    FTYPE_t r;
+    const FTYPE_t e2 = pow2(sim.box_opt.Ng*0.1); // softening of 10% of average interparticle length
 
     #pragma omp parallel for private(r)
     for(unsigned i = 0; i < res; i++)
@@ -318,10 +318,10 @@ void App_Var<T>::print_info() const
  */
 
 
-LinkedList::LinkedList(unsigned par_num, int m, FTYPE hc):
+LinkedList::LinkedList(unsigned par_num, int m, FTYPE_t hc):
 	par_num(par_num), Hc(hc), LL(par_num), HOC(m, m, m) {}
 	
-void LinkedList::get_linked_list(const std::vector<Particle_v<FTYPE>>& particles)
+void LinkedList::get_linked_list(const std::vector<Particle_v<FTYPE_t>>& particles)
 {
 	HOC.assign(-1);
 	for (unsigned i = 0; i < par_num; i++)
@@ -331,10 +331,10 @@ void LinkedList::get_linked_list(const std::vector<Particle_v<FTYPE>>& particles
 	}
 }
 
-template void Tracking::update_track_par(const std::vector<Particle_x<FTYPE>>& particles);
-template void Tracking::update_track_par(const std::vector<Particle_v<FTYPE>>& particles);
-template class App_Var<Particle_x<FTYPE>>;
-template class App_Var<Particle_v<FTYPE>>;
+template void Tracking::update_track_par(const std::vector<Particle_x<FTYPE_t>>& particles);
+template void Tracking::update_track_par(const std::vector<Particle_v<FTYPE_t>>& particles);
+template class App_Var<Particle_x<FTYPE_t>>;
+template class App_Var<Particle_v<FTYPE_t>>;
 
 #ifdef TEST
 

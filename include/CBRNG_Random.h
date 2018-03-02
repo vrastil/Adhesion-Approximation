@@ -16,7 +16,7 @@
 #ifndef CBRNG_Random_Header_Included
 #define CBRNG_Random_Header_Included
 
-// define FTYPE
+// define FTYPE_t
 #include "precision.hpp"
 
 // Here is where we choose our counter-based RNG
@@ -29,6 +29,6 @@ typedef RNG::key_type key_type;
 const int nsize_r123 = ctr_type::static_size;
 
 void GetSlabKeys(unsigned long *keys, int x1, int numx, unsigned long seed);
-void GetRandomDoublesWhiteNoise(FTYPE &rn1, FTYPE &rn2, FTYPE &rn, unsigned long ikey, unsigned long index);
+void GetRandomDoublesWhiteNoise(FTYPE_t &rn1, FTYPE_t &rn2, FTYPE_t &rn, unsigned long ikey, unsigned long index);
 
 #endif
