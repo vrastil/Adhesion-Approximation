@@ -155,7 +155,7 @@ App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
     sol.add_external_grid(&drho);
 }
 
-void  App_Var_chi::save_init_drho_k(const Mesh& dro_k, Mesh& aux_field)
+void App_Var_chi::save_init_drho_k(const Mesh& dro_k, Mesh& aux_field)
 {
     // do not overwrite aux_field if Mesh of different type
     if (dro_k.N != aux_field.N) throw std::range_error("Meshes of a different sizes!");

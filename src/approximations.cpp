@@ -80,10 +80,13 @@ static void print_input_realisation(T& APP)
 ***************************************/
 
 template<class T>
-static void standard_preparation(T& APP)
+static void standard_preparation(T& APP, function<void()> save_rho_k = [](){;})
 {
     /* Generating the right density distribution in k-space */	
     gen_rho_dist_k(APP.sim, APP.app_field[0], APP.p_F);
+
+    /* Save initial density field */
+    save_rho_k();
 
     /* Print input power spectrum (one realisation), before Zel`dovich push */
     if (APP.print_every) print_input_realisation(APP);
@@ -99,26 +102,11 @@ static void standard_preparation(T& APP)
     fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
 }
 
+/* preparation for chameleon gravity */
 static void standard_preparation(App_Var_chi& APP)
 {
-    /* Generating the right density distribution in k-space */	
-    gen_rho_dist_k(APP.sim, APP.app_field[0], APP.p_F);
-
-    /* Save initial density field */
-    APP.save_init_drho_k(APP.app_field[0], APP.app_field[1]);
-
-    /* Print input power spectrum (one realisation), before Zel`dovich push */
-    if (APP.print_every) print_input_realisation(APP);
-    
-	/* Computing initial potential in k-space */
-	gen_pot_k(APP.app_field[0], APP.power_aux[0]);
-	
-	/* Computing displacement in k-space */
-	gen_displ_k(APP.app_field, APP.power_aux[0]);
-    
-    /* Computing displacement in q-space */
-    printf("Computing displacement in q-space...\n");
-    fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
+    auto save_rho_k = [&](){ APP.save_init_drho_k(APP.app_field[0], APP.app_field[1]); };
+    standard_preparation<App_Var_chi>(APP, save_rho_k);
 }
 
 /**************
