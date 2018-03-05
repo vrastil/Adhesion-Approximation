@@ -7,6 +7,7 @@
 #include "stdafx.h"
 #include "app_var.hpp"
 #include "core_power.h"
+#include "chameleon.hpp"
 #include "params.hpp"
 #include "precision.hpp"
 
@@ -19,7 +20,8 @@ void upd_pos_first_order(const Sim_Param &sim, const FTYPE_t da, const FTYPE_t a
 void upd_pos_second_order(const Sim_Param &sim, const FTYPE_t da, const FTYPE_t a, std::vector<Particle_v<FTYPE_t>>& particles, const std::vector< Mesh> &force_field);
 void upd_pos_second_order_w_pp(const Sim_Param &sim, const FTYPE_t da, const FTYPE_t a, std::vector<Particle_v<FTYPE_t>>& particles, const std::vector< Mesh> &force_field,
                                LinkedList& linked_list, Interp_obj& fs_interp);
-void upd_pos_second_order_w_chi(const Sim_Param &sim, const FTYPE_t da, const FTYPE_t a, std::vector<Particle_v<FTYPE_t>>& particles, const std::vector< Mesh> &force_field);
+void upd_pos_second_order_w_chi(const Sim_Param &sim, const FTYPE_t da, const FTYPE_t a, std::vector<Particle_v<FTYPE_t>>& particles, const std::vector< Mesh> &force_field,
+                                ChiSolver<CHI_PREC_t>& sol);
 
 void gen_rho_dist_k(const Sim_Param &sim, Mesh& rho, const FFTW_PLAN_TYPE &p_F);
 void gen_pot_k(const Mesh& rho_k, Mesh& pot_k);

@@ -224,7 +224,7 @@ void chameleon_gravity(const Sim_Param &sim)
 {
     typedef App_Var_chi APP_t;
     auto upd_pos = [](APP_t& APP){
-        upd_pos_second_order_w_chi(APP.sim, APP.db, APP.b, APP.particles, APP.app_field); //< CHI specific
+        upd_pos_second_order_w_chi(APP.sim, APP.db, APP.b, APP.particles, APP.app_field, APP.sol); //< CHI specific
     };
      auto pot_corr = [](APP_t& APP){
         init_pot_w_cic(APP); //< force interpolation corrections

@@ -10,7 +10,8 @@ constexpr FTYPE_t MPL = (FTYPE_t)1; // chi in units of Planck mass
 // constexpr FTYPE_t hbarc = (FTYPE_t)197.327053; // reduced Planck constant times speed of light, [MeV fm]
 // constexpr FTYPE_t hbarc_cosmo = hbarc*FTYPE_t(1E-9)*fm_to_Mpc; // [GeV Mpc]
 // constexpr FTYPE_t G_N = hbarc_cosmo*FTYPE_t(6.70711*1E-39); // gravitational constant, [GeV Mpc / (GeV/c^2)^2]
- constexpr FTYPE_t c_kms = (FTYPE_t)299792.458; // speed of light [km / s]
+ constexpr FTYPE_t c_kms = 1;
+ // (FTYPE_t)299792.458; // speed of light [km / s]
 
 template<typename T>
 void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
@@ -114,14 +115,21 @@ T  ChiSolver<T>::l_operator(unsigned int level, std::vector<unsigned int>& index
     T const* const chi = MultiGridSolver<3, T>::get_y(level); // solution
     const T rho_0 = MultiGridSolver<3,T>::get_external_field(level, 0)[i]; // initial overdensity
 
+    // The right hand side of the PDE 
+    T source;
+    if(chi[i] <= 0)
+    { // if the solution is overshot, try bulk field
+        MultiGridSolver<3, T>::get_y(level)[i] = chi_min(rho_0);
+        source = 0;
+    } else {
+        source = (1+D*rho_0)/a_3 - pow(chi_0/chi[i], 1-n);
+        source *= chi_prefactor; // beta*rho_m,0 / Mpl^2, [dimensionless]
+    }
+
     // Compute the standard kinetic term [D^2 phi] (in 1D this is phi''_i =  phi_{i+1} + phi_{i-1} - 2 phi_{i} )
     T kinetic = -2*chi[i]*3; // chi, '-2*3' is factor in 3D discrete laplacian
     // go through all surrounding points
     for(auto it = index_list.begin() + 1; it < index_list.end(); ++it) kinetic += chi[*it];
-        
-    // The right hand side of the PDE 
-    T source = (1+D*rho_0)/a_3 - pow(chi_0/chi[i], 1-n);
-    source *= chi_prefactor; // beta*rho_m,0 / Mpl^2, [dimensionless]
 
     // source term arising rom restricting the equation down to the lower level
     if( level > 0 && addsource ) source += MultiGridSolver<3, T>::get_multigrid_source(level, i);
@@ -149,10 +157,10 @@ T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& inde
 }
 
 App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
-    App_Var<Particle_v<FTYPE_t>>(sim, app_str), sol(sim.box_opt.mesh_num, sim), drho(sim.box_opt.mesh_num)
+    App_Var<Particle_v<FTYPE_t>>(sim, app_str), sol(sim.box_opt.mesh_num, sim, true), drho(sim.box_opt.mesh_num)
 {
-    sol.set_epsilon(2e-5*sim.chi_opt.phi);
     sol.add_external_grid(&drho);
+    sol.set_maxsteps(8);
 }
 
 void App_Var_chi::save_init_drho_k(const Mesh& dro_k, Mesh& aux_field)
@@ -171,6 +179,8 @@ void App_Var_chi::save_init_drho_k(const Mesh& dro_k, Mesh& aux_field)
     sol.set_time(b, sim.cosmo);
     sol.set_initial_guess();
 }
+
+template class ChiSolver<CHI_PREC_t>;
 
 #ifdef TEST
 #include "test_chameleon.cpp"

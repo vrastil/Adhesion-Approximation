@@ -305,10 +305,17 @@ void upd_pos_second_order_w_pp(const Sim_Param &sim, const FTYPE_t da, const FTY
     stream_kick_stream(sim, da, particles, kick_step);
 }
 
-void upd_pos_second_order_w_chi(const Sim_Param &sim, const FTYPE_t da, const FTYPE_t a, vector<Particle_v<FTYPE_t>>& particles, const vector< Mesh> &force_field)
+void upd_pos_second_order_w_chi(const Sim_Param &sim, const FTYPE_t da, const FTYPE_t a, vector<Particle_v<FTYPE_t>>& particles, const vector< Mesh> &force_field,
+                                ChiSolver<CHI_PREC_t>& sol)
 {
     // Leapfrog method for chameleon gravity (frozen-potential)
-    auto kick_step = [&](){ kick_step_w_momentum(sim, a-da/2, da, particles, force_field); };
+    auto kick_step = [&](){
+        sol.set_time(a-da/2, sim.cosmo);
+        sol.set_epsilon(1e5*sol.chi_min(0));
+        //sol.set_initial_guess();
+        sol.solve();
+        kick_step_w_momentum(sim, a-da/2, da, particles, force_field);
+    };
     stream_kick_stream(sim, da, particles, kick_step);
 }
 

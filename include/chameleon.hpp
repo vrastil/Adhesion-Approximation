@@ -19,7 +19,6 @@ private:
 
 public:
     // Constructors
-    ChiSolver() {}
     ChiSolver(unsigned int N, const Sim_Param& sim, bool verbose = true) : ChiSolver(N, 2, sim, verbose) {}
     ChiSolver(unsigned int N, int Nmin, const Sim_Param& sim, bool verbose = true);
     void set_time(T a, const Cosmo_Param& cosmo);
@@ -41,6 +40,8 @@ public:
  * @class:	App_Var_chi
  * @brief:	class containing variables for chameleon gravity
  */
+
+typedef long double CHI_PREC_t;
  
  class App_Var_chi: public App_Var<Particle_v<FTYPE_t>>
 {
@@ -49,8 +50,8 @@ public:
 	App_Var_chi(const Sim_Param &sim, std::string app_str);
 
 	// VARIABLES
-    ChiSolver<FTYPE_t> sol;
-    MultiGrid<3, FTYPE_t> drho;
+    ChiSolver<CHI_PREC_t> sol;
+    MultiGrid<3, CHI_PREC_t> drho;
 
     // METHODS
     void save_init_drho_k(const Mesh& dro, Mesh& aux_field);
