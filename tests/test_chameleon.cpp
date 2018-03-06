@@ -72,9 +72,12 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[cha
     sol.set_initial_guess();
 
     // check bulk field
-    const FTYPE_t chi_bulk = sol.chi_min(rho_0);
-    FTYPE_t const* const chi = sol.get_y();
-    for(unsigned i : some_indices) REQUIRE( chi[i] == Approx(chi_bulk));
+    {
+        const FTYPE_t D = growth_factor(a, sim.cosmo);
+        const FTYPE_t chi_bulk = sol.chi_min(D*rho_0);
+        FTYPE_t const* const chi = sol.get_y();
+        for(unsigned i : some_indices) REQUIRE( chi[i] == Approx(chi_bulk));
+    }
 
     // check that EOM is satisfied
     std::vector<unsigned int> index_list;

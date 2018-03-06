@@ -107,7 +107,7 @@ void ChiSolver<T>::set_initial_guess()
     #pragma omp parallel for
     for (unsigned i = 0; i < N_tot; ++i)
     {
-        f[i] = chi_min(rho[i]);
+        f[i] = chi_min(D*rho[i]);
     }
 }
 
@@ -141,16 +141,20 @@ T  ChiSolver<T>::l_operator(unsigned int level, std::vector<unsigned int>& index
 
     // Solution and pde-source grid at current level
     T const* const chi = MultiGridSolver<3, T>::get_y(level); // solution
-    const T rho_0 = MultiGridSolver<3,T>::get_external_field(level, 0)[i]; // initial overdensity
+    const T rho = 
+    #ifdef LINEAR_CHI_SOLVER
+            D* // when using initial overdensity, current otherwise
+    #endif
+            MultiGridSolver<3,T>::get_external_field(level, 0)[i];
 
     // The right hand side of the PDE 
     T source;
     if(chi[i] <= 0)
     { // if the solution is overshot, try bulk field
-        MultiGridSolver<3, T>::get_y(level)[i] = chi_min(rho_0);
+        MultiGridSolver<3, T>::get_y(level)[i] = chi_min(rho);
         source = 0;
     } else {
-        source = (1+D*rho_0)/a_3 - pow(chi_0/chi[i], 1-n);
+        source = (1+rho)/a_3 - pow(chi_0/chi[i], 1-n);
         source *= chi_prefactor; // beta*rho_m,0 / Mpl^2, [dimensionless]
     }
 
@@ -226,6 +230,13 @@ void App_Var_chi::save_init_drho_k(const Mesh& dro_k, Mesh& aux_field)
     cout << "Setting initial guess for chameleon field...\n";
     sol.set_time(b, sim.cosmo);
     sol.set_initial_guess();
+}
+
+void App_Var_chi::save_drho_from_particles(Mesh& aux_field)
+{
+    cout << "Storing density distribution...\n";
+    get_rho_from_par(particles, aux_field, sim);
+    transform_Mesh_to_Grid(aux_field, drho);
 }
 
 static void pwr_spec_chi_k(const Mesh &chi_k, Mesh& power_aux, const FTYPE_t prefactor = 1)

@@ -5,6 +5,9 @@
 #include "app_var.hpp"
 #include "MultiGridSolver/multigrid_solver.h"
 
+// use rho = D*rho_0 ifdef LINEAR_CHI_SOLVER, assign particles onto Mesh at each timestep otherwise
+#define LINEAR_CHI_SOLVER
+
 template<typename T>
 class ChiSolver : public MultiGridSolver<3, T>
 {
@@ -38,8 +41,8 @@ public:
     // multiply guess from previus step by factor corresponding to evolution of bulk field
     void set_next_guess(const Cosmo_Param& cosmo);
 
-    // get chi_bulk for given initial overdensity
-    T chi_min(T delta_0) const { return chi_0*std::pow(a_3/(1+D*delta_0), 1/(1-n)); }
+    // get chi_bulk for given overdensity
+    T chi_min(T delta) const { return chi_0*std::pow(a_3/(1+delta), 1/(1-n)); }
 };
 
 /**
@@ -62,5 +65,6 @@ public:
 
     // METHODS
     void save_init_drho_k(const Mesh& dro, Mesh& aux_field);
+    void save_drho_from_particles(Mesh& aux_field);
     void print_output();
 };

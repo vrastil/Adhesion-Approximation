@@ -312,7 +312,11 @@ void upd_pos_second_order_w_chi(const Sim_Param &sim, const FTYPE_t da, const FT
     auto kick_step = [&](){
         sol.set_time(a-da/2, sim.cosmo);
         sol.set_epsilon(1e5*sol.chi_min(0));
+        #ifdef LINEAR_CHI_SOLVER
         sol.set_next_guess(sim.cosmo);
+        #else
+
+        #endif
         sol.solve();
         kick_step_w_momentum(sim, a-da/2, da, particles, force_field);
     };
