@@ -108,6 +108,7 @@ class MultiGridSolver {
     // Get a pointer to the solution array / grid
     T *get_y(unsigned int level = 0);
     Grid<NDIM, T> &get_grid(unsigned int level = 0){ return _f.get_grid(level); };
+    const Grid<NDIM, T> &get_grid(unsigned int level = 0) const { return _f.get_grid(level); };
 
     // Fetch values in externally added fields
     T* get_external_field(unsigned int level, unsigned int field);

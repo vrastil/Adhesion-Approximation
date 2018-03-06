@@ -1,5 +1,7 @@
+#include "core_app.h"
 #include "core_power.h"
 #include "core_mesh.h"
+#include "core_out.h"
 #include "chameleon.hpp"
 
 using namespace std;
@@ -14,7 +16,7 @@ constexpr FTYPE_t MPL = (FTYPE_t)1; // chi in units of Planck mass
  // (FTYPE_t)299792.458; // speed of light [km / s]
 
 template<typename T>
-void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
+static void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
 {/* copy data in Mesh 'N*N*(N+2)' onto MultiGrid 'N*N*N' */
     unsigned int ix, iy, iz;
     const unsigned N_tot = grid.get_Ntot();
@@ -33,14 +35,14 @@ void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
 }
 
 template<typename T>
-void transform_Mesh_to_Grid(const Mesh& mesh, MultiGrid<3, T> &grid)
+static void transform_Mesh_to_Grid(const Mesh& mesh, MultiGrid<3, T> &grid)
 {
     transform_Mesh_to_Grid(mesh, grid.get_grid());
     grid.restrict_down_all();
 }
 
 template<typename T>
-void transform_Grid_to_Mesh(Mesh& mesh, const Grid<3, T> &grid)
+static void transform_Grid_to_Mesh(Mesh& mesh, const Grid<3, T> &grid)
 {/* copy data in MultiGrid 'N*N*N' onto Mesh 'N*N*(N+2)' */
     unsigned int ix, iy, iz;
     const unsigned N_tot = grid.get_Ntot();
@@ -59,9 +61,15 @@ void transform_Grid_to_Mesh(Mesh& mesh, const Grid<3, T> &grid)
 }
 
 template<typename T>
-void transform_Grid_to_Mesh(Mesh& mesh, const MultiGrid<3, T> &grid)
+static void transform_Grid_to_Mesh(Mesh& mesh, const MultiGrid<3, T> &grid)
 {
     transform_Grid_to_Mesh(mesh, grid.get_grid());
+}
+
+template<typename T>
+static void transform_Grid_to_Mesh(Mesh& mesh, const MultiGridSolver<3, T> &sol)
+{
+    transform_Grid_to_Mesh(mesh, sol.get_grid());
 }
 
 template<typename T>
@@ -80,7 +88,8 @@ ChiSolver<T>::ChiSolver(unsigned int N, int Nmin, const Sim_Param& sim, bool ver
 template<typename T>
 void ChiSolver<T>::set_time(T a_, const Cosmo_Param& cosmo)
 {
-    a = a_;
+    a_0 = a; // store old time
+    a = a_; // set new time
     a_3 = pow(a_, 3);
     D = growth_factor(a_, cosmo);
 }
@@ -100,6 +109,25 @@ void ChiSolver<T>::set_initial_guess()
     {
         f[i] = chi_min(rho[i]);
     }
+}
+
+template<typename T>
+void ChiSolver<T>::set_next_guess(const Cosmo_Param& cosmo)
+{
+    if(!a_0) return; // do not set for initial conditions
+
+    const T a_0_3 = pow(a_0, 3);
+    const T D_0 = growth_factor(a_0, cosmo);
+
+    T* const f = MultiGridSolver<3, T>::get_y(); // initial guess
+    T const* const rho = MultiGridSolver<3,T>::get_external_field(0, 0); // overdensity
+    const unsigned N_tot = MultiGridSolver<3, T>::get_Ntot();
+
+    #pragma omp parallel for
+    for (unsigned i = 0; i < N_tot; ++i)
+    {
+        f[i] *= pow(a_3*(1+D_0*rho[i])/(a_0_3*(1+D*rho[i])), 1/(1-n));
+    }    
 }
 
 // The dicretized equation L(phi)
@@ -157,10 +185,28 @@ T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& inde
 }
 
 App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
-    App_Var<Particle_v<FTYPE_t>>(sim, app_str), sol(sim.box_opt.mesh_num, sim, true), drho(sim.box_opt.mesh_num)
+    App_Var<Particle_v<FTYPE_t>>(sim, app_str), sol(sim.box_opt.mesh_num, sim, false), drho(sim.box_opt.mesh_num)
 {
+    // EFFICIENTLY ALLOCATE VECTOR OF MESHES
+    chi_force.reserve(3);
+    for(size_t i = 0; i < 3; i++){
+        chi_force.emplace_back(sim.box_opt.mesh_num);
+    }
+    memory_alloc += sizeof(FTYPE_t)*app_field[0].length*app_field.size();
+
+    // SET CHI SOLVER
     sol.add_external_grid(&drho);
     sol.set_maxsteps(8);
+}
+
+template<typename T>
+static T min(const std::vector<T>& data)
+{
+    return *std::min_element(data.begin(), data.end());
+}
+
+static FTYPE_t min(const Mesh& data){
+    return min(data.data);
 }
 
 void App_Var_chi::save_init_drho_k(const Mesh& dro_k, Mesh& aux_field)
@@ -174,12 +220,45 @@ void App_Var_chi::save_init_drho_k(const Mesh& dro_k, Mesh& aux_field)
     fftw_execute_dft_c2r(p_B, aux_field);
     transform_Mesh_to_Grid(aux_field, drho);
 
+    cout << "Minimal value of initial overdensity:\t" << min(aux_field) << "\n";
+
     // set initial guess to bulk field
     cout << "Setting initial guess for chameleon field...\n";
     sol.set_time(b, sim.cosmo);
     sol.set_initial_guess();
 }
 
+static void pwr_spec_chi_k(const Mesh &chi_k, Mesh& power_aux, const FTYPE_t prefactor = 1)
+{
+    Vec_3D<int> k_vec;
+    FTYPE_t k;
+    const unsigned NM = chi_k.N;
+    const unsigned half_length = chi_k.length / 2;
+
+	#pragma omp parallel for private(k_vec, k)
+	for(unsigned i=0; i < half_length;i++)
+	{
+		get_k_vec(NM, i, k_vec);
+        k = k_vec.norm();
+        power_aux[2*i] = (pow2(chi_k[2*i]) + pow2(chi_k[2*i+1]))*pow(k, 4)*prefactor;
+		power_aux[2*i+1] = k;
+	}
+}
+
+void App_Var_chi::print_output()
+{/* Print standard output */
+    App_Var<Particle_v<FTYPE_t>>::print_output();
+
+    /* Chameleon power spectrum */
+    if (sim.out_opt.print_pwr)
+    {
+        transform_Grid_to_Mesh(chi_force[0], sol); // get solution
+        fftw_execute_dft_r2c(p_F, chi_force[0]); // get chi(k)
+        pwr_spec_chi_k(chi_force[0], chi_force[0], 1/sol.chi_prefactor); // get chi(k)^2 * k^4
+        gen_pow_spec_binned(sim, chi_force[0], pwr_spec_binned); // get average Pk
+        print_pow_spec(pwr_spec_binned, out_dir_app, "_chi" + z_suffix()); // print
+    }
+}
 template class ChiSolver<CHI_PREC_t>;
 
 #ifdef TEST
