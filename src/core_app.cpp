@@ -153,54 +153,6 @@ void set_pert_pos_w_vel(const Sim_Param &sim, const FTYPE_t a, vector<Particle_v
 	}
 }
 
-void stream_step(const Sim_Param &sim, const FTYPE_t da, vector<Particle_v<FTYPE_t>>& particles)
-{
-    const unsigned Np = sim.box_opt.par_num;
-    #pragma omp parallel for
-	for (unsigned i = 0; i < Np; i++)
-	{
-        particles[i].position += particles[i].velocity*da;
-    }
-}
-
-void kick_step_no_momentum(const Sim_Param &sim, const FTYPE_t a, vector<Particle_v<FTYPE_t>>& particles, const vector< Mesh> &vel_field)
-{
-    // no memory of previus velocity, 1st order ODE
-    const unsigned Np = sim.box_opt.par_num;
-    Vec_3D<FTYPE_t> vel;
-    const FTYPE_t dDda = growth_change(a, sim.cosmo); // dD / da
-    
-    #pragma omp parallel for private(vel)
-    for (unsigned i = 0; i < Np; i++)
-	{
-        vel.fill(0.);
-        assign_from(vel_field, particles[i].position, vel);
-        particles[i].velocity = vel*dDda;
-    }
-}
-
-void kick_step_w_momentum(const Sim_Param &sim, const FTYPE_t a, const FTYPE_t da, vector<Particle_v<FTYPE_t>>& particles, const vector< Mesh> &force_field)
-{
-    // classical 2nd order ODE
-    const unsigned Np = sim.box_opt.par_num;
-    Vec_3D<FTYPE_t> force;
-    const FTYPE_t D = growth_factor(a, sim.cosmo);
-    const FTYPE_t OL = sim.cosmo.Omega_L()*pow(a,3);
-    const FTYPE_t Om = sim.cosmo.Omega_m;
-    // -3/2a represents usual EOM, the rest are LCDM corrections
-    const FTYPE_t f1 = 3/(2*a)*(Om+2*OL)/(Om+OL);
-    const FTYPE_t f2 = 3/(2*a)*Om/(Om+OL)*D/a;
-    
-    #pragma omp parallel for private(force)
-    for (unsigned i = 0; i < Np; i++)
-	{
-        force.fill(0.);
-        assign_from(force_field, particles[i].position, force);
-        force = force*f2 - particles[i].velocity*f1;		
-        particles[i].velocity += force*da;
-    }
-}
-
 FTYPE_t force_ref(const FTYPE_t r, const FTYPE_t a){
 	// Reference force for an S_2-shaped particle
 	FTYPE_t z = 2 * r / a;
@@ -245,82 +197,6 @@ void force_short(const Sim_Param &sim, const FTYPE_t D, const LinkedList& linked
             p = linked_list.LL[p];
         }
     } while( it.iter() );
-}
-
-void kick_step_w_pp(const Sim_Param &sim, const FTYPE_t a, const FTYPE_t da, vector<Particle_v<FTYPE_t>>& particles, const vector< Mesh> &force_field,
-                    LinkedList& linked_list, Interp_obj& fs_interp)
-{    // 2nd order ODE with long & short range potential
-    const unsigned Np = sim.box_opt.par_num;
-    Vec_3D<FTYPE_t> force;
-    const FTYPE_t D = growth_factor(a, sim.cosmo);
-    const FTYPE_t OL = sim.cosmo.Omega_L()*pow(a,3);
-    const FTYPE_t Om = sim.cosmo.Omega_m;
-    // -3/2a represents usual EOM, the rest are LCDM corrections
-    const FTYPE_t f1 = 3/(2*a)*(Om+2*OL)/(Om+OL);
-    const FTYPE_t f2 = 3/(2*a)*Om/(Om+OL)*D/a;
-    
-    printf("Creating linked list...\n");
-	linked_list.get_linked_list(particles);
-
-    cout << "Computing short and long range parts of the potential...\n";
-    #pragma omp parallel for private(force)
-    for (unsigned i = 0; i < Np; i++)
-	{
-        force.fill(0.);
-        assign_from(force_field, particles[i].position, force); // long-range force
-        force_short(sim, D, linked_list, particles, particles[i].position, force, fs_interp); // short range force
-
-        force = force*f2 - particles[i].velocity*f1;		
-        particles[i].velocity += force*da;
-    }
-}
-
-static void stream_kick_stream(const Sim_Param &sim, const FTYPE_t da, vector<Particle_v<FTYPE_t>>& particles, function<void()> kick_step)
-{// general Leapfrog method: Stream-Kick-Stream & ensure periodicity
-    stream_step(sim, da/2, particles);
-    kick_step();
-    stream_step(sim, da/2, particles);
-    get_per(particles, sim.box_opt.par_num, sim.box_opt.mesh_num);
-}
-
-void upd_pos_first_order(const Sim_Param &sim, const FTYPE_t da, const FTYPE_t a, vector<Particle_v<FTYPE_t>>& particles, const vector< Mesh> &vel_field)
-{
-    // Leapfrog method for frozen-flow / adhesion
-    auto kick_step = [&](){ kick_step_no_momentum(sim, a-da/2, particles, vel_field); };
-    stream_kick_stream(sim, da, particles, kick_step);
-}
-
-void upd_pos_second_order(const Sim_Param &sim, const FTYPE_t da, const FTYPE_t a, vector<Particle_v<FTYPE_t>>& particles, const vector< Mesh> &force_field)
-{
-    // Leapfrog method for frozen-potential
-    auto kick_step = [&](){ kick_step_w_momentum(sim, a-da/2, da, particles, force_field); };
-    stream_kick_stream(sim, da, particles, kick_step);
-}
-
-void upd_pos_second_order_w_pp(const Sim_Param &sim, const FTYPE_t da, const FTYPE_t a, vector<Particle_v<FTYPE_t>>& particles, const vector< Mesh> &force_field,
-                               LinkedList& linked_list, Interp_obj& fs_interp)
-{
-    // Leapfrog method for modified frozen-potential
-    auto kick_step = [&](){ kick_step_w_pp(sim, a-da/2, da, particles, force_field, linked_list, fs_interp); };
-    stream_kick_stream(sim, da, particles, kick_step);
-}
-
-void upd_pos_second_order_w_chi(const Sim_Param &sim, const FTYPE_t da, const FTYPE_t a, vector<Particle_v<FTYPE_t>>& particles, const vector< Mesh> &force_field,
-                                ChiSolver<CHI_PREC_t>& sol)
-{
-    // Leapfrog method for chameleon gravity (frozen-potential)
-    auto kick_step = [&](){
-        sol.set_time(a-da/2, sim.cosmo);
-        sol.set_epsilon(1e5*sol.chi_min(0));
-        #ifdef LINEAR_CHI_SOLVER
-        sol.set_next_guess(sim.cosmo);
-        #else
-
-        #endif
-        sol.solve();
-        kick_step_w_momentum(sim, a-da/2, da, particles, force_field);
-    };
-    stream_kick_stream(sim, da, particles, kick_step);
 }
 
 static void gen_gauss_white_noise(const Sim_Param &sim, Mesh& rho)
