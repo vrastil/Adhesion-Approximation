@@ -3,7 +3,7 @@
 #include "stdafx.h"
 #include <assert.h>
 #include <cstring>  
-#include <iostream> 
+#include <iosfwd> 
 #include <fstream>
 #include <complex>
 #include <climits>

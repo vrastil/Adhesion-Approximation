@@ -2,7 +2,7 @@
 #define _MULTIGRID_HEADER
 #include "stdafx.h"
 #include <assert.h>
-#include <iostream>
+#include <iosfwd>
 #include <climits>
 #include <complex>
 #include "grid.h"

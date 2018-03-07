@@ -1,4 +1,5 @@
 #include "MultiGridSolver/multigrid.h"
+#include <iostream>
 
 // Simple int-int a^b power-function
 inline unsigned int power(unsigned int a, unsigned int b){

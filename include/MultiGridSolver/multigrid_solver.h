@@ -3,7 +3,7 @@
 #include "stdafx.h"
 #include <bitset>
 #include <assert.h>
-#include <iostream>
+#include <iosfwd>
 #include <climits>
 #include <iomanip>
 #include <complex>
