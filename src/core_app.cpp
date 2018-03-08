@@ -288,9 +288,15 @@ template <class T>
 void get_rho_from_par(const vector<T>& particles, Mesh& rho, const Sim_Param &sim)
 {
     printf("Computing the density field from particle positions...\n");
-    const FTYPE_t m = pow(sim.box_opt.Ng_pwr, 3);
-    const FTYPE_t mesh_mod = (FTYPE_t)sim.box_opt.mesh_num_pwr/sim.box_opt.mesh_num;
+
     const unsigned Np = sim.box_opt.par_num;
+    if (particles.size() != Np){
+        string msg = "Number of particles (" + to_string(particles.size()) + ") does not correspond with simulation parameters (" + to_string(Np) + ")!";
+        throw std::range_error(msg);
+    }
+    const FTYPE_t m = pow(rho.N, 3) / Np;
+    const FTYPE_t mesh_mod = (FTYPE_t)rho.N/sim.box_opt.mesh_num;
+    
 
     rho.assign(-1.);
     

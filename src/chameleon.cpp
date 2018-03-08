@@ -13,8 +13,8 @@ constexpr FTYPE_t MPL = (FTYPE_t)1; // chi in units of Planck mass
 // constexpr FTYPE_t hbarc = (FTYPE_t)197.327053; // reduced Planck constant times speed of light, [MeV fm]
 // constexpr FTYPE_t hbarc_cosmo = hbarc*FTYPE_t(1E-9)*fm_to_Mpc; // [GeV Mpc]
 // constexpr FTYPE_t G_N = hbarc_cosmo*FTYPE_t(6.70711*1E-39); // gravitational constant, [GeV Mpc / (GeV/c^2)^2]
- constexpr FTYPE_t c_kms = // 1;
-  (FTYPE_t)299792.458; // speed of light [km / s]
+ constexpr FTYPE_t c_kms = 1;
+ // (FTYPE_t)299792.458; // speed of light [km / s]
 
 template<typename T>
 void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
@@ -162,7 +162,7 @@ T  ChiSolver<T>::l_operator(unsigned int level, std::vector<unsigned int>& index
     T source;
     if(chi[i] <= 0)
     { // if the solution is overshot, try bulk field
-        MultiGridSolver<3, T>::get_y(level)[i] = chi_min(rho);
+        MultiGridSolver<3, T>::get_y(level)[i] = rho > -1 ? chi_min(rho) : 0;
         source = 0;
     } else {
         source = (1+rho)/a_3 - pow(chi_0/chi[i], 1-n);
@@ -236,7 +236,7 @@ void App_Var_chi::save_drho_from_particles(Mesh& aux_field)
     cout << "Storing density distribution...\n";
     get_rho_from_par(particles, aux_field, sim);
     transform_Mesh_to_Grid(aux_field, drho);
-    cout << "\t[min(drho) = " << min(drho);
+    cout << "\t[min(drho) = " << min(drho) << "]\n";
 }
 
 static void pwr_spec_chi_k(const Mesh &chi_k, Mesh& power_aux, const FTYPE_t prefactor = 1)

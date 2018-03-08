@@ -117,7 +117,7 @@ App_Var<T>::App_Var(const Sim_Param &sim, string app_str):
     else create_dir(out_dir_app);
 
     // PARTICLES ALLOCATION
-    particles.reserve(sim.box_opt.par_num);
+    particles.resize(sim.box_opt.par_num); //< use resize instead of reserve for initialization of particles
     memory_alloc += sizeof(T)*sim.box_opt.par_num;
 
 	// FFTW PREPARATION
