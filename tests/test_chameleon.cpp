@@ -3,6 +3,36 @@
 #include "core_out.h"
 #include "test.hpp"
 
+namespace{
+
+template<typename T>
+T mean(const std::vector<T>& data)
+{
+    T tmp(0);
+	
+	#pragma omp parallel for reduction(+:tmp)
+	for (auto it = data.begin(); it < data.end(); ++it) tmp += *it;
+	
+	return tmp / data.size();
+}
+
+FTYPE_t mean(const Mesh& data) return mean(data.data);
+
+void get_neighbor_gridindex(std::vector<unsigned int>& index_list, unsigned int i, unsigned int N)
+{
+    index_list = std::vector<unsigned int>(7);
+    index_list[0] = i;
+    for(unsigned int j = 0, n = 1; j < 3; j++, n *= N){
+        unsigned int ii = i/n % N;
+        unsigned int iminus = ii >= 1   ? ii - 1 : N - 1;
+        unsigned int iplus  = ii <= N-2 ? ii + 1 : 0;
+        index_list[2*j+1] = i + (iminus - ii) * n;
+        index_list[2*j+2] = i + (iplus - ii) * n;
+    }
+}
+
+} // namespace <unique> end
+
 TEST_CASE( "UNIT TEST: create Multigrid and copy data to/from Mesh", "[multigrid]" )
 {
     print_unit_msg("create Multigrid and copy data to/from Mesh");
@@ -26,19 +56,6 @@ TEST_CASE( "UNIT TEST: create Multigrid and copy data to/from Mesh", "[multigrid
     for(unsigned i : some_indices) CHECK( mesh_from[i] == mesh_to[i] );
     CHECK(min(mesh_from) == min(grid));
     CHECK(min(mesh_to) == min(grid));
-}
-
-void get_neighbor_gridindex(std::vector<unsigned int>& index_list, unsigned int i, unsigned int N)
-{
-    index_list = std::vector<unsigned int>(7);
-    index_list[0] = i;
-    for(unsigned int j = 0, n = 1; j < 3; j++, n *= N){
-        unsigned int ii = i/n % N;
-        unsigned int iminus = ii >= 1   ? ii - 1 : N - 1;
-        unsigned int iplus  = ii <= N-2 ? ii + 1 : 0;
-        index_list[2*j+1] = i + (iminus - ii) * n;
-        index_list[2*j+2] = i + (iplus - ii) * n;
-    }
 }
 
 TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[chameleon]" )
@@ -96,22 +113,6 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[cha
         get_neighbor_gridindex(index_list, i, N);
         CHECK( sol.l_operator(level, index_list, true) == Approx(0.));
     }
-}
-
-template<typename T>
-static T mean(const std::vector<T>& data)
-{
-    T tmp(0);
-	
-	#pragma omp parallel for reduction(+:tmp)
-	for (auto it = data.begin(); it < data.end(); ++it) tmp += *it;
-	
-	return tmp / data.size();
-}
-
-static FTYPE_t mean(const Mesh& data)
-{
-    return mean(data.data);
 }
 
 TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chameleon]" )

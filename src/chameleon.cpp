@@ -6,6 +6,7 @@
 
 using namespace std;
 
+namespace{
 constexpr FTYPE_t MPL = (FTYPE_t)1; // chi in units of Planck mass
 // (FTYPE_t)2.435E18; // reduced Planck mass, [GeV/c^2]
 // constexpr FTYPE_t fm_to_Mpc = (FTYPE_t)3.2407792896664E-38; // 1 fm = ? Mpc
@@ -16,7 +17,7 @@ constexpr FTYPE_t MPL = (FTYPE_t)1; // chi in units of Planck mass
   (FTYPE_t)299792.458; // speed of light [km / s]
 
 template<typename T>
-static void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
+void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
 {/* copy data in Mesh 'N*N*(N+2)' onto MultiGrid 'N*N*N' */
     unsigned int ix, iy, iz;
     const unsigned N_tot = grid.get_Ntot();
@@ -35,20 +36,20 @@ static void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
 }
 
 template<typename T>
-static void transform_Mesh_to_Grid(const Mesh& mesh, MultiGrid<3, T> &grid)
+void transform_Mesh_to_Grid(const Mesh& mesh, MultiGrid<3, T> &grid)
 {
     transform_Mesh_to_Grid(mesh, grid.get_grid());
     grid.restrict_down_all();
 }
 
 template<typename T>
-static void transform_Grid_to_Mesh(Mesh& mesh, const Grid<3, T> &grid)
+void transform_Grid_to_Mesh(Mesh& mesh, const Grid<3, T> &grid)
 {/* copy data in MultiGrid 'N*N*N' onto Mesh 'N*N*(N+2)' */
     unsigned int ix, iy, iz;
     const unsigned N_tot = grid.get_Ntot();
     const unsigned N = grid.get_N();
 
-    if (mesh.N != N) throw std::range_error("Mesh of a different size than MultiGrid!");
+    if (mesh.N != N) throw std::range_error("Mesh of a different size than Grid!");
 
     #pragma omp parallel for private(ix, iy, iz)
     for (unsigned i = 0; i < N_tot; ++i)
@@ -61,16 +62,23 @@ static void transform_Grid_to_Mesh(Mesh& mesh, const Grid<3, T> &grid)
 }
 
 template<typename T>
-static void transform_Grid_to_Mesh(Mesh& mesh, const MultiGrid<3, T> &grid)
-{
-    transform_Grid_to_Mesh(mesh, grid.get_grid());
-}
+void transform_Grid_to_Mesh(Mesh& mesh, const MultiGrid<3, T> &grid){ transform_Grid_to_Mesh(mesh, grid.get_grid()); }
 
 template<typename T>
-static void transform_Grid_to_Mesh(Mesh& mesh, const MultiGridSolver<3, T> &sol)
-{
-    transform_Grid_to_Mesh(mesh, sol.get_grid());
-}
+void transform_Grid_to_Mesh(Mesh& mesh, const MultiGridSolver<3, T> &sol){ transform_Grid_to_Mesh(mesh, sol.get_grid()); }
+
+template<typename T>
+T min(const std::vector<T>& data){ return *std::min_element(data.begin(), data.end()); }
+
+FTYPE_t min(const Mesh& data){ return min(data.data); }
+
+template<typename T>
+FTYPE_t min(const Grid<3, T> &grid){ return min(grid.get_vec()); }
+
+template<typename T>
+FTYPE_t min(const MultiGrid<3, T> &grid){ return min(grid.get_grid()); }
+
+} // namespace <unique> end
 
 template<typename T>
 ChiSolver<T>::ChiSolver(unsigned int N, int Nmin, const Sim_Param& sim, bool verbose):
@@ -126,7 +134,7 @@ void ChiSolver<T>::set_next_guess(const Cosmo_Param& cosmo)
     #pragma omp parallel for
     for (unsigned i = 0; i < N_tot; ++i)
     {
-        f[i] *= pow(a_3*(1+D_0*rho[i])/(a_0_3*(1+D*rho[i])), 1/(1-n));
+        f[i] *= D*rho[i] > -1 ? pow(a_3*(1+D_0*rho[i])/(a_0_3*(1+D*rho[i])), 1/(1-n)) : 1;
     }    
 }
 
@@ -141,11 +149,14 @@ T  ChiSolver<T>::l_operator(unsigned int level, std::vector<unsigned int>& index
 
     // Solution and pde-source grid at current level
     T const* const chi = MultiGridSolver<3, T>::get_y(level); // solution
-    const T rho = 
-    #ifdef LINEAR_CHI_SOLVER
-            D* // when using initial overdensity, current otherwise
+
+    #ifdef LINEAR_CHI_SOLVER // when using initial overdensity, current otherwise
+    const T rho = D*MultiGridSolver<3,T>::get_external_field(level, 0)[i] > -1 ?
+                  D*MultiGridSolver<3,T>::get_external_field(level, 0)[i] : -1;
+    #else
+    const T rho = MultiGridSolver<3,T>::get_external_field(level, 0)[i];
     #endif
-            MultiGridSolver<3,T>::get_external_field(level, 0)[i];
+            
 
     // The right hand side of the PDE 
     T source;
@@ -203,34 +214,6 @@ App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
     sol.set_maxsteps(8);
 }
 
-template<typename T>
-static T min(const std::vector<T>& data)
-{
-    return *std::min_element(data.begin(), data.end());
-}
-
-static FTYPE_t min(const Mesh& data){
-    return min(data.data);
-}
-
-template<typename T>
-static FTYPE_t min(const Grid<3, T> &grid)
-{
-    return *std::min_element(grid.get_vec().begin(), grid.get_vec().end());
-}
-
-template<typename T>
-static FTYPE_t min(const MultiGrid<3, T> &grid)
-{
-    min(grid.get_grid());
-}
-
-template<typename T>
-static FTYPE_t min(const MultiGridSolver<3, T> &sol)
-{
-    min(sol.get_grid());
-}
-
 void App_Var_chi::save_init_drho_k(const Mesh& dro_k, Mesh& aux_field)
 {
     // do not overwrite aux_field if Mesh of different type
@@ -241,9 +224,6 @@ void App_Var_chi::save_init_drho_k(const Mesh& dro_k, Mesh& aux_field)
     aux_field = dro_k;
     fftw_execute_dft_c2r(p_B, aux_field);
     transform_Mesh_to_Grid(aux_field, drho);
-
-    cout << "Minimal value of initial overdensity (Mesh):\t" << min(aux_field) << "\n";
-    cout << "Minimal value of initial overdensity (Grid):\t" << min(drho) << "\n";
 
     // set initial guess to bulk field
     cout << "Setting initial guess for chameleon field...\n";
@@ -256,6 +236,7 @@ void App_Var_chi::save_drho_from_particles(Mesh& aux_field)
     cout << "Storing density distribution...\n";
     get_rho_from_par(particles, aux_field, sim);
     transform_Mesh_to_Grid(aux_field, drho);
+    cout << "\t[min(drho) = " << min(drho);
 }
 
 static void pwr_spec_chi_k(const Mesh &chi_k, Mesh& power_aux, const FTYPE_t prefactor = 1)

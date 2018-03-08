@@ -55,10 +55,13 @@ swig: $(LIB) swig/*.i
 $(LIB): $(OBJ_FILES)
 	gcc-ar rcs $@ $^
 
-check: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -Wfloat-conversion -D TEST -D PRECISION=$(PRECISION)
-check: COMPILE.cc += -I./tests
-check: tests/test
+check: test
 	./tests/test
+
+test: tests/test
+test: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -D TEST -D PRECISION=$(PRECISION)
+test: COMPILE.cc += -I./tests
+
 
 tests/test: $(TEST_OBJ_FILES)
 	+$(COMPILE.fin) -o tests/test $^ $(CXXLIB)
@@ -66,7 +69,7 @@ tests/test: $(TEST_OBJ_FILES)
 %.o: %.cpp $(PCH_O)
 	$(COMPILE.cc) -o $@ $<
 
-tests/%.o: src/%.cpp
+tests/%.o: src/%.cpp $(PCH_O)
 	$(COMPILE.cc) -o $@ $<
 
 $(PCH_O): $(PCH)
@@ -84,4 +87,4 @@ cleanall: clean
 -include $(TEST_OBJ_FILES:.o=.d)
 -include $(PCH_O:.gch=.d)
 
-.PHONY: swig check clean
+.PHONY: swig check clean test
