@@ -44,6 +44,12 @@ T const* const Grid<NDIM,T>::get_y() const {
   return &_y[0]; 
 }
 
+template<unsigned int NDIM, typename T>
+const std::vector<T>& Grid<NDIM,T>::get_vec() const
+{
+    return _y;
+}
+
 // Allow to fetch value using f[i] syntax
 template<unsigned int NDIM, typename T>
 T& Grid<NDIM,T>::operator[](unsigned int i){ 

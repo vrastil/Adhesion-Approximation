@@ -36,6 +36,7 @@ class Grid {
     // Get a pointer to the T-array
     T* get_y();
     T const* const get_y() const;
+    const std::vector<T>& get_vec() const;
 
     // Allow syntax grid[i] to get/set the index = i'th element
     T& operator[](unsigned int i);

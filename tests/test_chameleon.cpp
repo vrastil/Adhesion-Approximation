@@ -13,13 +13,19 @@ TEST_CASE( "UNIT TEST: create Multigrid and copy data to/from Mesh", "[multigrid
     Mesh mesh_from(N);
     Mesh mesh_to(N);
 
-    const std::vector<unsigned> some_indices = {4, N*2+5, N*N*4+8*N+5};
-    for(unsigned i : some_indices) mesh_from[i] = rand();
+    const std::vector<unsigned> some_indices = // Mesh indices = N*N*(N+2)
+                                            {4, // (0, 0, 4)
+                                            (N+2)*2+5, // (0, 2, 5)
+                                            N*(N+2)*4+8*(N+2)+5}; // (4, 8, 5)
+    for(unsigned i : some_indices) mesh_from[i] = 2.0*rand()/RAND_MAX - 1;
 
     transform_Mesh_to_Grid(mesh_from, grid);
+    CHECK(min(mesh_from) == min(grid));
     transform_Grid_to_Mesh(mesh_to, grid);
 
     for(unsigned i : some_indices) CHECK( mesh_from[i] == mesh_to[i] );
+    CHECK(min(mesh_from) == min(grid));
+    CHECK(min(mesh_to) == min(grid));
 }
 
 void get_neighbor_gridindex(std::vector<unsigned int>& index_list, unsigned int i, unsigned int N)
@@ -42,7 +48,10 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[cha
     constexpr unsigned N = 32;
     constexpr FTYPE_t a = 0.5;
     constexpr FTYPE_t rho_0 = 0.3;
-    const std::vector<unsigned> some_indices = {4, N*2+5, N*N*4+8*N+5};
+    const std::vector<unsigned> some_indices = // Mesh indices = N*N*(N+2)
+                                            {4, // (0, 0, 4)
+                                            (N+2)*2+5, // (0, 2, 5)
+                                            N*(N+2)*4+8*(N+2)+5}; // (4, 8, 5)
 
     // initialize Sim_Param
     const int argc = 1;
@@ -50,7 +59,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[cha
     Sim_Param sim(argc, argv);
 
     // initialize ChiSolver
-    ChiSolver<FTYPE_t> sol(N, sim);
+    ChiSolver<FTYPE_t> sol(N, sim, false);
 
     // check thowing of exceptions in uninitialised state
     CHECK_THROWS_AS( sol.set_initial_guess(), std::out_of_range );
@@ -126,7 +135,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     cout << "8*PI*G*rho_0*beta := " << chi_prefactor << "\n";
 
     // initialize ChiSolver
-    ChiSolver<long double> sol(N, sim);
+    ChiSolver<long double> sol(N, sim, false);
 
     // initialize overdensity -- constant density in sphere of radius R, center at x0, y0, z0
     MultiGrid<3, long double> rho_grid(N);

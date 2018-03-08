@@ -6,7 +6,7 @@
 #include "MultiGridSolver/multigrid_solver.h"
 
 // use rho = D*rho_0 ifdef LINEAR_CHI_SOLVER, assign particles onto Mesh at each timestep otherwise
-#define LINEAR_CHI_SOLVER
+// #define LINEAR_CHI_SOLVER
 
 template<typename T>
 class ChiSolver : public MultiGridSolver<3, T>

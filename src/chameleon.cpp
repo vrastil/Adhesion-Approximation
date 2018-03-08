@@ -12,8 +12,8 @@ constexpr FTYPE_t MPL = (FTYPE_t)1; // chi in units of Planck mass
 // constexpr FTYPE_t hbarc = (FTYPE_t)197.327053; // reduced Planck constant times speed of light, [MeV fm]
 // constexpr FTYPE_t hbarc_cosmo = hbarc*FTYPE_t(1E-9)*fm_to_Mpc; // [GeV Mpc]
 // constexpr FTYPE_t G_N = hbarc_cosmo*FTYPE_t(6.70711*1E-39); // gravitational constant, [GeV Mpc / (GeV/c^2)^2]
- constexpr FTYPE_t c_kms = 1;
- // (FTYPE_t)299792.458; // speed of light [km / s]
+ constexpr FTYPE_t c_kms = // 1;
+  (FTYPE_t)299792.458; // speed of light [km / s]
 
 template<typename T>
 static void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
@@ -29,7 +29,7 @@ static void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
     {
         ix = i % N;
         iy = i / N % N;
-        iz = i / (N*N) % N;
+        iz = i / (N*N);
         grid[i] = mesh(ix, iy, iz);
     }
 }
@@ -55,7 +55,7 @@ static void transform_Grid_to_Mesh(Mesh& mesh, const Grid<3, T> &grid)
     {
         ix = i % N;
         iy = i / N % N;
-        iz = i / (N*N) % N;
+        iz = i / (N*N);
         mesh(ix, iy, iz) = grid[i];
     }
 }
@@ -189,7 +189,7 @@ T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& inde
 }
 
 App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
-    App_Var<Particle_v<FTYPE_t>>(sim, app_str), sol(sim.box_opt.mesh_num, sim, false), drho(sim.box_opt.mesh_num)
+    App_Var<Particle_v<FTYPE_t>>(sim, app_str), sol(sim.box_opt.mesh_num, sim, true), drho(sim.box_opt.mesh_num)
 {
     // EFFICIENTLY ALLOCATE VECTOR OF MESHES
     chi_force.reserve(3);
@@ -213,6 +213,24 @@ static FTYPE_t min(const Mesh& data){
     return min(data.data);
 }
 
+template<typename T>
+static FTYPE_t min(const Grid<3, T> &grid)
+{
+    return *std::min_element(grid.get_vec().begin(), grid.get_vec().end());
+}
+
+template<typename T>
+static FTYPE_t min(const MultiGrid<3, T> &grid)
+{
+    min(grid.get_grid());
+}
+
+template<typename T>
+static FTYPE_t min(const MultiGridSolver<3, T> &sol)
+{
+    min(sol.get_grid());
+}
+
 void App_Var_chi::save_init_drho_k(const Mesh& dro_k, Mesh& aux_field)
 {
     // do not overwrite aux_field if Mesh of different type
@@ -224,7 +242,8 @@ void App_Var_chi::save_init_drho_k(const Mesh& dro_k, Mesh& aux_field)
     fftw_execute_dft_c2r(p_B, aux_field);
     transform_Mesh_to_Grid(aux_field, drho);
 
-    cout << "Minimal value of initial overdensity:\t" << min(aux_field) << "\n";
+    cout << "Minimal value of initial overdensity (Mesh):\t" << min(aux_field) << "\n";
+    cout << "Minimal value of initial overdensity (Grid):\t" << min(drho) << "\n";
 
     // set initial guess to bulk field
     cout << "Setting initial guess for chameleon field...\n";
