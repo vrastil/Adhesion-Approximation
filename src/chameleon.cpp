@@ -200,7 +200,7 @@ T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& inde
 }
 
 App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
-    App_Var<Particle_v<FTYPE_t>>(sim, app_str), sol(sim.box_opt.mesh_num, sim, true), drho(sim.box_opt.mesh_num)
+    App_Var<Particle_v<FTYPE_t>>(sim, app_str), sol(sim.box_opt.mesh_num, sim, false), drho(sim.box_opt.mesh_num)
 {
     // EFFICIENTLY ALLOCATE VECTOR OF MESHES
     chi_force.reserve(3);

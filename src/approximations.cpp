@@ -490,7 +490,7 @@ void chameleon_gravity(const Sim_Param &sim)
             #ifdef LINEAR_CHI_SOLVER
             APP.sol.set_next_guess(APP.sim.cosmo);
             #else
-            APP.save_drho_from_particles(APP.app_field[0]);
+            APP.save_drho_from_particles(APP.chi_force[0]);
             #endif
             APP.sol.solve();      
             kick_step_w_momentum(APP.sim, APP.b-APP.db/2, APP.db, APP.particles, APP.app_field);
