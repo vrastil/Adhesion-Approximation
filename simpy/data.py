@@ -62,6 +62,12 @@ def try_get_zs_files(a_sim_info, subdir, patterns):
         print "\tWARNING! Missing data. Skipping step."
         return None, None
 
+def sort_chi_files(files, zs):
+    """ separate chi_files (*_chi_*) from given files, return 4 lists """
+    files_chi, zs_chi = zip(*[x for x in zip(files, zs) if 'chi' in x[0]])
+    files, zs = zip(*[x for x in zip(files, zs) if 'chi' not in x[0]])
+    return map(list, [files, zs, files_chi, zs_chi])
+
 # ***************************
 # LOAD DATA FROM SINGLE RUN *
 # ***************************
@@ -100,6 +106,10 @@ def load_plot_pwr(files, zs, a_sim_info, **kwargs):
     data_list = [np.transpose(np.loadtxt(x)) for x in files]
     get_extrap_pk(a_sim_info, files)
     plot.plot_pwr_spec(data_list, zs, a_sim_info, a_sim_info.data["pk_list"], **kwargs)
+
+def load_plot_chi_pwr(files, zs, a_sim_info, **kwargs):
+    data_list = [np.transpose(np.loadtxt(x)) for x in files]
+    plot.plot_chi_pwr_spec(data_list, zs, a_sim_info, **kwargs)
 
 def get_plot_corr(files, zs, a_sim_info, load=False):
     if "corr_func" not in a_sim_info.data:
@@ -188,6 +198,7 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
     all_steps = [
         # Power spectrum
         ("pwr_spec", '*par*.dat *init*.dat', load_plot_pwr, {}),
+        ("pwr_spec_chi", '*chi*.dat*', load_plot_chi_pwr, {'subdir' : 'pwr_spec/'}),
         # Power spectrum difference -- input, hybrid, particle
         ("pwr_diff", '*par*', load_plot_pwr_spec_diff,
             {'info_str' : '(particle)', 'ext_title' : 'par'}),

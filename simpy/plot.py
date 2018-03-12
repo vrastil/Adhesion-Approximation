@@ -39,6 +39,8 @@ def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True):
             lab = 'z = ' + str(z)
         elif skip_init:
             continue
+        else:
+            lab = 'init'
         yield [lab] + values
 
 def close_fig(filename, fig, save=True, show=False):
@@ -62,8 +64,18 @@ def add_nyquist_info(ax, a_sim_info):
     for val, lab in val_lab.iteritems():
         ax.axvline(val, ls=next(ls), c='k', label=lab + r")")
 
-def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False, out_dir='auto',
-                  pk_type='dens', save=True, show=False):
+def legend_manipulation(ax, figtext):
+    #handles, labels = zip(*sorted(zip(*ax.get_legend_handles_labels()), key=lambda x: x[1], reverse=True))
+    handles, labels = ax.get_legend_handles_labels()
+    plt.legend(handles, labels, loc='upper left',
+               bbox_to_anchor=(1.0, 1.0), fontsize=14)
+    plt.draw()
+    plt.figtext(0.5, 0.95, figtext,
+                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
+    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)    
+
+def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False,
+                  out_dir='auto', pk_type='dens', save=True, show=False):
     """" Plot power spectrum -- points and extrapolated values,
     show 'true' linear Pk at the initial and final redshift """
     if out_dir == 'auto':
@@ -111,17 +123,37 @@ def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False, out_dir='auto
     ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=15)
 
     # LEGEND manipulation
-    #handles, labels = zip(*sorted(zip(*ax.get_legend_handles_labels()), key=lambda x: x[1], reverse=True))
-    handles, labels = ax.get_legend_handles_labels()
-    plt.legend(handles, labels, loc='upper left',
-               bbox_to_anchor=(1.0, 1.0), fontsize=14)
-    plt.draw()
-    plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
-                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
+    legend_manipulation(ax, a_sim_info.info_tr())
 
+    # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show)
 
+def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, out_dir='auto', save=True, show=False):
+    if out_dir == 'auto':
+        out_dir = a_sim_info.res_dir
+    suptitle = "Chameleon power spectrum"
+    out_file = "pwr_spec_chi.png"
+
+    fig = plt.figure(figsize=(15, 11))
+    ax = plt.gca()
+    ax.set_yscale('log')
+    ax.set_xscale('log')
+
+    for lab, Pkk in iter_data(zs_chi, [data_list_chi]):
+        k, P_k = Pkk[0], Pkk[1]
+        ax.plot(k, P_k, 'o', ms=3, label=lab + r' $(\chi)$')
+
+    add_nyquist_info(ax, a_sim_info)
+    
+    fig.suptitle(suptitle, y=0.99, size=20)
+    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=15)
+    ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=15)
+
+    # LEGEND manipulation
+    legend_manipulation(ax, a_sim_info.info_tr())
+
+    # close & save figure
+    close_fig(out_dir + out_file, fig, save=save, show=show)
 
 def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_data_nl=None, out_dir='auto', save=True, show=False):
     if out_dir == 'auto':
