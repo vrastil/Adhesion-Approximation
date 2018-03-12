@@ -211,7 +211,7 @@ App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
 
     // SET CHI SOLVER
     sol.add_external_grid(&drho);
-    sol.set_maxsteps(8);
+    sol.set_maxsteps(5);
 }
 
 void App_Var_chi::save_init_drho_k(const Mesh& dro_k, Mesh& aux_field)
@@ -239,20 +239,18 @@ void App_Var_chi::save_drho_from_particles(Mesh& aux_field)
     cout << "\t[min(drho) = " << min(drho) << "]\n";
 }
 
-static void pwr_spec_chi_k(const Mesh &chi_k, Mesh& power_aux, const FTYPE_t prefactor = 1)
+static void pwr_spec_chi_k(const Mesh &chi_k, Mesh& power_aux)
 {
     Vec_3D<int> k_vec;
-    FTYPE_t k;
     const unsigned NM = chi_k.N;
     const unsigned half_length = chi_k.length / 2;
 
-	#pragma omp parallel for private(k_vec, k)
+	#pragma omp parallel for private(k_vec)
 	for(unsigned i=0; i < half_length;i++)
 	{
 		get_k_vec(NM, i, k_vec);
-        k = k_vec.norm();
-        power_aux[2*i] = (pow2(chi_k[2*i]) + pow2(chi_k[2*i+1]))*pow(k, 4)*prefactor;
-		power_aux[2*i+1] = k;
+        power_aux[2*i] = pow2(chi_k[2*i]) + pow2(chi_k[2*i+1]);
+		power_aux[2*i+1] = k_vec.norm();
 	}
 }
 
@@ -265,7 +263,7 @@ void App_Var_chi::print_output()
     {
         transform_Grid_to_Mesh(chi_force[0], sol); // get solution
         fftw_execute_dft_r2c(p_F, chi_force[0]); // get chi(k)
-        pwr_spec_chi_k(chi_force[0], chi_force[0], 1/sol.chi_prefactor); // get chi(k)^2 * k^4
+        pwr_spec_chi_k(chi_force[0], chi_force[0]); // get chi(k)^2
         gen_pow_spec_binned(sim, chi_force[0], pwr_spec_binned); // get average Pk
         print_pow_spec(pwr_spec_binned, out_dir_app, "_chi" + z_suffix()); // print
     }

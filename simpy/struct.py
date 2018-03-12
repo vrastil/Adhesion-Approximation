@@ -33,7 +33,7 @@ class SimInfo(object):
         by any additional parameters in 'kwargs' (optional) """
         # attributes to load from json file: string & dictionaries
         self.app = ""
-        self.app_opt = self.box_opt = self.cosmo = self.integ_opt = self.k_nyquist = self.out_opt = self.results = self.run_opt = {}
+        self.app_opt, self.box_opt, self.cosmo, self.integ_opt, self.k_nyquist, self.out_opt, self.results, self.run_opt, self.chi_opt = ({} for i in range(9))
 
         if a_file.endswith('.json'):
             self.load_file(a_file)

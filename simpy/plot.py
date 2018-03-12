@@ -143,6 +143,14 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, out_dir='auto', save=Tr
         k, P_k = Pkk[0], Pkk[1]
         ax.plot(k, P_k, 'o', ms=3, label=lab + r' $(\chi)$')
 
+    # plot linear power spectra
+    a_0 = 1./(1.+zs_chi[-1])
+    a_i = 1./(1.+zs_chi[0]) if zs_chi[0] != 'init' else 1./(1.+zs_chi[1])
+    P_i = power.lin_chi_pow_spec(a_i, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+    P_0 = power.lin_chi_pow_spec(a_0, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+    ax.plot(k, P_0, '-')
+    ax.plot(k, P_i, '-')
+
     add_nyquist_info(ax, a_sim_info)
     
     fig.suptitle(suptitle, y=0.99, size=20)
