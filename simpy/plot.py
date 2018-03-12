@@ -139,9 +139,10 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, out_dir='auto', save=Tr
     ax.set_yscale('log')
     ax.set_xscale('log')
 
-    for lab, Pkk in iter_data(zs_chi, [data_list_chi]):
+    for lab, Pkk, z in iter_data(zs_chi, [data_list_chi, zs_chi]):
         k, P_k = Pkk[0], Pkk[1]
-        ax.plot(k, P_k, 'o', ms=3, label=lab + r' $(\chi)$')
+        chi_prefactor = power.chi_prefactor(1/(1.+z), a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+        ax.plot(k, P_k/chi_prefactor, 'o', ms=3, label=lab)
 
     # plot linear power spectra
     a_0 = 1./(1.+zs_chi[-1])

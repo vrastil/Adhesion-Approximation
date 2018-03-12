@@ -67,6 +67,7 @@ class SimInfo(object):
         info += '$L = %i$ Mpc/h\n' % self.box_opt["box_size"]
         if self.app == 'AA': info += r'$\nu = %.1f$ (Mpc/h)$^2$' % self.app_opt["viscosity"]
         if self.app == 'FP_pp': info += r'$r_s = %.1f$' % self.app_opt["cut_radius"]
+        if self.app == 'CHI': info += r'$\phi_s = %.1e$' % self.chi_opt["phi"]
         return info
 
     def info_tr(self):

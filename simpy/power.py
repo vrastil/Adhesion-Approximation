@@ -56,28 +56,28 @@ def lin_pow_spec(a, k, cosmo):
     else:
         return fs.lin_pow_spec(a, np.asscalar(k), cosmo)
 
-def lin_chi_pow_spec(a, k, cosmo, chi_opt):
-    """ return ndarray of linear power spectrum for chameleon """
-    # units
-    MPL = 1
-    c_kms = 1
-
-    # chameleon constants
+def chi_prefactor(a, cosmo, chi_opt, MPL=1):
     chi_0 = 2*chi_opt["beta"]*MPL*chi_opt["phi"]
     n = chi_opt["n"]
     prefactor = pow(chi_0/(1-n), 2)*pow(a, 6/(1-n))
+    return prefactor
+
+def lin_chi_pow_spec(a, k, cosmo, chi_opt, MPL=1, c_kms=1):
+    """ return ndarray of linear power spectrum for chameleon in units of chi_prefactor """
+    # chameleon constants
+    chi_0 = 2*chi_opt["beta"]*MPL*chi_opt["phi"]
+    n = chi_opt["n"]
     mass_sq = ( # beta*rho_m,0 / Mpl
                3*chi_opt["beta"]*cosmo.Omega_m*MPL
                *pow(cosmo.H0 # Hubble constant
                / (cosmo.h * c_kms) # units factor for 'c = 1' and [L] = Mpc / h
                ,2)
-               # (1-n)/chi_0
                *(1-n)/chi_0
                # time dependence
                *pow(a, -(3+3/(1-n)))
                )
     k = np.array(k)
-    chi_mod = prefactor*pow(mass_sq/(mass_sq+k*k), 2)
+    chi_mod = pow(mass_sq/(mass_sq+k*k), 2)
 
     if k.shape:
         return chi_mod*np.array([fs.lin_pow_spec(a, k_, cosmo)  for k_ in k])
