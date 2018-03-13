@@ -485,14 +485,7 @@ void chameleon_gravity(const Sim_Param &sim)
     auto upd_pos = [](APP_t& APP){
         auto kick_step = [&]()
         {
-            APP.sol.set_time(APP.b-APP.db/2, APP.sim.cosmo);
-            APP.sol.set_epsilon(1e5*APP.sol.chi_min(0));
-            #ifdef LINEAR_CHI_SOLVER
-            APP.sol.set_next_guess(APP.sim.cosmo);
-            #else
-            APP.save_drho_from_particles(APP.chi_force[0]);
-            #endif
-            APP.sol.solve();      
+            APP.solve(APP.b-APP.db/2);   
             kick_step_w_momentum(APP.sim, APP.b-APP.db/2, APP.db, APP.particles, APP.app_field);
         };
         stream_kick_stream(APP.sim, APP.db, APP.particles, kick_step);

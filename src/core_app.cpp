@@ -368,7 +368,7 @@ void pwr_spec_k_init(const Mesh &rho_k, Mesh& power_aux)
 	for(unsigned i=0; i < half_length;i++)
 	{
 		get_k_vec(NM, i, k_vec);
-        power_aux[2*i] = rho_k[2*i]*rho_k[2*i] + rho_k[2*i+1]*rho_k[2*i+1];
+        power_aux[2*i] = pow2(rho_k[2*i]) + pow2(rho_k[2*i+1]);
 		power_aux[2*i+1] = k_vec.norm();
 	}
 }

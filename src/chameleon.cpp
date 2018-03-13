@@ -16,6 +16,9 @@ constexpr FTYPE_t MPL = (FTYPE_t)1; // chi in units of Planck mass
  constexpr FTYPE_t c_kms = 1;
  // (FTYPE_t)299792.458; // speed of light [km / s]
 
+ // use rho = D*rho_0 ifdef LINEAR_CHI_SOLVER, assign particles onto Mesh at each timestep otherwise
+// #define LINEAR_CHI_SOLVER
+
 template<typename T>
 void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
 {/* copy data in Mesh 'N*N*(N+2)' onto MultiGrid 'N*N*N' */
@@ -162,7 +165,7 @@ T  ChiSolver<T>::l_operator(unsigned int level, std::vector<unsigned int>& index
     T source;
     if(chi[i] <= 0)
     { // if the solution is overshot, try bulk field
-        MultiGridSolver<3, T>::get_y(level)[i] = rho > -1 ? chi_min(rho) : 0;
+        MultiGridSolver<3, T>::get_y(level)[i] = rho > -1 ? chi_min(rho) : chi_min(0);
         source = 0;
     } else {
         source = (1+rho)/a_3 - pow(chi_0/chi[i], 1-n);
@@ -231,27 +234,47 @@ void App_Var_chi::save_init_drho_k(const Mesh& dro_k, Mesh& aux_field)
     sol.set_initial_guess();
 }
 
+static void w_k_correction(Mesh& rho_k)
+{
+	FTYPE_t w_k;
+    Vec_3D<int> k_vec;
+    const unsigned NM = rho_k.N;
+    const unsigned half_length = rho_k.length / 2;
+
+	#pragma omp parallel for private(w_k, k_vec)
+	for(unsigned i=0; i < half_length;i++)
+	{
+		w_k = 1.;
+		get_k_vec(NM, i, k_vec);
+		for (int j = 0; j < 3; j++) if (k_vec[j] != 0) w_k *= pow(sin(k_vec[j]*PI/NM)/(k_vec[j]*PI/NM), 2); //< ORDER = 1 (CIC)
+        rho_k[2*i] /= w_k;
+		rho_k[2*i+1] /= w_k;
+	}
+}
+
 void App_Var_chi::save_drho_from_particles(Mesh& aux_field)
 {
     cout << "Storing density distribution...\n";
     get_rho_from_par(particles, aux_field, sim);
+    #ifdef CHI_W_CORR
+    fftw_execute_dft_r2c(p_F, aux_field);
+    w_k_correction(aux_field);
+    fftw_execute_dft_c2r(p_B, aux_field);
+    #endif
     transform_Mesh_to_Grid(aux_field, drho);
     cout << "\t[min(drho) = " << min(drho) << "]\n";
 }
 
-static void pwr_spec_chi_k(const Mesh &chi_k, Mesh& power_aux)
+void App_Var_chi::solve(FTYPE_t a)
 {
-    Vec_3D<int> k_vec;
-    const unsigned NM = chi_k.N;
-    const unsigned half_length = chi_k.length / 2;
-
-	#pragma omp parallel for private(k_vec)
-	for(unsigned i=0; i < half_length;i++)
-	{
-		get_k_vec(NM, i, k_vec);
-        power_aux[2*i] = pow2(chi_k[2*i]) + pow2(chi_k[2*i+1]);
-		power_aux[2*i+1] = k_vec.norm();
-	}
+    sol.set_time(a, sim.cosmo);
+    sol.set_epsilon(1e5*sol.chi_min(0));
+    #ifdef LINEAR_CHI_SOLVER
+    sol.set_next_guess(sim.cosmo);
+    #else
+    save_drho_from_particles(chi_force[0]);
+    #endif
+    sol.solve();
 }
 
 void App_Var_chi::print_output()
@@ -261,9 +284,11 @@ void App_Var_chi::print_output()
     /* Chameleon power spectrum */
     if (sim.out_opt.print_pwr)
     {
+        solve(b);
+
         transform_Grid_to_Mesh(chi_force[0], sol); // get solution
         fftw_execute_dft_r2c(p_F, chi_force[0]); // get chi(k)
-        pwr_spec_chi_k(chi_force[0], chi_force[0]); // get chi(k)^2
+        pwr_spec_k_init(chi_force[0], chi_force[0]); // get chi(k)^2, NO w_k correction
         gen_pow_spec_binned(sim, chi_force[0], pwr_spec_binned); // get average Pk
         print_pow_spec(pwr_spec_binned, out_dir_app, "_chi" + z_suffix()); // print
     }
