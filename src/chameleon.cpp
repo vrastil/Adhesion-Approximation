@@ -17,7 +17,7 @@ constexpr FTYPE_t MPL = (FTYPE_t)1; // chi in units of Planck mass
  // (FTYPE_t)299792.458; // speed of light [km / s]
 
  // use rho = D*rho_0 ifdef LINEAR_CHI_SOLVER, assign particles onto Mesh at each timestep otherwise
-// #define LINEAR_CHI_SOLVER
+#define LINEAR_CHI_SOLVER
 
 template<typename T>
 void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
@@ -262,7 +262,6 @@ void App_Var_chi::save_drho_from_particles(Mesh& aux_field)
     fftw_execute_dft_c2r(p_B, aux_field);
     #endif
     transform_Mesh_to_Grid(aux_field, drho);
-    cout << "\t[min(drho) = " << min(drho) << "]\n";
 }
 
 void App_Var_chi::solve(FTYPE_t a)

@@ -196,24 +196,23 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
     # Steps to perform -- each entry represents full information needed to perform one step
     # type: Tuple[step_key, data_file_patterns, plot_func, opt_kwargs]
     all_steps = [
-        # Power spectrum
+        # Power spectrum -- particle, velocity, chameleon
         ("pwr_spec", '*par*.dat *init*.dat', load_plot_pwr, {}),
         ("pwr_spec_chi", '*chi*.dat*', load_plot_chi_pwr, {'subdir' : 'pwr_spec/'}),
-        # Power spectrum difference -- input, hybrid, particle
+        ("vel_pwr_spec", '*.dat', load_plot_pwr, {'pk_type' : 'vel'}),
+        # Power spectrum difference -- input, hybrid, particle, velocity, chameleon
         ("pwr_diff", '*par*', load_plot_pwr_spec_diff,
             {'info_str' : '(particle)', 'ext_title' : 'par'}),
         ("pwr_diff_h", '*hybrid*', load_plot_pwr_spec_diff,
             {'subdir' : 'pwr_diff/', 'info_str' : '(hybrid)', 'ext_title' : 'hybrid'}),
         ("pwr_diff_i", '*input*', load_plot_pwr_spec_diff,
             {'subdir' : 'pwr_diff/', 'info_str' : '(input)', 'ext_title' : 'input'}),
-        # Power spectrum suppression
+        ("vel_pwr_diff", '*.dat', load_plot_pwr_spec_diff, {'pk_type' : 'vel'}),
+        ("chi_pwr_diff", '*chi*.dat*', load_plot_pwr_spec_diff,
+            {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
+        # Power spectrum suppression (includes maps) -- particle, velocity, chameleon,
         ("pwr_spec_supp", '*par*', get_plot_supp, {'subdir' : 'pwr_diff/'}),
         ("pwr_spec_supp_map", '*par*', get_plot_supp_map, {'subdir' : 'pwr_diff/'}),
-        # Velocity power spectrum
-        ("vel_pwr_spec", '*.dat', load_plot_pwr, {'pk_type' : 'vel'}),
-        # Velocity power spectrum difference
-        ("vel_pwr_diff", '*.dat', load_plot_pwr_spec_diff, {'pk_type' : 'vel'}),
-        # Velocity power spectrum suppression
         ("vel_pwr_spec_supp", '*.dat', get_plot_supp, {'subdir' : 'vel_pwr_diff/', 'pk_type' : 'vel'}),
         # Correlation function
         ("corr_func", '*par*.dat *init*.dat', get_plot_corr, {'subdir' : 'pwr_spec/'}),

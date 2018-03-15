@@ -11,6 +11,7 @@ import matplotlib.cm as cm
 from matplotlib.colors import SymLogNorm
 from matplotlib.ticker import FormatStrFormatter
 import numpy as np
+from itertools import izip
 
 from . import power
 
@@ -139,18 +140,23 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, out_dir='auto', save=Tr
     ax.set_yscale('log')
     ax.set_xscale('log')
 
+    # x_0 = a_sim_info.box_opt["box_size"]/a_sim_info.box_opt["mesh_num"]
+
     for lab, Pkk, z in iter_data(zs_chi, [data_list_chi, zs_chi]):
         k, P_k = Pkk[0], Pkk[1]
-        chi_prefactor = power.chi_prefactor(1/(1.+z), a_sim_info.sim.cosmo, a_sim_info.chi_opt)
-        ax.plot(k, P_k/chi_prefactor, 'o', ms=3, label=lab)
+        a = 1/(1.+z)
+        chi_bulk_a_n = power.chi_bulk_a_n(a, a_sim_info.chi_opt)
+        ax.plot(k, P_k/pow(chi_bulk_a_n, 2), 'o', ms=3, label=lab)
+        P_a = power.lin_chi_pow_spec(a, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+        ax.plot(k, P_a, '-')
 
     # plot linear power spectra
-    a_0 = 1./(1.+zs_chi[-1])
-    a_i = 1./(1.+zs_chi[0]) if zs_chi[0] != 'init' else 1./(1.+zs_chi[1])
-    P_i = power.lin_chi_pow_spec(a_i, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
-    P_0 = power.lin_chi_pow_spec(a_0, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
-    ax.plot(k, P_0, '-')
-    ax.plot(k, P_i, '-')
+    # a_0 = 1./(1.+zs_chi[-1])
+    # a_i = 1./(1.+zs_chi[0]) if zs_chi[0] != 'init' else 1./(1.+zs_chi[1])
+    # P_i = power.lin_chi_pow_spec(a_i, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+    # P_0 = power.lin_chi_pow_spec(a_0, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+    # ax.plot(k, P_0, '-')
+    # ax.plot(k, P_i, '-')
 
     add_nyquist_info(ax, a_sim_info)
     
@@ -229,7 +235,7 @@ def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, sho
             corr_par, lab, a_sim_info, corr_lin, corr_nl, out_dir, save, show)
 
 
-def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='', save=True, show=False):
+def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='par', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if pk_type == "dens":
@@ -238,6 +244,20 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
     elif pk_type == "vel":
         out_file = 'vel_pwr_spec_diff'
         suptitle = r"Power spectrum difference $(\nabla\cdot u)$"
+    elif pk_type == 'chi':
+        out_file = 'pwr_spec_diff_chi'
+        suptitle = "Chameleon power spectrum difference"
+        # transform chameleon power spectrum to suppression
+        supp_0 = data_list[0][1] / ( # Pk(init)
+                    power.lin_chi_pow_spec( # Pk_lin(init)
+                    1/(1.+zs[0]), data_list[0][0], a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+                    *pow(power.chi_bulk_a_n(1/(1.+zs[0]), a_sim_info.chi_opt), 2)) # chi_bulk for normalization of Pk_lin
+        for z, data in izip(zs, data_list):
+            a, k, Pk = 1/(1.+z), data[0], data[1]
+            Pk_lin = power.lin_chi_pow_spec(a, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+            chi_bulk_a_n = power.chi_bulk_a_n(a, a_sim_info.chi_opt)
+            data[1] = Pk/ (Pk_lin * pow(chi_bulk_a_n, 2) * supp_0) # chi_bulk for normalization of Pk_lin
+            
 
     out_file += '_%s.png' % ext_title
     suptitle += ' (ref: %s)' % ext_title
@@ -268,13 +288,16 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
 
     add_nyquist_info(ax, a_sim_info)
 
-    if ymax > 1:
-        ymax = 1
-    ymax = math.ceil(ymax / 0.1) * 0.1
-    ymin = math.floor(ymin / 0.1) * 0.1
+    if pk_type != 'chi':
+        if ymax > 1:
+            ymax = 1
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        ymax = math.ceil(ymax / 0.1) * 0.1
+        ymin = math.floor(ymin / 0.1) * 0.1
+        plt.ylim(ymin=ymin, ymax=ymax)
+    else:
+        plt.yscale('log')
     ax.yaxis.grid(True)
-    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-    plt.ylim(ymin=ymin, ymax=ymax)
 
     fig.suptitle(suptitle, y=0.99, size=20)
     plt.xlabel(r"$k [h/$Mpc$]$", fontsize=15)
