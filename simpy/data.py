@@ -13,7 +13,7 @@ from scipy.optimize import curve_fit
 from . import plot
 from .fastsim import Extrap_Pk_Nl_2, Extrap_Pk_Nl_3
 from .struct import SimInfo, StackInfo, insert
-from .power import hybrid_pow_spec, get_Data_vec, corr_func
+from .power import hybrid_pow_spec, get_Data_vec, corr_func, chi_supp
 
 # *******************
 # FIND, SORT, SLICE *
@@ -72,20 +72,24 @@ def sort_chi_files(files, zs):
 # LOAD DATA FROM SINGLE RUN *
 # ***************************
 
-def load_k_supp(files, k_nyquist_par):
+def load_k_supp(files, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens'):
     """
     Divide available k-values into 7 subinterval from
     k_min = 2*PI / L to k_max = 50% k_nyquist_par
     large scale :: k = 1st subinterval
     medium scale :: k = 4rd subinterval
-    small scale :: k = 7th subinterval """
+    small scale :: k = 7th subinterval 
+    
+    For chameleon field divide P(k) values by linear prediction """
 
     supp = [[[] for x in xrange(3)] for y in xrange(3)]
     for i, j in enumerate([0, 3, 6]):
-        for a_file in files:
+        for ii, a_file in enumerate(files):
             data = np.transpose(np.loadtxt(a_file))
             k = data[0]
             P_diff = data[1]
+            if pk_type == 'chi':
+                P_diff = chi_supp(a[ii], k, P_diff, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
             idx = (np.abs(k-0.5*k_nyquist_par)).argmin() / 7
             supp[i][0].append(np.mean(P_diff[j*idx:(j+1)*idx]))
             supp[i][1].append(np.std(P_diff[j*idx:(j+1)*idx]))
@@ -125,8 +129,8 @@ def get_plot_corr(files, zs, a_sim_info, load=False):
     plot.plot_corr_func(a_sim_info.data["corr_func"], zs, a_sim_info)
 
 def get_plot_supp(files, zs, a_sim_info, pk_type='dens'):
-    supp = load_k_supp(files, a_sim_info.k_nyquist["particle"])
     a = [1./(z+1.) for z in zs]
+    supp = load_k_supp(files, a_sim_info.k_nyquist["particle"], a_sim_info=a_sim_info, a=a, pk_type=pk_type)
     plot.plot_supp_lms(supp, a, a_sim_info, pk_type=pk_type)
 
 def get_plot_supp_map(files, zs, a_sim_info, pk_type='dens'):
@@ -214,6 +218,7 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         ("pwr_spec_supp", '*par*', get_plot_supp, {'subdir' : 'pwr_diff/'}),
         ("pwr_spec_supp_map", '*par*', get_plot_supp_map, {'subdir' : 'pwr_diff/'}),
         ("vel_pwr_spec_supp", '*.dat', get_plot_supp, {'subdir' : 'vel_pwr_diff/', 'pk_type' : 'vel'}),
+        ("chi_pwr_spec_supp", '*chi*.dat*', get_plot_supp, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
         # Correlation function
         ("corr_func", '*par*.dat *init*.dat', get_plot_corr, {'subdir' : 'pwr_spec/'}),
         # Density distribution

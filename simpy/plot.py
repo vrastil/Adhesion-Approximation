@@ -248,17 +248,10 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
         out_file = 'pwr_spec_diff_chi'
         suptitle = "Chameleon power spectrum difference"
         # transform chameleon power spectrum to suppression
-        supp_0 = data_list[0][1] / ( # Pk(init)
-                    power.lin_chi_pow_spec( # Pk_lin(init)
-                    1/(1.+zs[0]), data_list[0][0], a_sim_info.sim.cosmo, a_sim_info.chi_opt)
-                    *pow(power.chi_bulk_a_n(1/(1.+zs[0]), a_sim_info.chi_opt), 2)) # chi_bulk for normalization of Pk_lin
         for z, data in izip(zs, data_list):
             a, k, Pk = 1/(1.+z), data[0], data[1]
-            Pk_lin = power.lin_chi_pow_spec(a, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
-            chi_bulk_a_n = power.chi_bulk_a_n(a, a_sim_info.chi_opt)
-            data[1] = Pk/ (Pk_lin * pow(chi_bulk_a_n, 2) * supp_0) # chi_bulk for normalization of Pk_lin
+            data[1] = power.chi_supp(a, k, Pk, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
             
-
     out_file += '_%s.png' % ext_title
     suptitle += ' (ref: %s)' % ext_title
 
@@ -613,6 +606,10 @@ def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle=
     elif pk_type == "vel":
         out_file = 'supp_vel.png'
         suptitle = r"Power spectrum suppression $(\nabla\cdot u)$"
+    elif pk_type == 'chi':
+        out_file = 'supp_chi.png'
+        suptitle = "Chameleon power spectrum suppression"
+
     fig = plt.figure(figsize=(15, 11))
     ax = plt.gca()
     cmap = cm.get_cmap('gnuplot')
@@ -624,17 +621,20 @@ def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle=
 
     ax.yaxis.grid(True)
     ymin, ymax = ax.get_ylim()
-    if ymax > 1:
-        ymax = 1
-    ymax = math.ceil(ymax / 0.1) * 0.1
-    ymin = math.floor(ymin / 0.1) * 0.1
-    plt.ylim(ymin=ymin, ymax=ymax)
-
+    if pk_type != 'chi':
+        if ymax > 1:
+            ymax = 1
+        ymax = math.ceil(ymax / 0.1) * 0.1
+        ymin = math.floor(ymin / 0.1) * 0.1
+        plt.ylim(ymin=ymin, ymax=ymax)
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    else:
+        plt.yscale('log')
+        
     fig.suptitle(suptitle, y=0.99, size=20)
     plt.xlabel(r"$a(t)$", fontsize=15)
     plt.ylabel(
         r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$", fontsize=25)
-    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
  #   plt.subplots_adjust(left=0.1, right=0.7, top=0.9, bottom=0.1)
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)

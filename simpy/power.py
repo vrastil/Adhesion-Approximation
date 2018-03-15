@@ -88,6 +88,10 @@ def lin_chi_pow_spec(a, k, cosmo, chi_opt, x_0=1, MPL=1, c_kms=1):
     else:
         return chi_mod*fs.lin_pow_spec(a, np.asscalar(k), cosmo)
 
+def chi_supp(a, k, Pk, cosmo, chi_opt):
+    Pk_lin = lin_chi_pow_spec(a, k, cosmo, chi_opt)
+    return Pk/ (Pk_lin * pow(chi_bulk_a_n(a, chi_opt), 2)) # chi_bulk for normalization of Pk_lin
+
 def hybrid_pow_spec(a, k, A, cosmo):
     """ return 'hybrid' power spectrum: (1-A)*P_lin(k, a) + A*P_nl """
     return (1-A)*lin_pow_spec(a, k, cosmo) + A*non_lin_pow_spec(a, k, cosmo)

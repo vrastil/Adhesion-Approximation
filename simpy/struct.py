@@ -11,7 +11,7 @@ import os
 from .fastsim import Sim_Param
 
 RESULTS_KEYS = ["pwr_spec", "pwr_spec_chi", "pwr_diff", "pwr_diff_i", "pwr_diff_h",
-                "pwr_spec_supp", "pwr_spec_supp_map", "chi_pwr_diff",
+                "pwr_spec_supp", "pwr_spec_supp_map", "chi_pwr_diff", "chi_pwr_spec_supp",
                 "dens_hist", "vel_pwr_spec", "vel_pwr_diff", "vel_pwr_spec_supp",
                 "par_slice", "par_ani", "dens_slice", "dens_ani", "corr_func"]
 
