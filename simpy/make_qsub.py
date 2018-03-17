@@ -78,9 +78,9 @@ def memory_fp_pp(sim_param):
 
 def memory_chi(sim_param):
     mem = memory_base(sim_param)
-    mem += sim_param.num_m * 8 * 3  # chi_force
-    mem += sim_param.num_m * 8 * 1  # drho
-    mem += sim_param.num_m * 8 * 3  # chi_solver
+    mem += sim_param.num_m * 16 * 3  # chi_force
+    mem += sim_param.num_m * 16 * 1 * 1.14  # drho
+    mem += sim_param.num_m * 16 * 3 * 1.14  # chi_solver
     return mem / float(1024 * 1024 * 1024)  # convert to GB
 
 def get_input():
@@ -94,8 +94,10 @@ def get_input():
     print_every = input("Enter how often there will be printing: ")
 
     sim_param = Sim_Param(Nm, NM, Np, box, z, z0, da, print_every)
-    sim_param.rs = input("Enter value of short-range cutof: ")
+    sim_param.rs = input("Enter value of short-range cutof (FP_pp): ")
     sim_param.mlt_runs = input("Enter number of runs: ")
+    sim_param.chi_phi = input("Enter value of screening potential (CHI): ")
+    sim_param.chi_n = input("Enter value chameleon power-law potential exponent (CHI): ")
     return sim_param
 
 
