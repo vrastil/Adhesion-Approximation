@@ -16,7 +16,7 @@ T mean(const std::vector<T>& data)
 	return tmp / data.size();
 }
 
-FTYPE_t mean(const Mesh& data) return mean(data.data);
+FTYPE_t mean(const Mesh& data){ return mean(data.data); }
 
 void get_neighbor_gridindex(std::vector<unsigned int>& index_list, unsigned int i, unsigned int N)
 {
