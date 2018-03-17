@@ -22,7 +22,7 @@ endif
 CXXLIB +=-lgsl -lgslcblas
 CXXLIB +=-lccl
 
-COMPILE.cc = $(CXX) $(CXXFLAGS) -c -I./include
+COMPILE.cc = $(CXX) $(CXXFLAGS) -c -I./include# -D_GLIBCXX_USE_CXX11_ABI=0
 COMPILE.fin = $(CXX) $(CXXFLAGS) $(CXXLIB_PATH)
 
 OBJ_FILES = $(patsubst %.cpp,%.o,$(wildcard src/*.cpp) $(wildcard src/**/*.cpp))

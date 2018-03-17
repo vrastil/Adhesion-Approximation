@@ -47,6 +47,8 @@ class Sim_Param(object):
             math.ceil(self.n_steps / float(print_every))) + 1 if print_every else 0
         self.rs = 0
         self.mlt_runs = 1
+        self.chi_phi = 0
+        self.chi_n = 0
 
 
 def memory_base(sim_param):
@@ -74,6 +76,12 @@ def memory_fp_pp(sim_param):
     mem += pow(M, 3) * 4  # linked list
     return mem / float(1024 * 1024 * 1024)  # convert to GB
 
+def memory_chi(sim_param):
+    mem = memory_base(sim_param)
+    mem += sim_param.num_m * 8 * 3  # chi_force
+    mem += sim_param.num_m * 8 * 1  # drho
+    mem += sim_param.num_m * 8 * 3  # chi_solver
+    return mem / float(1024 * 1024 * 1024)  # convert to GB
 
 def get_input():
     Nm = input("Enter number of potential mesh points per dimenson: ")
@@ -181,11 +189,12 @@ def make_qsub(job):
              "source /software/modules/init\n"
              "module add fftw-3.3double\n"
              "module add fftw-3.3ompdouble\n"
+             "module add gcc-6.4.0\n"
              "export OMP_NUM_THREADS=$PBS_NUM_PPN\n"
              "export MYDIR=/storage/brno2/home/vrastilm\n"
              "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MYDIR/local/lib\n"
              "export CPATH=$CPATH:$MYDIR/local/include:/software/fftw-3.3/amd64_linux26.double/include/\n"
-             "export LIBRARY_PATH=$LIBRARY_PATH:$MYDIR/local/lib\n"
+             "export LIBRARY_PATH=$LIBRARY_PATH:$MYDIR/local/lib:/software/fftw-3.3/amd64_linux26.double/lib:/software/fftw-3.3/amd64_linux26.omp_double/lib\n"
              "cd $SCRATCHDIR\n"
              "cp -r $MYDIR/Adhesion-Approximation/include ./\n"
              "cp -r $MYDIR/Adhesion-Approximation/src ./\n"
@@ -284,12 +293,27 @@ def qsub_FP_pp(sim_param):
     save_to_qsub(make_qsub(FP_pp), "scripts/FP_pp_qsub.pbs")
 
 
+
+def qsub_CHI(sim_param):
+    cpu_param = 7.0, PREP_PAR, 85.6, PRINT_PAR, PRINT_NM
+    cpus = sim_param.mlt_runs * cpu_base(sim_param, *cpu_param)
+    mem = memory_chi(sim_param)
+    n_cpus = get_n_cpus(cpus, mem, "Chameleon gravity approximation")
+    CHI = Job_Param('CHI', mem, cpus, n_cpus)
+    CHI.add_std_opt(sim_param)
+    CHI.add_sim_opt("--comp_chi 1 ")
+    CHI.add_sim_opt("--chi_n %f " % sim_param.chi_n)
+    CHI.add_sim_opt("--chi_phi %f " % sim_param.chi_phi)
+    save_to_qsub(make_qsub(CHI), "scripts/CHI_qsub.pbs")
+
+
 if __name__ == "__main__":
     sim_param = get_input()
     qsub_ZA(sim_param)
     qsub_FF(sim_param)
     qsub_FP(sim_param)
     qsub_FP_pp(sim_param)
+    qsub_CHI(sim_param)
 
     save_to_qsub(make_submit(), "scripts/submit_mlt.sh")
     st = os.stat('scripts/submit_mlt.sh')
