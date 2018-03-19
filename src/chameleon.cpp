@@ -13,14 +13,10 @@ constexpr FTYPE_t MPL = (FTYPE_t)1; // chi in units of Planck mass
 // constexpr FTYPE_t hbarc = (FTYPE_t)197.327053; // reduced Planck constant times speed of light, [MeV fm]
 // constexpr FTYPE_t hbarc_cosmo = hbarc*FTYPE_t(1E-9)*fm_to_Mpc; // [GeV Mpc]
 // constexpr FTYPE_t G_N = hbarc_cosmo*FTYPE_t(6.70711*1E-39); // gravitational constant, [GeV Mpc / (GeV/c^2)^2]
-constexpr FTYPE_t c_kms = //1;
-(FTYPE_t)299792.458; // speed of light [km / s]
-
- // use rho = D*rho_0 ifdef LINEAR_CHI_SOLVER, assign particles onto Mesh at each timestep otherwise
-// #define LINEAR_CHI_SOLVER
+constexpr FTYPE_t c_kms = (FTYPE_t)299792.458; // speed of light [km / s]
 
 // compute chi in units of chi_a
-#define CHI_A_UNITS
+// #define CHI_A_UNITS
 
 template<typename T>
 void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
@@ -132,32 +128,6 @@ void ChiSolver<T>::set_initial_guess()
     }
 }
 
-template<typename T>
-void ChiSolver<T>::set_next_guess(const Cosmo_Param& cosmo)
-{
-    if(!a_0) return; // do not set for initial conditions
-
-    const T a_0_3 = pow(a_0, 3);
-    const T D_0 = growth_factor(a_0, cosmo);
-
-    T* const f = MultiGridSolver<3, T>::get_y(); // initial guess
-    T const* const rho_0 = MultiGridSolver<3,T>::get_external_field(0, 0); // overdensity
-    const unsigned N_tot = MultiGridSolver<3, T>::get_Ntot();
-
-    T rho;
-
-    #pragma omp parallel for private(rho)
-    for (unsigned i = 0; i < N_tot; ++i)
-    {
-        rho = rho_0[i];
-        f[i] *= D*rho > -1 ? pow((1+D_0*rho)/(1+D*rho)
-        #ifndef CHI_A_UNITS
-        *a_3/a_0_3
-        #endif
-        , 1/(1-n)) : 1;
-    }
-}
-
 // The dicretized equation L(phi)
 template<typename T>
 T  ChiSolver<T>::l_operator(unsigned int level, std::vector<unsigned int>& index_list, bool addsource)
@@ -170,13 +140,7 @@ T  ChiSolver<T>::l_operator(unsigned int level, std::vector<unsigned int>& index
     // Solution and pde-source grid at current level
     T const* const chi = MultiGridSolver<3, T>::get_y(level); // solution
 
-    #ifdef LINEAR_CHI_SOLVER // when using initial overdensity, current otherwise
-    const T rho = D*MultiGridSolver<3,T>::get_external_field(level, 0)[i] > -1 ?
-                  D*MultiGridSolver<3,T>::get_external_field(level, 0)[i] : -1;
-    #else
-    const T rho = MultiGridSolver<3,T>::get_external_field(level, 0)[i];
-    #endif
-            
+    const T rho = MultiGridSolver<3,T>::get_external_field(level, 0)[i];          
 
     // The right hand side of the PDE 
     T source;
@@ -246,24 +210,7 @@ App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
 
     // SET CHI SOLVER
     sol.add_external_grid(&drho);
-    sol.set_maxsteps(7);
-}
-
-void App_Var_chi::save_init_drho_k(const Mesh& dro_k, Mesh& aux_field)
-{
-    // do not overwrite aux_field if Mesh of different type
-    if (dro_k.N != aux_field.N) throw std::range_error("Meshes of a different sizes!");
-
-    // save initial overdensity
-    cout << "Storing initial density distribution...\n";
-    aux_field = dro_k;
-    fftw_execute_dft_c2r(p_B, aux_field);
-    transform_Mesh_to_Grid(aux_field, drho);
-
-    // set initial guess to bulk field
-    cout << "Setting initial guess for chameleon field...\n";
-    sol.set_time(b, sim.cosmo);
-    sol.set_initial_guess();
+    sol.set_maxsteps(10);
 }
 
 static void w_k_correction(Mesh& rho_k)
@@ -298,18 +245,16 @@ void App_Var_chi::save_drho_from_particles(Mesh& aux_field)
 
 void App_Var_chi::solve(FTYPE_t a)
 {
-    cout << "Solving equation of motion for chameleon field...\n";
     sol.set_time(a, sim.cosmo);
+
     #ifndef CHI_A_UNITS
-    sol.set_epsilon(1e-4*sol.chi_min(0));
+    sol.set_epsilon(1e-3*sol.chi_min(0));
     #else
-    sol.set_epsilon(1e-4);
+    sol.set_epsilon(1e-3);
     #endif
-    #ifdef LINEAR_CHI_SOLVER
-    sol.set_next_guess(sim.cosmo);
-    #else
+
     save_drho_from_particles(chi_force[0]);
-    #endif
+    cout << "Solving equation of motion for chameleon field...\n";
     sol.solve();
 }
 

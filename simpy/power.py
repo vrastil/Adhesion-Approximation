@@ -56,7 +56,7 @@ def lin_pow_spec(a, k, cosmo):
     else:
         return fs.lin_pow_spec(a, np.asscalar(k), cosmo)
 
-def chi_bulk_a(a, chi_opt, MPL=1, CHI_A_UNITS=True):
+def chi_bulk_a(a, chi_opt, MPL=1, CHI_A_UNITS=False):
     """ return bulk value of chameleon field at background level """
     if CHI_A_UNITS: return 1
     chi_0 = 2*chi_opt["beta"]*MPL*chi_opt["phi"]

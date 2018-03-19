@@ -35,9 +35,6 @@ public:
     // set initial guess to bulk value, need to set time and add rho before call to this function
     void set_initial_guess();
 
-    // multiply guess from previus step by factor corresponding to evolution of bulk field
-    void set_next_guess(const Cosmo_Param& cosmo);
-
     // get chi_bulk for given overdensity
     T chi_min(T delta) const;
 };
@@ -61,7 +58,6 @@ public:
     std::vector<Mesh> chi_force;
 
     // METHODS
-    void save_init_drho_k(const Mesh& dro_k, Mesh& aux_field);
     void print_output();
     void solve(FTYPE_t a);
 
