@@ -247,9 +247,9 @@ void App_Var_chi::solve(FTYPE_t a)
     sol.set_time(a, sim.cosmo);
 
     #ifndef CHI_A_UNITS
-    sol.set_epsilon(1e-3*sol.chi_min(0));
+    sol.set_epsilon(1e-4*sol.chi_min(0));
     #else
-    sol.set_epsilon(1e-3);
+    sol.set_epsilon(1e-4);
     #endif
 
     save_drho_from_particles(chi_force[0]);

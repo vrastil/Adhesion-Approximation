@@ -121,6 +121,12 @@ def cpu_pp(sim_param, prep_Nm, prep_Np, integ_np_nsteps, print_np, print_NM, int
         pow(sim_param.Np / 128., 3) * pow(sim_param.rs / 2.7, 3)
     return cpus
 
+def cpu_chi(sim_param, prep_Nm, prep_Np, integ_np_nsteps, print_np, print_NM, integ_np_nsteps_extra):
+    cpus = cpu_base(sim_param, prep_Nm, prep_Np,
+                    integ_np_nsteps, print_np, print_NM)
+    cpus += integ_np_nsteps_extra * sim_param.n_steps * \
+        pow(sim_param.Nm / 128., 3)
+    return cpus
 
 def convert_s2hms(seconds):
     h = int(seconds) / (60 * 60)
@@ -297,8 +303,8 @@ def qsub_FP_pp(sim_param):
 
 
 def qsub_CHI(sim_param):
-    cpu_param = 7.0, PREP_PAR, 85.6, PRINT_PAR, PRINT_NM
-    cpus = sim_param.mlt_runs * cpu_base(sim_param, *cpu_param)
+    cpu_param = 7.0, PREP_PAR, 2.1, PRINT_PAR, PRINT_NM, 120
+    cpus = sim_param.mlt_runs * cpu_chi(sim_param, *cpu_param)
     mem = memory_chi(sim_param)
     n_cpus = get_n_cpus(cpus, mem, "Chameleon gravity approximation")
     CHI = Job_Param('CHI', mem, cpus, n_cpus)
