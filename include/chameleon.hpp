@@ -11,7 +11,6 @@ class ChiSolver : public MultiGridSolver<3, T>
 private:
     // Parameters
     T a;    // scale factor
-    T a_0;  // scale factor from previous step
     T a_3;  // prec-compute a^3
     T D;    // pre-compute D(a)
 

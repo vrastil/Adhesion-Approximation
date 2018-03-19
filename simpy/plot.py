@@ -145,7 +145,7 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, out_dir='auto', save=Tr
     for lab, Pkk, z in iter_data(zs_chi, [data_list_chi, zs_chi]):
         k, P_k = Pkk[0], Pkk[1]
         a = 1/(1.+z)
-        chi_bulk_a_n = power.chi_bulk_a_n(a, a_sim_info.chi_opt)
+        chi_bulk_a_n = power.chi_bulk_a_n(a, a_sim_info.chi_opt, CHI_A_UNITS=True)
         ax.plot(k, P_k/pow(chi_bulk_a_n, 2), 'o', ms=3, label=lab)
         P_a = power.lin_chi_pow_spec(a, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
         ax.plot(k, P_a, '-')

@@ -16,7 +16,7 @@ constexpr FTYPE_t MPL = (FTYPE_t)1; // chi in units of Planck mass
 constexpr FTYPE_t c_kms = (FTYPE_t)299792.458; // speed of light [km / s]
 
 // compute chi in units of chi_a
-// #define CHI_A_UNITS
+#define CHI_A_UNITS
 
 template<typename T>
 void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
@@ -101,7 +101,6 @@ ChiSolver<T>::ChiSolver(unsigned int N, int Nmin, const Sim_Param& sim, bool ver
 template<typename T>
 void ChiSolver<T>::set_time(T a_, const Cosmo_Param& cosmo)
 {
-    a_0 = a; // store old time
     a = a_; // set new time
     a_3 = pow(a_, 3);
     D = growth_factor(a_, cosmo);
@@ -115,7 +114,8 @@ template<typename T>
 void ChiSolver<T>::set_initial_guess()
 {
     if (!a_3) throw out_of_range("invalid value of scale factor");
-    if (!MultiGridSolver<3, T>::get_external_field_size()) throw out_of_range("initial overdensity not set"); 
+    if (!MultiGridSolver<3, T>::get_external_field_size()) throw out_of_range("overdensity not set"); 
+    cout << "Setting initial guess for chameleon field...\n";
 
     T* const f = MultiGridSolver<3, T>::get_y(); // initial guess
     T const* const rho = MultiGridSolver<3,T>::get_external_field(0, 0); // overdensity
@@ -124,7 +124,7 @@ void ChiSolver<T>::set_initial_guess()
     #pragma omp parallel for
     for (unsigned i = 0; i < N_tot; ++i)
     {
-        f[i] = chi_min(D*rho[i]);
+        f[i] = chi_min(rho[i]);
     }
 }
 
@@ -143,15 +143,14 @@ T  ChiSolver<T>::l_operator(unsigned int level, std::vector<unsigned int>& index
     const T rho = MultiGridSolver<3,T>::get_external_field(level, 0)[i];          
 
     // The right hand side of the PDE 
-    T source;
     if(chi[i] <= 0)
     { // if the solution is overshot, try bulk field
         MultiGridSolver<3, T>::get_y(level)[i] = rho > -1 ? chi_min(rho) : chi_min(0);
     }
     #ifndef CHI_A_UNITS
-    source = ((1+rho)/a_3 - pow(chi_0/chi[i], 1-n)) * chi_prefactor_0;
+    T source = ((1+rho)/a_3 - pow(chi_0/chi[i], 1-n)) * chi_prefactor_0;
     #else
-    source = (1 + rho - pow(chi[i], n - 1)) * chi_prefactor;
+    T source = (1 + rho - pow(chi[i], n - 1)) * chi_prefactor;
     #endif
 
     // Compute the standard kinetic term [D^2 phi] (in 1D this is phi''_i =  phi_{i+1} + phi_{i-1} - 2 phi_{i} )
@@ -194,7 +193,7 @@ T  ChiSolver<T>::chi_min(T delta) const
     #ifndef CHI_A_UNITS
     return chi_0*std::pow(a_3/(1+delta), 1/(1-n));
     #else
-    std::pow(1+delta, 1/(n-1));
+    return std::pow(1+delta, 1/(n-1));
     #endif
 }
 
@@ -254,7 +253,7 @@ void App_Var_chi::solve(FTYPE_t a)
     #endif
 
     save_drho_from_particles(chi_force[0]);
-    cout << "Solving equation of motion for chameleon field...\n";
+    cout << "Solving equations of motion for chameleon field...\n";
     sol.solve();
 }
 

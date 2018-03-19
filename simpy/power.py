@@ -63,10 +63,10 @@ def chi_bulk_a(a, chi_opt, MPL=1, CHI_A_UNITS=False):
     n = chi_opt["n"]
     return chi_0*pow(a, 3/(1-n))
 
-def chi_bulk_a_n(a, chi_opt, MPL=1):
+def chi_bulk_a_n(a, chi_opt, MPL=1, CHI_A_UNITS=False):
     """ return bulk value of chameleon field at background level divided by (1-n), i.e. common factor """
     n = chi_opt["n"]
-    return chi_bulk_a(a, chi_opt, MPL=MPL)/(1-n)
+    return chi_bulk_a(a, chi_opt, MPL=MPL, CHI_A_UNITS=CHI_A_UNITS)/(1-n)
 
 def chi_mass_sq(a, k, cosmo, chi_opt, x_0=1, MPL=1, c_kms=299792.458):
     """ return mass squared of chameleon field sitting at chi_bulk(a, 0) """
