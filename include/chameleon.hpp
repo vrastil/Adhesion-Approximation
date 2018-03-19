@@ -15,16 +15,16 @@ private:
     T a_3;  // prec-compute a^3
     T D;    // pre-compute D(a)
 
+    const T n;        // Hu-Sawicki paramater
+    const T chi_0;    // 2*beta*Mpl*phi_scr
+    const T chi_prefactor_0; // dimensionless prefactor to poisson equation at a = 1
+    T chi_prefactor;
+
 public:
     // Constructors
     ChiSolver(unsigned int N, const Sim_Param& sim, bool verbose = true) : ChiSolver(N, 2, sim, verbose) {}
     ChiSolver(unsigned int N, int Nmin, const Sim_Param& sim, bool verbose = true);
     void set_time(T a, const Cosmo_Param& cosmo);
-
-    // Parameters
-    const T n;        // Hu-Sawicki paramater
-    const T chi_0;    // 2*beta*Mpl*phi_scr
-    const T chi_prefactor; // beta*rho_m,0 / Mpl, [dimensionless]
 
     // The dicretized equation L(phi)
     T  l_operator(unsigned int level, std::vector<unsigned int>& index_list, bool addsource);
@@ -39,7 +39,7 @@ public:
     void set_next_guess(const Cosmo_Param& cosmo);
 
     // get chi_bulk for given overdensity
-    T chi_min(T delta) const { return chi_0*std::pow(a_3/(1+delta), 1/(1-n)); }
+    T chi_min(T delta) const;
 };
 
 /**

@@ -56,8 +56,9 @@ def lin_pow_spec(a, k, cosmo):
     else:
         return fs.lin_pow_spec(a, np.asscalar(k), cosmo)
 
-def chi_bulk_a(a, chi_opt, MPL=1):
+def chi_bulk_a(a, chi_opt, MPL=1, CHI_A_UNITS=True):
     """ return bulk value of chameleon field at background level """
+    if CHI_A_UNITS: return 1
     chi_0 = 2*chi_opt["beta"]*MPL*chi_opt["phi"]
     n = chi_opt["n"]
     return chi_0*pow(a, 3/(1-n))
@@ -67,7 +68,7 @@ def chi_bulk_a_n(a, chi_opt, MPL=1):
     n = chi_opt["n"]
     return chi_bulk_a(a, chi_opt, MPL=MPL)/(1-n)
 
-def chi_mass_sq(a, k, cosmo, chi_opt, x_0=1, MPL=1, c_kms=1):
+def chi_mass_sq(a, k, cosmo, chi_opt, x_0=1, MPL=1, c_kms=299792.458):
     """ return mass squared of chameleon field sitting at chi_bulk(a, 0) """
     prefactor = (3*MPL*chi_opt["beta"]*cosmo.Omega_m *pow(cosmo.H0 # beta*rho_m,0 / Mpl
                / (cosmo.h * c_kms) # units factor for 'c = 1' and [L] = Mpc / h
@@ -77,7 +78,7 @@ def chi_mass_sq(a, k, cosmo, chi_opt, x_0=1, MPL=1, c_kms=1):
     prefactor /= pow(a, 3)
     return prefactor/chi_bulk_a_n(a, chi_opt, MPL=MPL)
 
-def lin_chi_pow_spec(a, k, cosmo, chi_opt, x_0=1, MPL=1, c_kms=1):
+def lin_chi_pow_spec(a, k, cosmo, chi_opt, x_0=1, MPL=1, c_kms=299792.458):
     """ return ndarray of linear power spectrum for chameleon in units of chi_prefactor """
     mass_sq = chi_mass_sq(a, k, cosmo, chi_opt, x_0=x_0, MPL=MPL, c_kms=c_kms)
     k = np.array(k)
