@@ -244,14 +244,21 @@ void App_Var_chi::save_drho_from_particles(Mesh& aux_field)
 
 void App_Var_chi::solve(FTYPE_t a)
 {
-    sol.set_time(a, sim.cosmo);
+    // set appropriate epsilon
+    FTYPE_t eps = 1e-4;
+    const FTYPE_t log_psi = log10(sim.chi_opt.phi);
+    const FTYPE_t a_kick = log_psi > 0 ? 0.1*exp10(-0.05*log_psi) : 0.1;
+    const FTYPE_t a_pow = log_psi > 0 ? -9 + 1.5*log_psi : -9;
+
+    if (a_pow > 0) eps /= 1 + pow(a/a_kick, a_pow);
+    else if (a_pow < 0) eps *= 1 + pow(a/a_kick, -a_pow);
 
     #ifndef CHI_A_UNITS
-    sol.set_epsilon(1e-4*sol.chi_min(0));
-    #else
-    sol.set_epsilon(1e-4);
+    eps *= sol.chi_min(0);
     #endif
 
+    sol.set_time(a, sim.cosmo);
+    sol.set_epsilon(eps);
     save_drho_from_particles(chi_force[0]);
     cout << "Solving equations of motion for chameleon field...\n";
     sol.solve();

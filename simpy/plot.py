@@ -18,7 +18,7 @@ from . import power
 matplotlib.rcParams['legend.numpoints'] = 1
 matplotlib.rcParams.update({'font.size': 15})
 
-def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True):
+def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True, get_a=False):
     """ Generator: iterate through data in list 'iterables'
     yield list of values when a_i > a_slice*a_i-1 and a_i < a_slice*a_end
     stops when a_i > a_end, a_end is the last value in zs, if not specified
@@ -41,8 +41,12 @@ def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True):
         elif skip_init:
             continue
         else:
+            a = 0
             lab = 'init'
-        yield [lab] + values
+        if get_a:
+            yield [lab] + values + [a]
+        else:
+            yield [lab] + values
 
 def close_fig(filename, fig, save=True, show=False):
     """save and/or show figure, close figure"""
@@ -142,13 +146,14 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, out_dir='auto', save=Tr
 
     # x_0 = a_sim_info.box_opt["box_size"]/a_sim_info.box_opt["mesh_num"]
 
-    for lab, Pkk, z in iter_data(zs_chi, [data_list_chi, zs_chi]):
+    for lab, Pkk, a in iter_data(zs_chi, [data_list_chi], get_a=True):
         k, P_k = Pkk[0], Pkk[1]
-        a = 1/(1.+z)
-        chi_bulk_a_n = power.chi_bulk_a_n(a, a_sim_info.chi_opt, CHI_A_UNITS=True)
+        chi_bulk_a_n = power.chi_bulk_a_n(a, a_sim_info.chi_opt)
         ax.plot(k, P_k/pow(chi_bulk_a_n, 2), 'o', ms=3, label=lab)
-        P_a = power.lin_chi_pow_spec(a, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+        P_a = power.chi_lin_pow_spec(a, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+        P_a_supp = P_a * power.chi_thin_shell_supp(a, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
         ax.plot(k, P_a, '-')
+        ax.plot(k, P_a_supp, '--')
 
     # plot linear power spectra
     # a_0 = 1./(1.+zs_chi[-1])
@@ -250,7 +255,7 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
         # transform chameleon power spectrum to suppression
         for z, data in izip(zs, data_list):
             a, k, Pk = 1/(1.+z), data[0], data[1]
-            data[1] = power.chi_supp(a, k, Pk, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+            data[1] = power.chi_trans_to_supp(a, k, Pk, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
             
     out_file += '_%s.png' % ext_title
     suptitle += ' (ref: %s)' % ext_title
@@ -269,13 +274,16 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
     ax.axvspan(k[3 * idx], k[4 * idx], alpha=0.3, color=cmap(0.5))
     ax.axvspan(k[6 * idx], k[7 * idx], alpha=0.4, color=cmap(0.9))
 
-    for lab, data in iter_data(zs, [data_list]):
+    for lab, data, a in iter_data(zs, [data_list], get_a=True):
         k, P_k = data[0], data[1]
         if len(data) == 3:
             plt.errorbar(k, P_k, fmt='o', yerr=data[2], ms=3, label=lab)
         else:
             plt.plot(k, P_k, 'o', ms=3, label=lab)
-            
+        if pk_type == 'chi':
+            supp = power.chi_thin_shell_supp(a, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+            plt.plot(k, supp, '--')
+
         ymax = max(ymax, np.max(P_k[0:7 * idx]))
         ymin = min(ymin, np.min(P_k[0:7 * idx]))
 

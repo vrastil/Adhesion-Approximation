@@ -13,7 +13,7 @@ from scipy.optimize import curve_fit
 from . import plot
 from .fastsim import Extrap_Pk_Nl_2, Extrap_Pk_Nl_3
 from .struct import SimInfo, StackInfo, insert
-from .power import hybrid_pow_spec, get_Data_vec, corr_func, chi_supp
+from .power import hybrid_pow_spec, get_Data_vec, corr_func, chi_trans_to_supp
 
 # *******************
 # FIND, SORT, SLICE *
@@ -89,7 +89,7 @@ def load_k_supp(files, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens'):
             k = data[0]
             P_diff = data[1]
             if pk_type == 'chi':
-                P_diff = chi_supp(a[ii], k, P_diff, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+                P_diff = chi_trans_to_supp(a[ii], k, P_diff, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
             idx = (np.abs(k-0.5*k_nyquist_par)).argmin() / 7
             supp[i][0].append(np.mean(P_diff[j*idx:(j+1)*idx]))
             supp[i][1].append(np.std(P_diff[j*idx:(j+1)*idx]))

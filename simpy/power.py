@@ -56,14 +56,14 @@ def lin_pow_spec(a, k, cosmo):
     else:
         return fs.lin_pow_spec(a, np.asscalar(k), cosmo)
 
-def chi_bulk_a(a, chi_opt, MPL=1, CHI_A_UNITS=False):
+def chi_bulk_a(a, chi_opt, MPL=1, CHI_A_UNITS=True):
     """ return bulk value of chameleon field at background level """
     if CHI_A_UNITS: return 1
     chi_0 = 2*chi_opt["beta"]*MPL*chi_opt["phi"]
     n = chi_opt["n"]
     return chi_0*pow(a, 3/(1-n))
 
-def chi_bulk_a_n(a, chi_opt, MPL=1, CHI_A_UNITS=False):
+def chi_bulk_a_n(a, chi_opt, MPL=1, CHI_A_UNITS=True):
     """ return bulk value of chameleon field at background level divided by (1-n), i.e. common factor """
     n = chi_opt["n"]
     return chi_bulk_a(a, chi_opt, MPL=MPL, CHI_A_UNITS=CHI_A_UNITS)/(1-n)
@@ -76,9 +76,9 @@ def chi_mass_sq(a, k, cosmo, chi_opt, x_0=1, MPL=1, c_kms=299792.458):
                ,2))
     # evolve rho_m,0 -> rho_m
     prefactor /= pow(a, 3)
-    return prefactor/chi_bulk_a_n(a, chi_opt, MPL=MPL)
+    return prefactor/chi_bulk_a_n(a, chi_opt, MPL=MPL, CHI_A_UNITS=False)
 
-def lin_chi_pow_spec(a, k, cosmo, chi_opt, x_0=1, MPL=1, c_kms=299792.458):
+def chi_lin_pow_spec(a, k, cosmo, chi_opt, x_0=1, MPL=1, c_kms=299792.458):
     """ return ndarray of linear power spectrum for chameleon in units of chi_prefactor """
     mass_sq = chi_mass_sq(a, k, cosmo, chi_opt, x_0=x_0, MPL=MPL, c_kms=c_kms)
     k = np.array(k)
@@ -89,8 +89,17 @@ def lin_chi_pow_spec(a, k, cosmo, chi_opt, x_0=1, MPL=1, c_kms=299792.458):
     else:
         return chi_mod*fs.lin_pow_spec(a, np.asscalar(k), cosmo)
 
-def chi_supp(a, k, Pk, cosmo, chi_opt):
-    Pk_lin = lin_chi_pow_spec(a, k, cosmo, chi_opt)
+def chi_thin_shell_supp(a, k, cosmo, chi_opt):
+    """ return thin-shell suppresion factor """
+    mass_sq = chi_mass_sq(a, k, cosmo, chi_opt)
+    C = 2e-1
+    supp = C + (1-C)*mass_sq/(4*k**2+mass_sq)
+    
+    return supp**2
+
+def chi_trans_to_supp(a, k, Pk, cosmo, chi_opt, CHI_A_UNITS=True):
+    """ transform input chameleon power spectrum to suppression according to linear prediction """
+    Pk_lin = chi_lin_pow_spec(a, k, cosmo, chi_opt)
     return Pk/ (Pk_lin * pow(chi_bulk_a_n(a, chi_opt), 2)) # chi_bulk for normalization of Pk_lin
 
 def hybrid_pow_spec(a, k, A, cosmo):
