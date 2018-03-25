@@ -106,12 +106,18 @@ class SimInfo(object):
         create_dir(self.res_dir)
 
     def rerun(self, rerun, key, skip, zs):
-        if zs is None or key in skip:
+        if zs is None:
+            print "[Skipped]  (missing data)"
+            return False
+        if key in skip:
+            print "[Skipped]"
             return False
         elif rerun == "all":
             return True
+        elif not self.results[key] or key in rerun:
+            return True
         else:
-            return not self.results[key] or key in rerun
+            print "[Done]"
 
     def done(self, key):
         self.results[key] = True
@@ -122,6 +128,7 @@ class SimInfo(object):
         data["results"][key] = True
         with open(self.file, 'w') as outfile:
             json.dump(data, outfile, indent=2)
+        print "[Done]"
 
 class StackInfo(SimInfo):
     def __getitem__(self, key):

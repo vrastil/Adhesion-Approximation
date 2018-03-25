@@ -59,7 +59,6 @@ def try_get_zs_files(a_sim_info, subdir, patterns):
         zs, files = sort_get_fl_get_z(a_sim_info, subdir, patterns=patterns)
         return list(zs), list(files)
     except ValueError:
-        print "\tWARNING! Missing data. Skipping step."
         return None, None
 
 def sort_chi_files(files, zs):
@@ -178,7 +177,7 @@ def load_check_plot(a_sim_info, key, patterns, # type: SimInfo, str, str,
     4) plot -- need to pass Callable function with arguments: files, zs, a_sim_info, kwargs
     5) write info about done step into a_sim_info
     """
-    print 'step: %s %s' % (key, info_str)
+    print 'step: %-20s' % (key + ' ' + info_str),
     subdir = key + '/' if subdir is None else subdir
     zs, files = try_get_zs_files(a_sim_info, subdir, patterns)
     if a_sim_info.rerun(rerun, key, skip, zs):
@@ -239,6 +238,7 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         except KeyboardInterrupt:
             raise
         except Exception:
+            print "\n"
             print "=" * 110
             traceback.print_exc(file=sys.stdout)
             print "=" * 110
@@ -254,13 +254,14 @@ def analyze_all(out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/outp
         sim_infos = sim_infos[only]
 
     for a_sim_info in sim_infos:
-        print 'Analyzing run %s' % a_sim_info.info_tr()
+        info = 'Analyzing run %s' % a_sim_info.info_tr()
+        print '*'*len(info), '\n', info, '\n', '*'*len(info)
         try:
             analyze_run(a_sim_info, rerun=rerun, skip=skip)
         except KeyboardInterrupt:
             print 'Exiting...'
             return
-    print 'All runs analyzed!'
+    print '*'*len(info), '\n','All runs analyzed!'
 
 # ******************************
 # LOAD DATA FROM MULTIPLE RUNS *
@@ -442,8 +443,8 @@ def load_stack_save(stack_info, key, patterns,  # type: StackInfo, str, str,
        - fname = fname + "_%s_%s" % (app, z_str)
     4) write info about done step into stack_info
     """
+    print 'step: %-25s' % (key + ' ' + info_str),
     if stack_info.rerun(rerun, key, skip, True):
-        print 'step: %s %s' % (key, info_str) 
         subdir = key.replace('_files', '/') if subdir is None else subdir
         for z, data in zip(*stack_files(stack_info, subdir, patterns)):
             z_str = 'init.dat' if z == 'init' else 'z%.2f.dat' % z
@@ -484,6 +485,7 @@ def stack_group(rerun=None, skip=None, **kwargs):
         except KeyboardInterrupt:
             raise
         except Exception:
+            print "\n"
             print "=" * 110
             traceback.print_exc(file=sys.stdout)
             print "=" * 110
@@ -515,6 +517,7 @@ def stack_group(rerun=None, skip=None, **kwargs):
         except KeyboardInterrupt:
             raise
         except Exception:
+            print "\n"
             print "=" * 110
             traceback.print_exc(file=sys.stdout)
             print "=" * 110
@@ -557,10 +560,11 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
             print "\t" + a_sim_info.dir
 
     for sep_sim_infos in sep_files:
-        print "\nStacking group %s" % sep_sim_infos[0].info_tr()
+        info = "Stacking group %s" % sep_sim_infos[0].info_tr()
+        print '*'*len(info), '\n', info, '\n', '*'*len(info)
         try:
             stack_group(group_sim_infos=sep_sim_infos, rerun=rerun, skip=skip, **kwargs)
         except KeyboardInterrupt:
             print 'Exiting...'
             return
-    print 'All groups analyzed!'
+    print '*'*len(info), '\n', 'All groups analyzed!'
