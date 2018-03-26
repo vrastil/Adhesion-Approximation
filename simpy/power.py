@@ -75,7 +75,7 @@ def chi_mass_sq(a, k, cosmo, chi_opt, x_0=1, MPL=1, c_kms=299792.458):
                * x_0 # dimension factor for laplacian
                ,2))
     # evolve rho_m,0 -> rho_m
-    prefactor /= pow(a, 3)
+    prefactor /= 4*pow(a, 3)
     return prefactor/chi_bulk_a_n(a, chi_opt, MPL=MPL, CHI_A_UNITS=False)
 
 def chi_lin_pow_spec(a, k, cosmo, chi_opt, x_0=1, MPL=1, c_kms=299792.458):

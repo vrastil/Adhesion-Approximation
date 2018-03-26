@@ -149,11 +149,12 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, out_dir='auto', save=Tr
     for lab, Pkk, a in iter_data(zs_chi, [data_list_chi], get_a=True):
         k, P_k = Pkk[0], Pkk[1]
         chi_bulk_a_n = power.chi_bulk_a_n(a, a_sim_info.chi_opt)
-        ax.plot(k, P_k/pow(chi_bulk_a_n, 2), 'o', ms=3, label=lab)
+        lines = ax.plot(k, P_k/pow(chi_bulk_a_n, 2), 'o', ms=3, label=lab)
+        color = lines[0].get_color()
         P_a = power.chi_lin_pow_spec(a, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
-        P_a_supp = P_a * power.chi_thin_shell_supp(a, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
-        ax.plot(k, P_a, '-')
-        ax.plot(k, P_a_supp, '--')
+       # P_a_supp = P_a * power.chi_thin_shell_supp(a, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+        ax.plot(k, P_a, '-', color=color)
+       # ax.plot(k, P_a_supp, '--', color=color)
 
     # plot linear power spectra
     # a_0 = 1./(1.+zs_chi[-1])
@@ -277,12 +278,13 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
     for lab, data, a in iter_data(zs, [data_list], get_a=True):
         k, P_k = data[0], data[1]
         if len(data) == 3:
-            plt.errorbar(k, P_k, fmt='o', yerr=data[2], ms=3, label=lab)
+            lines = plt.errorbar(k, P_k, fmt='o', yerr=data[2], ms=3, label=lab)        
         else:
-            plt.plot(k, P_k, 'o', ms=3, label=lab)
-        if pk_type == 'chi':
-            supp = power.chi_thin_shell_supp(a, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
-            plt.plot(k, supp, '--')
+            lines = plt.plot(k, P_k, 'o', ms=3, label=lab)
+        # if pk_type == 'chi':
+        #     supp = power.chi_thin_shell_supp(a, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+        #     color = lines[0].get_color()
+        #     plt.plot(k, supp, '--', color=color)
 
         ymax = max(ymax, np.max(P_k[0:7 * idx]))
         ymin = min(ymin, np.min(P_k[0:7 * idx]))
