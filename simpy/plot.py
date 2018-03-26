@@ -79,6 +79,12 @@ def legend_manipulation(ax, figtext):
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)    
 
+def get_a_init_from_zs(zs):
+    """ from list of redshifts returns initial scale factor, i.e. value after 'init' """
+    for z in zs:
+        if z != 'init':
+            return 1/(1.+z)
+
 def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False,
                   out_dir='auto', pk_type='dens', save=True, show=False):
     """" Plot power spectrum -- points and extrapolated values,
@@ -111,7 +117,7 @@ def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False,
 
     # plot non/linear power spectra
     a_0 = 1./(1.+zs[-1])
-    a_i = 1./(1.+zs[0]) if zs[0] != 'init' else 1./(1.+zs[1])
+    a_i = get_a_init_from_zs(zs)
     P_i = power.lin_pow_spec(a_i, k, a_sim_info.sim.cosmo)
     P_0 = power.lin_pow_spec(a_0, k, a_sim_info.sim.cosmo)
     if pk_type == "dens":

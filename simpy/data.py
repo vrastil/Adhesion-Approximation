@@ -407,7 +407,7 @@ def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par):
     perr, pcor = get_perr_pcor(pcov)
 
     # get hybrid Extrap
-    Pk_par = Extrap_Pk_Nl_3 if sigma else Extrap_Pk_Nl_2
+    Pk_par = Extrap_Pk_Nl_2 if sigma is None else Extrap_Pk_Nl_3
     Pk_par = Pk_par(get_Data_vec(data), sim, popt[1], popt[0])
 
     # return all info in dict
