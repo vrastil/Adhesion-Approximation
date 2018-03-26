@@ -46,13 +46,12 @@
 
 template<unsigned int NDIM, typename T>
 class MultiGridSolver {
-  private:
+private:
 
     unsigned int _N;      // The number of cells per dim in the main grid
     unsigned int _Ntot;   // Total number of cells in the main grid
     unsigned int _Nmin;   // The number of cells per dim in the smallest grid
     unsigned int _Nlevel; // Number of levels
-    bool _verbose;        // Turn on verbose while solving
 
     // All the grids needed
     MultiGrid<NDIM, T> _f;      // The solution
@@ -62,26 +61,15 @@ class MultiGridSolver {
     // If the source of the equation depends on fields external to the solver they can
     // be added by running add_ext_field and then used in l_operator etc.
     std::vector<MultiGrid<NDIM,T> * > _ext_field;
-
-    // Convergence criterion (if the convergence check is not overwritten)
-    bool _conv_criterion_residual = true;  // [True]: residual < eps [False]: residual/residual_i < eps
-    double _eps_converge          = 1e-5;  // Convergence criterion
     
     // Solver parameters
     unsigned int _ngs_coarse      = 2;     // Number of NGS sweeps on coarse grid
     unsigned int _ngs_fine        = 2;     // Number of NGS sweeps on the main grid
-    unsigned int _maxsteps        = 1000;  // Maximum number of V-cycles
     unsigned int _ngridcolours    = 2;     // The order we go through the grid: 
                                            // [Sum_i coord[i] % ngridcolour == j for j = 0,1,..,ngridcolour-1]
     
     // Book-keeping variables
-    unsigned int _istep_vcycle = 0;           // The number of V-cycles we are currenlty at
     unsigned int _tot_sweeps_domain_grid = 0; // Total number of sweeps on the domaingrid (level = 0)
-
-    // Residual information
-    double _rms_res;                       // Residual
-    double _rms_res_i;                     // The initial residual
-    double _rms_res_old;                   // The residual at the old step
 
     // Internal methods:
     double calculate_residual(unsigned int level, Grid<NDIM,T>& res);
@@ -94,7 +82,22 @@ class MultiGridSolver {
     void   recursive_go_down(unsigned int from_level);
     void   make_new_source(unsigned int level);
 
-  public:
+protected:
+
+    bool _verbose;        // Turn on verbose while solving
+
+    // Convergence criterion (if the convergence check is not overwritten)
+    bool _conv_criterion_residual = true;  // [True]: residual < eps [False]: residual/residual_i < eps
+    double _eps_converge          = 1e-5;  // Convergence criterion
+    unsigned int _maxsteps        = 1000;  // Maximum number of V-cycles
+    unsigned int _istep_vcycle = 0;        // The number of V-cycles we are currenlty at
+
+    // Residual information
+    double _rms_res;                       // Residual
+    double _rms_res_i;                     // The initial residual
+    double _rms_res_old;                   // The residual at the old step
+
+public:
 
     bool _store_all_residual = false;         // Store the residual after every sweep
     std::vector<double> _res_domain_array;    // Array with the residuals after each step

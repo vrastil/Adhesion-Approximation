@@ -188,6 +188,57 @@ T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& inde
 }
 
 template<typename T>
+bool ChiSolver<T>::check_convergence(){
+    // bring variables from MultiGridSolver<3, T>:: namespace here
+    const double& _rms_res_i = MultiGridSolver<3, T>::_rms_res_i;
+    const double& _rms_res = MultiGridSolver<3, T>::_rms_res;
+    const double& _rms_res_old = MultiGridSolver<3, T>::_rms_res_old;
+    const double& _verbose = MultiGridSolver<3, T>::_verbose;
+    const double& _istep_vcycle = MultiGridSolver<3, T>::_istep_vcycle;
+    const double& _eps_converge = MultiGridSolver<3, T>::_eps_converge;
+    const double& _maxsteps = MultiGridSolver<3, T>::_maxsteps;
+
+    // Compute ratio of residual to previous residual
+    double err = _rms_res_old != 0.0 ? _rms_res/_rms_res_old : 0.0;
+    bool converged = false;
+
+    // Print out some information
+    if(_verbose){
+        std::cout << "    Checking for convergence at step = " << _istep_vcycle << std::endl;
+        std::cout << "        Residual = " << _rms_res << "  Residual_old = " <<  _rms_res_old << std::endl;
+        std::cout << "        Residual_i = " << _rms_res_i << "  Err = " << err << std::endl;
+    }
+
+    // Convergence criterion -- till the residuals are getting smaller
+        if(err > 1){ // reject solution, wait for better one
+            if(_verbose) std::cout << "    The solution stopped converging err = " << err << " > 1" << std::endl;
+            conv_stop = true;
+        } else if((err > _eps_converge) && (err <= 1)){
+            std::cout << std::endl;
+            std::cout << "    The solution stopped converging fast enough err = " << err << " > " << _eps_converge << " ( res = " << _rms_res << " ) istep = " << _istep_vcycle << "\n" << std::endl;
+            converged = true;
+        } else {
+            if (conv_stop){
+                std::cout << std::endl;
+                std::cout << "    The solution has converged err = " << err << " > " << _eps_converge << " ( res = " << _rms_res << " ) istep = " << _istep_vcycle << "\n" << std::endl;
+                converged = true;
+            } else {
+                if(_verbose) std::cout << "    The solution is still converging err = " << err << " !> " << _eps_converge << std::endl;
+            }
+        }
+
+    // Define converged if istep exceeds maxsteps to avoid infinite loop...
+    if(_istep_vcycle >= _maxsteps){
+        std::cout << "    WARNING: MultigridSolver failed to converge! Reached istep = maxsteps = " << _maxsteps << std::endl;
+        std::cout << "    res = " << _rms_res << " res_old = " << _rms_res_old << " res_i = " << _rms_res_i << std::endl;
+        converged  = true;
+    }
+
+    if (converged) conv_stop = false;
+    return converged;
+}
+
+template<typename T>
 T  ChiSolver<T>::chi_min(T delta) const
 {
     #ifndef CHI_A_UNITS
@@ -209,7 +260,7 @@ App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
 
     // SET CHI SOLVER
     sol.add_external_grid(&drho);
-    sol.set_maxsteps(10);
+    sol.set_maxsteps(20);
 }
 
 static void w_k_correction(Mesh& rho_k)
@@ -244,21 +295,8 @@ void App_Var_chi::save_drho_from_particles(Mesh& aux_field)
 
 void App_Var_chi::solve(FTYPE_t a)
 {
-    // set appropriate epsilon
-    FTYPE_t eps = 1e-4;
-    const FTYPE_t log_psi = log10(sim.chi_opt.phi);
-    const FTYPE_t a_kick = log_psi > 0 ? 0.1*exp10(-0.05*log_psi) : 0.1;
-    const FTYPE_t a_pow = log_psi > 0 ? -9 + 1.5*log_psi : -9;
-
-    if (a_pow > 0) eps /= 1 + pow(a/a_kick, a_pow);
-    else if (a_pow < 0) eps *= 1 + pow(a/a_kick, -a_pow);
-
-    #ifndef CHI_A_UNITS
-    eps *= sol.chi_min(0);
-    #endif
-
     sol.set_time(a, sim.cosmo);
-    sol.set_epsilon(eps);
+    sol.set_epsilon(0.98);
     save_drho_from_particles(chi_force[0]);
     cout << "Solving equations of motion for chameleon field...\n";
     sol.solve();

@@ -19,6 +19,8 @@ private:
     const T chi_prefactor_0; // dimensionless prefactor to poisson equation at a = 1
     T chi_prefactor;
 
+    bool conv_stop = false;
+
 public:
     // Constructors
     ChiSolver(unsigned int N, const Sim_Param& sim, bool verbose = true) : ChiSolver(N, 2, sim, verbose) {}
@@ -26,10 +28,13 @@ public:
     void set_time(T a, const Cosmo_Param& cosmo);
 
     // The dicretized equation L(phi)
-    T  l_operator(unsigned int level, std::vector<unsigned int>& index_list, bool addsource);
+    T  l_operator(unsigned int level, std::vector<unsigned int>& index_list, bool addsource) override;
 
     // Differential of the L operator: dL_{ijk...}/dphi_{ijk...}
-    T dl_operator(unsigned int level, std::vector<unsigned int>& index_list);
+    T dl_operator(unsigned int level, std::vector<unsigned int>& index_list) override;
+
+    // Criterion for defining convergence
+    bool check_convergence() override;
 
     // set initial guess to bulk value, need to set time and add rho before call to this function
     void set_initial_guess();
