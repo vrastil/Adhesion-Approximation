@@ -225,7 +225,6 @@ bool ChiSolver<T>::check_convergence(){
     } else {
         if (m_conv_stop){
             std::cout << "\n    The solution stopped converging num(err > 1)  = " << m_conv_stop
-                      << " ( err = " << err << " > " << m_err_stop
                       << " res = " << _rms_res << " > " << _eps_converge  << " ) istep = " << _istep_vcycle << "\n\n";
             converged = true;
         } else {

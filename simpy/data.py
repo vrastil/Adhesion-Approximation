@@ -178,6 +178,7 @@ def load_check_plot(a_sim_info, key, patterns, # type: SimInfo, str, str,
     5) write info about done step into a_sim_info
     """
     print 'step: %-20s' % (key + ' ' + info_str),
+    sys.stdout.flush()
     subdir = key + '/' if subdir is None else subdir
     zs, files = try_get_zs_files(a_sim_info, subdir, patterns)
     if a_sim_info.rerun(rerun, key, skip, zs):
@@ -444,6 +445,7 @@ def load_stack_save(stack_info, key, patterns,  # type: StackInfo, str, str,
     4) write info about done step into stack_info
     """
     print 'step: %-25s' % (key + ' ' + info_str),
+    sys.stdout.flush()
     if stack_info.rerun(rerun, key, skip, True):
         subdir = key.replace('_files', '/') if subdir is None else subdir
         for z, data in zip(*stack_files(stack_info, subdir, patterns)):

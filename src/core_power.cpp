@@ -163,7 +163,9 @@ void ODE_Solver::update(double &t, const double t1, double y[])
 
 void norm_pwr(Cosmo_Param& cosmo)
 {
+    #ifndef LESSINFO
     cout << "Initializing CCL power spectrum...\n";
+    #endif
     int status = 0;
     ccl_sigma8(cosmo.cosmo, &status);
     if (status) throw std::runtime_error(cosmo.cosmo->status_message);
@@ -515,7 +517,9 @@ constexpr size_t GSL_N = 50;
 template<class P> // everything callable P_k(k)
 void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<FTYPE_t, 2>& corr_func_binned)
 {
+    #ifndef LESSINFO
     printf("Computing correlation function via GSL integration QAWF...\n");
+    #endif
     Integr_obj_qawf xi_r(&xi_integrand_W<P>, 0, GSL_EPSABS,  GSL_LIMIT, GSL_N);
     gen_corr_func_binned_gsl(sim, P_k, corr_func_binned, xi_r);
 }
