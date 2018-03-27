@@ -19,7 +19,10 @@ private:
     const T chi_prefactor_0; // dimensionless prefactor to poisson equation at a = 1
     T chi_prefactor;
 
-    bool conv_stop = false;
+    // convergence parameters
+    unsigned m_conv_stop = 0; // number of unsuccessful sweeps
+    double m_err_stop;        // stop iteration when: 1 >  err > m_err_stop
+    double m_err_stop_min;    // iterate at least until: err > m_err_stop_min
 
 public:
     // Constructors
@@ -35,6 +38,7 @@ public:
 
     // Criterion for defining convergence
     bool check_convergence() override;
+    void set_convergence(double eps, double err_stop, double err_stop_min);
 
     // set initial guess to bulk value, need to set time and add rho before call to this function
     void set_initial_guess();

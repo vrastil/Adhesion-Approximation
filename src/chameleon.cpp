@@ -190,13 +190,13 @@ T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& inde
 template<typename T>
 bool ChiSolver<T>::check_convergence(){
     // bring variables from MultiGridSolver<3, T>:: namespace here
-    const double& _rms_res_i = MultiGridSolver<3, T>::_rms_res_i;
-    const double& _rms_res = MultiGridSolver<3, T>::_rms_res;
-    const double& _rms_res_old = MultiGridSolver<3, T>::_rms_res_old;
-    const double& _verbose = MultiGridSolver<3, T>::_verbose;
-    const double& _istep_vcycle = MultiGridSolver<3, T>::_istep_vcycle;
-    const double& _eps_converge = MultiGridSolver<3, T>::_eps_converge;
-    const double& _maxsteps = MultiGridSolver<3, T>::_maxsteps;
+    const double _rms_res_i = MultiGridSolver<3, T>::_rms_res_i;
+    const double _rms_res = MultiGridSolver<3, T>::_rms_res;
+    const double _rms_res_old = MultiGridSolver<3, T>::_rms_res_old;
+    const double _verbose = MultiGridSolver<3, T>::_verbose;
+    const double _istep_vcycle = MultiGridSolver<3, T>::_istep_vcycle;
+    const double _eps_converge = MultiGridSolver<3, T>::_eps_converge;
+    const double _maxsteps = MultiGridSolver<3, T>::_maxsteps;
 
     // Compute ratio of residual to previous residual
     double err = _rms_res_old != 0.0 ? _rms_res/_rms_res_old : 0.0;
@@ -204,38 +204,53 @@ bool ChiSolver<T>::check_convergence(){
 
     // Print out some information
     if(_verbose){
-        std::cout << "    Checking for convergence at step = " << _istep_vcycle << std::endl;
-        std::cout << "        Residual = " << _rms_res << "  Residual_old = " <<  _rms_res_old << std::endl;
-        std::cout << "        Residual_i = " << _rms_res_i << "  Err = " << err << std::endl;
+        std::cout << "    Checking for convergence at step = " << _istep_vcycle << "\n";
+        std::cout << "        Residual = " << _rms_res << "  Residual_old = " <<  _rms_res_old << "\n";
+        std::cout << "        Residual_i = " << _rms_res_i << "  Err = " << err << "\n";
     }
 
-    // Convergence criterion -- till the residuals are getting smaller
-        if(err > 1){ // reject solution, wait for better one
-            if(_verbose) std::cout << "    The solution stopped converging err = " << err << " > 1" << std::endl;
-            conv_stop = true;
-        } else if((err > _eps_converge) && (err <= 1)){
-            std::cout << std::endl;
-            std::cout << "    The solution stopped converging fast enough err = " << err << " > " << _eps_converge << " ( res = " << _rms_res << " ) istep = " << _istep_vcycle << "\n" << std::endl;
+    // Convergence criterion
+    if((_rms_res < _eps_converge) && (err > m_err_stop_min)){ // residuals below treshold
+        std::cout << "\n    The solution has converged res = " << _rms_res << " < " << _eps_converge 
+                  << " ( err = " << err << " ) istep = " << _istep_vcycle << "\n\n";
+        converged = true;
+    } else if(err > 1){ // reject solution, wait for better one
+        if(_verbose) std::cout << "    The solution stopped converging res = " << _rms_res << " !< " << _eps_converge
+                               << " err = " << err << " > 1" << " num(err > 1) = " << m_conv_stop << "\n";
+        m_conv_stop++;
+    } else if(err > m_err_stop){ // convergence too slow
+        std::cout << "\n    The solution stopped converging fast enough err = " << err << " > " << m_err_stop
+                  << " ( res = " << _rms_res << " ) istep = " << _istep_vcycle << "\n\n";
+        converged = true;
+    } else {
+        if (m_conv_stop){
+            std::cout << "\n    The solution stopped converging num(err > 1)  = " << m_conv_stop
+                      << " ( err = " << err << " > " << m_err_stop
+                      << " res = " << _rms_res << " > " << _eps_converge  << " ) istep = " << _istep_vcycle << "\n\n";
             converged = true;
         } else {
-            if (conv_stop){
-                std::cout << std::endl;
-                std::cout << "    The solution has converged err = " << err << " > " << _eps_converge << " ( res = " << _rms_res << " ) istep = " << _istep_vcycle << "\n" << std::endl;
-                converged = true;
-            } else {
-                if(_verbose) std::cout << "    The solution is still converging err = " << err << " !> " << _eps_converge << std::endl;
-            }
+            if(_verbose) std::cout << "    The solution is still converging err = " << err << " !> " << _eps_converge
+                                   << " res = " << _rms_res << " > " << _eps_converge << "\n";
         }
+    }
 
     // Define converged if istep exceeds maxsteps to avoid infinite loop...
     if(_istep_vcycle >= _maxsteps){
-        std::cout << "    WARNING: MultigridSolver failed to converge! Reached istep = maxsteps = " << _maxsteps << std::endl;
-        std::cout << "    res = " << _rms_res << " res_old = " << _rms_res_old << " res_i = " << _rms_res_i << std::endl;
+        std::cout << "    WARNING: MultigridSolver failed to converge! Reached istep = maxsteps = " << _maxsteps << "\n";
+        std::cout << "    res = " << _rms_res << " res_old = " << _rms_res_old << " res_i = " << _rms_res_i << "\n";
         converged  = true;
     }
 
-    if (converged) conv_stop = false;
+    if (converged) m_conv_stop = 0;
     return converged;
+}
+
+template<typename T>
+void ChiSolver<T>::set_convergence(double eps, double err_stop, double err_stop_min)
+{
+    MultiGridSolver<3, T>::set_epsilon(eps);
+    m_err_stop = err_stop;
+    m_err_stop_min = err_stop_min;
 }
 
 template<typename T>
@@ -260,7 +275,8 @@ App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
 
     // SET CHI SOLVER
     sol.add_external_grid(&drho);
-    sol.set_maxsteps(20);
+    sol.set_convergence(1e-6, 0.95, 0.1);
+    sol.set_maxsteps(15);
 }
 
 static void w_k_correction(Mesh& rho_k)
@@ -296,8 +312,8 @@ void App_Var_chi::save_drho_from_particles(Mesh& aux_field)
 void App_Var_chi::solve(FTYPE_t a)
 {
     sol.set_time(a, sim.cosmo);
-    sol.set_epsilon(0.98);
     save_drho_from_particles(chi_force[0]);
+    cout << "Setting guess for chameleon field...\n";
     cout << "Solving equations of motion for chameleon field...\n";
     sol.solve();
 }
