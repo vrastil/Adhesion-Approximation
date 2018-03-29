@@ -1,3 +1,10 @@
+/**
+ * @file:	chameleon.cpp
+ * @brief:	chameleon solver
+ * @note:   chameleon field is in units of 'chi_a = 2*beta*Mpl*Phi_s*a^3/1-n)
+ */
+
+
 #include "core_app.h"
 #include "core_power.h"
 #include "core_mesh.h"
@@ -5,18 +12,9 @@
 #include "chameleon.hpp"
 
 using namespace std;
-
 namespace{
-constexpr FTYPE_t MPL = (FTYPE_t)1; // chi in units of Planck mass
-// (FTYPE_t)2.435E18; // reduced Planck mass, [GeV/c^2]
-// constexpr FTYPE_t fm_to_Mpc = (FTYPE_t)3.2407792896664E-38; // 1 fm = ? Mpc
-// constexpr FTYPE_t hbarc = (FTYPE_t)197.327053; // reduced Planck constant times speed of light, [MeV fm]
-// constexpr FTYPE_t hbarc_cosmo = hbarc*FTYPE_t(1E-9)*fm_to_Mpc; // [GeV Mpc]
-// constexpr FTYPE_t G_N = hbarc_cosmo*FTYPE_t(6.70711*1E-39); // gravitational constant, [GeV Mpc / (GeV/c^2)^2]
+constexpr FTYPE_t MPL = (FTYPE_t)1; // mass & chi in units of Planck mass
 constexpr FTYPE_t c_kms = (FTYPE_t)299792.458; // speed of light [km / s]
-
-// compute chi in units of chi_a
-#define CHI_A_UNITS
 
 template<typename T>
 void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
@@ -86,14 +84,8 @@ template<typename T>
 ChiSolver<T>::ChiSolver(unsigned int N, int Nmin, const Sim_Param& sim, bool verbose):
     MultiGridSolver<3, T>(N, Nmin, verbose), n(sim.chi_opt.n), chi_0(2*sim.chi_opt.beta*MPL*sim.chi_opt.phi),
     chi_prefactor_0( // dimensionless prefactor to poisson equation
-    #ifndef CHI_A_UNITS // beta*rho_m,0 / Mpl^2 + computing units
-    3*sim.chi_opt.beta*sim.cosmo.Omega_m*pow(sim.cosmo.H0 // beta*rho_m,0 / Mpl^2
-    * sim.cosmo.h / c_kms // units factor for 'c = 1' and [L] = Mpc / h
-    * sim.box_opt.box_size // dimension factor for laplacian
-    ,2))
-    #else // beta*rho_m,0 / Mpl^2 / (a^3 chi_a) + computing units
+    // beta*rho_m,0 / (Mpl*chi_0) + computing units; additional a^(-3 -3/(1-n)) at each timestep
     3/2.*sim.cosmo.Omega_m*pow(sim.cosmo.H0 * sim.cosmo.h / c_kms * sim.box_opt.box_size ,2) / sim.chi_opt.phi)
-    #endif
 {
     if ((n <= 0) || (n >= 1) || (chi_0 <= 0)) throw out_of_range("invalid values of chameleon power-law potential parameters");
 }
@@ -104,14 +96,11 @@ void ChiSolver<T>::set_time(T a_, const Cosmo_Param& cosmo)
     a = a_; // set new time
     a_3 = pow(a_, 3);
     D = growth_factor(a_, cosmo);
-
-    #ifdef CHI_A_UNITS
     chi_prefactor = chi_prefactor_0*pow(a, -3.*(2.-n)/(1.-n));
-    #endif
 }
 
 template<typename T>
-void ChiSolver<T>::set_initial_guess()
+void ChiSolver<T>::set_bulk_field()
 {
     if (!a_3) throw out_of_range("invalid value of scale factor");
     if (!MultiGridSolver<3, T>::get_external_field_size()) throw out_of_range("overdensity not set"); 
@@ -126,6 +115,83 @@ void ChiSolver<T>::set_initial_guess()
     {
         f[i] = chi_min(rho[i]);
     }
+}
+
+template<typename T>
+void ChiSolver<T>::set_linear(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B, const T x_0)
+{
+    // variables
+    const unsigned N = rho.N;
+    const unsigned l_half = rho.length/2;
+    const FTYPE_t mass_sq = (1-n)*chi_prefactor*pow(x_0, 2); // dimensionless square mass, with derivative factor
+    const FTYPE_t chi_a_n = -1/(1-n); // prefactor for chi(k), in chi_a units
+    Grid<3, T>& chi = MultiGridSolver<3, T>::get_grid(); // guess
+    T const* const rho_grid = MultiGridSolver<3,T>::get_external_field(0, 0); // overdensity
+    const unsigned N_tot = MultiGridSolver<3, T>::get_Ntot();
+    std::vector<unsigned int> index_list;
+    bool converged = true;
+    FTYPE_t k2;
+
+    cout << "mass_sq = " << mass_sq << "\n";
+
+    // get delta(k)
+    fftw_execute_dft_r2c(p_F, rho);
+
+    // get dchi(k)
+	#pragma omp parallel for private(k2)
+	for(unsigned i=0; i < l_half;i++){
+		k2 = get_k_sq(N, i);
+		if (k2 == 0)
+        {
+            rho[2*i] = 0;
+            rho[2*i+1] = 0;
+        }
+		else
+        {
+			rho[2*i] *= chi_a_n/(k2+mass_sq)*mass_sq;
+			rho[2*i+1] *= chi_a_n/(k2+mass_sq)*mass_sq;
+		}
+	}
+
+    // get dchi(x)
+    fftw_execute_dft_c2r(p_B, rho);
+
+    // copy dchi(x) onto Grid
+    transform_Mesh_to_Grid(rho, chi);
+
+    // get chi(x)
+    #pragma omp parallel for
+    for (unsigned i = 0; i < N_tot; ++i)
+    {
+        ++chi[i];
+        // if (++chi[i] < 0) // get linear chi(x) and check screening
+        // {
+        //     if(chi_min(rho_grid[i]) < 1e-2) chi[i] = chi_min(rho_grid[i]);
+        //     else{
+        //         chi[i] = 0;
+        //         converged = false;
+        //     }
+        // } 
+    }
+
+    // // check for zero values (those in screened regime but outside dense objects)
+    // unsigned num_loop = 0;
+    // while (!converged){
+    //     num_loop++;
+    //     converged = true;
+    //     #pragma omp parallel for private(index_list)
+    //     for (unsigned i = 0; i < N_tot; ++i)
+    //     {
+    //         if (chi[i] == 0) 
+    //         { // assign average value
+    //             MultiGridSolver<3, T>::get_neighbor_gridindex(index_list, i, N);
+    //             for(auto it = index_list.begin() + 1; it < index_list.end(); ++it) chi[i] += chi[*it];
+    //             chi[i] /= 6;
+    //             if (chi[i] == 0) converged = false; // wait until next loop
+    //         } 
+    //     }
+    // }
+    // cout << "No zero values after " << num_loop << " loops.\n";
 }
 
 // The dicretized equation L(phi)
@@ -145,13 +211,10 @@ T  ChiSolver<T>::l_operator(unsigned int level, std::vector<unsigned int>& index
     // The right hand side of the PDE 
     if(chi[i] <= 0)
     { // if the solution is overshot, try bulk field
-        MultiGridSolver<3, T>::get_y(level)[i] = rho > -1 ? chi_min(rho) : chi_min(0);
+        MultiGridSolver<3, T>::get_y(level)[i] = chi_min(rho);
+        return 0;
     }
-    #ifndef CHI_A_UNITS
-    T source = ((1+rho)/a_3 - pow(chi_0/chi[i], 1-n)) * chi_prefactor_0;
-    #else
     T source = (1 + rho - pow(chi[i], n - 1)) * chi_prefactor;
-    #endif
 
     // Compute the standard kinetic term [D^2 phi] (in 1D this is phi''_i =  phi_{i+1} + phi_{i-1} - 2 phi_{i} )
     T kinetic = -2*chi[i]*3; // chi, '-2*3' is factor in 3D discrete laplacian
@@ -178,11 +241,7 @@ T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& inde
     const T dkinetic = -2.0*3;
     
     // Derivative of source
-    #ifndef CHI_A_UNITS // when using initial overdensity, current otherwise
-    const T dsource = chi_prefactor_0*(1-n)/chi_0*pow(chi_0/chi, 2-n);
-    #else
     const T dsource = chi_prefactor*(1-n)*pow(chi, n-2);
-    #endif
 
     return dkinetic/(h*h) - dsource;
 }
@@ -255,11 +314,7 @@ void ChiSolver<T>::set_convergence(double eps, double err_stop, double err_stop_
 template<typename T>
 T  ChiSolver<T>::chi_min(T delta) const
 {
-    #ifndef CHI_A_UNITS
-    return chi_0*std::pow(a_3/(1+delta), 1/(1-n));
-    #else
-    return std::pow(1+delta, 1/(n-1));
-    #endif
+    return delta > -1 ? std::pow(1+delta, 1/(n-1)) : 1;
 }
 
 App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
@@ -312,7 +367,8 @@ void App_Var_chi::solve(FTYPE_t a)
 {
     sol.set_time(a, sim.cosmo);
     save_drho_from_particles(chi_force[0]);
-    cout << "Setting guess for chameleon field...\n";
+    // cout << "Setting guess for chameleon field...\n";
+    // sol.set_linear(chi_force[0], p_F, p_B, sim.x_0());
     cout << "Solving equations of motion for chameleon field...\n";
     sol.solve();
 }

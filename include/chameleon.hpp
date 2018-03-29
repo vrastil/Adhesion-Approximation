@@ -40,8 +40,11 @@ public:
     bool check_convergence() override;
     void set_convergence(double eps, double err_stop, double err_stop_min);
 
-    // set initial guess to bulk value, need to set time and add rho before call to this function
-    void set_initial_guess();
+    // set chameleon guess to bulk value, need to set time and add rho before call to this function
+    void set_bulk_field();
+
+    // set chameleon guess to liear prediction
+    void set_linear(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B, const T x_0);
 
     // get chi_bulk for given overdensity
     T chi_min(T delta) const;
@@ -69,6 +72,6 @@ public:
     void print_output();
     void solve(FTYPE_t a);
 
-protected:
+private:
     void save_drho_from_particles(Mesh& aux_field);
 };

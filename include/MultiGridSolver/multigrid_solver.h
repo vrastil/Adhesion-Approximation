@@ -73,7 +73,6 @@ private:
 
     // Internal methods:
     double calculate_residual(unsigned int level, Grid<NDIM,T>& res);
-    void   get_neighbor_gridindex(std::vector<unsigned int>& index_list, unsigned int i, unsigned int ngrid);
     void   prolonge_up_array(unsigned int to_level, Grid<NDIM,T>& BottomGrid, Grid<NDIM,T>& TopGrid);
     void   make_prolongation_array(Grid<NDIM,T>& f, Grid<NDIM,T>& Rf, Grid<NDIM,T>& df);
     void   GaussSeidelSweep(unsigned int level, unsigned int curcolor, T *f);
@@ -85,6 +84,9 @@ private:
 protected:
 
     bool _verbose;        // Turn on verbose while solving
+
+    // Internal methods:
+    void get_neighbor_gridindex(std::vector<unsigned int>& index_list, unsigned int i, unsigned int ngrid);
 
     // Convergence criterion (if the convergence check is not overwritten)
     bool _conv_criterion_residual = true;  // [True]: residual < eps [False]: residual/residual_i < eps
