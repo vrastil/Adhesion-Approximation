@@ -118,12 +118,12 @@ void ChiSolver<T>::set_bulk_field()
 }
 
 template<typename T>
-void ChiSolver<T>::set_linear(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B, const T x_0)
+void ChiSolver<T>::set_linear(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B, const T h)
 {
     // variables
     const unsigned N = rho.N;
     const unsigned l_half = rho.length/2;
-    const FTYPE_t mass_sq = (1-n)*chi_prefactor*pow(x_0, 2); // dimensionless square mass, with derivative factor
+    const FTYPE_t mass_sq = (1-n)*chi_prefactor*pow(h, 2); // dimensionless square mass, with derivative factor
     const FTYPE_t chi_a_n = -1/(1-n); // prefactor for chi(k), in chi_a units
     Grid<3, T>& chi = MultiGridSolver<3, T>::get_grid(); // guess
     T const* const rho_grid = MultiGridSolver<3,T>::get_external_field(0, 0); // overdensity
@@ -131,8 +131,6 @@ void ChiSolver<T>::set_linear(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_P
     std::vector<unsigned int> index_list;
     bool converged = true;
     FTYPE_t k2;
-
-    cout << "mass_sq = " << mass_sq << "\n";
 
     // get delta(k)
     fftw_execute_dft_r2c(p_F, rho);
@@ -196,12 +194,9 @@ void ChiSolver<T>::set_linear(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_P
 
 // The dicretized equation L(phi)
 template<typename T>
-T  ChiSolver<T>::l_operator(unsigned int level, std::vector<unsigned int>& index_list, bool addsource)
+T  ChiSolver<T>::l_operator(unsigned int level, std::vector<unsigned int>& index_list, bool addsource, const T h)
 { 
     const unsigned int i = index_list[0];
-    
-    // Gridspacing
-    const T h = 1.0/T( MultiGridSolver<3, T>::get_N(level) );
 
     // Solution and pde-source grid at current level
     T const* const chi = MultiGridSolver<3, T>::get_y(level); // solution
@@ -230,12 +225,9 @@ T  ChiSolver<T>::l_operator(unsigned int level, std::vector<unsigned int>& index
 
 // Differential of the L operator: dL_{ijk...}/dphi_{ijk...}
 template<typename T>
-T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& index_list){
+T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& index_list, const T h){
     // solution
     const T chi = MultiGridSolver<3, T>::get_y(level)[ index_list[0] ];
-
-    // Gridspacing
-    const T h = 1.0/T( MultiGridSolver<3, T>::get_N(level) );
 
     // Derivative of kinetic term
     const T dkinetic = -2.0*3;
@@ -367,8 +359,8 @@ void App_Var_chi::solve(FTYPE_t a)
 {
     sol.set_time(a, sim.cosmo);
     save_drho_from_particles(chi_force[0]);
-    // cout << "Setting guess for chameleon field...\n";
-    // sol.set_linear(chi_force[0], p_F, p_B, sim.x_0());
+    cout << "Setting guess for chameleon field...\n";
+    sol.set_linear(chi_force[0], p_F, p_B, 1/(2*PI));
     cout << "Solving equations of motion for chameleon field...\n";
     sol.solve();
 }

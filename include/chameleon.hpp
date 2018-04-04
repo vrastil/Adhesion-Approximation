@@ -31,10 +31,10 @@ public:
     void set_time(T a, const Cosmo_Param& cosmo);
 
     // The dicretized equation L(phi)
-    T  l_operator(unsigned int level, std::vector<unsigned int>& index_list, bool addsource) override;
+    T  l_operator(unsigned int level, std::vector<unsigned int>& index_list, bool addsource, const T h) override;
 
     // Differential of the L operator: dL_{ijk...}/dphi_{ijk...}
-    T dl_operator(unsigned int level, std::vector<unsigned int>& index_list) override;
+    T dl_operator(unsigned int level, std::vector<unsigned int>& index_list, const T h) override;
 
     // Criterion for defining convergence
     bool check_convergence() override;

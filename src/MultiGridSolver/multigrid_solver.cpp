@@ -18,12 +18,9 @@ inline unsigned int power(unsigned int a, unsigned int b){
 //================================================
 
 template<unsigned int NDIM, typename T>
-T MultiGridSolver<NDIM,T>::l_operator(unsigned int level, std::vector<unsigned int>& index_list, bool addsource){
-  T h, l, source, kinetic;
+T MultiGridSolver<NDIM,T>::l_operator(unsigned int level, std::vector<unsigned int>& index_list, bool addsource, const T h){
+  T l, source, kinetic;
   unsigned int i = index_list[0];
-
-  // Gridspacing h
-  h = 1.0/T( get_N(level) );
 
   // Compute the standard kinetic term [D^2 f]
   kinetic = -2.0 * NDIM * _f[level][ i ];
@@ -52,14 +49,9 @@ T MultiGridSolver<NDIM,T>::l_operator(unsigned int level, std::vector<unsigned i
 //================================================
 
 template<unsigned int NDIM, typename T>
-T MultiGridSolver<NDIM,T>::dl_operator(unsigned int level, std::vector<unsigned int>& index_list){
-  T dl, h;
-
-  // Gridspacing
-  h = 1.0/T( get_N(level) );
-
+T MultiGridSolver<NDIM,T>::dl_operator(unsigned int level, std::vector<unsigned int>& index_list, const T h){
   // The derivtive dL/df
-  dl = -2.0*NDIM/(h*h);
+  T dl = -2.0*NDIM/(h*h);
 
   // Sanity check
   if(fabs(dl) < 1e-10){
@@ -243,6 +235,9 @@ double MultiGridSolver<NDIM,T>::calculate_residual(unsigned int level, Grid<NDIM
   unsigned int N    = get_N(level);
   unsigned int Ntot = get_Ntot(level);
 
+  // Gridspacing
+  const T h = 1.0/T( get_N(level) );
+
   // Calculate and store (minus) the residual in each cell
 #ifdef OPENMP
 #pragma omp parallel for
@@ -250,7 +245,7 @@ double MultiGridSolver<NDIM,T>::calculate_residual(unsigned int level, Grid<NDIM
   for (unsigned int i = 0; i < Ntot; i++) {
     std::vector<unsigned int> index_list;
     get_neighbor_gridindex(index_list, i, N);
-    res[i] = -l_operator(level, index_list, true);
+    res[i] = -l_operator(level, index_list, true, h);
   }
 
   // Calculate and return RMS residual
@@ -396,6 +391,9 @@ void MultiGridSolver<NDIM,T>::GaussSeidelSweep(unsigned int level, unsigned int 
   unsigned int N    = get_N(level);
   unsigned int Ntot = get_Ntot(level);
 
+  // Gridspacing
+  const T h = 1.0/T( get_N(level) );
+
 #ifdef OPENMP
 #pragma omp parallel for 
 #endif
@@ -413,8 +411,8 @@ void MultiGridSolver<NDIM,T>::GaussSeidelSweep(unsigned int level, unsigned int 
       // Update the solution f = f - L / (dL/df)
       std::vector<unsigned int> index_list;
       get_neighbor_gridindex(index_list, i, N);
-      T l  =  l_operator(level, index_list, true);
-      T dl = dl_operator(level, index_list);
+      T l  =  l_operator(level, index_list, true, h);
+      T dl = dl_operator(level, index_list, h);
       f[i] -= l/dl;
     }
   }
@@ -539,6 +537,9 @@ void MultiGridSolver<NDIM,T>::make_new_source(unsigned int level){
   unsigned int N    = get_N(level);
   unsigned int Ntot = get_Ntot(level);
 
+  // Gridspacing
+  const T h = 1.0/T( get_N(level) );
+
   // Calculate the new source
 #ifdef OPENMP
 #pragma omp parallel for
@@ -546,7 +547,7 @@ void MultiGridSolver<NDIM,T>::make_new_source(unsigned int level){
   for(unsigned int i = 0; i < Ntot; i++){
     std::vector<unsigned int> index_list;
     get_neighbor_gridindex(index_list, i, N);
-    T res = l_operator(level, index_list, false);
+    T res = l_operator(level, index_list, false, h);
     _source[level][i] = _res[level][i] + res;
   }
 }

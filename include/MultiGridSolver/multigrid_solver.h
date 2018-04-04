@@ -147,8 +147,8 @@ public:
     void clear();
 
     // Methods that must be implemented by user
-    virtual T l_operator(unsigned int level, std::vector<unsigned int>& index_list, bool addsource);
-    virtual T dl_operator(unsigned int level, std::vector<unsigned int>& index_list);
+    virtual T l_operator(unsigned int level, std::vector<unsigned int>& index_list, bool addsource, const T h);
+    virtual T dl_operator(unsigned int level, std::vector<unsigned int>& index_list, const T h);
     virtual bool   check_convergence();
 };
 
