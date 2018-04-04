@@ -128,13 +128,10 @@ void ChiSolver<T>::get_chi_k(Mesh& rho_k, const T h)
     const T chi_a_n = -1/(1-n); // prefactor for chi(k), in chi_a units
     
     T k2, g_k;
-    Vec_3D<int> k_vec;
 
-	#pragma omp parallel for private(k2, g_k, k_vec)
+	#pragma omp parallel for private(k2, g_k)
 	for(unsigned i=0; i < l_half;i++){
-        g_k = 1.;
-		get_k_vec(N, i, k_vec);
-		k2 = k_vec.norm2();
+		k2 = get_k_sq(N, i);
 		if (k2 == 0)
         {
             rho_k[2*i] = 0;
@@ -142,8 +139,7 @@ void ChiSolver<T>::get_chi_k(Mesh& rho_k, const T h)
         }
 		else
         {
-            for (int k_i : k_vec) if (k_i) g_k *= pow((k_i*PI/N)/sin(k_i*PI/N), 2); //< 1/w(k), ORDER = 1 (CIC)
-            g_k *= chi_a_n/(k2+mass_sq)*mass_sq; // Green function
+            g_k = chi_a_n/(k2+mass_sq)*mass_sq; // Green function
 			rho_k[2*i] *= g_k;
 			rho_k[2*i+1] *= g_k;
 		}
