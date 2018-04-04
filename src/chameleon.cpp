@@ -118,59 +118,58 @@ void ChiSolver<T>::set_bulk_field()
 }
 
 template<typename T>
-void ChiSolver<T>::set_linear(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B, const T h)
-{
-    // variables
-    const unsigned N = rho.N;
-    const unsigned l_half = rho.length/2;
-    const FTYPE_t mass_sq = (1-n)*chi_prefactor*pow(h, 2); // dimensionless square mass, with derivative factor
-    const FTYPE_t chi_a_n = -1/(1-n); // prefactor for chi(k), in chi_a units
-    Grid<3, T>& chi = MultiGridSolver<3, T>::get_grid(); // guess
-    T const* const rho_grid = MultiGridSolver<3,T>::get_external_field(0, 0); // overdensity
-    const unsigned N_tot = MultiGridSolver<3, T>::get_Ntot();
-    std::vector<unsigned int> index_list;
-    bool converged = true;
-    FTYPE_t k2;
+void ChiSolver<T>::get_chi_k(Mesh& rho_k, const T h)
+{/* transform input density in k-space into linear prediction for chameleon field
+    includes w(k) corrections for interpolation of particles */
 
-    // get delta(k)
-    fftw_execute_dft_r2c(p_F, rho);
+    const unsigned N = rho_k.N;
+    const unsigned l_half = rho_k.length/2;
+    const T mass_sq = (1-n)*chi_prefactor*pow(h, 2); // dimensionless square mass, with derivative factor
+    const T chi_a_n = -1/(1-n); // prefactor for chi(k), in chi_a units
+    
+    T k2, g_k;
+    Vec_3D<int> k_vec;
 
-    // get dchi(k)
-	#pragma omp parallel for private(k2)
+	#pragma omp parallel for private(k2, g_k, k_vec)
 	for(unsigned i=0; i < l_half;i++){
-		k2 = get_k_sq(N, i);
+        g_k = 1.;
+		get_k_vec(N, i, k_vec);
+		k2 = k_vec.norm2();
 		if (k2 == 0)
         {
-            rho[2*i] = 0;
-            rho[2*i+1] = 0;
+            rho_k[2*i] = 0;
+            rho_k[2*i+1] = 0;
         }
 		else
         {
-			rho[2*i] *= chi_a_n/(k2+mass_sq)*mass_sq;
-			rho[2*i+1] *= chi_a_n/(k2+mass_sq)*mass_sq;
+            for (int k_i : k_vec) if (k_i) g_k *= pow((k_i*PI/N)/sin(k_i*PI/N), 2); //< 1/w(k), ORDER = 1 (CIC)
+            g_k *= chi_a_n/(k2+mass_sq)*mass_sq; // Green function
+			rho_k[2*i] *= g_k;
+			rho_k[2*i+1] *= g_k;
 		}
 	}
+}
 
-    // get dchi(x)
-    fftw_execute_dft_c2r(p_B, rho);
+template<typename T>
+void ChiSolver<T>::get_chi_x()
+{// transform dchi into chi, in chi_a units this means only 'chi = 1 + dchi'
+    Grid<3, T>& chi = MultiGridSolver<3, T>::get_grid(); // guess
+    const unsigned N_tot = MultiGridSolver<3, T>::get_Ntot();
 
-    // copy dchi(x) onto Grid
-    transform_Mesh_to_Grid(rho, chi);
-
-    // get chi(x)
     #pragma omp parallel for
-    for (unsigned i = 0; i < N_tot; ++i)
-    {
-        ++chi[i];
-        // if (++chi[i] < 0) // get linear chi(x) and check screening
-        // {
-        //     if(chi_min(rho_grid[i]) < 1e-2) chi[i] = chi_min(rho_grid[i]);
-        //     else{
-        //         chi[i] = 0;
-        //         converged = false;
-        //     }
-        // } 
-    }
+    for (unsigned i = 0; i < N_tot; ++i) ++chi[i];
+}
+
+template<typename T>
+void ChiSolver<T>::screen_corr()
+{// check for invalid values and/or screening regime, try to improve guess
+    return;
+
+    // Grid<3, T>& chi = MultiGridSolver<3, T>::get_grid(); // guess
+    // const unsigned N_tot = MultiGridSolver<3, T>::get_Ntot();
+    // T const* const rho_grid = MultiGridSolver<3,T>::get_external_field(0, 0); // overdensity
+    // std::vector<unsigned int> index_list;
+    // bool converged = true;
 
     // // check for zero values (those in screened regime but outside dense objects)
     // unsigned num_loop = 0;
@@ -190,6 +189,28 @@ void ChiSolver<T>::set_linear(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_P
     //     }
     // }
     // cout << "No zero values after " << num_loop << " loops.\n";
+}
+
+template<typename T>
+void ChiSolver<T>::set_linear(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B, const T h)
+{
+    // get delta(k)
+    fftw_execute_dft_r2c(p_F, rho);
+
+    // get dchi(k)
+    get_chi_k(rho, h);
+
+    // get dchi(x)
+    fftw_execute_dft_c2r(p_B, rho);
+
+    // copy dchi(x) onto Grid
+    transform_Mesh_to_Grid(rho, MultiGridSolver<3, T>::get_grid());
+
+    // get chi(x)
+    get_chi_x();
+
+    // check for invalid values
+    screen_corr();
 }
 
 // The dicretized equation L(phi)
@@ -325,33 +346,10 @@ App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
     sol.set_maxsteps(15);
 }
 
-static void w_k_correction(Mesh& rho_k)
-{
-	FTYPE_t w_k;
-    Vec_3D<int> k_vec;
-    const unsigned NM = rho_k.N;
-    const unsigned half_length = rho_k.length / 2;
-
-	#pragma omp parallel for private(w_k, k_vec)
-	for(unsigned i=0; i < half_length;i++)
-	{
-		w_k = 1.;
-		get_k_vec(NM, i, k_vec);
-		for (int j = 0; j < 3; j++) if (k_vec[j] != 0) w_k *= pow(sin(k_vec[j]*PI/NM)/(k_vec[j]*PI/NM), 2); //< ORDER = 1 (CIC)
-        rho_k[2*i] /= w_k;
-		rho_k[2*i+1] /= w_k;
-	}
-}
-
 void App_Var_chi::save_drho_from_particles(Mesh& aux_field)
 {
     cout << "Storing density distribution...\n";
     get_rho_from_par(particles, aux_field, sim);
-    #ifdef CHI_W_CORR
-    fftw_execute_dft_r2c(p_F, aux_field);
-    w_k_correction(aux_field);
-    fftw_execute_dft_c2r(p_B, aux_field);
-    #endif
     transform_Mesh_to_Grid(aux_field, drho);
 }
 
@@ -361,8 +359,8 @@ void App_Var_chi::solve(FTYPE_t a)
     save_drho_from_particles(chi_force[0]);
     cout << "Setting guess for chameleon field...\n";
     sol.set_linear(chi_force[0], p_F, p_B, 1/(2*PI));
-    cout << "Solving equations of motion for chameleon field...\n";
-    sol.solve();
+    // cout << "Solving equations of motion for chameleon field...\n";
+    // sol.solve();
 }
 
 void App_Var_chi::print_output()

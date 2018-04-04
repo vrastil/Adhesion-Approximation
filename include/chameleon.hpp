@@ -24,6 +24,11 @@ private:
     double m_err_stop;        // stop iteration when: 1 >  err > m_err_stop
     double m_err_stop_min;    // iterate at least until: err > m_err_stop_min
 
+    // internal methods for setting linear guess
+    void get_chi_k(Mesh& rho_k, const T h);
+    void get_chi_x();
+    void screen_corr();
+
 public:
     // Constructors
     ChiSolver(unsigned int N, const Sim_Param& sim, bool verbose = true) : ChiSolver(N, 2, sim, verbose) {}
