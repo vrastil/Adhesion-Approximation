@@ -93,6 +93,13 @@ def chi_trans_to_supp(a, k, Pk, cosmo, chi_opt, CHI_A_UNITS=True):
     Pk_lin = chi_lin_pow_spec(a, k, cosmo, chi_opt)
     return Pk/ (Pk_lin * pow(chi_bulk_a_n(a, chi_opt), 2)) # chi_bulk for normalization of Pk_lin
 
+def chi_trans_to_init(data_list):
+    """ transform supp (ref: lin) to supp (ref: init) """
+    reversed_data_list = data_list[::-1]
+    for data in reversed_data_list:
+        data[1] -= reversed_data_list[-1][1]
+
+
 def hybrid_pow_spec(a, k, A, cosmo):
     """ return 'hybrid' power spectrum: (1-A)*P_lin(k, a) + A*P_nl """
     return (1-A)*lin_pow_spec(a, k, cosmo) + A*non_lin_pow_spec(a, k, cosmo)

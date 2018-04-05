@@ -260,6 +260,9 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
         for z, data in izip(zs, data_list):
             a, k, Pk = 1/(1.+z), data[0], data[1]
             data[1] = power.chi_trans_to_supp(a, k, Pk, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+        # transform supp (ref: lin) to supp (ref: init)
+        power.chi_trans_to_init(data_list)
+        ext_title = 'init'
             
     out_file += '_%s.png' % ext_title
     suptitle += ' (ref: %s)' % ext_title
@@ -290,15 +293,15 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
 
     add_nyquist_info(ax, a_sim_info)
 
-    if pk_type != 'chi':
-        if ymax > 1:
-            ymax = 1
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-        ymax = math.ceil(ymax / 0.1) * 0.1
-        ymin = math.floor(ymin / 0.1) * 0.1
-        plt.ylim(ymin=ymin, ymax=ymax)
-    else:
-        plt.yscale('log')
+    # if pk_type != 'chi':
+    if ymax > 1:
+        ymax = 1
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ymax = math.ceil(ymax / 0.1) * 0.1
+    ymin = math.floor(ymin / 0.1) * 0.1
+    plt.ylim(ymin=ymin, ymax=ymax)
+    # else:
+    #     plt.yscale('log')
     ax.yaxis.grid(True)
 
     fig.suptitle(suptitle, y=0.99, size=20)
