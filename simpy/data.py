@@ -293,9 +293,16 @@ def load_data_for_stack(stack_info, subdir, a_file):
 def check_data_consistency(all_data_k, all_data_Pk):
     # chceck lengths of lists, delete excess (in case outputs of simulations encountered any errors)
     for i, data_k in enumerate(all_data_k):
-        del_num = 0
         j = 0
         while True:
+            min_l = np.min([len(k_vec) for k_vec in  data_k])
+            if min_l == j:
+                # delete all rows beyond this j
+                for ik in range(len(data_k)):
+                    while len(all_data_k[i][ik]) > min_l:
+                        del all_data_k[i][ik][j]
+                        del all_data_Pk[i][ik][j]
+                break
             k_row = [k_vec[j] for k_vec in  data_k]
             k_max = np.max(k_row)
             for ik, k in  enumerate(k_row):
@@ -304,7 +311,7 @@ def check_data_consistency(all_data_k, all_data_Pk):
                     # remove k, Pk if not the same, look for first close
                     if j == len(all_data_k[i][ik]):
                         break
-                    del_num += 1
+
                     del all_data_k[i][ik][j]
                     del all_data_Pk[i][ik][j]
                     # look at the next k
@@ -475,9 +482,9 @@ def stack_group(rerun=None, skip=None, **kwargs):
         ("pwr_spec_files", '*par*.dat *init*.dat', HEADER_PWR, 'pwr_spec_par', {}),
         # Power spectrum difference -- input, hybrid, particle
         ("pwr_diff_files", '*par*', HEADER_PWR_DIFF_PAR, 'pwr_spec_diff_par', {'info_str' : '(particle)'}),
-        ("pwr_diff_files_h", '*hybrid*', HEADER_PWR_DIFF_INPUT, 'pwr_spec_diff_hybrid',
+        ("pwr_diff_files_h", '*hybrid*', HEADER_PWR_DIFF_HYBRID, 'pwr_spec_diff_hybrid',
             {'subdir' : 'pwr_diff/', 'info_str' : '(hybrid)'}),
-        ("pwr_diff_files_i", '*input*', HEADER_PWR_DIFF_HYBRID, 'pwr_spec_diff_input',
+        ("pwr_diff_files_i", '*input*', HEADER_PWR_DIFF_INPUT, 'pwr_spec_diff_input',
             {'subdir' : 'pwr_diff/', 'info_str' : '(input)'})
     ]
     for key, patterns, header, fname, kwargs in all_files_steps:

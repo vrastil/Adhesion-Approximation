@@ -355,8 +355,8 @@ void App_Var_chi::solve(FTYPE_t a)
     save_drho_from_particles(chi_force[0]);
     cout << "Setting guess for chameleon field...\n";
     sol.set_linear(chi_force[0], p_F, p_B, 1/(2*PI));
-    // cout << "Solving equations of motion for chameleon field...\n";
-    // sol.solve();
+    cout << "Solving equations of motion for chameleon field...\n";
+    sol.solve();
 }
 
 void App_Var_chi::print_output()
