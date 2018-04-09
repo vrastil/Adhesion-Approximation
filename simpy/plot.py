@@ -139,7 +139,7 @@ def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False,
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show)
 
-def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, out_dir='auto', save=True, show=False):
+def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, err=False, out_dir='auto', save=True, show=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     suptitle = "Chameleon power spectrum"
@@ -153,19 +153,15 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, out_dir='auto', save=Tr
     for lab, Pkk, a in iter_data(zs_chi, [data_list_chi], get_a=True):
         k, P_k = Pkk[0], Pkk[1]
         chi_bulk_a_n = power.chi_bulk_a_n(a, a_sim_info.chi_opt)
-        lines = ax.plot(k, P_k/pow(chi_bulk_a_n, 2), 'o', ms=3, label=lab)
+        P_k /= pow(chi_bulk_a_n, 2)
+        lines = ax.plot(k, P_k, 'o', ms=3, label=lab)
         color = lines[0].get_color()
         P_a = power.chi_lin_pow_spec(a, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
         ax.plot(k, P_a, '-', color=color)
-       # ax.plot(k, P_a_supp, '--', color=color)
-
-    # plot linear power spectra
-    # a_0 = 1./(1.+zs_chi[-1])
-    # a_i = 1./(1.+zs_chi[0]) if zs_chi[0] != 'init' else 1./(1.+zs_chi[1])
-    # P_i = power.lin_chi_pow_spec(a_i, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
-    # P_0 = power.lin_chi_pow_spec(a_0, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
-    # ax.plot(k, P_0, '-')
-    # ax.plot(k, P_i, '-')
+        if err:
+            P_k_std = Pkk[2] / pow(chi_bulk_a_n, 2)
+            ax.fill_between(k, P_k - P_k_std, P_k + P_k_std,
+                             facecolor='darkgrey', alpha=0.5)
 
     add_nyquist_info(ax, a_sim_info)
     
@@ -260,6 +256,8 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
         for z, data in izip(zs, data_list):
             a, k, Pk = 1/(1.+z), data[0], data[1]
             data[1] = power.chi_trans_to_supp(a, k, Pk, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+            if len(data) == 3:
+                data[2] = power.chi_trans_to_supp(a, k, data[2], a_sim_info.sim.cosmo, a_sim_info.chi_opt)
         # transform supp (ref: lin) to supp (ref: init)
         power.chi_trans_to_init(data_list)
         ext_title = 'init'
@@ -283,25 +281,24 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
 
     for lab, data, a in iter_data(zs, [data_list], get_a=True):
         k, P_k = data[0], data[1]
-        if len(data) == 3:
-            lines = plt.errorbar(k, P_k, fmt='o', yerr=data[2], ms=3, label=lab)        
+        P_k_std = data[2] if len(data) == 3 else None
+        if P_k_std is None:
+            plt.plot(k, P_k, 'o', ms=3, label=lab)
+            ymax = max(ymax, np.max(P_k[0:7 * idx]))
+            ymin = min(ymin, np.min(P_k[0:7 * idx]))
         else:
-            lines = plt.plot(k, P_k, 'o', ms=3, label=lab)
-
-        ymax = max(ymax, np.max(P_k[0:7 * idx]))
-        ymin = min(ymin, np.min(P_k[0:7 * idx]))
-
+            plt.errorbar(k, P_k, fmt='o', yerr=P_k_std, ms=3, label=lab)
+            ymax = max(ymax, np.max(P_k[0:7 * idx] + P_k_std[0:7 * idx]))
+            ymin = min(ymin, np.min(P_k[0:7 * idx] - P_k_std[0:7 * idx]))
+            
     add_nyquist_info(ax, a_sim_info)
 
-    # if pk_type != 'chi':
-    if ymax > 1:
+    if pk_type != 'chi' and ymax > 1:
         ymax = 1
-    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ymax = math.ceil(ymax / 0.1) * 0.1
     ymin = math.floor(ymin / 0.1) * 0.1
     plt.ylim(ymin=ymin, ymax=ymax)
-    # else:
-    #     plt.yscale('log')
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax.yaxis.grid(True)
 
     fig.suptitle(suptitle, y=0.99, size=20)
@@ -325,6 +322,16 @@ def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto',
     elif pk_type == "vel":
         out_file = 'vel_pwr_spec_diff'
         suptitle = r"Power spectrum difference $(\nabla\cdot u)$"
+    elif pk_type == 'chi':
+        out_file = 'pwr_spec_diff_chi'
+        suptitle = "Chameleon power spectrum difference"
+        # transform chameleon power spectrum to suppression
+        for z, data in izip(zs, data_array):
+            a, k, Pk = 1/(1.+z), data[0], data[1]
+            data[1] = -1 + power.chi_trans_to_supp(a, k, Pk, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+        # transform supp (ref: lin) to supp (ref: init)
+        power.chi_trans_to_init(data_array)
+        ext_title = 'init'
 
     out_file += '_%s_map.png' % ext_title
     suptitle += ' (ref: %s)' % ext_title
@@ -341,11 +348,26 @@ def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto',
     a = np.array([a[0]-da/2] + [1 / (1 + z) + da/2 for z in zs])
     k = data_array[0][0]
     supp = data_array[:, 1, :] # extract Pk, shape = (zs, k)
-    im = ax.pcolormesh(k, a, supp, cmap='seismic', norm=SymLogNorm(linthresh=0.2, linscale=1.0,
-                                   vmin=-1, vmax=1))
-    #im = ax.imshow(supp, cmap='seismic', aspect='auto', origin="lower", vmin=-0.2, vmax=0.2, extent=[k[0], k[-1], a[0], a[-1]])
-    cbar = fig.colorbar(im, cax=cbar_ax, ticks=[-1, -0.2, 0, 0.2, 1])
-    cbar.ax.set_yticklabels(['-1', '-0.2', '0', '0.2', '> 1'])
+    vmin = -1
+    vmax = 1
+    if pk_type != 'chi':
+        linthresh = 0.2
+        linscale = 1.0
+    else:
+        linthresh = 0.5
+        linscale = 0.2
+
+    if vmin < 0:
+        ticks = [vmin, -linthresh, 0, linthresh, vmax]
+    else:
+        ticks = [vmin, linthresh, vmax]
+    labels = [str(x) for x in ticks]
+    labels[-1] = '> %i' % ticks[-1]
+
+    im = ax.pcolormesh(k, a, supp, cmap='seismic', norm=SymLogNorm(linthresh=linthresh, linscale=linscale,
+                                   vmin=vmin, vmax=vmax))
+    cbar = fig.colorbar(im, cax=cbar_ax, ticks=ticks)
+    cbar.ax.set_yticklabels(labels)
 
     if a_sim_info.k_nyquist is not None:
         ls = [':', '-.', '--']
@@ -631,17 +653,15 @@ def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle=
                     color=cmap(0.1+i*0.4), lw=4-i*1.5,
                     label='%s-scale:\n' r'$\langle%.2f,%.2f\rangle$' % (scale, supp[i][2][0], supp[i][2][0]))
 
-    ax.yaxis.grid(True)
     ymin, ymax = ax.get_ylim()
-    if pk_type != 'chi':
-        if ymax > 1:
-            ymax = 1
-        ymax = math.ceil(ymax / 0.1) * 0.1
-        ymin = math.floor(ymin / 0.1) * 0.1
-        plt.ylim(ymin=ymin, ymax=ymax)
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-    else:
-        plt.yscale('log')
+    if pk_type != 'chi' and ymax > 1:
+        ymax = 1
+
+    ymax = math.ceil(ymax / 0.1) * 0.1
+    ymin = math.floor(ymin / 0.1) * 0.1
+    plt.ylim(ymin=ymin, ymax=ymax)
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax.yaxis.grid(True)
         
     fig.suptitle(suptitle, y=0.99, size=20)
     plt.xlabel(r"$a(t)$", fontsize=15)

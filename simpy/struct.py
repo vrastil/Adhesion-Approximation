@@ -10,16 +10,45 @@ import json
 import os
 from .fastsim import Sim_Param
 
-RESULTS_KEYS = ["pwr_spec", "pwr_spec_chi", "pwr_diff", "pwr_diff_i", "pwr_diff_h",
-                "pwr_spec_supp", "pwr_spec_supp_map", "chi_pwr_diff", "chi_pwr_spec_supp",
-                "dens_hist", "vel_pwr_spec", "vel_pwr_diff", "vel_pwr_spec_supp",
-                "par_slice", "par_ani", "dens_slice", "dens_ani", "corr_func"]
+RESULTS_ALL = {
+    "ani" : ["par_ani", "dens_ani"],
+    "corr" : ["corr_func"],
+    "dens" : ["dens_hist", "dens_slice"],
+    "chi" : ["pwr_spec_chi", "chi_pwr_diff", "chi_pwr_spec_supp", "chi_pwr_spec_supp_map"],
+    "par" : ["par_slice"],
+    "pwr" : ["pwr_spec", "pwr_diff", "pwr_diff_i", "pwr_diff_h", "pwr_spec_supp", "pwr_spec_supp_map"],
+    "vel" : ["vel_pwr_spec", "vel_pwr_diff", "vel_pwr_spec_supp"],
+    "files" : ["corr_files", "pwr_spec_files", "pwr_diff_files",
+                        "pwr_diff_files_i", "pwr_diff_files_h", "pwr_spec_chi_files"]
+    }
 
-RESULTS_KEYS_FILES = ["corr_files", "pwr_spec_files", "pwr_diff_files",
-                      "pwr_diff_files_i", "pwr_diff_files_h"]
 
-RESULTS_KEYS_STACK = RESULTS_KEYS + RESULTS_KEYS_FILES
+def _is_key_strval(key, strval):
+    """ check <strval> (rerun or skip) against <key>, true either for
+        1) exact match
+        2) <strval> stands for group of keys one of which is 'key'
+        3) <strval> is 'all'
+        """
+    if (strval == key) or (
+        strval in RESULTS_ALL and key in RESULTS_ALL[strval]) or (
+        strval == 'all'):
+        return True
+    else:
+        return False
 
+def _is_key_val(key, val):
+    """ check val (rerun or skip) against key and return bool """
+    # single string
+    if isinstance(val, str):
+        return _is_key_strval(key, val)
+    # list of strings
+    elif isinstance(val, list):
+        for strval in val:
+            if _is_key_strval(key, strval):
+                return True
+    # None or unknown type
+    else:
+        return False
 
 def create_dir(out_dir):
     if not os.path.exists(out_dir):
@@ -96,8 +125,8 @@ class SimInfo(object):
         if self.results is None:
             self.results = {}
         
-        for key in RESULTS_KEYS:
-            if key not in self.results:
+        for key in sum(RESULTS_ALL.values(), []):
+            if key not in self.results and key != 'files':
                 self.results[key] = False
 
         self.file = a_file
@@ -106,18 +135,26 @@ class SimInfo(object):
         create_dir(self.res_dir)
 
     def rerun(self, rerun, key, skip, zs):
+        """ steps to rerun or skip """
+        # missing data
         if zs is None:
             print "[Skipped]  (missing data)"
             return False
-        if key in skip:
+        # manually selected steps to rerun
+        # check before skip-step in case of skip == 'all'
+        elif _is_key_val(key, rerun):
+            return True
+        # manually selected steps to skip
+        elif _is_key_val(key, skip):
             print "[Skipped]"
             return False
-        elif rerun == "all":
+        # step not done yet and not skipped
+        elif not self.results[key]:
             return True
-        elif not self.results[key] or key in rerun:
-            return True
+        # step already done
         else:
             print "[Done]"
+            return False
 
     def done(self, key):
         self.results[key] = True
@@ -148,7 +185,7 @@ class StackInfo(SimInfo):
 
         self.save() # need to save new cosmo param for C++ to load modified parameters
         self.data = {}
-        for key in RESULTS_KEYS_STACK:
+        for key in sum(RESULTS_ALL.values(), []):
             if key not in self.results:
                 self.results[key] = False
 

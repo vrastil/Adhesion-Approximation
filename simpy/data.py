@@ -88,7 +88,7 @@ def load_k_supp(files, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens'):
             k = data[0]
             P_diff = data[1]
             if pk_type == 'chi':
-                P_diff = chi_trans_to_supp(a[ii], k, P_diff, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+                P_diff = -1 + chi_trans_to_supp(a[ii], k, P_diff, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
             idx = (np.abs(k-0.5*k_nyquist_par)).argmin() / 7
             supp[i][0].append(np.mean(P_diff[j*idx:(j+1)*idx]))
             supp[i][1].append(np.std(P_diff[j*idx:(j+1)*idx]))
@@ -135,7 +135,7 @@ def get_plot_supp(files, zs, a_sim_info, pk_type='dens'):
 def get_plot_supp_map(files, zs, a_sim_info, pk_type='dens'):
     data_array = [np.transpose(np.loadtxt(a_file)) for a_file in files]
     data_array = check_data_consistency_diff(data_array)
-    plot.plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, ext_title="par")
+    plot.plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, ext_title="par", pk_type=pk_type)
 
 def load_plot_pwr_spec_diff(files, zs, a_sim_info, **kwargs):
     data_list = [np.transpose(np.loadtxt(a_file))
@@ -177,7 +177,7 @@ def load_check_plot(a_sim_info, key, patterns, # type: SimInfo, str, str,
     4) plot -- need to pass Callable function with arguments: files, zs, a_sim_info, kwargs
     5) write info about done step into a_sim_info
     """
-    print 'step: %-20s' % (key + ' ' + info_str),
+    print 'step: %-25s' % (key + ' ' + info_str),
     sys.stdout.flush()
     subdir = key + '/' if subdir is None else subdir
     zs, files = try_get_zs_files(a_sim_info, subdir, patterns)
@@ -190,13 +190,6 @@ def load_check_plot(a_sim_info, key, patterns, # type: SimInfo, str, str,
 # ****************************
 
 def analyze_run(a_sim_info, rerun=None, skip=None):
-    if skip is None:
-        skip = []
-    elif skip == "ani":
-        skip = ["par_ani", "dens_ani"]
-    if rerun is None:
-        rerun = []
-
     # Steps to perform -- each entry represents full information needed to perform one step
     # type: Tuple[step_key, data_file_patterns, plot_func, opt_kwargs]
     all_steps = [
@@ -219,6 +212,7 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         ("pwr_spec_supp_map", '*par*', get_plot_supp_map, {'subdir' : 'pwr_diff/'}),
         ("vel_pwr_spec_supp", '*.dat', get_plot_supp, {'subdir' : 'vel_pwr_diff/', 'pk_type' : 'vel'}),
         ("chi_pwr_spec_supp", '*chi*.dat*', get_plot_supp, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
+        ("chi_pwr_spec_supp_map", '*chi*.dat*', get_plot_supp_map, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
         # Correlation function
         ("corr_func", '*par*.dat *init*.dat', get_plot_corr, {'subdir' : 'pwr_spec/'}),
         # Density distribution
@@ -428,13 +422,14 @@ def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par):
 HEADER_PWR = ("This file contains power spectrum P(k) in units [(Mpc/h)^3] "
               "depending on wavenumber k in units [h/Mpc] with standard deviation in units [h/Mpc].\n"
               "k [h/Mpc]\tP(k) [(Mpc/h)^3]\tstd [(Mpc/h)^3]")
-HEADER_PWR_DIFF_1 = ("This file contains relative difference between power spectrum P(k)\n"
-                     "and lineary extrapolated ")
-HEADER_PWR_DIFF_2 = ("depending on wavenumber k in units [h/Mpc] with standard deviation in units [h/Mpc].\n"
-                     "k [h/Mpc]\tP(k) [(Mpc/h)^3]\tstd [(Mpc/h)^3]")
-HEADER_PWR_DIFF_PAR = HEADER_PWR_DIFF_1 + "power spectrum of initial particle position\n" + HEADER_PWR_DIFF_2
-HEADER_PWR_DIFF_INPUT = HEADER_PWR_DIFF_1 + "'hybrid' power spectrum\n" + HEADER_PWR_DIFF_2
-HEADER_PWR_DIFF_HYBRID = HEADER_PWR_DIFF_1 + "input power spectrum\n" + HEADER_PWR_DIFF_2
+HEADER_PWR_CHI = HEADER_PWR.replace("power", "chameleon power").replace("units", "units of chi_a/(1-n)")
+HEADER_PWR_DIFF = ("This file contains relative difference between power spectrum P(k)\n"
+                   "and lineary extrapolated <STRING_TO_REPLACE>\n"
+                   "depending on wavenumber k in units [h/Mpc] with standard deviation in units [h/Mpc].\n"
+                   "k [h/Mpc]\tP(k) [(Mpc/h)^3]\tstd [(Mpc/h)^3]")
+HEADER_PWR_DIFF_PAR = HEADER_PWR_DIFF.replace("<STRING_TO_REPLACE>", "power spectrum of initial particle position")
+HEADER_PWR_DIFF_INPUT = HEADER_PWR_DIFF.replace("<STRING_TO_REPLACE>", "input power spectrum")
+HEADER_PWR_DIFF_HYBRID = HEADER_PWR_DIFF.replace("<STRING_TO_REPLACE>", "'hybrid' power spectrum")
 HEADER_CORR = ("This file contains correlation function depending on distance r in units [Mpc/h]."
                "r [Mpc/h]\txsi(r)")
 
@@ -466,13 +461,6 @@ def load_stack_save(stack_info, key, patterns,  # type: StackInfo, str, str,
 # **********************************
 
 def stack_group(rerun=None, skip=None, **kwargs):
-    if skip is None:
-        skip = []
-    elif skip == "ani":
-        skip = ["par_ani", "dens_ani"]
-    if rerun is None:
-        rerun = []
-
     # load & save all info about stack
     stack_info = StackInfo(**kwargs)
 
@@ -480,6 +468,8 @@ def stack_group(rerun=None, skip=None, **kwargs):
     all_files_steps = [
         # Power spectrum
         ("pwr_spec_files", '*par*.dat *init*.dat', HEADER_PWR, 'pwr_spec_par', {}),
+        ("pwr_spec_chi_files", '*chi*.dat*', HEADER_PWR_CHI, 'pwr_spec_chi',
+            {'subdir' : 'pwr_spec/'}),
         # Power spectrum difference -- input, hybrid, particle
         ("pwr_diff_files", '*par*', HEADER_PWR_DIFF_PAR, 'pwr_spec_diff_par', {'info_str' : '(particle)'}),
         ("pwr_diff_files_h", '*hybrid*', HEADER_PWR_DIFF_HYBRID, 'pwr_spec_diff_hybrid',
@@ -503,7 +493,8 @@ def stack_group(rerun=None, skip=None, **kwargs):
     all_steps = [
         # Power spectrum
         ("pwr_spec", '*par*.dat *init*.dat', load_plot_pwr, {'err' : True}),
-        # Power spectrum difference -- input, hybrid, particle
+        ("pwr_spec_chi", '*chi*.dat*', load_plot_chi_pwr,
+            {'subdir' : 'pwr_spec/', 'err' : True}),
         # Power spectrum difference -- input, hybrid, particle
         ("pwr_diff", '*par*', load_plot_pwr_spec_diff,
             {'info_str' : '(particle)', 'ext_title' : 'par'}),
@@ -511,11 +502,15 @@ def stack_group(rerun=None, skip=None, **kwargs):
             {'subdir' : 'pwr_diff/', 'info_str' : '(hybrid)', 'ext_title' : 'hybrid'}),
         ("pwr_diff_i", '*input*', load_plot_pwr_spec_diff,
             {'subdir' : 'pwr_diff/', 'info_str' : '(input)', 'ext_title' : 'input'}),
+        ("chi_pwr_diff", '*chi*.dat*', load_plot_pwr_spec_diff,
+            {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
         # Correlation function
         ("corr_func", '*par*.dat *init*.dat', get_plot_corr, {'subdir' : 'pwr_spec/'}),
         # Power spectrum suppression
         ("pwr_spec_supp", '*par*', get_plot_supp, {'subdir' : 'pwr_diff/'}),
-        ("pwr_spec_supp_map", '*par*', get_plot_supp_map, {'subdir' : 'pwr_diff/'})
+        ("pwr_spec_supp_map", '*par*', get_plot_supp_map, {'subdir' : 'pwr_diff/'}),
+        ("chi_pwr_spec_supp", '*chi*.dat*', get_plot_supp, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
+        ("chi_pwr_spec_supp_map", '*chi*.dat*', get_plot_supp_map, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'})
     ]
 
     # perform all steps, skip step if Exception occurs
