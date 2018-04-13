@@ -63,6 +63,18 @@ T MultiGridSolver<NDIM,T>::dl_operator(unsigned int level, std::vector<unsigned 
 }
 
 //================================================
+// override for different method of updating,
+// default solver use Newton`s method:
+// f_new = f_old - L / dL/df
+//================================================
+
+template<unsigned int NDIM, typename T>
+T MultiGridSolver<NDIM,T>::upd_operator(T f, T l, T dl)
+{
+    return f - l/dl;
+}
+
+//================================================
 // The driver routine for solving the PDE
 //================================================
 
@@ -413,7 +425,7 @@ void MultiGridSolver<NDIM,T>::GaussSeidelSweep(unsigned int level, unsigned int 
       get_neighbor_gridindex(index_list, i, N);
       T l  =  l_operator(level, index_list, true, h);
       T dl = dl_operator(level, index_list, h);
-      f[i] -= l/dl;
+      f[i] = upd_operator(f[i], l, dl);
     }
   }
 }
@@ -492,7 +504,7 @@ void MultiGridSolver<NDIM,T>::recursive_go_up(unsigned int to_level){
   prolonge_up_array(to_level, _res.get_grid(from_level), _res.get_grid(to_level));
 
   // Correct solution at to_level (temp array _res contains the correction P[f-R[f]])
-  _f.get_grid(to_level) += _res.get_grid(to_level);
+  correct_sol(_f.get_grid(to_level), _res.get_grid(to_level));
 
   // Calculate new residual
   calculate_residual(to_level, _res.get_grid(to_level));
@@ -506,6 +518,12 @@ void MultiGridSolver<NDIM,T>::recursive_go_up(unsigned int to_level){
   else {
     return;
   }
+}
+
+template<unsigned int NDIM, typename T>
+void MultiGridSolver<NDIM,T>::correct_sol(Grid<NDIM,T>& f, const Grid<NDIM,T>& corr)
+{
+    f += corr;
 }
 
 //================================================

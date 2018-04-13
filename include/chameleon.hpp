@@ -27,7 +27,9 @@ private:
     // internal methods for setting linear guess
     void get_chi_k(Mesh& rho_k, const T h);
     void get_chi_x();
-    void screen_corr();
+
+    // internal method for finding highest density in nearby points
+    bool check_surr_dens(T const* const rho_grid, std::vector<unsigned int> index_list, unsigned i, unsigned N);
 
 public:
     // Constructors
@@ -41,6 +43,12 @@ public:
     // Differential of the L operator: dL_{ijk...}/dphi_{ijk...}
     T dl_operator(unsigned int level, std::vector<unsigned int>& index_list, const T h) override;
 
+    // Method for updating solution
+    T upd_operator(T f, T l, T dl) override;
+
+    // Method for correcting solution when going up
+    void correct_sol(Grid<3,T>& f, const Grid<3,T>& corr) override;
+
     // Criterion for defining convergence
     bool check_convergence() override;
     void set_convergence(double eps, double err_stop, double err_stop_min);
@@ -50,6 +58,10 @@ public:
 
     // set chameleon guess to liear prediction
     void set_linear(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B, const T x_0);
+
+    // check solution for unphysical values and improve guess,
+    // also fix chameleon filed in high density region (as boundary condition)
+    void set_screened();
 
     // get chi_bulk for given overdensity
     T chi_min(T delta) const;

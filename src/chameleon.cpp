@@ -13,8 +13,14 @@
 
 using namespace std;
 namespace{
-constexpr FTYPE_t MPL = (FTYPE_t)1; // mass & chi in units of Planck mass
-constexpr FTYPE_t c_kms = (FTYPE_t)299792.458; // speed of light [km / s]
+// mass & chi in units of Planck mass
+constexpr FTYPE_t MPL = (FTYPE_t)1;
+
+// speed of light [km / s]
+constexpr FTYPE_t c_kms = (FTYPE_t)299792.458;
+
+// unphysical value of overdensity (< -1) used to indicate that chameleon filed at this point should not be changed
+constexpr CHI_PREC_t MARK_CHI_BOUND_COND =  (CHI_PREC_t)-2;
 
 template<typename T>
 void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
@@ -157,34 +163,47 @@ void ChiSolver<T>::get_chi_x()
 }
 
 template<typename T>
-void ChiSolver<T>::screen_corr()
-{// check for invalid values and/or screening regime, try to improve guess
-    return;
+bool ChiSolver<T>::check_surr_dens(T const* const rho_grid, std::vector<unsigned int> index_list, unsigned i, unsigned N)
+{
+    // never fix bulk field in under-dense region
+    if (rho_grid[i] <= 0) return false;
 
-    // Grid<3, T>& chi = MultiGridSolver<3, T>::get_grid(); // guess
-    // const unsigned N_tot = MultiGridSolver<3, T>::get_Ntot();
-    // T const* const rho_grid = MultiGridSolver<3,T>::get_external_field(0, 0); // overdensity
-    // std::vector<unsigned int> index_list;
-    // bool converged = true;
+    // check surrounding points if theres is higher density
+    MultiGridSolver<3, T>::get_neighbor_gridindex(index_list, i, N);
+    for(unsigned i_s : index_list) if (rho_grid[i_s] > rho_grid[i]) return false;
 
-    // // check for zero values (those in screened regime but outside dense objects)
-    // unsigned num_loop = 0;
-    // while (!converged){
-    //     num_loop++;
-    //     converged = true;
-    //     #pragma omp parallel for private(index_list)
-    //     for (unsigned i = 0; i < N_tot; ++i)
-    //     {
-    //         if (chi[i] == 0) 
-    //         { // assign average value
-    //             MultiGridSolver<3, T>::get_neighbor_gridindex(index_list, i, N);
-    //             for(auto it = index_list.begin() + 1; it < index_list.end(); ++it) chi[i] += chi[*it];
-    //             chi[i] /= 6;
-    //             if (chi[i] == 0) converged = false; // wait until next loop
-    //         } 
-    //     }
-    // }
-    // cout << "No zero values after " << num_loop << " loops.\n";
+    // if current point has the highest density, fix chameleon value
+    return true;
+}
+
+template<typename T>
+void ChiSolver<T>::set_screened()
+{// check for invalid values (non-linear regime), fix values in high density regions, try to improve guess in others
+    Grid<3, T>& chi = MultiGridSolver<3, T>::get_grid(); // guess
+    const unsigned N_tot = MultiGridSolver<3, T>::get_Ntot();
+    const unsigned N = MultiGridSolver<3, T>::get_N();
+    T* const rho_grid = MultiGridSolver<3,T>::get_external_field(0, 0); // overdensity
+    std::vector<unsigned int> index_list;
+
+    #pragma omp parallel for private(index_list)
+    for (unsigned i = 0; i < N_tot; ++i)
+    {
+        if (chi[i] <= 0) // non-linear regime
+        {
+            // '0' to indicate high-density region 
+            chi[i] = check_surr_dens(rho_grid, index_list, i, N) ? 0 : chi_min(rho_grid[i]);
+            
+        }
+    }
+    #pragma omp parallel for
+    for (unsigned i = 0; i < N_tot; ++i)
+    {
+        if (chi[i] == 0) // fix chameleon to bulk value, set unphysical density to indicate screened regime
+        {
+            chi[i] = chi_min(rho_grid[i]);
+            rho_grid[i] = MARK_CHI_BOUND_COND;
+        }
+    }
 }
 
 template<typename T>
@@ -204,32 +223,26 @@ void ChiSolver<T>::set_linear(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_P
 
     // get chi(x)
     get_chi_x();
-
-    // check for invalid values
-    screen_corr();
 }
 
 // The dicretized equation L(phi)
 template<typename T>
 T  ChiSolver<T>::l_operator(unsigned int level, std::vector<unsigned int>& index_list, bool addsource, const T h)
 { 
-    const unsigned int i = index_list[0];
-
     // Solution and pde-source grid at current level
+    const unsigned int i = index_list[0];
     T const* const chi = MultiGridSolver<3, T>::get_y(level); // solution
+    const T chi_i = chi[i];
+    const T rho = MultiGridSolver<3,T>::get_external_field(level, 0)[i];
 
-    const T rho = MultiGridSolver<3,T>::get_external_field(level, 0)[i];          
+    // do not change values in screened regions
+    if (rho == MARK_CHI_BOUND_COND) return 0;
 
     // The right hand side of the PDE 
-    if(chi[i] <= 0)
-    { // if the solution is overshot, try bulk field
-        MultiGridSolver<3, T>::get_y(level)[i] = chi_min(rho);
-        return 0;
-    }
     T source = (1 + rho - pow(chi[i], n - 1)) * chi_prefactor;
 
     // Compute the standard kinetic term [D^2 phi] (in 1D this is phi''_i =  phi_{i+1} + phi_{i-1} - 2 phi_{i} )
-    T kinetic = -2*chi[i]*3; // chi, '-2*3' is factor in 3D discrete laplacian
+    T kinetic = -2*chi_i*3; // chi, '-2*3' is factor in 3D discrete laplacian
     // go through all surrounding points
     for(auto it = index_list.begin() + 1; it < index_list.end(); ++it) kinetic += chi[*it];
 
@@ -246,13 +259,37 @@ T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& inde
     // solution
     const T chi = MultiGridSolver<3, T>::get_y(level)[ index_list[0] ];
 
-    // Derivative of kinetic term
-    const T dkinetic = -2.0*3;
-    
     // Derivative of source
     const T dsource = chi_prefactor*(1-n)*pow(chi, n-2);
 
+    // Derivative of kinetic term
+    const T dkinetic = -2.0*3;
+
     return dkinetic/(h*h) - dsource;
+}
+
+// Method for updating solution:
+// try Newton`s method and check for unphysical values
+template<typename T>
+T  ChiSolver<T>::upd_operator(T f, T l, T dl)
+{
+    const T f_new = f - l/dl;
+    return f_new > 0 ? f_new : f/10;
+}
+
+// Method for correcting solution when going up
+// check for unphysical values
+template<typename T>
+void ChiSolver<T>::correct_sol(Grid<3,T>& f, const Grid<3,T>& res)
+{
+    const unsigned Ntot  = f.get_Ntot();
+    T f_new;
+    #pragma omp parallel for private(f_new)
+    for(unsigned i = 0; i < Ntot; i++)
+    {
+        f_new = f[i] + res[i];
+        f[i] = f_new > 0 ? f_new : f[i]/10;
+    }
 }
 
 template<typename T>
@@ -353,8 +390,9 @@ void App_Var_chi::solve(FTYPE_t a)
 {
     sol.set_time(a, sim.cosmo);
     save_drho_from_particles(chi_force[0]);
-    cout << "Setting guess for chameleon field...\n";
+    cout << "Setting linear guess for chameleon field...\n";
     sol.set_linear(chi_force[0], p_F, p_B, 1/(2*PI));
+    sol.set_screened();
     cout << "Solving equations of motion for chameleon field...\n";
     sol.solve();
 }

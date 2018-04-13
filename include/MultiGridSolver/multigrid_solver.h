@@ -83,7 +83,8 @@ private:
 
 protected:
 
-    bool _verbose;        // Turn on verbose while solving
+    // Turn on verbose while solving
+    bool _verbose;
 
     // Internal methods:
     void get_neighbor_gridindex(std::vector<unsigned int>& index_list, unsigned int i, unsigned int ngrid);
@@ -149,6 +150,8 @@ public:
     // Methods that must be implemented by user
     virtual T l_operator(unsigned int level, std::vector<unsigned int>& index_list, bool addsource, const T h);
     virtual T dl_operator(unsigned int level, std::vector<unsigned int>& index_list, const T h);
+    virtual T upd_operator(T f, T l, T dl);
+    virtual void correct_sol(Grid<NDIM,T>& f, const Grid<NDIM,T>& corr);
     virtual bool   check_convergence();
 };
 

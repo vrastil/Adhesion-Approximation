@@ -154,7 +154,7 @@ template<> FTYPE_t wgh_sch<2>(const Vec_3D<FTYPE_t> &x, const Vec_3D<int>& y, in
 
 /**
  * @class:	IT
- * @brief:	class for effective iteration of cube of mesch cells
+ * @brief:	class for effective iteration of cube of mesh cells
  */
 
 template<int points>
