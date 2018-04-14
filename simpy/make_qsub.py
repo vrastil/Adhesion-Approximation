@@ -78,9 +78,9 @@ def memory_fp_pp(sim_param):
 
 def memory_chi(sim_param):
     mem = memory_base(sim_param)
-    mem += sim_param.num_m * 16 * 3  # chi_force
-    mem += sim_param.num_m * 16 * 1 * 1.14  # drho
-    mem += sim_param.num_m * 16 * 3 * 1.14  # chi_solver
+    mem += sim_param.num_m * 8 * 3  # chi_force
+    mem += 8*(sim_param.num_m - 1) / 7 * 16 * 1  # drho
+    mem += 8*(sim_param.num_m - 1) / 7 * 16 * 3  # chi_solver
     return mem / float(1024 * 1024 * 1024)  # convert to GB
 
 def get_input():
