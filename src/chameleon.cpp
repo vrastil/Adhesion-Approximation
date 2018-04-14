@@ -22,6 +22,12 @@ constexpr FTYPE_t c_kms = (FTYPE_t)299792.458;
 // unphysical value of overdensity (< -1) used to indicate that chameleon filed at this point should not be changed
 constexpr CHI_PREC_t MARK_CHI_BOUND_COND =  (CHI_PREC_t)-2;
 
+// correction multiplier for chameleon field when the solution is overshot
+constexpr CHI_PREC_t CHI_CORR_MULT = (CHI_PREC_t)0.8;
+
+// slow-down multiplier for Newton`s method
+constexpr CHI_PREC_t CHI_SLOW_MULT = (CHI_PREC_t)0.05;
+
 template<typename T>
 void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
 {/* copy data in Mesh 'N*N*(N+2)' onto MultiGrid 'N*N*N' */
@@ -184,26 +190,29 @@ void ChiSolver<T>::set_screened()
     const unsigned N = MultiGridSolver<3, T>::get_N();
     T* const rho_grid = MultiGridSolver<3,T>::get_external_field(0, 0); // overdensity
     std::vector<unsigned int> index_list;
+    unsigned num_high_density = 0;
 
     #pragma omp parallel for private(index_list)
     for (unsigned i = 0; i < N_tot; ++i)
     {
         if (chi[i] <= 0) // non-linear regime
         {
-            // '0' to indicate high-density region 
+            // '0' to indicate high-density region
             chi[i] = check_surr_dens(rho_grid, index_list, i, N) ? 0 : chi_min(rho_grid[i]);
-            
         }
     }
-    #pragma omp parallel for
+    #pragma omp parallel for reduction(+:num_high_density)
     for (unsigned i = 0; i < N_tot; ++i)
     {
         if (chi[i] == 0) // fix chameleon to bulk value, set unphysical density to indicate screened regime
         {
+            ++num_high_density;
             chi[i] = chi_min(rho_grid[i]);
             rho_grid[i] = MARK_CHI_BOUND_COND;
         }
     }
+
+    cout << "Identified and fixed " << num_high_density << "(" << std::setprecision(2) << num_high_density*100.0/N_tot <<  "%) points\n";
 }
 
 template<typename T>
@@ -273,8 +282,8 @@ T  ChiSolver<T>::dl_operator(unsigned int level, std::vector<unsigned int>& inde
 template<typename T>
 T  ChiSolver<T>::upd_operator(T f, T l, T dl)
 {
-    const T f_new = f - l/dl;
-    return f_new > 0 ? f_new : f/10;
+    const T f_new = f - CHI_SLOW_MULT*l/dl;
+    return f_new > 0 ? f_new : f*CHI_CORR_MULT;
 }
 
 // Method for correcting solution when going up
@@ -287,8 +296,8 @@ void ChiSolver<T>::correct_sol(Grid<3,T>& f, const Grid<3,T>& res)
     #pragma omp parallel for private(f_new)
     for(unsigned i = 0; i < Ntot; i++)
     {
-        f_new = f[i] + res[i];
-        f[i] = f_new > 0 ? f_new : f[i]/10;
+        f_new = f[i] + CHI_SLOW_MULT*res[i];
+        f[i] = f_new > 0 ? f_new : f[i]*CHI_CORR_MULT;
     }
 }
 
@@ -324,16 +333,19 @@ bool ChiSolver<T>::check_convergence(){
                                << " err = " << err << " > 1" << " num(err > 1) = " << m_conv_stop << "\n";
         m_conv_stop++;
     } else if(err > m_err_stop){ // convergence too slow
-        std::cout << "\n    The solution stopped converging fast enough err = " << err << " > " << m_err_stop
-                  << " ( res = " << _rms_res << " ) istep = " << _istep_vcycle << "\n\n";
-        converged = true;
+        if (_rms_res > m_rms_stop_min) m_conv_stop++;
+        else{
+            std::cout << "\n    The solution stopped converging fast enough err = " << err << " > " << m_err_stop
+                    << " ( res = " << _rms_res << " ) istep = " << _istep_vcycle << "\n\n";
+            converged = true;
+        }
     } else {
-        if (m_conv_stop){
+        if (m_conv_stop >= m_num_fail){
             std::cout << "\n    The solution stopped converging num(err > 1)  = " << m_conv_stop
                       << " res = " << _rms_res << " > " << _eps_converge  << " ) istep = " << _istep_vcycle << "\n\n";
             converged = true;
         } else {
-            if(_verbose) std::cout << "    The solution is still converging err = " << err << " !> " << _eps_converge
+            if(_verbose) std::cout << "    The solution is still converging err = " << err << " !> " << m_err_stop
                                    << " res = " << _rms_res << " > " << _eps_converge << "\n";
         }
     }
@@ -344,17 +356,19 @@ bool ChiSolver<T>::check_convergence(){
         std::cout << "    res = " << _rms_res << " res_old = " << _rms_res_old << " res_i = " << _rms_res_i << "\n";
         converged  = true;
     }
-
+    
     if (converged) m_conv_stop = 0;
     return converged;
 }
 
 template<typename T>
-void ChiSolver<T>::set_convergence(double eps, double err_stop, double err_stop_min)
+void ChiSolver<T>::set_convergence(double eps, double err_stop, double err_stop_min,  double rms_stop_min, double num_fail)
 {
     MultiGridSolver<3, T>::set_epsilon(eps);
     m_err_stop = err_stop;
     m_err_stop_min = err_stop_min;
+    m_rms_stop_min = rms_stop_min;
+    m_num_fail = num_fail;
 }
 
 template<typename T>
@@ -375,8 +389,8 @@ App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
 
     // SET CHI SOLVER
     sol.add_external_grid(&drho);
-    sol.set_convergence(1e-6, 0.95, 0.1);
-    sol.set_maxsteps(15);
+    sol.set_convergence(1e-6, 0.95, 0.1, 1e-3, 5);
+    sol.set_maxsteps(40);
 }
 
 void App_Var_chi::save_drho_from_particles(Mesh& aux_field)

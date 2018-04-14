@@ -21,8 +21,10 @@ private:
 
     // convergence parameters
     unsigned m_conv_stop = 0; // number of unsuccessful sweeps
-    double m_err_stop;        // stop iteration when: 1 >  err > m_err_stop
-    double m_err_stop_min;    // iterate at least until: err > m_err_stop_min
+    double m_rms_stop_min;      // iterate at least until _rms_res > m_conv_eps_min
+    double m_err_stop;     // stop iteration when: 1 >  err > m_err_stop
+    double m_err_stop_min; // iterate at least until: err > m_err_stop_min
+    double m_num_fail;     // give up converging if number of failed iteration (err > 1) is > m_num_fail
 
     // internal methods for setting linear guess
     void get_chi_k(Mesh& rho_k, const T h);
@@ -51,7 +53,7 @@ public:
 
     // Criterion for defining convergence
     bool check_convergence() override;
-    void set_convergence(double eps, double err_stop, double err_stop_min);
+    void set_convergence(double eps, double err_stop, double err_stop_min, double rms_stop_min, double num_fail);
 
     // set chameleon guess to bulk value, need to set time and add rho before call to this function
     void set_bulk_field();
