@@ -3,9 +3,21 @@
 #include "stdafx.h"
 
 #include "params.hpp"
-#include "approximations.hpp"
+#include "ApproximationsSchemes/adhesion.hpp"
+#include "ApproximationsSchemes/chameleon.hpp"
+#include "ApproximationsSchemes/frozen_flow.hpp"
+#include "ApproximationsSchemes/frozen_potential.hpp"
+#include "ApproximationsSchemes/mod_frozen_potential.hpp"
+#include "ApproximationsSchemes/zeldovich.hpp"
 
 using namespace std;
+
+template<class T>
+static void init_and_run_app(const Sim_Param& sim)
+{
+    T APP(sim);
+    APP.run_simulation();
+}
 
 int main(int argc, char* argv[]){
 	try{
@@ -23,22 +35,22 @@ int main(int argc, char* argv[]){
         
         do{
             /* ZEL`DOVICH APPROXIMATION */
-            if(sim.comp_app.ZA)	zel_app(sim);
+            if(sim.comp_app.ZA)	init_and_run_app<App_Var_ZA>(sim);
             
             /* FROZEN-FLOW APPROXIMATION */
-            if(sim.comp_app.FF)	frozen_flow(sim);
+            if(sim.comp_app.FF)	init_and_run_app<App_Var_FF>(sim);
         
             /* FROZEN-POTENTIAL APPROXIMATION */
-            if(sim.comp_app.FP)	frozen_potential(sim);
+            if(sim.comp_app.FP)	init_and_run_app<App_Var_FP>(sim);
             
             /* ADHESION APPROXIMATION */
-            if(sim.comp_app.AA)	adhesion_approximation(sim);
+            if(sim.comp_app.AA)	init_and_run_app<App_Var_AA>(sim);
             
             /* MODIFIED FROZEN-POTENTIAL APPROXIMATION */
-            if(sim.comp_app.FP_pp)	mod_frozen_potential(sim);
+            if(sim.comp_app.FP_pp)	init_and_run_app<App_Var_FP_mod>(sim);
 
             /* CHAMELEON GRAVITY (FROZEN-POTENTIAL APPROXIMATION) */
-            if(sim.comp_app.chi) chameleon_gravity(sim);
+            if(sim.comp_app.chi) init_and_run_app<App_Var_Chi>(sim);
 
         } while (sim.simulate());
 

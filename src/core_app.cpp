@@ -108,6 +108,7 @@ void set_unpert_pos_w_vel(const Sim_Param &sim, vector<Particle_v<FTYPE_t>>& par
 
 void set_pert_pos(const Sim_Param &sim, const FTYPE_t db, vector<Particle_x<FTYPE_t>>& particles, const vector< Mesh> &vel_field)
 {
+    printf("\nSetting initial positions of particles...\n");
 	Vec_3D<int> unpert_pos;
 	Vec_3D<FTYPE_t> displ_field;
 	Vec_3D<FTYPE_t> pert_pos;
@@ -128,8 +129,9 @@ void set_pert_pos(const Sim_Param &sim, const FTYPE_t db, vector<Particle_x<FTYP
 	}
 }
 
-void set_pert_pos_w_vel(const Sim_Param &sim, const FTYPE_t a, vector<Particle_v<FTYPE_t>>& particles, const vector< Mesh> &vel_field)
+void set_pert_pos(const Sim_Param &sim, const FTYPE_t a, vector<Particle_v<FTYPE_t>>& particles, const vector< Mesh> &vel_field)
 {
+    printf("\nSetting initial positions and velocitis of particles...\n");
 	Vec_3D<int> unpert_pos;
 	Vec_3D<FTYPE_t> velocity;
 	Vec_3D<FTYPE_t> pert_pos;
@@ -151,52 +153,6 @@ void set_pert_pos_w_vel(const Sim_Param &sim, const FTYPE_t a, vector<Particle_v
 		get_per(pert_pos, Nm);
 		particles[i] = Particle_v<FTYPE_t>(pert_pos, velocity*dDda);		
 	}
-}
-
-FTYPE_t force_ref(const FTYPE_t r, const FTYPE_t a){
-	// Reference force for an S_2-shaped particle
-	FTYPE_t z = 2 * r / a;
-	if (z > 2) return 1 / (r*r);
-	else if (z > 1) return (12 / (z*z) - 224 + 896 * z - 840 * z*z + 224 * pow(z, 3) +
-							70 * pow(z, 4) - 48 * pow(z, 5) + 7 * pow(z, 6)) / (35 * a*a);
-	else return (224 * z - 224 * pow(z, 3) + 70 * pow(z, 4) + 48 * pow(z, 5) - 21 * pow(z, 7)) / (35 * a*a);
-}
-
-FTYPE_t force_tot(const FTYPE_t r, const FTYPE_t e2){
-	return 1 / (r*r+e2);
-}
-
-void force_short(const Sim_Param &sim, const FTYPE_t D, const LinkedList& linked_list, const vector<Particle_v<FTYPE_t>>& particles,
-				 const Vec_3D<FTYPE_t>& position, Vec_3D<FTYPE_t>& force, Interp_obj& fs_interp)
-{	// Calculate short range force in position, force is added
-    #define FORCE_SHORT_NO_INTER
-	int p;
-	Vec_3D<FTYPE_t> dr_vec;
-    FTYPE_t dr2;
-    FTYPE_t dr; // <-- #ifdef FORCE_SHORT_NO_INTER
-    const FTYPE_t m = pow(sim.box_opt.Ng, 3) / D;
-    const unsigned Nm = sim.box_opt.mesh_num;
-    const FTYPE_t rs2 = pow2(sim.app_opt.rs);
-    const FTYPE_t e2 = pow2(sim.box_opt.Ng*0.1); // <-- #ifdef FORCE_SHORT_NO_INTER
-
-    IT<3> it(position, sim.app_opt.Hc);
-    do{
-        p = linked_list.HOC(it.vec);
-        while (p != -1){
-            dr_vec = get_sgn_distance(particles[p].position, position, Nm);
-            dr2 = dr_vec.norm2();
-            if ((dr2 < rs2) && (dr2 != 0)) // Short range force is set 0 for separation larger than cutoff radius
-            {
-                #ifdef FORCE_SHORT_NO_INTER
-                dr = sqrt(dr2);
-                force += dr_vec*(force_tot(dr, e2) - force_ref(dr, sim.app_opt.a))*m/(dr*4*PI);
-                #else
-                force += dr_vec*(m/sqrt(dr2)*fs_interp.eval(dr2));
-                #endif
-            }
-            p = linked_list.LL[p];
-        }
-    } while( it.iter() );
 }
 
 static void gen_gauss_white_noise(const Sim_Param &sim, Mesh& rho)

@@ -4,12 +4,13 @@
  * @note:   chameleon field is in units of 'chi_a = 2*beta*Mpl*Phi_s*a^3/1-n)
  */
 
-
+#include "ApproximationsSchemes/chameleon.hpp"
 #include "core_app.h"
 #include "core_power.h"
 #include "core_mesh.h"
 #include "core_out.h"
-#include "chameleon.hpp"
+#include "integration.hpp"
+#include "params.hpp"
 #include "MultiGridSolver/multigrid_solver.h"
 
 using namespace std;
@@ -394,11 +395,11 @@ public:
 } // namespace <unique> end
 
 /**
- * @class:	App_Var_chi
- * @brief:	class containing variables for chameleon gravity
+ * @class:	App_Var_Chi
+ * @brief:	class containing variables and methods for chameleon gravity
  */
 
-class App_Var_chi::ChiImpl
+class App_Var_Chi::ChiImpl
 {
 public:
     // CONSTRUCTOR
@@ -459,20 +460,15 @@ public:
     }
 };
 
-App_Var_chi::App_Var_chi(const Sim_Param &sim, std::string app_str):
-    App_Var<Particle_v<FTYPE_t>>(sim, app_str), m_impl(new ChiImpl(sim))
+App_Var_Chi::App_Var_Chi(const Sim_Param &sim):
+    App_Var<Particle_v<FTYPE_t>>(sim, "CHI", "Chameleon gravity"), m_impl(new ChiImpl(sim))
 {
     memory_alloc += m_impl->memory_alloc;
 }
 
-App_Var_chi::~App_Var_chi() = default;
+App_Var_Chi::~App_Var_Chi() = default;
 
-void App_Var_chi::solve(FTYPE_t a)
-{
-    m_impl->solve(a, particles, sim, p_F, p_B);
-}
-
-void App_Var_chi::print_output()
+void App_Var_Chi::print_output()
 {
     /* Print standard output */
     App_Var<Particle_v<FTYPE_t>>::print_output();
@@ -480,10 +476,20 @@ void App_Var_chi::print_output()
     /* Chameleon power spectrum */
     if (sim.out_opt.print_pwr)
     {
-        solve(b); // get solution for current time
+        m_impl->solve(a(), particles, sim, p_F, p_B); // get solution for current time
         m_impl->gen_pow_spec_binned(sim, pwr_spec_binned, p_F); // get chameleon power spectrum
-        print_pow_spec(pwr_spec_binned, out_dir_app, "_chi" + z_suffix()); // print
+        print_pow_spec(pwr_spec_binned, get_out_dir(), "_chi" + get_z_suffix()); // print
     }
+}
+
+void App_Var_Chi::upd_pos()
+{// Leapfrog method for chameleon gravity (frozen-potential)
+    auto kick_step = [&]()
+    {
+        m_impl->solve(a_half(), particles, sim, p_F, p_B);
+        kick_step_w_momentum(sim.cosmo, a_half(), da(), particles, app_field);
+    };
+    stream_kick_stream(da(), particles, kick_step, sim.box_opt.mesh_num);
 }
 
 #ifdef TEST

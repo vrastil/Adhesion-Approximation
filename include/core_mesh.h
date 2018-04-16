@@ -17,7 +17,7 @@ FTYPE_t get_k_sq(int N, int index);
 
 template<typename T> void get_per(Vec_3D<T> &position, int per);
 template<typename T> void get_per(Vec_3D<T> &position, int perx, int pery, int perz);
-void get_per(std::vector<Particle_v<FTYPE_t>>& particles, const unsigned par_num, const int per);
+void get_per(std::vector<Particle_v<FTYPE_t>>& particles, const int per);
 
 FTYPE_t get_distance(const Vec_3D<FTYPE_t> &x_1, const Vec_3D<FTYPE_t> &x_2, int per);
 Vec_3D<FTYPE_t> get_sgn_distance(const Vec_3D<FTYPE_t> &x_from, const Vec_3D<FTYPE_t> &x_to, int per);

@@ -56,17 +56,6 @@ void create_dir(string out_dir)
         cout << "Directory Created: "<< out_dir << "\n";
     }
 }
-void work_dir_over(string out_dir)
-{
-    create_dir(out_dir + "corr_func/");
-	create_dir(out_dir + "par_cut/");
-    create_dir(out_dir + "pwr_diff/");
-    create_dir(out_dir + "pwr_spec/");
-    create_dir(out_dir + "rho_bin/");
-    create_dir(out_dir + "rho_map/");
-    create_dir(out_dir + "vel_pwr_diff/");
-    create_dir(out_dir + "vel_pwr_spec/");
-}
 
 template <class T>
 void print_par_pos_cut_small(const std::vector<T>& particles, const Sim_Param &sim, string out_dir, string suffix)
