@@ -1,7 +1,6 @@
 #include <catch.hpp>
-#include "core_mesh.h"
-#include "core_out.h"
 #include "test.hpp"
+#include "chameleon.cpp"
 
 namespace{
 

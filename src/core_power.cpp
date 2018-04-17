@@ -548,7 +548,3 @@ template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk<FT
 template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk<FTYPE_t, 3>&, Data_Vec<FTYPE_t, 2>&);
 template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk_Nl<FTYPE_t, 2>&, Data_Vec<FTYPE_t, 2>&);
 template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk_Nl<FTYPE_t, 3>&, Data_Vec<FTYPE_t, 2>&);
-
-#ifdef TEST
-#include "test_power.cpp"
-#endif

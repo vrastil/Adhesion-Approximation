@@ -491,7 +491,3 @@ void App_Var_Chi::upd_pos()
     };
     stream_kick_stream(da(), particles, kick_step, sim.box_opt.mesh_num);
 }
-
-#ifdef TEST
-#include "test_chameleon.cpp"
-#endif

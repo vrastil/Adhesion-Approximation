@@ -1,5 +1,6 @@
 #include <catch.hpp>
 #include "test.hpp"
+#include "core_mesh.cpp"
 
 TEST_CASE( "UNIT TEST: sign function {sgn<T>}", "[core]" )
 {

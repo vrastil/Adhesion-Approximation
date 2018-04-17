@@ -11,7 +11,10 @@ CXXFLAGS +=-fopenmp -flto=jobserver -fPIC
 CXXFLAGS +=-D NOISE_HALF
 CXXFLAGS +=-D OPENMP # for multigrid_solver
 
+# used boost libraries
 CXXLIB +=-lboost_program_options -lboost_filesystem -lboost_system
+
+# fftw and omp libraries depend on define precision (single / double / long double)
 ifeq ($(PRECISION),1)
 	CXXLIBP =-lfftw3f -lfftw3f_omp
 else ifeq ($(PRECISION),2)
@@ -19,14 +22,25 @@ else ifeq ($(PRECISION),2)
 else ifeq ($(PRECISION),3)
 	CXXLIBP =-lfftw3l -lfftw3l_omp
 endif
+
+# gsl and ccl libraries
 CXXLIB +=-lgsl -lgslcblas
 CXXLIB +=-lccl
 
 COMPILE.cc = $(CXX) $(CXXFLAGS) -c -I./include# -D_GLIBCXX_USE_CXX11_ABI=0
 COMPILE.fin = $(CXX) $(CXXFLAGS) $(CXXLIB_PATH)
 
-OBJ_FILES = $(patsubst %.cpp,%.o,$(wildcard src/*.cpp) $(wildcard src/**/*.cpp))
-TEST_OBJ_FILES = $(patsubst src/%,tests/%, $(filter-out src/main.o,$(OBJ_FILES))) tests/test_main.o
+# get list of object files for each cpp file in src/, src/**/
+OBJ_FILES := $(wildcard src/*.cpp) $(wildcard src/**/*.cpp)
+OBJ_FILES := $(OBJ_FILES:.cpp=.o)
+
+# get list of object files for each cpp file in tests/, tests/**/
+TEST_OBJ_FILES := $(wildcard tests/*.cpp) $(wildcard tests/**/*.cpp)
+TEST_OBJ_FILES := $(subst test_,,$(TEST_OBJ_FILES:.cpp=.o))
+
+# add the rest of object files that are not already included
+TEST_OBJ_FILES += $(filter-out $(TEST_OBJ_FILES), $(patsubst src/%.o, tests/%.o, $(OBJ_FILES)))
+
 LIB = lib/fastsim.a
 PCH = include/stdafx.h
 PCH_O = $(PCH).gch
@@ -59,16 +73,22 @@ check: test
 	./tests/test
 
 test: tests/test
-test: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -D TEST -D PRECISION=$(PRECISION)
-test: COMPILE.cc += -I./tests
+test: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -D PRECISION=$(PRECISION)
+test: COMPILE.cc += -I./src
 
 
 tests/test: $(TEST_OBJ_FILES)
 	+$(COMPILE.fin) -o tests/test $^ $(CXXLIB)
 
+# generic rule for building object files
 %.o: %.cpp $(PCH_O)
 	$(COMPILE.cc) -o $@ $<
 
+# specific rule for building test object files which DO have its own source file
+tests/%.o: tests/test_%.cpp $(PCH_O)
+	$(COMPILE.cc) -o $@ $<
+
+# specific rule for building test object files which do NOT have its own source file
 tests/%.o: src/%.cpp $(PCH_O)
 	$(COMPILE.cc) -o $@ $<
 

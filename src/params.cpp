@@ -58,31 +58,17 @@ static T find_value(const std::map<T, U>& map, const U& value)
 Cosmo_Param::Cosmo_Param():
     // cosmo == NULL as indicator of uninitialization
     // config first initialize to default (in case new configuration options are added)
-    config(default_config), cosmo(NULL)
-    {
-    #ifdef TEST
-    cout << ">>> Debug: Creating Cosmo_Param via call to Cosmo_Param()\n";
-    cout << "\tconfig.transfer_function_method = " << config.transfer_function_method << "\n";
-    #endif
-    }
+    config(default_config), cosmo(NULL) {}
 
 void Cosmo_Param::init()
 {
     k2_G *= k2_G;
     h = H0/100;
-    #ifdef TEST
-    cout << ">>> Debug: Creating Cosmo_Param via call to init()\n";
-    cout << "\tconfig.transfer_function_method = " << config.transfer_function_method << "\n";
-    #endif
 
     // create flat LCDM cosmology
     int status = 0;
     cosmo = ccl_cosmology_create_with_lcdm_params(Omega_c(), Omega_b, 0, h, sigma8, ns, config, &status);
     if (status) throw std::runtime_error(cosmo->status_message);
-
-    #ifdef TEST
-    cout << ">>> Debug: Created ccl_cosmology*: " << cosmo << "\n";
-    #endif
     
     // PRECOMPUTED VALUES
     D_norm = norm_growth_factor(*this); //< use only when outside CCL range
@@ -93,19 +79,14 @@ void Cosmo_Param::init()
 
 Cosmo_Param::~Cosmo_Param()
 {
-    #ifdef TEST
-    cout << ">>> Debug: Cosmo_Param destructor: " << this << "\n";
-    #endif
     if(cosmo){
-        #ifdef TEST
-        cout << ">>> Debug: Free space after ccl_cosmology: " << cosmo << "\n";
-        #endif
         ccl_cosmology_free(cosmo);
         cosmo = NULL;
     }
 }
 
 Cosmo_Param::operator void*() const
+// GSL accepts only non-const pointers, case when passed const Cosmo_Param&
 {
     return const_cast<Cosmo_Param*>(this);
 }
@@ -303,9 +284,6 @@ void to_json(json& j, const Cosmo_Param& cosmo)
 
 void from_json(const json& j, Cosmo_Param& cosmo)
 {
-    #ifdef TEST
-    cout << ">>> Debug: Loading 'Cosmo_Param& cosmo' from json file\n";
-    #endif
     cosmo.A = j.at("A").get<FTYPE_t>();
     cosmo.ns = j.at("index").get<FTYPE_t>();
     cosmo.sigma8 = j.at("sigma8").get<FTYPE_t>();
