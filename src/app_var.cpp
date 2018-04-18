@@ -43,6 +43,16 @@ public:
     }
 
     // METHODS
+    unsigned get_num_track_par() const
+    {
+        return par_ids.size();
+    }
+
+    unsigned get_num_steps() const
+    {
+        return par_pos.size();
+    }
+
 	template <class T> void update_track_par(const std::vector<T>& particles)
     {
         std::vector<Particle_x<FTYPE_t>> par_pos_step;

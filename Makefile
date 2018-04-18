@@ -36,10 +36,10 @@ OBJ_FILES := $(OBJ_FILES:.cpp=.o)
 
 # get list of object files for each cpp file in tests/, tests/**/
 TEST_OBJ_FILES := $(wildcard tests/*.cpp) $(wildcard tests/**/*.cpp)
-TEST_OBJ_FILES := $(subst test_,,$(TEST_OBJ_FILES:.cpp=.o))
+TEST_OBJ_FILES := $(TEST_OBJ_FILES:.cpp=.o)
 
 # add the rest of object files that are not already included
-TEST_OBJ_FILES += $(filter-out $(TEST_OBJ_FILES), $(patsubst src/%.o, tests/%.o, $(OBJ_FILES)))
+TEST_OBJ_FILES += $(filter-out $(subst test_,,$(TEST_OBJ_FILES)), $(patsubst src/%.o, tests/%.o, $(OBJ_FILES)))
 
 LIB = lib/fastsim.a
 PCH = include/stdafx.h
@@ -73,7 +73,7 @@ check: test
 	./tests/test
 
 test: tests/test
-test: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -D PRECISION=$(PRECISION)
+test: CXXFLAGS +=-Og -g -w -D PRECISION=$(PRECISION)
 test: COMPILE.cc += -I./src
 
 
@@ -85,7 +85,7 @@ tests/test: $(TEST_OBJ_FILES)
 	$(COMPILE.cc) -o $@ $<
 
 # specific rule for building test object files which DO have its own source file
-tests/%.o: tests/test_%.cpp $(PCH_O)
+tests/%.o: tests/%.cpp $(PCH_O)
 	$(COMPILE.cc) -o $@ $<
 
 # specific rule for building test object files which do NOT have its own source file
