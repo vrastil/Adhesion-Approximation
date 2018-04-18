@@ -57,62 +57,71 @@ TEST_CASE( "UNIT TEST: create Multigrid and copy data to/from Mesh", "[multigrid
     CHECK(min(mesh_to) == min(grid));
 }
 
-// TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[chameleon]" )
-// {
-//     print_unit_msg("create and initialize ChiSolver, check bulk field");
+TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[chameleon]" )
+{
+    print_unit_msg("create and initialize ChiSolver, check bulk field");
 
-//     constexpr unsigned N = 32;
-//     constexpr FTYPE_t a = 0.5;
-//     constexpr FTYPE_t rho_0 = 0.3;
-//     const std::vector<unsigned> some_indices = // Mesh indices = N*N*(N+2)
-//                                             {4, // (0, 0, 4)
-//                                             (N+2)*2+5, // (0, 2, 5)
-//                                             N*(N+2)*4+8*(N+2)+5}; // (4, 8, 5)
+    constexpr unsigned N = 32;
+    constexpr FTYPE_t a = 0.5;
+    constexpr FTYPE_t rho_0 = 0.3;
+    const std::vector<unsigned> some_indices = // Mesh indices = N*N*(N+2)
+                                            {4, // (0, 0, 4)
+                                            (N+2)*2+5, // (0, 2, 5)
+                                            N*(N+2)*4+8*(N+2)+5}; // (4, 8, 5)
 
-//     // initialize Sim_Param
-//     const int argc = 1;
-//     const char* const argv[1] = {"test"};
-//     Sim_Param sim(argc, argv);
+    // initialize Sim_Param
+    const int argc = 1;
+    const char* const argv[1] = {"test"};
+    Sim_Param sim(argc, argv);
 
-//     // initialize ChiSolver
-//     ChiSolver<FTYPE_t> sol(N, sim, false);
+    // check thowing of exception with unphysical values of chameleon parameters
+    auto constructor = [&sim](){ ChiSolver<FTYPE_t> _sol(N, sim, false); };
+    sim.chi_opt.n = -1;
+    CHECK_THROWS_AS( constructor(), std::out_of_range );
+    sim.chi_opt.n = 0.5;
+    sim.chi_opt.beta = -1;
+    CHECK_THROWS_AS( constructor(), std::out_of_range );
 
-//     // check thowing of exceptions in uninitialised state
-//     CHECK_THROWS_AS( sol.set_initial_guess(), std::out_of_range );
+    // initialize ChiSolver
+    sim.chi_opt.beta = 1/sqrt(6.);
+    ChiSolver<FTYPE_t> sol(N, sim, false);
 
-//     // initialize overdensity -- constant density
-//     MultiGrid<3, FTYPE_t> rho_grid(N);
-//     {
-//         Mesh rho(N);
-//         rho.assign(rho_0);
-//         transform_Mesh_to_Grid(rho, rho_grid);
-//     }
+    // check thowing of exceptions in uninitialised state
+    CHECK_THROWS_AS( sol.set_bulk_field(), std::out_of_range );
 
-//     // check density
-//     for(unsigned i : some_indices) CHECK( rho_grid[0][i] == rho_0 );
+    // initialize overdensity -- constant density
+    MultiGrid<3, FTYPE_t> rho_grid(N);
+    {
+        Mesh rho(N);
+        rho.assign(rho_0);
+        transform_Mesh_to_Grid(rho, rho_grid);
+    }
 
-//     // set ChiSolver -- bulk field
-//     sol.set_time(a, sim.cosmo);
-//     sol.add_external_grid(&rho_grid);
-//     sol.set_initial_guess();
+    // check density
+    for(unsigned i : some_indices) CHECK( rho_grid[0][i] == rho_0 );
 
-//     // check bulk field
-//     {
-//         const FTYPE_t D = growth_factor(a, sim.cosmo);
-//         const FTYPE_t chi_bulk = sol.chi_min(D*rho_0);
-//         FTYPE_t const* const chi = sol.get_y();
-//         for(unsigned i : some_indices) REQUIRE( chi[i] == Approx(chi_bulk));
-//     }
+    // set ChiSolver -- bulk field
+    sol.set_time(a, sim.cosmo);
+    sol.add_external_grid(&rho_grid);
+    sol.set_bulk_field();
 
-//     // check that EOM is satisfied
-//     std::vector<unsigned int> index_list;
-//     unsigned level = 0;
-//     for(unsigned i : some_indices)
-//     {
-//         get_neighbor_gridindex(index_list, i, N);
-//         CHECK( sol.l_operator(level, index_list, true) == Approx(0.));
-//     }
-// }
+    // check bulk field
+    {
+        const FTYPE_t chi_bulk = sol.chi_min(rho_0);
+        FTYPE_t const* const chi = sol.get_y();
+        for(unsigned i : some_indices) REQUIRE( chi[i] == Approx(chi_bulk));
+    }
+
+    // check that EOM is satisfied
+    std::vector<unsigned int> index_list;
+    unsigned level = 0;
+    const FTYPE_t h = 1.0/FTYPE_t( sol.get_N(level) );
+    for(unsigned i : some_indices)
+    {
+        get_neighbor_gridindex(index_list, i, N);
+        CHECK( sol.l_operator(level, index_list, true, h) == Approx(0.));
+    }
+}
 
 // TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chameleon]" )
 // {
