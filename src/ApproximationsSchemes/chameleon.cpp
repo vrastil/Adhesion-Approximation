@@ -32,7 +32,7 @@ constexpr CHI_PREC_t MARK_CHI_BOUND_COND =  (CHI_PREC_t)-2;
 constexpr CHI_PREC_t CHI_CORR_MULT = (CHI_PREC_t)0.8;
 
 // slow-down multiplier for Newton`s method
-constexpr CHI_PREC_t CHI_SLOW_MULT = (CHI_PREC_t)0.05;
+constexpr CHI_PREC_t CHI_SLOW_MULT = (CHI_PREC_t)0.5;
 
 template<typename T>
 void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
@@ -336,7 +336,7 @@ public:
     }
 
     void set_linear(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B, const T h)
-    {/* set chameleon guess to liear prediction */
+    {/* set chameleon guess to linear prediction */
         // get delta(k)
         fftw_execute_dft_r2c(p_F, rho);
 

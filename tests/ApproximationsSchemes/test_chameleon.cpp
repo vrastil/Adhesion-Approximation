@@ -123,100 +123,119 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[cha
     }
 }
 
-// TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chameleon]" )
-// {
-//     print_unit_msg("create and initialize ChiSolver, solve sphere");
+TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chameleon]" )
+{
+    print_unit_msg("create and initialize ChiSolver, solve sphere");
 
-//     constexpr int N = 64;
-//     constexpr FTYPE_t R2 = 4*4;
-//     int ix0 = N/2, iy0 = N/2, iz0 = N/2;
+    constexpr int N = 128;
+    constexpr FTYPE_t R = 2;
+    constexpr FTYPE_t R2 = R*R;
+    int ix0 = N/2, iy0 = N/2, iz0 = N/2;
 
-//     constexpr FTYPE_t rho_0 = 1E-5;
+    constexpr FTYPE_t rho_0 = 0.5;
 
-//     // initialize Sim_Param
-//     const int argc = 1;
-//     const char* const argv[1] = {"test"};
-//     Sim_Param sim(argc, argv);
+    // initialize Sim_Param
+    const int argc = 1;
+    const char* const argv[1] = {"test"};
+    Sim_Param sim(argc, argv);
 
-//     // chi prefactor
-//     const long double chi_prefactor = 3*sim.chi_opt.beta*sim.cosmo.Omega_m*pow(sim.cosmo.H0
-//             / (sim.cosmo.h * c_kms)* sim.x_0(),2);
-//     cout << "8*PI*G*rho_0*beta := " << chi_prefactor << "\n";
+    // initialize ChiSolver
+    ChiSolver<CHI_PREC_t> sol(N, sim, true);
 
-//     // initialize ChiSolver
-//     ChiSolver<long double> sol(N, sim, false);
+    // initialize overdensity -- constant density in sphere of radius R, center at x0, y0, z0
+    MultiGrid<3, CHI_PREC_t> rho_grid(N);
+    FTYPE_t mean_rho;
+    Mesh rho(N);
+    {
+        const int N_tot = rho.length;
+        FTYPE_t R2_;
+        #pragma omp parallel for private(R2_)
+        for (int ix = 0; ix < N; ++ix)
+        {
+            for (int iy = 0; iy < N; ++iy)
+            {
+                for (int iz = 0; iz < N; ++iz)
+                {
+                    R2_ = pow(ix - ix0, 2) + pow(iy - iy0, 2) + pow(iz - iz0, 2);
+                    rho(ix, iy, iz) = R2_ < R2 ? rho_0 : 0;
+                }
+            }
+        }
+        mean_rho = mean(rho);
+        rho -= mean_rho;
+        transform_Mesh_to_Grid(rho, rho_grid);
 
-//     // initialize overdensity -- constant density in sphere of radius R, center at x0, y0, z0
-//     MultiGrid<3, long double> rho_grid(N);
-//     FTYPE_t mean_rho;
-//     {
-//         Mesh rho(N);
-//         const int N_tot = rho.length;
-//         FTYPE_t R2_;
-//         #pragma omp parallel for private(R2_)
-//         for (int ix = 0; ix < N; ++ix)
-//         {
-//             for (int iy = 0; iy < N; ++iy)
-//             {
-//                 for (int iz = 0; iz < N; ++iz)
-//                 {
-//                     R2_ = pow(ix - ix0, 2) + pow(iy - iy0, 2) + pow(iz - iz0, 2);
-//                     rho(ix, iy, iz) = R2_ < R2 ? rho_0 : 0;
-//                 }
-//             }
-//         }
-//         mean_rho = mean(rho);
-//         rho -= mean_rho;
-//         transform_Mesh_to_Grid(rho, rho_grid);
+        // check density
+        REQUIRE( mean(rho) == Approx(0.) );
+        REQUIRE( rho(ix0, iy0, iz0) == Approx(rho_0 - mean_rho) );
+        REQUIRE( rho(0, 0, 0) == Approx(-mean_rho) );
+    }
 
-//         // check density
-//         REQUIRE( mean(rho) == Approx(0.) );
-//         REQUIRE( rho(ix0, iy0, iz0) == Approx(rho_0 - mean_rho) );
-//         REQUIRE( rho(0, 0, 0) == Approx(-mean_rho) );
-//     }
+    // FFTW preparation
+    if (!FFTW_PLAN_OMP_INIT()){
+        throw runtime_error("Errors during multi-thread initialization");
+    }
+    FFTW_PLAN_OMP(sim.run_opt.nt);
+    const FFTW_PLAN_TYPE p_F = FFTW_PLAN_R2C(N, N, N, rho.real(), rho.complex(), FFTW_ESTIMATE);
+    const FFTW_PLAN_TYPE p_B = FFTW_PLAN_C2R(N, N, N, rho.complex(), rho.real(), FFTW_ESTIMATE);
+
+    // set ChiSolver
+    const double err_mod = pow(sim.box_opt.box_size, 2);
+    sol.set_convergence(err_mod*1e-6, 0.95, 0.1, err_mod*1e-3, 5);
+    sol.set_time(1, sim.cosmo);
+    sol.add_external_grid(&rho_grid);
+
+    // compute gravitational potential
+    Mesh phi_pot(rho); //< copy density
+    fftw_execute_dft_r2c(p_F, phi_pot);
+    gen_pot_k(phi_pot);
+    fftw_execute_dft_c2r(p_B, phi_pot);
+    phi_pot *= pow(sim.box_opt.box_size/sim.box_opt.mesh_num, 2);
+
+    // get linear prediction
+    sol.set_linear(rho, p_F, p_B, 1/(2*PI));
+    sol.set_screened();
 
 
-//     // set ChiSolver
-//     sol.set_epsilon(2e-5*sim.chi_opt.phi);
-//     sol.set_time(1, sim.cosmo);
-//     sol.add_external_grid(&rho_grid);
-//     sol.set_initial_guess();
-
-//     // Solve the equation
-//     sol.solve();
+    // Solve the equation
+    sol.solve();
     
-//     // copy onto Mesh
-//     Mesh chi_full(N);
-//     transform_Grid_to_Mesh(chi_full, sol.get_grid());
+    // copy onto Mesh
+    Mesh chi_full(N);
+    transform_Grid_to_Mesh(chi_full, sol.get_grid());
 
-//     // create directory structure and open file
-//     std::string out_dir = sim.out_opt.out_dir + "test_ChiSolver/";
-//     string file_name = out_dir + "chi_values.dat";
-//     create_dir(out_dir);
-//     Ofstream File(file_name);
+    // create directory structure and open file
+    std::string out_dir = sim.out_opt.out_dir + "test_ChiSolver/";
+    string file_name = out_dir + "chi_values.dat";
+    create_dir(out_dir);
+    Ofstream File(file_name);
 
-//     // print chi_full
-//     File << setprecision(18);
-//     File << "# N :=\t" << N << "\n";
-//     File << "# R :=\t" << sqrt(R2) << "\n";
-//     File << "# rho_0 :=\t" << rho_0 << "\n";
-//     File << "# phi screening :=\t" << sim.chi_opt.phi << "\n";
-//     File << "# phi gravitational :=\t" << 3./2.*R2*rho_0 << "\n";
-//     File << "# r\t(chi(r)-chi_0)/chi_prefactor\n";
-//     const long double chi_0 = sol.chi_min(-mean_rho);
-//     // const FTYPE_t chi_0 = max(chi_full);
-//     // const FTYPE_t chi_0 = chi_full(0, 0, 0);
-//     // const FTYPE_t chi_0 = 2*sim.chi_opt.beta*MPL*sim.chi_opt.phi;
+    // print chi_full
+    File << setprecision(18);
+    File << "# N :=\t" << N << "\n";
+    File << "# R :=\t" << sqrt(R2) << "\n";
+    File << "# rho_0 :=\t" << rho_0 << "\n";
+    File << "# phi screening :=\t" << sim.chi_opt.phi << "\n";
+    File << "# phi gravitational :=\t" << 3./2.*R2*rho_0 << "\n";
+    File << "# r\t(chi(r)-chi_0)\n";
+    const CHI_PREC_t chi_0 = sol.chi_min(-mean_rho);
+    // const FTYPE_t chi_0 = max(chi_full);
 
-//     auto print_r_chi = [&File, ix0, iy0, iz0,&chi_full, chi_0, chi_prefactor]
-//                        (int i, int j, int k){
-//         File << sqrt(pow(i - ix0, 2) + pow(j - iy0, 2) + pow(k - iz0, 2)) << "\t" << (chi_full(i, j, k) - chi_0) / chi_prefactor << "\n";
-//     };
+    auto print_r_chi = [&File, ix0, iy0, iz0,&chi_full, chi_0, &phi_pot]
+                       (int i, int j, int k){
+        File << sqrt(pow(i - ix0, 2) + pow(j - iy0, 2) + pow(k - iz0, 2)) << "\t" << chi_full(i, j, k) -1
+             << "\t" << phi_pot(i, j, k) << "\n";
+    };
 
-//     for (int i = 0; i < N - 1; ++i)
-//     {
-//         print_r_chi(i, i, i);
-//         print_r_chi(i, i, i + 1);
-//         print_r_chi(i, i + 1, i + 1);
-//     }
-// }
+    for (int i = 0; i < N - 1; ++i)
+    {
+        print_r_chi(i, i, i);
+        print_r_chi(i, i, i + 1);
+        print_r_chi(i, i + 1, i + 1);
+    }
+
+    // FFTW CLEANUP
+	FFTW_DEST_PLAN(p_F);
+    FFTW_DEST_PLAN(p_B);
+	FFTW_PLAN_OMP_CLEAN();
+}

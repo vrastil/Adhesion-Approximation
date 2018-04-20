@@ -74,6 +74,7 @@ check: test
 
 test: tests/test
 test: CXXFLAGS +=-Og -g -w -D PRECISION=$(PRECISION)
+test: CXXLIB += $(CXXLIBP)
 test: COMPILE.cc += -I./src
 
 

@@ -181,14 +181,13 @@ public:
             throw runtime_error("Errors during multi-thread initialization");
         }
         FFTW_PLAN_OMP(sim.run_opt.nt);
-        APP.p_F = FFTW_PLAN_R2C(sim.box_opt.mesh_num, sim.box_opt.mesh_num, sim.box_opt.mesh_num, APP.app_field[0].real(),
-            APP.app_field[0].complex(), FFTW_ESTIMATE);
-        APP.p_B = FFTW_PLAN_C2R(sim.box_opt.mesh_num, sim.box_opt.mesh_num, sim.box_opt.mesh_num, APP.app_field[0].complex(),
-            APP.app_field[0].real(), FFTW_ESTIMATE);
-        APP.p_F_pwr = FFTW_PLAN_R2C(sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, APP.power_aux[0].real(),
-            APP.power_aux[0].complex(), FFTW_ESTIMATE);
-        APP.p_B_pwr = FFTW_PLAN_C2R(sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, sim.box_opt.mesh_num_pwr, APP.power_aux[0].complex(),
-            APP.power_aux[0].real(), FFTW_ESTIMATE);
+        const unsigned N_pot = sim.box_opt.mesh_num;
+        const unsigned N_pwr = sim.box_opt.mesh_num_pwr;
+
+        APP.p_F = FFTW_PLAN_R2C(N_pot, N_pot, N_pot, APP.app_field[0].real(), APP.app_field[0].complex(), FFTW_ESTIMATE);
+        APP.p_B = FFTW_PLAN_C2R(N_pot, N_pot, N_pot, APP.app_field[0].complex(), APP.app_field[0].real(), FFTW_ESTIMATE);
+        APP.p_F_pwr = FFTW_PLAN_R2C(N_pwr, N_pwr, N_pwr, APP.power_aux[0].real(), APP.power_aux[0].complex(), FFTW_ESTIMATE);
+        APP.p_B_pwr = FFTW_PLAN_C2R(N_pwr, N_pwr, N_pwr, APP.power_aux[0].complex(), APP.power_aux[0].real(), FFTW_ESTIMATE);
     }
 
     /*********************
