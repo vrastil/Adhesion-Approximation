@@ -54,6 +54,14 @@ T* MultiGrid<NDIM,T>::get_y(unsigned int level){
 }
 
 template<unsigned int NDIM, typename T>
+T const * const MultiGrid<NDIM,T>::get_y(unsigned int level) const{ 
+#ifdef _BOUNDSCHECK
+  assert(level < _Nlevel);
+#endif
+  return _y[level].get_y(); 
+}
+
+template<unsigned int NDIM, typename T>
 T MultiGrid<NDIM,T>::get_y(unsigned int level, unsigned int i){
 #ifdef _BOUNDSCHECK
   assert(level < _Nlevel);

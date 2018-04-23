@@ -44,7 +44,8 @@ class MultiGrid {
     // Fetch a pointer to the underlying array at each level
     T* operator[](unsigned int level);
     const T* operator[](unsigned int level) const;
-    T* get_y(unsigned int level);
+    T* get_y(unsigned int level = 0);
+    T const* const get_y(unsigned int level = 0) const;
 
     // Fetch the value in the grid at a given level and index
     T get_y(unsigned int level, unsigned int i);

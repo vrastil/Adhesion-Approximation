@@ -185,7 +185,7 @@ public:
         chi_prefactor = chi_prefactor_0*pow(a, -3.*(2.-n)/(1.-n));
     }
 
-    T  l_operator(unsigned int level, std::vector<unsigned int>& index_list, bool addsource, const T h) override
+    T  l_operator(const unsigned int level, const std::vector<unsigned int>& index_list, const bool addsource, const T h) const override
     {/* The dicretized equation L(phi) */
         // Solution and pde-source grid at current level
         const unsigned int i = index_list[0];
@@ -212,7 +212,7 @@ public:
     }
 
     // Differential of the L operator: dL_{ijk...}/dphi_{ijk...}
-    T dl_operator(unsigned int level, std::vector<unsigned int>& index_list, const T h) override
+    T dl_operator(const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const override
     {
         // solution
         const T chi = MultiGridSolver<3, T>::get_y(level)[ index_list[0] ];
@@ -227,9 +227,12 @@ public:
     }
 
     
-    T upd_operator(T f, T l, T dl) override
+    T upd_operator(const T f, const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const override
     {/* Method for updating solution:
         try Newton`s method and check for unphysical values */
+        T l  =  l_operator(level, index_list, true, h);
+        T dl = dl_operator(level, index_list, h);
+        
         const T f_new = f - CHI_SLOW_MULT*l/dl;
         return f_new > 0 ? f_new : f*CHI_CORR_MULT;
     }

@@ -18,7 +18,8 @@ inline unsigned int power(unsigned int a, unsigned int b){
 //================================================
 
 template<unsigned int NDIM, typename T>
-T MultiGridSolver<NDIM,T>::l_operator(unsigned int level, std::vector<unsigned int>& index_list, bool addsource, const T h){
+T MultiGridSolver<NDIM,T>::l_operator(const unsigned int level, const std::vector<unsigned int>& index_list, const bool addsource, const T h) const
+{
   T l, source, kinetic;
   unsigned int i = index_list[0];
 
@@ -49,7 +50,8 @@ T MultiGridSolver<NDIM,T>::l_operator(unsigned int level, std::vector<unsigned i
 //================================================
 
 template<unsigned int NDIM, typename T>
-T MultiGridSolver<NDIM,T>::dl_operator(unsigned int level, std::vector<unsigned int>& index_list, const T h){
+T MultiGridSolver<NDIM,T>::dl_operator(const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const
+{
   // The derivtive dL/df
   T dl = -2.0*NDIM/(h*h);
 
@@ -69,8 +71,10 @@ T MultiGridSolver<NDIM,T>::dl_operator(unsigned int level, std::vector<unsigned 
 //================================================
 
 template<unsigned int NDIM, typename T>
-T MultiGridSolver<NDIM,T>::upd_operator(T f, T l, T dl)
+T MultiGridSolver<NDIM,T>::upd_operator(const T f, const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const
 {
+    T l  =  l_operator(level, index_list, true, h);
+    T dl = dl_operator(level, index_list, h);
     return f - l/dl;
 }
 
@@ -129,8 +133,13 @@ void MultiGridSolver<NDIM,T>::solve(){
 
 template<unsigned int NDIM, typename T>
 T* MultiGridSolver<NDIM,T>::get_y(unsigned int level){ 
-  return _f.get_y(level); 
+  return _f.get_y(level);
 }
+
+template<unsigned int NDIM, typename T>
+T const* const MultiGridSolver<NDIM,T>::get_y(unsigned int level) const{
+    return _f.get_y(level);
+} 
 
 template<unsigned int NDIM, typename T>
 void MultiGridSolver<NDIM,T>::set_epsilon(double eps_converge){ 
@@ -423,9 +432,7 @@ void MultiGridSolver<NDIM,T>::GaussSeidelSweep(unsigned int level, unsigned int 
       // Update the solution f = f - L / (dL/df)
       std::vector<unsigned int> index_list;
       get_neighbor_gridindex(index_list, i, N);
-      T l  =  l_operator(level, index_list, true, h);
-      T dl = dl_operator(level, index_list, h);
-      f[i] = upd_operator(f[i], l, dl);
+      f[i] = upd_operator(f[i], level, index_list, h);
     }
   }
 }
@@ -606,12 +613,17 @@ void MultiGridSolver<NDIM,T>::recursive_go_down(unsigned int from_level){
 }
 
 template<unsigned int NDIM, typename T>
-T MultiGridSolver<NDIM,T>::get_multigrid_source(unsigned int level, unsigned int i){ 
+T MultiGridSolver<NDIM,T>::get_multigrid_source(unsigned int level, unsigned int i) const{
   return _source[level][i]; 
 }
 
 template<unsigned int NDIM, typename T>
 T* MultiGridSolver<NDIM,T>::get_external_field(unsigned int level, unsigned int field){ 
+  return _ext_field[field]->get_y(level);
+}
+
+template<unsigned int NDIM, typename T>
+T const* const MultiGridSolver<NDIM,T>::get_external_field(unsigned int level, unsigned int field) const{ 
   return _ext_field[field]->get_y(level);
 }
 

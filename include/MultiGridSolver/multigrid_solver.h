@@ -113,15 +113,18 @@ public:
 
     // Get a pointer to the solution array / grid
     T *get_y(unsigned int level = 0);
+    T const* const get_y(unsigned int level = 0) const;
+
     Grid<NDIM, T> &get_grid(unsigned int level = 0){ return _f.get_grid(level); };
     const Grid<NDIM, T> &get_grid(unsigned int level = 0) const { return _f.get_grid(level); };
 
     // Fetch values in externally added fields
     T* get_external_field(unsigned int level, unsigned int field);
+    T const* const get_external_field(unsigned int level, unsigned int field) const;
     size_t get_external_field_size() const;
     
     // Get values of the multigrid-source used to store the restricted residual during the solve step
-    T get_multigrid_source(unsigned int level, unsigned int i);
+    T get_multigrid_source(unsigned int level, unsigned int i) const;
 
     // Set precision parameters
     void set_epsilon(double eps_converge);
@@ -148,9 +151,9 @@ public:
     void clear();
 
     // Methods that must be implemented by user
-    virtual T l_operator(unsigned int level, std::vector<unsigned int>& index_list, bool addsource, const T h);
-    virtual T dl_operator(unsigned int level, std::vector<unsigned int>& index_list, const T h);
-    virtual T upd_operator(T f, T l, T dl);
+    virtual T upd_operator(const T f, const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const;
+    virtual T l_operator(const unsigned int level, const std::vector<unsigned int>& index_list, bool addsource, const T h) const;
+    virtual T dl_operator(const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const;
     virtual void correct_sol(Grid<NDIM,T>& f, const Grid<NDIM,T>& corr);
     virtual bool   check_convergence();
 };
