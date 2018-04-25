@@ -511,7 +511,7 @@ void MultiGridSolver<NDIM,T>::recursive_go_up(unsigned int to_level){
   prolonge_up_array(to_level, _res.get_grid(from_level), _res.get_grid(to_level));
 
   // Correct solution at to_level (temp array _res contains the correction P[f-R[f]])
-  correct_sol(_f.get_grid(to_level), _res.get_grid(to_level));
+  correct_sol(_f.get_grid(to_level), _res.get_grid(to_level), to_level);
 
   // Calculate new residual
   calculate_residual(to_level, _res.get_grid(to_level));
@@ -528,7 +528,7 @@ void MultiGridSolver<NDIM,T>::recursive_go_up(unsigned int to_level){
 }
 
 template<unsigned int NDIM, typename T>
-void MultiGridSolver<NDIM,T>::correct_sol(Grid<NDIM,T>& f, const Grid<NDIM,T>& corr)
+void MultiGridSolver<NDIM,T>::correct_sol(Grid<NDIM,T>& f, const Grid<NDIM,T>& corr, const unsigned int level)
 {
     f += corr;
 }

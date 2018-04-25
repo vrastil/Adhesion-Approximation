@@ -28,11 +28,8 @@ constexpr FTYPE_t c_kms = (FTYPE_t)299792.458;
 // unphysical value of overdensity (< -1) used to indicate that chameleon filed at this point should not be changed
 constexpr CHI_PREC_t MARK_CHI_BOUND_COND =  (CHI_PREC_t)-2;
 
-// correction multiplier for chameleon field when the solution is overshot
-constexpr CHI_PREC_t CHI_CORR_MULT = (CHI_PREC_t)0.8;
-
-// slow-down multiplier for Newton`s method
-constexpr CHI_PREC_t CHI_SLOW_MULT = (CHI_PREC_t)0.5;
+// when the relative change in solution is less than this, use Newton`s method. Bisection method otherwise
+constexpr CHI_PREC_t SWITCH_BIS_NEW = (CHI_PREC_t)0.1;
 
 template<typename T>
 void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
@@ -116,7 +113,12 @@ private:
     double m_rms_stop_min;      // iterate at least until _rms_res > m_conv_eps_min
     double m_err_stop;     // stop iteration when: 1 >  err > m_err_stop
     double m_err_stop_min; // iterate at least until: err > m_err_stop_min
-    double m_num_fail;     // give up converging if number of failed iteration (err > 1) is > m_num_fail
+    unsigned m_num_fail;     // give up converging if number of failed iteration (err > 1) is > m_num_fail
+
+    // bisection convergence parameters
+    unsigned m_max_bisection_steps; // at given point perfom max this number of inteval halving
+    T m_dchi_stop;                  // if change in chi is small, stop halving
+    T m_l_stop;                     // if residuum is small, stop halving
 
     void get_chi_k(Mesh& rho_k, const T h)
     {/* transform input density in k-space into linear prediction for chameleon field,
@@ -185,19 +187,18 @@ public:
         chi_prefactor = chi_prefactor_0*pow(a, -3.*(2.-n)/(1.-n));
     }
 
-    T  l_operator(const unsigned int level, const std::vector<unsigned int>& index_list, const bool addsource, const T h) const override
+    T  l_operator(const T chi_i, const unsigned int level, const std::vector<unsigned int>& index_list, const bool addsource, const T h) const 
     {/* The dicretized equation L(phi) */
         // Solution and pde-source grid at current level
         const unsigned int i = index_list[0];
         T const* const chi = MultiGridSolver<3, T>::get_y(level); // solution
-        const T chi_i = chi[i];
         const T rho = MultiGridSolver<3,T>::get_external_field(level, 0)[i];
-
+        
         // do not change values in screened regions
         if (rho == MARK_CHI_BOUND_COND) return 0;
 
         // The right hand side of the PDE 
-        T source = (1 + rho - pow(chi[i], n - 1)) * chi_prefactor;
+        T source = (1 + rho - pow(chi_i, n - 1)) * chi_prefactor;
 
         // Compute the standard kinetic term [D^2 phi] (in 1D this is phi''_i =  phi_{i+1} + phi_{i-1} - 2 phi_{i} )
         T kinetic = -2*chi_i*3; // chi, '-2*3' is factor in 3D discrete laplacian
@@ -209,6 +210,15 @@ public:
 
         // The discretized equation of motion L_{ijk...}(phi) = 0
         return kinetic/(h*h) - source;
+    }
+
+    T  l_operator(const unsigned int level, const std::vector<unsigned int>& index_list, const bool addsource, const T h) const override
+    {/* The dicretized equation L(phi) */
+        // Solution and pde-source grid at current level
+        const unsigned int i = index_list[0];
+        T const* const chi = MultiGridSolver<3, T>::get_y(level); // solution
+        const T chi_i = chi[i];
+        return l_operator(chi_i, level, index_list, addsource, h);
     }
 
     // Differential of the L operator: dL_{ijk...}/dphi_{ijk...}
@@ -226,28 +236,120 @@ public:
         return dkinetic/(h*h) - dsource;
     }
 
+    bool find_opposite_l_sign(const T f1, const T l1, T df, T& f2, T& l2, const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const
+    {/* find such 'f2' that 'l_operator(f2)' has opposite sign than l1
+        use df as a guess in which direction to be looking */
+        f2 = f1;
+        constexpr unsigned j_max = 10;
+        for (unsigned j = 0; j < j_max; ++j)
+        {
+            f2 += df;
+            if (f2 <= 0)
+            {
+                const unsigned i = index_list[0];
+                const T rho = MultiGridSolver<3,T>::get_external_field(level, 0)[i];
+
+                f2 = chi_min(rho);
+                j = j_max;//< end of loop but first check for an improvement
+            }
+            l2 = l_operator(f2, level, index_list, true, h);
+            if (l1*l2 <= 0) return true;
+        }
+        return false;
+    }
+
+    bool check_bisection_convergence(const T df_new, const T l_new) const
+    {
+        return ((abs(l_new) < m_l_stop) || (abs(df_new) < m_dchi_stop));
+    }
+
+    T bisection_step(T& f1, T& l1, T& f2, T& l2, const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const
+    {/* given 'f1' and 'f2' with different signs of l_operator(f_i) perform one step of bisection:
+        f_new = (f1 + f2) / 2
+        change whichever l_operator(f_i) has the same sign as l_operator(f_new)
+        return value indicates convergence -- 0 (unphysical for chameleon) not, otherwise yes*/
+
+        const T f_new = (f1 + f2) / 2;
+        const T l_new = l_operator(f_new, level, index_list, true, h);
+
+        if (check_bisection_convergence(f2 - f_new, l_new)) return f_new;
+
+        if (l1*l_new > 0) {
+            f1 = f_new;
+            l1 = l_new;
+            
+        } else {
+            f2 = f_new;
+            l2 = l_new;
+        }
+
+        return 0;
+    }
+
+    T bisection(T f1, T l1, const T df, const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const
+    {/* initialize bisection solver -- find two values with opposite value of l_operator -- and start iterating */
+        T f_new, f2, l2;
+
+        // get initial guess -- return when failed
+        if (!find_opposite_l_sign(f1, l1, df, f2, l2, level, index_list, h))
+        {
+            if ((f2 <= 0) || !std::isfinite(f2)) throw out_of_range("invalid value of chameleon field: "
+                                            + std::to_string(f2));
+            return f2;
+        }
+
+        // check prerequisites
+        if (l1*l2 > 0) throw out_of_range("input values for bisection method have the same sign : l1 = "
+                                          + std::to_string(l1) + ", l2 = " + std::to_string(l2));
+
+        // iterate
+        for (unsigned i = 0; i < m_max_bisection_steps; ++i){
+            f_new = bisection_step(f1, l1, f2, l2, level, index_list, h);
+            if (f_new)
+            {
+                return f_new;
+            }
+        }
+
+        // failed iteration
+        return f1;
+    }
+
     
     T upd_operator(const T f, const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const override
     {/* Method for updating solution:
+        if df is large, try bisection, otherwise Newton`s method
         try Newton`s method and check for unphysical values */
         T l  =  l_operator(level, index_list, true, h);
         T dl = dl_operator(level, index_list, h);
-        
-        const T f_new = f - CHI_SLOW_MULT*l/dl;
-        return f_new > 0 ? f_new : f*CHI_CORR_MULT;
+        T df = -l/dl;
+        T df_rel = abs(df/f);
+
+        static_assert((SWITCH_BIS_NEW < 1), "Newton`s method cannot be allowed with negative values. Adjust 'SWITCH_BIS_NEW < 1'.");
+
+        return df_rel < SWITCH_BIS_NEW ? f + df : bisection(f, l, df, level, index_list, h);
     }
 
-    // 
-    void correct_sol(Grid<3,T>& f, const Grid<3,T>& corr) override
+    void correct_sol(Grid<3,T>& f, const Grid<3,T>& corr, const unsigned int level) override
     {/* Method for correcting solution when going up,
         check for unphysical values */
+        
         const unsigned Ntot  = f.get_Ntot();
-        T f_new;
-        #pragma omp parallel for private(f_new)
+
+        // bisection variables
+        const unsigned int N = MultiGridSolver<3, T>::get_N(level);
+        const T h = 1.0/T( N );
+        std::vector<unsigned int> index_list;
+        
+        #pragma omp parallel for private(index_list)
         for(unsigned i = 0; i < Ntot; i++)
         {
-            f_new = f[i] + CHI_SLOW_MULT*corr[i];
-            f[i] = f_new > 0 ? f_new : f[i]*CHI_CORR_MULT;
+            if (abs(corr[i]/f[i]) < SWITCH_BIS_NEW) f[i] += corr[i];
+            else{
+                MultiGridSolver<3, T>::get_neighbor_gridindex(index_list, i, N);
+                T l =  l_operator(level, index_list, true, h);
+                f[i] = bisection(f[i], l, corr[i], level, index_list, h);
+            }   
         }
     }
 
@@ -311,13 +413,20 @@ public:
         return converged;
     }
 
-    void set_convergence(double eps, double err_stop, double err_stop_min, double rms_stop_min, double num_fail)
+    void set_convergence(double eps, double err_stop, double err_stop_min, double rms_stop_min, unsigned num_fail)
     {
         MultiGridSolver<3, T>::set_epsilon(eps);
         m_err_stop = err_stop;
         m_err_stop_min = err_stop_min;
         m_rms_stop_min = rms_stop_min;
         m_num_fail = num_fail;
+    }
+
+    void set_bisection_convergence(unsigned max_bi_step, T dchi_stop, T l_stop)
+    {
+        m_max_bisection_steps = max_bi_step;
+        m_dchi_stop = dchi_stop;
+        m_l_stop = l_stop;
     }
 
     // set chameleon guess to bulk value, need to set time and add rho before call to this function
@@ -424,6 +533,7 @@ public:
         // SET CHI SOLVER
         sol.add_external_grid(&drho);
         sol.set_convergence(1e-6, 0.95, 0.1, 1e-3, 5);
+        sol.set_bisection_convergence(5, 0, 1e-3);
         sol.set_maxsteps(40);
     }
 
