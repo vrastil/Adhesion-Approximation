@@ -182,7 +182,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     // set ChiSolver
     const double err_mod = pow(sim.box_opt.box_size, 2);
     sol.set_convergence(err_mod*1e-6, 0.95, 0.1, err_mod*1e-3, 5);
-    sol.set_bisection_convergence(5, 0, 1e-3);
+    sol.set_bisection_convergence(4, 1e-3, SWITCH_BIS_NEW);
     sol.set_time(1, sim.cosmo);
     sol.add_external_grid(&rho_grid);
 

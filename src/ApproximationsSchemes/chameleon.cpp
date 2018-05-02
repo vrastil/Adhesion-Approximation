@@ -31,6 +31,17 @@ constexpr CHI_PREC_t MARK_CHI_BOUND_COND =  (CHI_PREC_t)-2;
 // when the relative change in solution is less than this, use Newton`s method. Bisection method otherwise
 constexpr CHI_PREC_t SWITCH_BIS_NEW = (CHI_PREC_t)0.1;
 
+// convergence criteria
+constexpr double CONVERGENCE_RES = 1e-7; //< stop when total (rms) residual below
+constexpr double CONVERGENCE_RES_MIN = 1e-5; //< do not stop if solution didn`t converge below
+constexpr double CONVERGENCE_ERR = 0.8; //< stop when improvements between steps slow below
+constexpr double CONVERGENCE_ERR_MIN = 0.2; //< do not stop if solution is still improving
+constexpr unsigned CONVERGENCE_NUM_FAIL = 3; //< stop when number of failed steps is over
+constexpr unsigned CONVERGENCE_BI_STEPS = 15; //< maximal number of steps inside bisection rootfindg method
+constexpr unsigned CONVERGENCE_BI_STEPS_INIT = 15; //< maximal number of steps inside bisection initialization method
+constexpr CHI_PREC_t CONVERGENCE_BI_DCHI = (CHI_PREC_t)1e-3; //< stop bisection method when chi doesn`t chanege
+constexpr CHI_PREC_t CONVERGENCE_BI_L = (CHI_PREC_t)1e-2; //< stop bisection method when residual below
+
 template<typename T>
 void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
 {/* copy data in Mesh 'N*N*(N+2)' onto MultiGrid 'N*N*N' */
@@ -240,8 +251,7 @@ public:
     {/* find such 'f2' that 'l_operator(f2)' has opposite sign than l1
         use df as a guess in which direction to be looking */
         f2 = f1;
-        constexpr unsigned j_max = 10;
-        for (unsigned j = 0; j < j_max; ++j)
+        for (unsigned j = 0; j < CONVERGENCE_BI_STEPS_INIT; ++j)
         {
             f2 += df;
             if (f2 <= 0)
@@ -250,7 +260,7 @@ public:
                 const T rho = MultiGridSolver<3,T>::get_external_field(level, 0)[i];
 
                 f2 = chi_min(rho);
-                j = j_max;//< end of loop but first check for an improvement
+                j = CONVERGENCE_BI_STEPS_INIT;//< end of loop but first check for an improvement
             }
             l2 = l_operator(f2, level, index_list, true, h);
             if (l1*l2 <= 0) return true;
@@ -291,16 +301,7 @@ public:
         T f_new, f2, l2;
 
         // get initial guess -- return when failed
-        if (!find_opposite_l_sign(f1, l1, df, f2, l2, level, index_list, h))
-        {
-            if ((f2 <= 0) || !std::isfinite(f2)) throw out_of_range("invalid value of chameleon field: "
-                                            + std::to_string(f2));
-            return f2;
-        }
-
-        // check prerequisites
-        if (l1*l2 > 0) throw out_of_range("input values for bisection method have the same sign : l1 = "
-                                          + std::to_string(l1) + ", l2 = " + std::to_string(l2));
+        if (!find_opposite_l_sign(f1, l1, df, f2, l2, level, index_list, h)) return f2;
 
         // iterate
         for (unsigned i = 0; i < m_max_bisection_steps; ++i){
@@ -333,8 +334,9 @@ public:
     void correct_sol(Grid<3,T>& f, const Grid<3,T>& corr, const unsigned int level) override
     {/* Method for correcting solution when going up,
         check for unphysical values */
-        
+
         const unsigned Ntot  = f.get_Ntot();
+        const T * const rho = MultiGridSolver<3,T>::get_external_field(level, 0);
 
         // bisection variables
         const unsigned int N = MultiGridSolver<3, T>::get_N(level);
@@ -344,7 +346,9 @@ public:
         #pragma omp parallel for private(index_list)
         for(unsigned i = 0; i < Ntot; i++)
         {
-            if (abs(corr[i]/f[i]) < SWITCH_BIS_NEW) f[i] += corr[i];
+            // do not change values in screened regions
+            if (rho[i] == MARK_CHI_BOUND_COND) continue;
+            else if (abs(corr[i]/f[i]) < SWITCH_BIS_NEW) f[i] += corr[i];
             else{
                 MultiGridSolver<3, T>::get_neighbor_gridindex(index_list, i, N);
                 T l =  l_operator(level, index_list, true, h);
@@ -531,10 +535,12 @@ public:
         memory_alloc += sizeof(CHI_PREC_t)*8*(sol.get_Ntot()-1)/7;// MultiGrid<3, CHI_PREC_t> drho
 
         // SET CHI SOLVER
+        // compensate for units in which we compute laplace operator
+        const double err_mod = pow(sim.box_opt.box_size, 2);
         sol.add_external_grid(&drho);
-        sol.set_convergence(1e-6, 0.95, 0.1, 1e-3, 5);
-        sol.set_bisection_convergence(5, 0, 1e-3);
-        sol.set_maxsteps(40);
+        sol.set_convergence(err_mod*CONVERGENCE_RES, CONVERGENCE_ERR, CONVERGENCE_ERR_MIN, err_mod*CONVERGENCE_RES_MIN, CONVERGENCE_NUM_FAIL);
+        sol.set_bisection_convergence(CONVERGENCE_BI_STEPS_INIT, CONVERGENCE_BI_DCHI, CONVERGENCE_BI_L);
+        sol.set_maxsteps(15);
     }
 
     // VARIABLES
