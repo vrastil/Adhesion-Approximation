@@ -311,7 +311,7 @@ def qsub_CHI(sim_param):
     CHI.add_std_opt(sim_param)
     CHI.add_sim_opt("--comp_chi 1 ")
     CHI.add_sim_opt("--chi_n %f " % sim_param.chi_n)
-    CHI.add_sim_opt("--chi_phi %f " % sim_param.chi_phi)
+    CHI.add_sim_opt("--chi_phi %E " % sim_param.chi_phi)
     save_to_qsub(make_qsub(CHI), "scripts/CHI_qsub.pbs")
 
 

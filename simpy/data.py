@@ -248,6 +248,7 @@ def analyze_all(out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/outp
     if only is not None:
         sim_infos = sim_infos[only]
 
+    info = ''
     for a_sim_info in sim_infos:
         info = 'Analyzing run %s' % a_sim_info.info_tr()
         print '*'*len(info), '\n', info, '\n', '*'*len(info)
