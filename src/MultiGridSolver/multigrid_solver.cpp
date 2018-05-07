@@ -179,6 +179,11 @@ unsigned int  MultiGridSolver<NDIM,T>::get_Ntot(unsigned int level) const{
 }
 
 template<unsigned int NDIM, typename T>
+unsigned int  MultiGridSolver<NDIM,T>::get_Nlevel() const{ 
+  return _Nlevel;
+}
+
+template<unsigned int NDIM, typename T>
 MultiGridSolver<NDIM,T>::MultiGridSolver(unsigned int N, unsigned int Nmin, bool verbose) :
   _N(N), _Ntot(power(N, NDIM)), _Nmin(Nmin), _Nlevel(int(log2(N) - _Nmin + 2)), _verbose(verbose), 
   _rms_res(0.0), _rms_res_i(0.0), _rms_res_old(0.0) {
@@ -544,13 +549,6 @@ template<unsigned int NDIM, typename T>
 void MultiGridSolver<NDIM,T>::make_prolongation_array(Grid<NDIM,T>& f, Grid<NDIM,T>& Rf, Grid<NDIM,T>& df){
   unsigned int Ntot = f.get_Ntot();
   df = f - Rf;
-  return;
-#ifdef OPENMP
-#pragma omp parallel for
-#endif
-  for (unsigned int i = 0; i < Ntot; i++){
-    df[i] = f[i] - Rf[i];
-  }
 }
 
 //================================================

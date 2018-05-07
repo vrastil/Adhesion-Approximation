@@ -158,13 +158,17 @@ private:
         }
     }
 
-    void get_chi_x()
+    void get_chi_x(unsigned level = 0)
     {/* transform dchi into chi, in chi_a units this means only 'chi = 1 + dchi' */
-        Grid<3, T>& chi = MultiGridSolver<3, T>::get_grid(); // guess
-        const unsigned N_tot = MultiGridSolver<3, T>::get_Ntot();
+        if (level >= MultiGridSolver<3, T>::get_Nlevel()) return; //< we are at the bottom level
+
+        Grid<3, T>& chi = MultiGridSolver<3, T>::get_grid(level); // guess
+        const unsigned N_tot = MultiGridSolver<3, T>::get_Ntot(level);
 
         #pragma omp parallel for
         for (unsigned i = 0; i < N_tot; ++i) ++chi[i];
+
+        get_chi_x(level + 1); //< recursive call to transform all levels
     }
 
     
@@ -462,19 +466,21 @@ public:
         // get dchi(x)
         fftw_execute_dft_c2r(p_B, rho);
 
-        // copy dchi(x) onto Grid
+        // copy dchi(x) onto MultiGrid (including 'restrict_down_all()')
         transform_Mesh_to_Grid(rho, MultiGridSolver<3, T>::get_grid());
 
         // get chi(x)
         get_chi_x();
     }
 
-    void set_screened()
+    void set_screened(unsigned level = 0)
     {/* check solution for invalid values (non-linear regime), fix values in high density regions, try to improve guess in others */
-        Grid<3, T>& chi = MultiGridSolver<3, T>::get_grid(); // guess
-        const unsigned N_tot = MultiGridSolver<3, T>::get_Ntot();
-        const unsigned N = MultiGridSolver<3, T>::get_N();
-        T* const rho_grid = MultiGridSolver<3,T>::get_external_field(0, 0); // overdensity
+        if (level >= MultiGridSolver<3, T>::get_Nlevel()) return; //< we are at the bottom level
+
+        Grid<3, T>& chi = MultiGridSolver<3, T>::get_grid(level); // guess
+        const unsigned N_tot = MultiGridSolver<3, T>::get_Ntot(level);
+        const unsigned N = MultiGridSolver<3, T>::get_N(level);
+        T* const rho_grid = MultiGridSolver<3,T>::get_external_field(level, 0); // overdensity
         std::vector<unsigned int> index_list;
         unsigned num_high_density = 0;
 
@@ -498,7 +504,9 @@ public:
             }
         }
 
-        cout << "Identified and fixed " << num_high_density << "(" << std::setprecision(2) << num_high_density*100.0/N_tot <<  "%) points\n";
+        cout << "Identified and fixed " << num_high_density << "(" << std::setprecision(2) << num_high_density*100.0/N_tot <<  "%) points at level " << level << "\n";
+
+        set_screened(level + 1); //< recursive call to fix all levels
     }
 
     T chi_min(T delta) const
