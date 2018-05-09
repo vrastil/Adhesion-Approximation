@@ -344,6 +344,12 @@ bool MultiGridSolver<NDIM,T>::check_convergence(){
   return converged;
 }
 
+template<unsigned int NDIM, typename T>
+void MultiGridSolver<NDIM,T>::check_solution(unsigned, Grid<NDIM,T>&) { }
+
+template<unsigned int NDIM, typename T>
+void MultiGridSolver<NDIM,T>::check_solution(unsigned level) { check_solution(level, get_grid(level)); }
+
 //================================================
 // Prolonge up solution phi from course grid
 // to fine grid. Using trilinear prolongation
@@ -506,6 +512,7 @@ void MultiGridSolver<NDIM,T>::recursive_go_up(unsigned int to_level){
 
   // Restrict down R[f] and store in _res (used as temp-array)
   _f.restrict_down(to_level, _res.get_grid(from_level));
+  check_solution(from_level, _res.get_grid(from_level));
 
   // Make prolongation array ready at from_level
   make_prolongation_array(_f.get_grid(from_level), _res.get_grid(from_level), _res.get_grid(from_level));
@@ -597,8 +604,9 @@ void MultiGridSolver<NDIM,T>::recursive_go_down(unsigned int from_level){
     std::cout << "    Going down from level " << from_level << " -> " << to_level << std::endl;
 
   // Restrict residual and solution
-  _res.restrict_down(from_level, _res.get_grid(from_level + 1));
-  _f.restrict_down(from_level, _f.get_grid(from_level + 1));
+  _res.restrict_down(from_level, _res.get_grid(to_level));
+  _f.restrict_down(from_level, _f.get_grid(to_level));
+  check_solution(to_level);
 
   // Make new source
   make_new_source(to_level);

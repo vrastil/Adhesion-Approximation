@@ -131,6 +131,9 @@ private:
     T m_dchi_stop;                  // if change in chi is small, stop halving
     T m_l_stop;                     // if residuum is small, stop halving
 
+    // variables for checking solution in deep-screened regime, for each level
+    std::vector<std::map<unsigned, T>> fix_vals; //< <index, value>
+
     void get_chi_k(Mesh& rho_k, const T h)
     {/* transform input density in k-space into linear prediction for chameleon field,
         includes w(k) corrections for interpolation of particles */
@@ -193,6 +196,8 @@ public:
         3/2.*sim.cosmo.Omega_m*pow(sim.cosmo.H0 * sim.cosmo.h / c_kms * sim.box_opt.box_size ,2) / sim.chi_opt.phi)
         {
             if ((n <= 0) || (n >= 1) || (chi_0 <= 0)) throw out_of_range("invalid values of chameleon power-law potential parameters");
+
+            fix_vals.resize(this->get_Nlevel());
         }
 
     ChiSolver(unsigned int N, const Sim_Param& sim, bool verbose = true) : ChiSolver(N, 2, sim, verbose) {}
@@ -421,6 +426,11 @@ public:
         return converged;
     }
 
+    void check_solution(unsigned level, Grid<3,T>& chi) override
+    {
+        for (auto fv : fix_vals[level]) chi[fv.first] = fv.second;
+    }
+
     void set_convergence(double eps, double err_stop, double err_stop_min, double rms_stop_min, unsigned num_fail)
     {
         MultiGridSolver<3, T>::set_epsilon(eps);
@@ -482,7 +492,6 @@ public:
         const unsigned N = MultiGridSolver<3, T>::get_N(level);
         T* const rho_grid = MultiGridSolver<3,T>::get_external_field(level, 0); // overdensity
         std::vector<unsigned int> index_list;
-        unsigned num_high_density = 0;
 
         #pragma omp parallel for private(index_list)
         for (unsigned i = 0; i < N_tot; ++i)
@@ -493,17 +502,22 @@ public:
                 chi[i] = check_surr_dens(rho_grid, index_list, i, N) ? 0 : chi_min(rho_grid[i]);
             }
         }
-        #pragma omp parallel for reduction(+:num_high_density)
+
+        fix_vals[level].clear();
+
+        // writing into map, do not use omp
         for (unsigned i = 0; i < N_tot; ++i)
         {
             if (chi[i] == 0) // fix chameleon to bulk value, set unphysical density to indicate screened regime
             {
-                ++num_high_density;
+
                 chi[i] = chi_min(rho_grid[i]);
                 rho_grid[i] = MARK_CHI_BOUND_COND;
+                fix_vals[level].emplace(i, chi[i]);
             }
         }
 
+        unsigned num_high_density = fix_vals[level].size();
         cout << "Identified and fixed " << num_high_density << "(" << std::setprecision(2) << num_high_density*100.0/N_tot <<  "%) points at level " << level << "\n";
 
         set_screened(level + 1); //< recursive call to fix all levels
@@ -548,6 +562,7 @@ public:
         sol.add_external_grid(&drho);
         sol.set_convergence(err_mod*CONVERGENCE_RES, CONVERGENCE_ERR, CONVERGENCE_ERR_MIN, err_mod*CONVERGENCE_RES_MIN, CONVERGENCE_NUM_FAIL);
         sol.set_bisection_convergence(CONVERGENCE_BI_STEPS_INIT, CONVERGENCE_BI_DCHI, CONVERGENCE_BI_L);
+        sol.set_ngs_sweeps(2, 2); //< fine, coarse
         sol.set_maxsteps(15);
     }
 

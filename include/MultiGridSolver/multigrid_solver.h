@@ -151,12 +151,14 @@ public:
     // Free up all memory
     void clear();
 
-    // Methods that must be implemented by user
+    // Methods that may be implemented by user
     virtual T upd_operator(const T f, const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const;
     virtual T l_operator(const unsigned int level, const std::vector<unsigned int>& index_list, bool addsource, const T h) const;
     virtual T dl_operator(const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const;
     virtual void correct_sol(Grid<NDIM,T>& f, const Grid<NDIM,T>& corr, const unsigned int level);
-    virtual bool   check_convergence();
+    virtual bool check_convergence();
+    virtual void check_solution(unsigned level, Grid<NDIM,T>& sol);
+    void check_solution(unsigned level); //< automatically retrieves reference to solution
 };
 
 #endif
