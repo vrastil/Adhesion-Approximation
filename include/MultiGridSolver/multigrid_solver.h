@@ -118,6 +118,9 @@ public:
     Grid<NDIM, T> &get_grid(unsigned int level = 0){ return _f.get_grid(level); };
     const Grid<NDIM, T> &get_grid(unsigned int level = 0) const { return _f.get_grid(level); };
 
+    MultiGrid<NDIM, T> &get_mlt_grid(unsigned int level = 0){ return _f; };
+    const MultiGrid<NDIM, T> &get_mlt_grid(unsigned int level = 0) const { return _f; };
+
     // Fetch values in externally added fields
     T* get_external_field(unsigned int level, unsigned int field);
     T const* const get_external_field(unsigned int level, unsigned int field) const;

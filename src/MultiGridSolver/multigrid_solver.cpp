@@ -117,12 +117,17 @@ void MultiGridSolver<NDIM,T>::solve(){
       std::cout << "===============================================================\n" << std::endl;
     }
 
-    // Go down to the bottom (from finest grid [0] to coarsest grid [_Nlevel-1])
-    recursive_go_down(0);
+    if (_Nlevel == 1)
+        // no V-cycle, solve on domaingrid
+        solve_current_level(0);
+    else
+    {// Go down to the bottom (from finest grid [0] to coarsest grid [_Nlevel-1])
+        recursive_go_down(0);
 
-    // Go up to the top
-    recursive_go_up(_Nlevel-2);
-    
+        // Go up to the top
+        recursive_go_up(_Nlevel-2);
+    }
+
     // Check for errors in the computation (NaN) and exit if true
     _f.get_grid(0).check_for_nan(true);
     
@@ -185,7 +190,7 @@ unsigned int  MultiGridSolver<NDIM,T>::get_Nlevel() const{
 
 template<unsigned int NDIM, typename T>
 MultiGridSolver<NDIM,T>::MultiGridSolver(unsigned int N, unsigned int Nmin, bool verbose) :
-  _N(N), _Ntot(power(N, NDIM)), _Nmin(Nmin), _Nlevel(int(log2(N) - _Nmin + 2)), _verbose(verbose), 
+  _N(N), _Ntot(power(N, NDIM)), _Nmin(Nmin), _Nlevel(int(log2(N / _Nmin) + 1)), _verbose(verbose), 
   _rms_res(0.0), _rms_res_i(0.0), _rms_res_old(0.0) {
 
     // Check that N is divisible by 2^{Nlevel - 1} which is required for the restriction to make sense
