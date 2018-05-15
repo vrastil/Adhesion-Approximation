@@ -112,18 +112,29 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
         ("chi_beta", po::value<FTYPE_t>(&sim.chi_opt.beta)->default_value(1/sqrt(6), "(1/6)^1/2"), "coupling constant")
         ("chi_n", po::value<FTYPE_t>(&sim.chi_opt.n)->default_value(0.5, "1/2"), "chameleon power-law potential exponent,\n0 < n < 1")
         ("chi_phi", po::value<FTYPE_t>(&sim.chi_opt.phi)->default_value(1E-6, "1E-6"), "screening potential")
-        ;
+        ;  
     mod_grav.add(config_cham);
     
-        
-    po::options_description cmdline_options("\nCOSMOLOGICAL APPROXIMATION");
+    po::options_description config_test("Test options");
+    config_test.add_options()
+        ("R_sphere", po::value<FTYPE_t>(&sim.test_opt.R_sphere)->default_value(1., "3.0"), "radius of a sphere sitting in a vacuum")
+        ("rho_sphere", po::value<FTYPE_t>(&sim.test_opt.rho_sphere)->default_value(2.7, "1.0"), "density  of a sphere sitting in a vacuum")
+        ("N_grid", po::value<unsigned>(&sim.test_opt.N_grid)->default_value(64, "64"), "finest grid size")
+        ;
+
+
+    po::options_description cmdline_options("\nCOSMOLOGICAL APPROXIMATION");//< store all normal parameters
     cmdline_options.add(generic).add(config_mesh).add(config_power).add(config_integ);
     cmdline_options.add(config_output).add(config_app).add(config_run).add(config_other);
     cmdline_options.add(mod_grav);
-    
+
+    config_test.add(cmdline_options);//< union of test parameters and normaln ones
     po::variables_map vm;
-    store(po::command_line_parser(ac, av).options(cmdline_options).run(), vm);		
+    //po::store(po::command_line_parser(ac, av).options(config_test).run(), vm);
+    po::store(po::parse_command_line(ac, av, config_test), vm);
     po::notify(vm);
+
+
 
     if (vm.count("help")) {
         cout << setprecision(3) << cmdline_options << "\n";
@@ -134,7 +145,8 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
         ifstream ifs(config_file.c_str());
         if (ifs){
         cout << "\nUsing configuration options defined in file " << config_file << " (given command line options have higher priority).\n";
-            store(po::parse_config_file(ifs, cmdline_options), vm);
+            po::store(po::parse_config_file(ifs, config_test), vm);
+            // po::store(po::parse_config_file(ifs, cmdline_options), vm);
             notify(vm);
         } else{
             cout << "Cannot open config file '" << config_file << "'. Using default and command lines values.\n";

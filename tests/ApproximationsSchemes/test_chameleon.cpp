@@ -123,55 +123,86 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[cha
     }
 }
 
+void init_overdensity(const Sim_Param& sim, Mesh& rho, MultiGrid<3, CHI_PREC_t>& rho_grid)
+{
+    const unsigned N = sim.test_opt.N_grid;
+    const FTYPE_t R = sim.test_opt.R_sphere;
+    const FTYPE_t rho_0 = sim.test_opt.rho_sphere;
+    const int N_tot = rho.length;
+
+    FTYPE_t mean_rho;
+    FTYPE_t R2_;
+    const FTYPE_t R2 = R*R;
+    int ix0 = N/2, iy0 = N/2, iz0 = N/2;
+    
+    #pragma omp parallel for private(R2_)
+    for (int ix = 0; ix < N; ++ix)
+    {
+        for (int iy = 0; iy < N; ++iy)
+        {
+            for (int iz = 0; iz < N; ++iz)
+            {
+                R2_ = pow(ix - ix0, 2) + pow(iy - iy0, 2) + pow(iz - iz0, 2);
+                rho(ix, iy, iz) = R2_ < R2 ? rho_0 : 0;
+            }
+        }
+    }
+    mean_rho = mean(rho);
+    rho -= mean_rho;
+    transform_Mesh_to_MultiGrid(rho, rho_grid);
+
+    // check density
+    REQUIRE( mean(rho) == Approx(0.) );
+    REQUIRE( rho(ix0, iy0, iz0) == Approx(rho_0 - mean_rho) );
+    REQUIRE( rho(0, 0, 0) == Approx(-mean_rho) );
+}
+
+void get_grav_pot(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B, FTYPE_t box_size, FTYPE_t phi_prefactor)
+{
+    fftw_execute_dft_r2c(p_F, rho);
+    gen_pot_k(rho);
+    fftw_execute_dft_c2r(p_B, rho);
+    rho *= pow(box_size / rho.N, 2) // computing units (laplace)
+        *  phi_prefactor; // prefactor of poisson equation
+}
+
+void print_mesh(const string& file_name, const Mesh& pot)
+{
+    Ofstream File(file_name);
+    unsigned N = pot.N;
+    int ix0 = N/2, iy0 = N/2, iz0 = N/2;
+
+    auto print_r_chi = [&File, ix0, iy0, iz0,&pot]
+                       (int i, int j, int k){
+        File << sqrt(pow(i - ix0, 2) + pow(j - iy0, 2) + pow(k - iz0, 2)) << "\t" << pot(i, j, k) -1  << "\n";
+    };
+
+    for (int i = 0; i < N - 1; ++i)
+    {
+        print_r_chi(i, i, i);
+        print_r_chi(i, i, i + 1);
+        print_r_chi(i, i + 1, i + 1);
+    }
+}
+
 TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chameleon]" )
 {
     print_unit_msg("create and initialize ChiSolver, solve sphere");
 
-    /* PARAMETERS */
-    constexpr unsigned N = 64;
-    constexpr FTYPE_t R = 3;
-    constexpr FTYPE_t rho_0 = 1e6;
-
-    constexpr unsigned N_min = 2;
-    constexpr FTYPE_t R2 = R*R;
-    int ix0 = N/2, iy0 = N/2, iz0 = N/2;
-
     // initialize Sim_Param
-    const int argc = 1;
     const char* const argv[1] = {"test"};
-    Sim_Param sim(argc, argv);
+    Sim_Param sim(1, argv);
+    const unsigned N = sim.test_opt.N_grid;
+    sim.print_info();
 
     // initialize ChiSolver
+    constexpr unsigned N_min = 2;
     ChiSolver<CHI_PREC_t> sol(N, N_min, sim, true);
 
     // initialize overdensity -- constant density in sphere of radius R, center at x0, y0, z0
     MultiGrid<3, CHI_PREC_t> rho_grid(N);
-    FTYPE_t mean_rho;
     Mesh rho(N);
-    {
-        const int N_tot = rho.length;
-        FTYPE_t R2_;
-        #pragma omp parallel for private(R2_)
-        for (int ix = 0; ix < N; ++ix)
-        {
-            for (int iy = 0; iy < N; ++iy)
-            {
-                for (int iz = 0; iz < N; ++iz)
-                {
-                    R2_ = pow(ix - ix0, 2) + pow(iy - iy0, 2) + pow(iz - iz0, 2);
-                    rho(ix, iy, iz) = R2_ < R2 ? rho_0 : 0;
-                }
-            }
-        }
-        mean_rho = mean(rho);
-        rho -= mean_rho;
-        transform_Mesh_to_MultiGrid(rho, rho_grid);
-
-        // check density
-        REQUIRE( mean(rho) == Approx(0.) );
-        REQUIRE( rho(ix0, iy0, iz0) == Approx(rho_0 - mean_rho) );
-        REQUIRE( rho(0, 0, 0) == Approx(-mean_rho) );
-    }
+    init_overdensity(sim, rho, rho_grid);
 
     // FFTW preparation
     if (!FFTW_PLAN_OMP_INIT()){
@@ -183,64 +214,37 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
 
     // set ChiSolver
     sol.set_time(1, sim.cosmo);
-    const double err_mod = sol.get_chi_prefactor();
-    sol.set_convergence(err_mod*CONVERGENCE_RES, CONVERGENCE_ERR, CONVERGENCE_ERR_MIN, err_mod*CONVERGENCE_RES_MIN, CONVERGENCE_NUM_FAIL);
-    sol.set_bisection_convergence(CONVERGENCE_BI_STEPS_INIT, CONVERGENCE_BI_DCHI, CONVERGENCE_BI_L);
+    sol.set_def_convergence();
     sol.add_external_grid(&rho_grid);
 
     // compute gravitational potential
     Mesh phi_pot(rho); //< copy density
-    fftw_execute_dft_r2c(p_F, phi_pot);
-    gen_pot_k(phi_pot);
-    fftw_execute_dft_c2r(p_B, phi_pot);
-    phi_pot *= pow(sim.box_opt.box_size / N, 2) // computing units (laplace)
-            *  sol.get_phi_prefactor(); // prefactor of poisson equation
+    get_grav_pot(phi_pot, p_F, p_B, sim.box_opt.box_size, sol.get_phi_prefactor());
 
     // get linear prediction
     sol.set_linear(rho, p_F, p_B);
     sol.set_screened();
+
+    // full solution on Mesh
+    Mesh chi_full(N);
+
+    // create directory structure and open file
+    std::string out_dir = sim.out_opt.out_dir + "test_ChiSolver/";
+    create_dir(out_dir);
+
+    // print linear predition and gravitational potential
+    transform_MultiGridSolver_to_Mesh(chi_full, sol);
+    print_mesh(out_dir + "lin_chi.dat", chi_full);
+    print_mesh(out_dir + "grav_pot.dat", phi_pot);
 
     // Solve the equation -- full V-cycles
     sol.set_ngs_sweeps(3, 3); //< fine, coarse
     sol.set_maxsteps(1);
     // sol.solve();
 
-    // // Solve the equation -- only fine grid refinement
-    // sol.set_ngs_sweeps(3, 0); //< fine, coarse
-    // sol.set_maxsteps(10);
-    // sol.solve();
-    
-    // copy onto Mesh
-    Mesh chi_full(N);
-    transform_MultiGridSolver_to_Mesh(chi_full, sol);
-
-    // create directory structure and open file
-    std::string out_dir = sim.out_opt.out_dir + "test_ChiSolver/";
-    string file_name = out_dir + "chi_values.dat";
-    create_dir(out_dir);
-    Ofstream File(file_name);
-
     // print chi_full
-    File << setprecision(18);
-    File << "# N :=\t" << N << "\n";
-    File << "# R :=\t" << sqrt(R2) << "\n";
-    File << "# rho_0 :=\t" << rho_0 << "\n";
-    File << "# phi screening :=\t" << sim.chi_opt.phi << "\n";
-    File << "# phi gravitational :=\t" << 3./2.*R2*rho_0 << "\n";
-    File << "# r\tchi(r)/chi_a - 1\n";
-
-    auto print_r_chi = [&File, ix0, iy0, iz0,&chi_full, &phi_pot]
-                       (int i, int j, int k){
-        File << sqrt(pow(i - ix0, 2) + pow(j - iy0, 2) + pow(k - iz0, 2)) << "\t" << chi_full(i, j, k) -1
-             << "\t" << phi_pot(i, j, k) << "\n";
-    };
-
-    for (int i = 0; i < N - 1; ++i)
-    {
-        print_r_chi(i, i, i);
-        print_r_chi(i, i, i + 1);
-        print_r_chi(i, i + 1, i + 1);
-    }
+    transform_MultiGridSolver_to_Mesh(chi_full, sol);
+    print_mesh(out_dir + "chi_full.dat", chi_full);
 
     // FFTW CLEANUP
 	FFTW_DEST_PLAN(p_F);

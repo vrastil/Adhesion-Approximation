@@ -102,6 +102,12 @@ struct Run_Opt {
     bool phase;
 };
 
+/* TEST */
+struct Test_Opt {
+    FTYPE_t R_sphere, rho_sphere;
+    unsigned N_grid;
+};
+
 // define Range outside because of SWIG
 struct Range { FTYPE_t lower, upper; };
 
@@ -142,6 +148,7 @@ public:
     Run_Opt run_opt;
     Other_par other_par;
     Chi_Opt chi_opt;
+    Test_Opt test_opt;
 
 	// METHODS
     void print_info(std::string out, std::string app) const;

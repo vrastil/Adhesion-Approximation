@@ -441,6 +441,13 @@ public:
         m_l_stop = l_stop;
     }
 
+    void set_def_convergence()
+    {// set convergence -- compensate for units in which we compute laplace operator
+        const double err_mod = get_chi_prefactor();
+        set_convergence(err_mod*CONVERGENCE_RES, CONVERGENCE_ERR, CONVERGENCE_ERR_MIN, err_mod*CONVERGENCE_RES_MIN, CONVERGENCE_NUM_FAIL);
+        set_bisection_convergence(CONVERGENCE_BI_STEPS_INIT, CONVERGENCE_BI_DCHI, CONVERGENCE_BI_L);
+    }
+
     // set chameleon guess to bulk value, need to set time and add rho before call to this function
     void set_bulk_field()
     {
@@ -571,8 +578,7 @@ public:
         sol.set_time(a, sim.cosmo);
 
         // set convergence -- compensate for units in which we compute laplace operator
-        const double err_mod = sol.get_chi_prefactor();
-        sol.set_convergence(err_mod*CONVERGENCE_RES, CONVERGENCE_ERR, CONVERGENCE_ERR_MIN, err_mod*CONVERGENCE_RES_MIN, CONVERGENCE_NUM_FAIL);
+        sol.set_def_convergence();
 
         // save (over)density from particles
         cout << "Storing density distribution...\n";
