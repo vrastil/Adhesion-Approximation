@@ -48,9 +48,9 @@ TEST_CASE( "UNIT TEST: create Multigrid and copy data to/from Mesh", "[multigrid
                                             N*(N+2)*4+8*(N+2)+5}; // (4, 8, 5)
     for(unsigned i : some_indices) mesh_from[i] = 2.0*rand()/RAND_MAX - 1;
 
-    transform_Mesh_to_Grid(mesh_from, grid);
+    transform_Mesh_to_MultiGrid(mesh_from, grid);
     CHECK(min(mesh_from) == min(grid));
-    transform_Grid_to_Mesh(mesh_to, grid);
+    transform_MultiGrid_to_Mesh(mesh_to, grid);
 
     for(unsigned i : some_indices) CHECK( mesh_from[i] == mesh_to[i] );
     CHECK(min(mesh_from) == min(grid));
@@ -94,7 +94,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[cha
     {
         Mesh rho(N);
         rho.assign(rho_0);
-        transform_Mesh_to_Grid(rho, rho_grid);
+        transform_Mesh_to_MultiGrid(rho, rho_grid);
     }
 
     // check density
@@ -127,12 +127,14 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
 {
     print_unit_msg("create and initialize ChiSolver, solve sphere");
 
-    constexpr int N = 128;
-    constexpr FTYPE_t R = 2;
+    /* PARAMETERS */
+    constexpr unsigned N = 64;
+    constexpr FTYPE_t R = 3;
+    constexpr FTYPE_t rho_0 = 1e6;
+
+    constexpr unsigned N_min = 2;
     constexpr FTYPE_t R2 = R*R;
     int ix0 = N/2, iy0 = N/2, iz0 = N/2;
-
-    constexpr FTYPE_t rho_0 = 0.5;
 
     // initialize Sim_Param
     const int argc = 1;
@@ -140,7 +142,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     Sim_Param sim(argc, argv);
 
     // initialize ChiSolver
-    ChiSolver<CHI_PREC_t> sol(N, sim, true);
+    ChiSolver<CHI_PREC_t> sol(N, N_min, sim, true);
 
     // initialize overdensity -- constant density in sphere of radius R, center at x0, y0, z0
     MultiGrid<3, CHI_PREC_t> rho_grid(N);
@@ -163,7 +165,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
         }
         mean_rho = mean(rho);
         rho -= mean_rho;
-        transform_Mesh_to_Grid(rho, rho_grid);
+        transform_Mesh_to_MultiGrid(rho, rho_grid);
 
         // check density
         REQUIRE( mean(rho) == Approx(0.) );
@@ -180,10 +182,10 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     const FFTW_PLAN_TYPE p_B = FFTW_PLAN_C2R(N, N, N, rho.complex(), rho.real(), FFTW_ESTIMATE);
 
     // set ChiSolver
-    const double err_mod = pow(sim.box_opt.box_size, 2);
-    sol.set_convergence(err_mod*1e-6, 0.95, 0.1, err_mod*1e-3, 5);
-    sol.set_bisection_convergence(4, 1e-3, SWITCH_BIS_NEW);
     sol.set_time(1, sim.cosmo);
+    const double err_mod = sol.get_chi_prefactor();
+    sol.set_convergence(err_mod*CONVERGENCE_RES, CONVERGENCE_ERR, CONVERGENCE_ERR_MIN, err_mod*CONVERGENCE_RES_MIN, CONVERGENCE_NUM_FAIL);
+    sol.set_bisection_convergence(CONVERGENCE_BI_STEPS_INIT, CONVERGENCE_BI_DCHI, CONVERGENCE_BI_L);
     sol.add_external_grid(&rho_grid);
 
     // compute gravitational potential
@@ -191,19 +193,26 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     fftw_execute_dft_r2c(p_F, phi_pot);
     gen_pot_k(phi_pot);
     fftw_execute_dft_c2r(p_B, phi_pot);
-    phi_pot *= pow(sim.box_opt.box_size/sim.box_opt.mesh_num, 2);
+    phi_pot *= pow(sim.box_opt.box_size / N, 2) // computing units (laplace)
+            *  sol.get_phi_prefactor(); // prefactor of poisson equation
 
     // get linear prediction
-    sol.set_linear(rho, p_F, p_B, 1/(2*PI));
+    sol.set_linear(rho, p_F, p_B);
     sol.set_screened();
 
+    // Solve the equation -- full V-cycles
+    sol.set_ngs_sweeps(3, 3); //< fine, coarse
+    sol.set_maxsteps(1);
+    // sol.solve();
 
-    // Solve the equation
-    sol.solve();
+    // // Solve the equation -- only fine grid refinement
+    // sol.set_ngs_sweeps(3, 0); //< fine, coarse
+    // sol.set_maxsteps(10);
+    // sol.solve();
     
     // copy onto Mesh
     Mesh chi_full(N);
-    transform_Grid_to_Mesh(chi_full, sol.get_grid());
+    transform_MultiGridSolver_to_Mesh(chi_full, sol);
 
     // create directory structure and open file
     std::string out_dir = sim.out_opt.out_dir + "test_ChiSolver/";
@@ -218,11 +227,9 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     File << "# rho_0 :=\t" << rho_0 << "\n";
     File << "# phi screening :=\t" << sim.chi_opt.phi << "\n";
     File << "# phi gravitational :=\t" << 3./2.*R2*rho_0 << "\n";
-    File << "# r\t(chi(r)-chi_0)\n";
-    const CHI_PREC_t chi_0 = sol.chi_min(-mean_rho);
-    // const FTYPE_t chi_0 = max(chi_full);
+    File << "# r\tchi(r)/chi_a - 1\n";
 
-    auto print_r_chi = [&File, ix0, iy0, iz0,&chi_full, chi_0, &phi_pot]
+    auto print_r_chi = [&File, ix0, iy0, iz0,&chi_full, &phi_pot]
                        (int i, int j, int k){
         File << sqrt(pow(i - ix0, 2) + pow(j - iy0, 2) + pow(k - iz0, 2)) << "\t" << chi_full(i, j, k) -1
              << "\t" << phi_pot(i, j, k) << "\n";

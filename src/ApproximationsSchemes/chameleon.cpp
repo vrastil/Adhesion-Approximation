@@ -32,13 +32,13 @@ constexpr CHI_PREC_t MARK_CHI_BOUND_COND =  (CHI_PREC_t)-2;
 constexpr CHI_PREC_t SWITCH_BIS_NEW = (CHI_PREC_t)0.1;
 
 // convergence criteria
-constexpr double CONVERGENCE_RES = 1e-7; //< stop when total (rms) residual below
+constexpr double CONVERGENCE_RES = 1e-9; //< stop when total (rms) residual below
 constexpr double CONVERGENCE_RES_MIN = 1e-5; //< do not stop if solution didn`t converge below
-constexpr double CONVERGENCE_ERR = 0.8; //< stop when improvements between steps slow below
-constexpr double CONVERGENCE_ERR_MIN = 0.2; //< do not stop if solution is still improving
+constexpr double CONVERGENCE_ERR = 0.95; //< stop when improvements between steps slow below
+constexpr double CONVERGENCE_ERR_MIN = 0.5; //< do not stop if solution is still improving
 constexpr unsigned CONVERGENCE_NUM_FAIL = 3; //< stop when number of failed steps is over
-constexpr unsigned CONVERGENCE_BI_STEPS = 15; //< maximal number of steps inside bisection rootfindg method
-constexpr unsigned CONVERGENCE_BI_STEPS_INIT = 15; //< maximal number of steps inside bisection initialization method
+constexpr unsigned CONVERGENCE_BI_STEPS = 8; //< maximal number of steps inside bisection rootfindg method
+constexpr unsigned CONVERGENCE_BI_STEPS_INIT = 5; //< maximal number of steps inside bisection initialization method
 constexpr CHI_PREC_t CONVERGENCE_BI_DCHI = (CHI_PREC_t)1e-3; //< stop bisection method when chi doesn`t chanege
 constexpr CHI_PREC_t CONVERGENCE_BI_L = (CHI_PREC_t)1e-2; //< stop bisection method when residual below
 
@@ -62,10 +62,10 @@ void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
 }
 
 template<typename T>
-void transform_Mesh_to_Grid(const Mesh& mesh, MultiGrid<3, T> &grid)
+void transform_Mesh_to_MultiGrid(const Mesh& mesh, MultiGrid<3, T> &mltgrid)
 {
-    transform_Mesh_to_Grid(mesh, grid.get_grid());
-    grid.restrict_down_all();
+    transform_Mesh_to_Grid(mesh, mltgrid.get_grid());
+    mltgrid.restrict_down_all();
 }
 
 template<typename T>
@@ -88,10 +88,10 @@ void transform_Grid_to_Mesh(Mesh& mesh, const Grid<3, T> &grid)
 }
 
 template<typename T>
-void transform_Grid_to_Mesh(Mesh& mesh, const MultiGrid<3, T> &grid){ transform_Grid_to_Mesh(mesh, grid.get_grid()); }
+void transform_MultiGrid_to_Mesh(Mesh& mesh, const MultiGrid<3, T> &mltgrid){ transform_Grid_to_Mesh(mesh, mltgrid.get_grid()); }
 
 template<typename T>
-void transform_Grid_to_Mesh(Mesh& mesh, const MultiGridSolver<3, T> &sol){ transform_Grid_to_Mesh(mesh, sol.get_grid()); }
+void transform_MultiGridSolver_to_Mesh(Mesh& mesh, const MultiGridSolver<3, T> &sol){ transform_Grid_to_Mesh(mesh, sol.get_grid()); }
 
 template<typename T>
 T min(const std::vector<T>& data){ return *std::min_element(data.begin(), data.end()); }
@@ -116,6 +116,7 @@ private:
     // Parameters
     const T n;       // Hu-Sawicki paramater
     const T chi_0;   // 2*beta*Mpl*phi_scr
+    const T phi_prefactor;   // prefactor for Poisson equation for gravitational potential
     const T chi_prefactor_0; // dimensionless prefactor to poisson equation at a = 1
     T chi_prefactor; // time-dependent prefactor
 
@@ -134,12 +135,12 @@ private:
     // variables for checking solution in deep-screened regime, for each level
     std::vector<std::map<unsigned, T>> fix_vals; //< <index, value>
 
-    void get_chi_k(Mesh& rho_k, const T h)
+    void get_chi_k(Mesh& rho_k)
     {/* transform input density in k-space into linear prediction for chameleon field,
         includes w(k) corrections for interpolation of particles */
         const unsigned N = rho_k.N;
         const unsigned l_half = rho_k.length/2;
-        const T mass_sq = (1-n)*chi_prefactor*pow(h, 2); // dimensionless square mass, with derivative factor
+        const T mass_sq = (1-n)*chi_prefactor/pow(2*PI, 2); // dimensionless square mass, with derivative factor k* = 2*PI / L
         const T chi_a_n = -1/(1-n); // prefactor for chi(k), in chi_a units
         
         T k2, g_k;
@@ -160,20 +161,6 @@ private:
             }
         }
     }
-
-    void get_chi_x(unsigned level = 0)
-    {/* transform dchi into chi, in chi_a units this means only 'chi = 1 + dchi' */
-        if (level >= MultiGridSolver<3, T>::get_Nlevel()) return; //< we are at the bottom level
-
-        Grid<3, T>& chi = MultiGridSolver<3, T>::get_grid(level); // guess
-        const unsigned N_tot = MultiGridSolver<3, T>::get_Ntot(level);
-
-        #pragma omp parallel for
-        for (unsigned i = 0; i < N_tot; ++i) ++chi[i];
-
-        get_chi_x(level + 1); //< recursive call to transform all levels
-    }
-
     
     bool check_surr_dens(T const* const rho_grid, std::vector<unsigned int> index_list, unsigned i, unsigned N)
     {/* internal method for finding highest density in nearby points */
@@ -191,13 +178,17 @@ private:
 public:
     ChiSolver(unsigned int N, int Nmin, const Sim_Param& sim, bool verbose = true) :
         MultiGridSolver<3, T>(N, Nmin, verbose), n(sim.chi_opt.n), chi_0(2*sim.chi_opt.beta*MPL*sim.chi_opt.phi),
+        phi_prefactor( // prefactor for Poisson equation for gravitational potential, [] = (h/Mpc)^2
+            // 4*pi*G*rho_m,0 + computing units [Mpc/h]
+            3/2.*sim.cosmo.Omega_m*pow(sim.cosmo.H0 * sim.cosmo.h / c_kms ,2)
+        ),
         chi_prefactor_0( // dimensionless prefactor to poisson equation
-        // beta*rho_m,0 / (Mpl*chi_0) + computing units; additional a^(-3 -3/(1-n)) at each timestep
-        3/2.*sim.cosmo.Omega_m*pow(sim.cosmo.H0 * sim.cosmo.h / c_kms * sim.box_opt.box_size ,2) / sim.chi_opt.phi)
+            // beta*rho_m,0 / (Mpl*chi_0) + computing units [Mpc/h]; additional a^(-3 -3/(1-n)) at each timestep
+            phi_prefactor*pow(sim.box_opt.box_size ,2) / sim.chi_opt.phi
+        ),
+        fix_vals(this->get_Nlevel())
         {
             if ((n <= 0) || (n >= 1) || (chi_0 <= 0)) throw out_of_range("invalid values of chameleon power-law potential parameters");
-
-            fix_vals.resize(this->get_Nlevel());
         }
 
     ChiSolver(unsigned int N, const Sim_Param& sim, bool verbose = true) : ChiSolver(N, 2, sim, verbose) {}
@@ -206,6 +197,9 @@ public:
     {
         chi_prefactor = chi_prefactor_0*pow(a, -3.*(2.-n)/(1.-n));
     }
+
+    T get_chi_prefactor() const { return chi_prefactor; }
+    T get_phi_prefactor() const { return phi_prefactor; }
 
     T  l_operator(const T chi_i, const unsigned int level, const std::vector<unsigned int>& index_list, const bool addsource, const T h) const 
     {/* The dicretized equation L(phi) */
@@ -465,22 +459,22 @@ public:
         }
     }
 
-    void set_linear(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B, const T h)
+    void set_linear(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B)
     {/* set chameleon guess to linear prediction */
         // get delta(k)
         fftw_execute_dft_r2c(p_F, rho);
 
         // get dchi(k)
-        get_chi_k(rho, h);
+        get_chi_k(rho);
 
         // get dchi(x)
         fftw_execute_dft_c2r(p_B, rho);
 
-        // copy dchi(x) onto MultiGrid (including 'restrict_down_all()')
-        transform_Mesh_to_Grid(rho, MultiGridSolver<3, T>::get_grid());
+        // transform dchi into chi, in chi_a units this means only 'chi = 1 + dchi' */
+        rho += 1;
 
-        // get chi(x)
-        get_chi_x();
+        // copy dchi(x) onto MultiGrid (including 'restrict_down_all()')
+        transform_Mesh_to_MultiGrid(rho, MultiGridSolver<3, T>::get_mlt_grid());
     }
 
     void set_screened(unsigned level = 0)
@@ -557,13 +551,11 @@ public:
         memory_alloc += sizeof(CHI_PREC_t)*8*(sol.get_Ntot()-1)/7;// MultiGrid<3, CHI_PREC_t> drho
 
         // SET CHI SOLVER
-        // compensate for units in which we compute laplace operator
-        const double err_mod = pow(sim.box_opt.box_size, 2);
+        
         sol.add_external_grid(&drho);
-        sol.set_convergence(err_mod*CONVERGENCE_RES, CONVERGENCE_ERR, CONVERGENCE_ERR_MIN, err_mod*CONVERGENCE_RES_MIN, CONVERGENCE_NUM_FAIL);
         sol.set_bisection_convergence(CONVERGENCE_BI_STEPS_INIT, CONVERGENCE_BI_DCHI, CONVERGENCE_BI_L);
-        sol.set_ngs_sweeps(2, 2); //< fine, coarse
-        sol.set_maxsteps(15);
+        sol.set_ngs_sweeps(3, 5); //< fine, coarse
+        sol.set_maxsteps(10);
     }
 
     // VARIABLES
@@ -578,14 +570,18 @@ public:
         // set prefactor
         sol.set_time(a, sim.cosmo);
 
+        // set convergence -- compensate for units in which we compute laplace operator
+        const double err_mod = sol.get_chi_prefactor();
+        sol.set_convergence(err_mod*CONVERGENCE_RES, CONVERGENCE_ERR, CONVERGENCE_ERR_MIN, err_mod*CONVERGENCE_RES_MIN, CONVERGENCE_NUM_FAIL);
+
         // save (over)density from particles
         cout << "Storing density distribution...\n";
         get_rho_from_par(particles, chi_force[0], sim);
-        transform_Mesh_to_Grid(chi_force[0], drho);
+        transform_Mesh_to_MultiGrid(chi_force[0], drho);
 
         // set guess from linear theory and correct unphysical values
         cout << "Setting linear guess for chameleon field...\n";
-        sol.set_linear(chi_force[0], p_F, p_B, 1/(2*PI));
+        sol.set_linear(chi_force[0], p_F, p_B);
         sol.set_screened();
 
         // get multigrid_solver runnig
@@ -595,7 +591,7 @@ public:
 
     void gen_pow_spec_binned(const Sim_Param &sim, Data_Vec<FTYPE_t,2>& pwr_spec_binned, const FFTW_PLAN_TYPE& p_F)
     {
-        transform_Grid_to_Mesh(chi_force[0], sol); // get solution
+        transform_MultiGridSolver_to_Mesh(chi_force[0], sol); // get solution
         fftw_execute_dft_r2c(p_F, chi_force[0]); // get chi(k)
         pwr_spec_k_init(chi_force[0], chi_force[0]); // get chi(k)^2, NO w_k correction
         ::gen_pow_spec_binned(sim, chi_force[0], pwr_spec_binned); // get average Pk
