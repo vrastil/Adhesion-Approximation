@@ -34,12 +34,12 @@ constexpr CHI_PREC_t SWITCH_BIS_NEW = (CHI_PREC_t)0.1;
 // convergence criteria
 constexpr double CONVERGENCE_RES = 1e-9; //< stop when total (rms) residual below
 constexpr double CONVERGENCE_RES_MIN = 1e-5; //< do not stop if solution didn`t converge below
-constexpr double CONVERGENCE_ERR = 0.95; //< stop when improvements between steps slow below
-constexpr double CONVERGENCE_ERR_MIN = 0.5; //< do not stop if solution is still improving
+constexpr double CONVERGENCE_ERR = 0.97; //< stop when improvements between steps slow below
+constexpr double CONVERGENCE_ERR_MIN = 0.7; //< do not stop if solution is still improving
 constexpr unsigned CONVERGENCE_NUM_FAIL = 3; //< stop when number of failed steps is over
-constexpr unsigned CONVERGENCE_BI_STEPS = 8; //< maximal number of steps inside bisection rootfindg method
+constexpr unsigned CONVERGENCE_BI_STEPS = 10; //< maximal number of steps inside bisection rootfindg method
 constexpr unsigned CONVERGENCE_BI_STEPS_INIT = 5; //< maximal number of steps inside bisection initialization method
-constexpr CHI_PREC_t CONVERGENCE_BI_DCHI = (CHI_PREC_t)1e-3; //< stop bisection method when chi doesn`t chanege
+constexpr CHI_PREC_t CONVERGENCE_BI_DCHI = (CHI_PREC_t)1e-2; //< stop bisection method when chi doesn`t chanege
 constexpr CHI_PREC_t CONVERGENCE_BI_L = (CHI_PREC_t)1e-2; //< stop bisection method when residual below
 
 template<typename T>
@@ -499,8 +499,8 @@ public:
         {
             if (chi[i] <= 0) // non-linear regime
             {
-                // '0' to indicate high-density region
-                chi[i] = check_surr_dens(rho_grid, index_list, i, N) ? 0 : chi_min(rho_grid[i]);
+                if (check_surr_dens(rho_grid, index_list, i, N)) chi[i] = 0; //< '0' to indicate high-density region
+                else chi[i] = rho_grid[i] > 0 ? chi_min(rho_grid[i]) : 1/2.;//< phi_s / 2 in underdense region as starting point
             }
         }
 

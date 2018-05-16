@@ -166,15 +166,15 @@ void get_grav_pot(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_
         *  phi_prefactor; // prefactor of poisson equation
 }
 
-void print_mesh(const string& file_name, const Mesh& pot)
+void print_mesh(const string& file_name, const Mesh& pot, const FTYPE_t mod = -1)
 {
     Ofstream File(file_name);
     unsigned N = pot.N;
     int ix0 = N/2, iy0 = N/2, iz0 = N/2;
 
-    auto print_r_chi = [&File, ix0, iy0, iz0,&pot]
+    auto print_r_chi = [&File, ix0, iy0, iz0,&pot, mod]
                        (int i, int j, int k){
-        File << sqrt(pow(i - ix0, 2) + pow(j - iy0, 2) + pow(k - iz0, 2)) << "\t" << pot(i, j, k) -1  << "\n";
+        File << sqrt(pow(i - ix0, 2) + pow(j - iy0, 2) + pow(k - iz0, 2)) << "\t" << pot(i, j, k) + mod  << "\n";
     };
 
     for (int i = 0; i < N - 1; ++i)
@@ -196,7 +196,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     sim.print_info();
 
     // initialize ChiSolver
-    constexpr unsigned N_min = 2;
+    constexpr unsigned N_min = 8;
     ChiSolver<CHI_PREC_t> sol(N, N_min, sim, true);
 
     // initialize overdensity -- constant density in sphere of radius R, center at x0, y0, z0
@@ -235,12 +235,12 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     // print linear predition and gravitational potential
     transform_MultiGridSolver_to_Mesh(chi_full, sol);
     print_mesh(out_dir + "lin_chi.dat", chi_full);
-    print_mesh(out_dir + "grav_pot.dat", phi_pot);
+    print_mesh(out_dir + "grav_pot.dat", phi_pot, 0);
 
     // Solve the equation -- full V-cycles
-    sol.set_ngs_sweeps(3, 3); //< fine, coarse
-    sol.set_maxsteps(1);
-    // sol.solve();
+    sol.set_ngs_sweeps(5, 15); //< fine, coarse
+    sol.set_maxsteps(30);
+    sol.solve();
 
     // print chi_full
     transform_MultiGridSolver_to_Mesh(chi_full, sol);
