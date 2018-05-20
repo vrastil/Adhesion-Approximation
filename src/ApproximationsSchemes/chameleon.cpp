@@ -36,7 +36,7 @@ constexpr double CONVERGENCE_RES = 1e-9; //< stop when total (rms) residual belo
 constexpr double CONVERGENCE_RES_MIN = 1e-5; //< do not stop if solution didn`t converge below
 constexpr double CONVERGENCE_ERR = 0.97; //< stop when improvements between steps slow below
 constexpr double CONVERGENCE_ERR_MIN = 0.7; //< do not stop if solution is still improving
-constexpr unsigned CONVERGENCE_NUM_FAIL = 3; //< stop when number of failed steps is over
+constexpr unsigned CONVERGENCE_NUM_FAIL = 5; //< stop when number of failed steps is over
 constexpr unsigned CONVERGENCE_BI_STEPS = 10; //< maximal number of steps inside bisection rootfindg method
 constexpr unsigned CONVERGENCE_BI_STEPS_INIT = 5; //< maximal number of steps inside bisection initialization method
 constexpr CHI_PREC_t CONVERGENCE_BI_DCHI = (CHI_PREC_t)1e-2; //< stop bisection method when chi doesn`t chanege
@@ -168,7 +168,7 @@ private:
         if (rho_grid[i] <= 0) return false;
 
         // check surrounding points if theres is higher density
-        MultiGridSolver<3, T>::get_neighbor_gridindex(index_list, i, N);
+        this->get_neighbor_gridindex(index_list, i, N);
         for(unsigned i_s : index_list) if (rho_grid[i_s] > rho_grid[i]) return false;
 
         // if current point has the highest density, fix chameleon value
@@ -205,8 +205,8 @@ public:
     {/* The dicretized equation L(phi) */
         // Solution and pde-source grid at current level
         const unsigned int i = index_list[0];
-        T const* const chi = MultiGridSolver<3, T>::get_y(level); // solution
-        const T rho = MultiGridSolver<3,T>::get_external_field(level, 0)[i];
+        T const* const chi = this->get_y(level); // solution
+        const T rho = this->get_external_field(level, 0)[i];
         
         // do not change values in screened regions
         if (rho == MARK_CHI_BOUND_COND) return 0;
@@ -220,7 +220,7 @@ public:
         for(auto it = index_list.begin() + 1; it < index_list.end(); ++it) kinetic += chi[*it];
 
         // source term arising rom restricting the equation down to the lower level
-        if( level > 0 && addsource ) source += MultiGridSolver<3, T>::get_multigrid_source(level, i);
+        if( level > 0 && addsource ) source += this->get_multigrid_source(level, i);
 
         // The discretized equation of motion L_{ijk...}(phi) = 0
         return kinetic/(h*h) - source;
@@ -230,7 +230,7 @@ public:
     {/* The dicretized equation L(phi) */
         // Solution and pde-source grid at current level
         const unsigned int i = index_list[0];
-        T const* const chi = MultiGridSolver<3, T>::get_y(level); // solution
+        T const* const chi = this->get_y(level); // solution
         const T chi_i = chi[i];
         return l_operator(chi_i, level, index_list, addsource, h);
     }
@@ -239,7 +239,7 @@ public:
     T dl_operator(const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const override
     {
         // solution
-        const T chi = MultiGridSolver<3, T>::get_y(level)[ index_list[0] ];
+        const T chi = this->get_y(level)[ index_list[0] ];
 
         // Derivative of source
         const T dsource = chi_prefactor*(1-n)*pow(chi, n-2);
@@ -260,7 +260,7 @@ public:
             if (f2 <= 0)
             {
                 const unsigned i = index_list[0];
-                const T rho = MultiGridSolver<3,T>::get_external_field(level, 0)[i];
+                const T rho = this->get_external_field(level, 0)[i];
 
                 f2 = chi_min(rho);
                 j = CONVERGENCE_BI_STEPS_INIT;//< end of loop but first check for an improvement
@@ -339,10 +339,10 @@ public:
         check for unphysical values */
 
         const unsigned Ntot  = f.get_Ntot();
-        const T * const rho = MultiGridSolver<3,T>::get_external_field(level, 0);
+        const T * const rho = this->get_external_field(level, 0);
 
         // bisection variables
-        const unsigned int N = MultiGridSolver<3, T>::get_N(level);
+        const unsigned int N = this->get_N(level);
         const T h = 1.0/T( N );
         std::vector<unsigned int> index_list;
         
@@ -353,7 +353,7 @@ public:
             if (rho[i] == MARK_CHI_BOUND_COND) continue;
             else if (abs(corr[i]/f[i]) < SWITCH_BIS_NEW) f[i] += corr[i];
             else{
-                MultiGridSolver<3, T>::get_neighbor_gridindex(index_list, i, N);
+                this->get_neighbor_gridindex(index_list, i, N);
                 T l =  l_operator(level, index_list, true, h);
                 f[i] = bisection(f[i], l, corr[i], level, index_list, h);
             }   
@@ -362,14 +362,14 @@ public:
 
     bool check_convergence() override
     {/* Criterion for defining convergence */
-        // bring variables from MultiGridSolver<3, T>:: namespace here
-        const double _rms_res_i = MultiGridSolver<3, T>::_rms_res_i;
-        const double _rms_res = MultiGridSolver<3, T>::_rms_res;
-        const double _rms_res_old = MultiGridSolver<3, T>::_rms_res_old;
-        const double _verbose = MultiGridSolver<3, T>::_verbose;
-        const double _istep_vcycle = MultiGridSolver<3, T>::_istep_vcycle;
-        const double _eps_converge = MultiGridSolver<3, T>::_eps_converge;
-        const double _maxsteps = MultiGridSolver<3, T>::_maxsteps;
+        // bring variables from this-> namespace here
+        const double _rms_res_i = this->_rms_res_i;
+        const double _rms_res = this->_rms_res;
+        const double _rms_res_old = this->_rms_res_old;
+        const double _verbose = this->_verbose;
+        const double _istep_vcycle = this->_istep_vcycle;
+        const double _eps_converge = this->_eps_converge;
+        const double _maxsteps = this->_maxsteps;
 
         // Compute ratio of residual to previous residual
         double err = _rms_res_old != 0.0 ? _rms_res/_rms_res_old : 0.0;
@@ -392,7 +392,16 @@ public:
                                 << " err = " << err << " > 1" << " num(err > 1) = " << m_conv_stop << "\n";
             m_conv_stop++;
         } else if(err > m_err_stop){ // convergence too slow
-            if (_rms_res > m_rms_stop_min) m_conv_stop++;
+            if (_rms_res > m_rms_stop_min)
+            {
+                m_conv_stop++;
+                if (m_conv_stop >= m_num_fail){
+                    std::cout << "\n    The solution stopped converging num(err > 1)  = " << m_conv_stop
+                            << " res = " << _rms_res << " > " << _eps_converge  << " ) istep = " << _istep_vcycle << "\n\n";
+                    converged = true;
+
+                }
+            }
             else{
                 std::cout << "\n    The solution stopped converging fast enough err = " << err << " > " << m_err_stop
                         << " ( res = " << _rms_res << " ) istep = " << _istep_vcycle << "\n\n";
@@ -427,7 +436,7 @@ public:
 
     void set_convergence(double eps, double err_stop, double err_stop_min, double rms_stop_min, unsigned num_fail)
     {
-        MultiGridSolver<3, T>::set_epsilon(eps);
+        this->set_epsilon(eps);
         m_err_stop = err_stop;
         m_err_stop_min = err_stop_min;
         m_rms_stop_min = rms_stop_min;
@@ -452,12 +461,12 @@ public:
     void set_bulk_field()
     {
         if (!chi_prefactor) throw out_of_range("invalid value of scale factor");
-        if (!MultiGridSolver<3, T>::get_external_field_size()) throw out_of_range("overdensity not set"); 
+        if (!this->get_external_field_size()) throw out_of_range("overdensity not set"); 
         cout << "Setting initial guess for chameleon field...\n";
 
-        T* const f = MultiGridSolver<3, T>::get_y(); // initial guess
-        T const* const rho = MultiGridSolver<3,T>::get_external_field(0, 0); // overdensity
-        const unsigned N_tot = MultiGridSolver<3, T>::get_Ntot();
+        T* const f = this->get_y(); // initial guess
+        T const* const rho = this->get_external_field(0, 0); // overdensity
+        const unsigned N_tot = this->get_Ntot();
 
         #pragma omp parallel for
         for (unsigned i = 0; i < N_tot; ++i)
@@ -466,8 +475,11 @@ public:
         }
     }
 
-    void set_linear(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B)
-    {/* set chameleon guess to linear prediction */
+    void set_linear_sol_at_level(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B, unsigned level)
+    {/* set chameleon guess to linear prediction at specific level */
+        // check we have the right grids
+        if (this->get_N(level) != rho.N) throw std::range_error("Mesh of a different size than Grid at current level!");
+
         // get delta(k)
         fftw_execute_dft_r2c(p_F, rho);
 
@@ -480,18 +492,51 @@ public:
         // transform dchi into chi, in chi_a units this means only 'chi = 1 + dchi' */
         rho += 1;
 
-        // copy dchi(x) onto MultiGrid (including 'restrict_down_all()')
-        transform_Mesh_to_MultiGrid(rho, MultiGridSolver<3, T>::get_mlt_grid());
+        // copy dchi(x) onto Grid at level
+        transform_Mesh_to_Grid(rho, this->get_grid(level));
+    }
+
+    void set_linear_recursively(unsigned level)
+    {
+        // we are at the bottom level
+        if (level >= this->get_Nlevel()) return;
+
+        // extract parameters
+        const unsigned N = this->get_N(level);
+
+        // create temporary Mesh to compute linear potential, copy density
+        Mesh rho(N);
+        transform_Grid_to_Mesh(rho, this->get_external_grid(level, 0));
+
+        // initialize FFTW
+        const FFTW_PLAN_TYPE p_F = FFTW_PLAN_R2C(N, N, N, rho.real(), rho.complex(), FFTW_ESTIMATE);
+        const FFTW_PLAN_TYPE p_B = FFTW_PLAN_C2R(N, N, N, rho.complex(), rho.real(), FFTW_ESTIMATE);
+
+        // set linear prediction
+        set_linear_sol_at_level(rho, p_F, p_B, level);
+
+        // solve linear prediction for the next level
+        set_linear_recursively(level + 1);
+    }
+
+    void set_linear(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B)
+    {/* set chameleon guess to linear prediction */
+
+        // solve level = 0, use already allocated space and created plans
+        set_linear_sol_at_level(rho, p_F, p_B, 0);
+
+        // recursively solve at level > 0, create new grids and plans (small)
+        set_linear_recursively(1);
     }
 
     void set_screened(unsigned level = 0)
     {/* check solution for invalid values (non-linear regime), fix values in high density regions, try to improve guess in others */
-        if (level >= MultiGridSolver<3, T>::get_Nlevel()) return; //< we are at the bottom level
+        if (level >= this->get_Nlevel()) return; //< we are at the bottom level
 
-        Grid<3, T>& chi = MultiGridSolver<3, T>::get_grid(level); // guess
-        const unsigned N_tot = MultiGridSolver<3, T>::get_Ntot(level);
-        const unsigned N = MultiGridSolver<3, T>::get_N(level);
-        T* const rho_grid = MultiGridSolver<3,T>::get_external_field(level, 0); // overdensity
+        Grid<3, T>& chi = this->get_grid(level); // guess
+        const unsigned N_tot = this->get_Ntot(level);
+        const unsigned N = this->get_N(level);
+        T* const rho_grid = this->get_external_field(level, 0); // overdensity
         std::vector<unsigned int> index_list;
 
         #pragma omp parallel for private(index_list)

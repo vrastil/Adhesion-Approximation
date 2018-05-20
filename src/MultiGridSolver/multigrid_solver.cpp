@@ -624,26 +624,6 @@ void MultiGridSolver<NDIM,T>::recursive_go_down(unsigned int from_level){
 }
 
 template<unsigned int NDIM, typename T>
-T MultiGridSolver<NDIM,T>::get_multigrid_source(unsigned int level, unsigned int i) const{
-  return _source[level][i]; 
-}
-
-template<unsigned int NDIM, typename T>
-T* MultiGridSolver<NDIM,T>::get_external_field(unsigned int level, unsigned int field){ 
-  return _ext_field[field]->get_y(level);
-}
-
-template<unsigned int NDIM, typename T>
-T const* const MultiGridSolver<NDIM,T>::get_external_field(unsigned int level, unsigned int field) const{ 
-  return _ext_field[field]->get_y(level);
-}
-
-template<unsigned int NDIM, typename T>
-size_t MultiGridSolver<NDIM,T>::get_external_field_size() const{ 
-  return _ext_field.size();
-}
-
-template<unsigned int NDIM, typename T>
 void  MultiGridSolver<NDIM,T>::clear() {
   _N = _Ntot = _Nlevel = 0;
   _f.clear();

@@ -111,6 +111,8 @@ public:
     MultiGridSolver(unsigned int N, bool verbose) : MultiGridSolver(N, 2, verbose) {}
     MultiGridSolver(unsigned int N, unsigned int Nmin, bool verbose);
 
+    unsigned get_istep() const { return _istep_vcycle; };
+
     // Get a pointer to the solution array / grid
     T *get_y(unsigned int level = 0);
     T const* const get_y(unsigned int level = 0) const;
@@ -122,12 +124,16 @@ public:
     const MultiGrid<NDIM, T> &get_mlt_grid(unsigned int level = 0) const { return _f; };
 
     // Fetch values in externally added fields
-    T* get_external_field(unsigned int level, unsigned int field);
-    T const* const get_external_field(unsigned int level, unsigned int field) const;
-    size_t get_external_field_size() const;
+    T* get_external_field(unsigned int level, unsigned int field) { return _ext_field[field]->get_y(level); };
+    T const* const get_external_field(unsigned int level, unsigned int field) const { return _ext_field[field]->get_y(level); };
+
+    Grid<NDIM, T> &get_external_grid(unsigned int level, unsigned field) { return _ext_field[field]->get_grid(level); };
+    const Grid<NDIM, T> &get_external_grid(unsigned int level, unsigned field) const { return _ext_field[field]->get_grid(level); };
+
+    size_t get_external_field_size() const { return _ext_field.size(); };
     
     // Get values of the multigrid-source used to store the restricted residual during the solve step
-    T get_multigrid_source(unsigned int level, unsigned int i) const;
+    T get_multigrid_source(unsigned int level, unsigned int i) const { return _source[level][i]; };
 
     // Set precision parameters
     void set_epsilon(double eps_converge);
