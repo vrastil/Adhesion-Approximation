@@ -7,7 +7,6 @@
 #include "stdafx.h"
 #include <ccl_config.h>
 #include <ccl_core.h>
-#include <json.hpp>
 #include <map>
 #include "precision.hpp"
 
@@ -158,19 +157,3 @@ public:
     FTYPE_t x_0_pwr() const{return box_opt.box_size/box_opt.mesh_num_pwr;}
     bool simulate() { return run_opt.simulate(); }
 };
-
-// interaction with json files
-
-void to_json(nlohmann::json&, const Cosmo_Param&);
-void to_json(nlohmann::json&, const Box_Opt&);
-void to_json(nlohmann::json&, const Integ_Opt&);
-void to_json(nlohmann::json&, const App_Opt&);
-void to_json(nlohmann::json&, const Run_Opt&);
-void to_json(nlohmann::json&, const Out_Opt&);
-
-void from_json(const nlohmann::json&, Box_Opt&);
-void from_json(const nlohmann::json&, Integ_Opt&);
-void from_json(const nlohmann::json&, App_Opt&);
-void from_json(const nlohmann::json&, Run_Opt&);
-void from_json(const nlohmann::json&, Out_Opt&);
-void from_json(const nlohmann::json&, Cosmo_Param&);

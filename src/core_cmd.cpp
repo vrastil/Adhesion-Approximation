@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include <boost/any.hpp>
 #include <boost/program_options.hpp>
+#include <iomanip>
 #include <fstream>
 #include "core_cmd.h"
 

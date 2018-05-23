@@ -5,9 +5,13 @@
 #pragma once
 #include <gsl/gsl_odeiv2.h>
 #include <gsl/gsl_spline.h>
-#include "templates/class_data_vec.hpp"
-#include "params.hpp"
 #include "precision.hpp"
+
+/* FORWARD DECLARATIONS */
+class Cosmo_Param;
+class Sim_Param;
+template <typename T, unsigned N>
+class Data_Vec;
 
 void norm_pwr(Cosmo_Param& cosmo);
 FTYPE_t norm_growth_factor(const Cosmo_Param& cosmo);

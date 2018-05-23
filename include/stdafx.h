@@ -7,6 +7,7 @@
 
 #include <cmath>
 #include <fftw3.h>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>

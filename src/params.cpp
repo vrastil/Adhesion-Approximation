@@ -9,12 +9,32 @@
 #include "core_out.h"
 #include "core_mesh.h"
 #include "core_power.h"
+#include <json.hpp>
 
 using namespace std;
 using json = nlohmann::json;
 
+namespace{///< anonymous namespace
+
+// interaction with json files
+void to_json(json&, const Cosmo_Param&);
+void to_json(json&, const Box_Opt&);
+void to_json(json&, const Integ_Opt&);
+void to_json(json&, const App_Opt&);
+void to_json(json&, const Run_Opt&);
+void to_json(json&, const Out_Opt&);
+void to_json(json&, const Test_Opt&);
+
+void from_json(const json&, Cosmo_Param&);
+void from_json(const json&, Box_Opt&);
+void from_json(const json&, Integ_Opt&);
+void from_json(const json&, App_Opt&);
+void from_json(const json&, Run_Opt&);
+void from_json(const json&, Out_Opt&);
+void from_json(const json&, Test_Opt&);
+
 // convert to pyccl transfer_function_types keys
-static const map<string, transfer_function_t> transfer_function_method = {
+const map<string, transfer_function_t> transfer_function_method = {
     {"emulator", ccl_emulator},
     {"eisenstein_hu", ccl_eisenstein_hu},
     {"bbks", ccl_bbks},
@@ -22,20 +42,20 @@ static const map<string, transfer_function_t> transfer_function_method = {
     {"boltzmann_camb", ccl_boltzmann_camb}
 };
 // convert to pyccl matter_power_spectrum_types keys
-static const map<string, matter_power_spectrum_t> matter_power_spectrum_method = {
+const map<string, matter_power_spectrum_t> matter_power_spectrum_method = {
     {"linear", ccl_linear},
     {"halofit", ccl_halofit},
     {"halo_model", ccl_halo_model}
 };
 // convert to pyccl mass_function_types keys
-static const map<string, mass_function_t> mass_function_method = {
+const map<string, mass_function_t> mass_function_method = {
     {"tinker", ccl_tinker},
     {"tinker10", ccl_tinker10},
     {"watson", ccl_watson},
     {"angulo", ccl_angulo}
 };
 // convert to pyccl baryons_power_spectrum keys
-static const map<string, baryons_power_spectrum_t> baryons_power_spectrum_method = {
+const map<string, baryons_power_spectrum_t> baryons_power_spectrum_method = {
     {"nobaryons", ccl_nobaryons},
     {"bcm", ccl_bcm}
 };
@@ -44,11 +64,13 @@ static const map<string, baryons_power_spectrum_t> baryons_power_spectrum_method
  * return first occurence of 'value' in std::map
  */
 template<typename T, typename U>
-static T find_value(const std::map<T, U>& map, const U& value)
+T find_value(const std::map<T, U>& map, const U& value)
 {
     for(auto x : map) if (x.second == value) return x.first;
     throw std::out_of_range("Value not found");
 }
+
+} ///< end of anonymous namespace
 
 /**
  * @class:	Cosmo_Param
@@ -252,6 +274,7 @@ void Sim_Param::print_info(string out, string app) const
             {"app", app}
         };
         if (comp_app.chi) j["chi_opt"] = chi_opt;
+        if (app == "test") j["test_opt"] = test_opt;
 
         o << setw(2) << j << endl;
         o.close();
@@ -420,4 +443,22 @@ void from_json(const json& j, Chi_Opt& chi_opt)
     chi_opt.beta = j.at("beta").get<FTYPE_t>();
     chi_opt.n = j.at("n").get<FTYPE_t>();
     chi_opt.phi = j.at("phi").get<FTYPE_t>();
+}
+
+void to_json(json& j, const Test_Opt& test_opt)
+{
+    j = json{
+        {"R_sphere", test_opt.R_sphere},
+        {"rho_sphere", test_opt.rho_sphere},
+        {"N_grid", test_opt.N_grid},
+        {"N_min", test_opt.N_min}
+    };
+}
+
+void from_json(const json& j, Test_Opt& test_opt)
+{
+    test_opt.R_sphere = j.at("R_sphere").get<FTYPE_t>();
+    test_opt.rho_sphere = j.at("rho_sphere").get<FTYPE_t>();
+    test_opt.N_grid = j.at("N_grid").get<FTYPE_t>();
+    test_opt.N_min = j.at("N_min").get<FTYPE_t>();
 }

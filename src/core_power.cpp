@@ -1,10 +1,13 @@
+#include "core_power.h"
+#include "templates/class_data_vec.hpp"
+#include "params.hpp"
+
 #include <ccl_background.h>
 #include <ccl_power.h>
 #include <gsl/gsl_deriv.h>
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_fit.h>
 #include <gsl/gsl_integration.h>
-#include "core_power.h"
 
 using namespace std;
 

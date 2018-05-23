@@ -5,6 +5,8 @@
 #include "integration.hpp"
 #include "params.hpp"
 
+#include <algorithm>
+
 namespace {
 const FTYPE_t ACC = 1e-10;
 const FTYPE_t log_acc = log(ACC);

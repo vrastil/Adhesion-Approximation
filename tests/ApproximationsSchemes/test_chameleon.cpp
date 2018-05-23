@@ -202,7 +202,6 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     Sim_Param sim(1, argv);
     const unsigned N = sim.test_opt.N_grid;
     const unsigned N_min = sim.test_opt.N_min;
-    sim.print_info();
 
     // initialize ChiSolver
     ChiSolver<CHI_PREC_t> sol(N, N_min, sim, true);
@@ -238,8 +237,9 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
 
     // create directory structure
     std::string out_dir = sim.out_opt.out_dir + "test_ChiSolver/";
-    remove_dir(out_dir);
+    remove_all_files(out_dir);
     create_dir(out_dir);
+    sim.print_info(out_dir, "test");
 
     // print gravitational potential
     print_mesh(out_dir + "grav_pot.dat", phi_pot, 0);
