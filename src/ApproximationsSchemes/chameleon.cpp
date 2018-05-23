@@ -29,7 +29,7 @@ constexpr FTYPE_t c_kms = (FTYPE_t)299792.458;
 constexpr CHI_PREC_t MARK_CHI_BOUND_COND =  (CHI_PREC_t)-2;
 
 // when the relative change in solution is less than this, use Newton`s method. Bisection method otherwise
-constexpr CHI_PREC_t SWITCH_BIS_NEW = (CHI_PREC_t)0.1;
+constexpr CHI_PREC_t SWITCH_BIS_NEW = (CHI_PREC_t)0.6;
 
 // convergence criteria
 constexpr double CONVERGENCE_RES = 1e-9; //< stop when total (rms) residual below
@@ -37,8 +37,8 @@ constexpr double CONVERGENCE_RES_MIN = 1e-5; //< do not stop if solution didn`t 
 constexpr double CONVERGENCE_ERR = 0.97; //< stop when improvements between steps slow below
 constexpr double CONVERGENCE_ERR_MIN = 0.7; //< do not stop if solution is still improving
 constexpr unsigned CONVERGENCE_NUM_FAIL = 5; //< stop when number of failed steps is over
-constexpr unsigned CONVERGENCE_BI_STEPS = 10; //< maximal number of steps inside bisection rootfindg method
-constexpr unsigned CONVERGENCE_BI_STEPS_INIT = 5; //< maximal number of steps inside bisection initialization method
+constexpr unsigned CONVERGENCE_BI_STEPS = 5; //< maximal number of steps inside bisection rootfindg method
+constexpr unsigned CONVERGENCE_BI_STEPS_INIT = 3; //< maximal number of steps inside bisection initialization method
 constexpr CHI_PREC_t CONVERGENCE_BI_DCHI = (CHI_PREC_t)1e-2; //< stop bisection method when chi doesn`t chanege
 constexpr CHI_PREC_t CONVERGENCE_BI_L = (CHI_PREC_t)1e-2; //< stop bisection method when residual below
 

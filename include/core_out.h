@@ -37,7 +37,9 @@ public:
 std::string currentDateTime();
 std::string std_out_dir(std::string pre_subdir, const Sim_Param &sim);
 
-void create_dir(std::string out_dir);
+void create_dir(const std::string& out_dir);
+void remove_dir(const std::string &out_dir);
+void remove_all_files(const std::string &out_dir);
 
 void print_pow_spec(const Data_Vec<FTYPE_t, 2> &pwr_spec_binned, std::string out_dir, std::string suffix);
 void print_vel_pow_spec(const Data_Vec<FTYPE_t, 2> &pwr_spec_binned, std::string out_dir, std::string suffix);

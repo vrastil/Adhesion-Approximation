@@ -49,12 +49,38 @@ string std_out_dir(string pre_subdir, const Sim_Param &sim)
            to_string(sim.box_opt.Ng) + "p_" + to_string(sim.box_opt.mesh_num_pwr) +"M_" + to_string((int)sim.box_opt.box_size) + "b/";
 }
 
-void create_dir(string out_dir)
+void create_dir(const string &out_dir)
 {
-	fs::path dir(out_dir.c_str());
-	if(fs::create_directories(dir)){
-        cout << "Directory Created: "<< out_dir << "\n";
+	const fs::path dir(out_dir.c_str());
+	if(fs::create_directories(dir))
+    {
+        cout << "Directory created: "<< out_dir << "\n";
     }
+}
+
+void remove_dir(const string &out_dir)
+{
+    const fs::path dir(out_dir.c_str());
+    if (fs::remove_all(dir))
+    {
+        cout << "Directory removed: "<< out_dir << "\n";
+    }
+}
+
+void remove_all_files(const string &out_dir)
+{
+    const fs::path dir(out_dir.c_str());
+    unsigned i = 0;
+
+    for(auto & p : fs::directory_iterator(dir))
+    {
+        if (fs::is_regular_file(p))
+        {
+            fs::remove(p);
+            ++i;
+        }
+    }
+    cout << "Removed " << i << " file(s) in directory: "<< out_dir << "\n";
 }
 
 template <class T>

@@ -236,8 +236,9 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     // full solution on Mesh
     Mesh chi_full(N);
 
-    // create directory structure and open file
+    // create directory structure
     std::string out_dir = sim.out_opt.out_dir + "test_ChiSolver/";
+    remove_dir(out_dir);
     create_dir(out_dir);
 
     // print gravitational potential
@@ -248,7 +249,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     
     int istep = 0;
     constexpr unsigned step_per_iter = 5;
-    while(1)
+    while(0)
     {
         // istep, max_step (use int for the last iteration -- negative max_step)
         istep += sol.get_istep();
