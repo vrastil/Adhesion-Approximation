@@ -451,7 +451,8 @@ void to_json(json& j, const Test_Opt& test_opt)
         {"R_sphere", test_opt.R_sphere},
         {"rho_sphere", test_opt.rho_sphere},
         {"N_grid", test_opt.N_grid},
-        {"N_min", test_opt.N_min}
+        {"N_min", test_opt.N_min},
+        {"rho_b", test_opt.rho_b}
     };
 }
 
@@ -459,6 +460,7 @@ void from_json(const json& j, Test_Opt& test_opt)
 {
     test_opt.R_sphere = j.at("R_sphere").get<FTYPE_t>();
     test_opt.rho_sphere = j.at("rho_sphere").get<FTYPE_t>();
-    test_opt.N_grid = j.at("N_grid").get<FTYPE_t>();
-    test_opt.N_min = j.at("N_min").get<FTYPE_t>();
+    test_opt.N_grid = j.at("N_grid").get<unsigned>();
+    test_opt.N_min = j.at("N_min").get<unsigned>();
+    test_opt.rho_b = j.at("rho_b").get<FTYPE_t>();
 }

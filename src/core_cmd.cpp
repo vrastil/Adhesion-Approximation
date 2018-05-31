@@ -122,9 +122,11 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
         ("rho_sphere", po::value<FTYPE_t>(&sim.test_opt.rho_sphere)->default_value(2.7, "1.0"), "density  of a sphere sitting in a vacuum")
         ("N_grid", po::value<unsigned>(&sim.test_opt.N_grid)->default_value(64, "64"), "finest grid size")
         ("N_min", po::value<unsigned>(&sim.test_opt.N_min)->default_value(2, "2"), "coarsest grid size")
+        ("step_per_iter", po::value<unsigned>(&sim.test_opt.step_per_iter)->default_value(5, "5"), "print chameleon results after X steps")
         ("fine_sweeps", po::value<unsigned>(&sim.test_opt.fine_sweeps)->default_value(3, "3"), "number of sweeps on fine grid")
         ("coarse_sweeps", po::value<unsigned>(&sim.test_opt.coarse_sweeps)->default_value(3, "3"), "number of sweeps on coarse grids")
         ("max_steps", po::value<unsigned>(&sim.test_opt.max_steps)->default_value(1, "1"), "max number of V-cycles")
+        ("verbose", po::value<bool>(&sim.test_opt.verbose)->default_value(true, "true"), "verbosity")
         ;
 
 

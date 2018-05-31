@@ -103,9 +103,14 @@ struct Run_Opt {
 
 /* TEST */
 struct Test_Opt {
+    /* cmd args */
     FTYPE_t R_sphere, rho_sphere;
-    unsigned fine_sweeps, coarse_sweeps, max_steps;
+    unsigned fine_sweeps, coarse_sweeps, max_steps, step_per_iter;
     unsigned N_grid, N_min;
+    bool verbose;
+
+    /* derived param*/
+    FTYPE_t rho_b;
 };
 
 // define Range outside because of SWIG

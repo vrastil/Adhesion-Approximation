@@ -30,7 +30,7 @@ void get_neighbor_gridindex(std::vector<unsigned int>& index_list, unsigned int 
     }
 }
 
-void init_overdensity(const Sim_Param& sim, Mesh& rho, MultiGrid<3, CHI_PREC_t>& rho_grid)
+void init_overdensity(Sim_Param& sim, Mesh& rho, MultiGrid<3, CHI_PREC_t>& rho_grid)
 {
     const unsigned N = sim.test_opt.N_grid;
     const FTYPE_t R = sim.test_opt.R_sphere;
@@ -55,6 +55,9 @@ void init_overdensity(const Sim_Param& sim, Mesh& rho, MultiGrid<3, CHI_PREC_t>&
         }
     }
     mean_rho = mean(rho);
+
+    if (mean_rho > 1) throw out_of_range("invalid values of sphere parameters (overdensity: " + to_string(-mean_rho) + " < -1)");
+
     rho -= mean_rho;
     transform_Mesh_to_MultiGrid(rho, rho_grid);
 
@@ -62,6 +65,9 @@ void init_overdensity(const Sim_Param& sim, Mesh& rho, MultiGrid<3, CHI_PREC_t>&
     REQUIRE( mean(rho) == Approx(0.) );
     REQUIRE( rho(ix0, iy0, iz0) == Approx(rho_0 - mean_rho) );
     REQUIRE( rho(0, 0, 0) == Approx(-mean_rho) );
+
+    // update background underdensity
+    sim.test_opt.rho_b = -mean_rho;
 }
 
 void get_grav_pot(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B, FTYPE_t box_size, FTYPE_t phi_prefactor)
@@ -202,9 +208,10 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     Sim_Param sim(1, argv);
     const unsigned N = sim.test_opt.N_grid;
     const unsigned N_min = sim.test_opt.N_min;
+    const bool verbose = sim.test_opt.verbose;
 
     // initialize ChiSolver
-    ChiSolver<CHI_PREC_t> sol(N, N_min, sim, true);
+    ChiSolver<CHI_PREC_t> sol(N, N_min, sim, verbose);
 
     // initialize overdensity -- constant density in sphere of radius R, center at x0, y0, z0
     MultiGrid<3, CHI_PREC_t> rho_grid(N);
@@ -223,6 +230,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     sol.set_time(1, sim.cosmo);
     sol.set_def_convergence();
     sol.add_external_grid(&rho_grid);
+    sol.set_ngs_sweeps(sim.test_opt.fine_sweeps, sim.test_opt.coarse_sweeps); //< fine, coarse
 
     // compute gravitational potential
     Mesh phi_pot(rho); //< copy density
@@ -245,11 +253,11 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     print_mesh(out_dir + "grav_pot.dat", phi_pot, 0);
 
     // Solve the equation -- full V-cycles
-    sol.set_ngs_sweeps(sim.test_opt.fine_sweeps, sim.test_opt.coarse_sweeps); //< fine, coarse
+    std::cout << "Starting V-cycles with intermediate output...\n";
     
     int istep = 0;
-    constexpr unsigned step_per_iter = 5;
-    while(0)
+    const unsigned step_per_iter = sim.test_opt.step_per_iter;
+    while(1)
     {
         // istep, max_step (use int for the last iteration -- negative max_step)
         istep += sol.get_istep();
