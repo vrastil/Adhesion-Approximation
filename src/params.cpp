@@ -16,23 +16,6 @@ using json = nlohmann::json;
 
 namespace{///< anonymous namespace
 
-// interaction with json files
-void to_json(json&, const Cosmo_Param&);
-void to_json(json&, const Box_Opt&);
-void to_json(json&, const Integ_Opt&);
-void to_json(json&, const App_Opt&);
-void to_json(json&, const Run_Opt&);
-void to_json(json&, const Out_Opt&);
-void to_json(json&, const Test_Opt&);
-
-void from_json(const json&, Cosmo_Param&);
-void from_json(const json&, Box_Opt&);
-void from_json(const json&, Integ_Opt&);
-void from_json(const json&, App_Opt&);
-void from_json(const json&, Run_Opt&);
-void from_json(const json&, Out_Opt&);
-void from_json(const json&, Test_Opt&);
-
 // convert to pyccl transfer_function_types keys
 const map<string, transfer_function_t> transfer_function_method = {
     {"emulator", ccl_emulator},
@@ -71,6 +54,186 @@ T find_value(const std::map<T, U>& map, const U& value)
 }
 
 } ///< end of anonymous namespace
+
+// interaction with json files
+void to_json(json& j, const Cosmo_Param& cosmo)
+{
+    j = json{
+        {"A", cosmo.A},
+        {"index", cosmo.ns},
+        {"sigma8", cosmo.sigma8},
+        {"smoothing_k", cosmo.k2_G},
+        {"Omega_c", cosmo.Omega_c()},
+        {"Omega_b", cosmo.Omega_b},
+        {"Omega_m", cosmo.Omega_m},
+        {"h", cosmo.h}
+    };
+    
+    j["transfer_function_method"] = find_value(transfer_function_method, cosmo.config.transfer_function_method);
+    j["matter_power_spectrum_method"] = find_value(matter_power_spectrum_method, cosmo.config.matter_power_spectrum_method);
+    j["mass_function_method"] = find_value(mass_function_method, cosmo.config.mass_function_method);
+    j["baryons_power_spectrum_method"] = find_value(baryons_power_spectrum_method, cosmo.config.baryons_power_spectrum_method);
+}
+
+void from_json(const json& j, Cosmo_Param& cosmo)
+{
+    cosmo.A = j.at("A").get<FTYPE_t>();
+    cosmo.ns = j.at("index").get<FTYPE_t>();
+    cosmo.sigma8 = j.at("sigma8").get<FTYPE_t>();
+    cosmo.k2_G = j.at("smoothing_k").get<FTYPE_t>();
+    cosmo.Omega_b = j.at("Omega_b").get<FTYPE_t>();
+    cosmo.Omega_m = j.at("Omega_m").get<FTYPE_t>();
+    cosmo.h = j.at("h").get<FTYPE_t>();
+    cosmo.H0 = cosmo.h * 100;
+    
+    string tmp;
+    try{
+        tmp = j.at("transfer_function_method").get<string>();
+        cosmo.config.transfer_function_method = transfer_function_method.at(tmp);
+    }catch(const out_of_range& oor){
+        cosmo.config.transfer_function_method = ccl_boltzmann_class;
+    }
+    try{
+        tmp = j.at("matter_power_spectrum_method").get<string>();
+        cosmo.config.matter_power_spectrum_method = matter_power_spectrum_method.at(tmp);
+    }catch(const out_of_range& oor){
+        cosmo.config.matter_power_spectrum_method = ccl_halofit;
+    }
+    try{
+        tmp = j.at("mass_function_method").get<string>();
+        cosmo.config.mass_function_method = mass_function_method.at(tmp);
+    }catch(const out_of_range& oor){
+        cosmo.config.mass_function_method = ccl_tinker10;
+    }
+    try{
+        tmp = j.at("baryons_power_spectrum_method").get<string>();
+        cosmo.config.baryons_power_spectrum_method = baryons_power_spectrum_method.at(tmp);
+    }catch(const out_of_range& oor){
+        cosmo.config.baryons_power_spectrum_method = ccl_nobaryons;
+    }
+    cosmo.init();
+}
+
+void to_json(json& j, const Box_Opt& box_opt)
+{
+    j = json{
+        {"mesh_num", box_opt.mesh_num},
+        {"mesh_num_pwr", box_opt.mesh_num_pwr},
+        {"Ng", box_opt.Ng},
+        {"par_num", box_opt.par_num_1d},
+        {"box_size", box_opt.box_size}
+    };
+}
+
+void from_json(const json& j, Box_Opt& box_opt)
+{
+    box_opt.mesh_num = j.at("mesh_num").get<unsigned>();
+    box_opt.mesh_num_pwr = j.at("mesh_num_pwr").get<unsigned>();
+    box_opt.par_num_1d = j.at("par_num").get<unsigned>();
+    box_opt.box_size = j.at("box_size").get<FTYPE_t>();
+
+    box_opt.init();
+}
+
+void to_json(json& j, const Integ_Opt& integ_opt)
+{
+    j = json{
+        {"redshift", integ_opt.z_in},
+        {"redshift_0", integ_opt.z_out},
+        {"time_step", integ_opt.db}
+    };
+}
+
+void from_json(const json& j, Integ_Opt& integ_opt)
+{
+    integ_opt.z_in = j.at("redshift").get<FTYPE_t>();
+    integ_opt.z_out = j.at("redshift_0").get<FTYPE_t>();
+    integ_opt.db = j.at("time_step").get<FTYPE_t>();
+
+    integ_opt.init();
+}
+
+void to_json(json& j, const App_Opt& app_opt)
+{
+    j = json{
+        {"viscosity", app_opt.nu_dim},
+        {"cut_radius", app_opt.rs}
+    };
+}
+
+void from_json(const json& j, App_Opt& app_op)
+{
+    app_op.nu_dim = j.at("viscosity").get<FTYPE_t>();
+    app_op.nu = app_op.nu_dim;
+    app_op.rs = j.at("cut_radius").get<FTYPE_t>();
+}
+
+void to_json(json& j, const Run_Opt& run_opt)
+{
+    j = json{
+        {"num_thread", run_opt.nt},
+        {"seed", run_opt.seed}
+    };
+}
+
+void from_json(const json& j, Run_Opt& run_opt)
+{
+    run_opt.nt = j.at("num_thread").get<unsigned>();
+    run_opt.seed = j.at("seed").get<unsigned long>();
+    run_opt.init();
+}
+
+void to_json(json& j, const Out_Opt& out_opt)
+{
+    j = json{
+        {"bins_per_decade", out_opt.bins_per_decade},
+        {"points_per_10_Mpc", out_opt.points_per_10_Mpc},
+        {"out_dir", out_opt.out_dir}
+    };
+}
+
+void from_json(const json& j, Out_Opt& out_opt)
+{
+    out_opt.bins_per_decade = j.at("bins_per_decade").get<unsigned>();
+    out_opt.points_per_10_Mpc = j.at("points_per_10_Mpc").get<unsigned>();
+    out_opt.out_dir = j.at("out_dir").get<string>();
+}
+
+void to_json(json& j, const Chi_Opt& chi_opt)
+{
+    j = json{
+        {"beta", chi_opt.beta},
+        {"n", chi_opt.n},
+        {"phi", chi_opt.phi}
+    };
+}
+
+void from_json(const json& j, Chi_Opt& chi_opt)
+{
+    chi_opt.beta = j.at("beta").get<FTYPE_t>();
+    chi_opt.n = j.at("n").get<FTYPE_t>();
+    chi_opt.phi = j.at("phi").get<FTYPE_t>();
+}
+
+void to_json(json& j, const Test_Opt& test_opt)
+{
+    j = json{
+        {"R_sphere", test_opt.R_sphere},
+        {"rho_sphere", test_opt.rho_sphere},
+        {"N_grid", test_opt.N_grid},
+        {"N_min", test_opt.N_min},
+        {"rho_b", test_opt.rho_b}
+    };
+}
+
+void from_json(const json& j, Test_Opt& test_opt)
+{
+    test_opt.R_sphere = j.at("R_sphere").get<FTYPE_t>();
+    test_opt.rho_sphere = j.at("rho_sphere").get<FTYPE_t>();
+    test_opt.N_grid = j.at("N_grid").get<unsigned>();
+    test_opt.N_min = j.at("N_min").get<unsigned>();
+    test_opt.rho_b = j.at("rho_b").get<FTYPE_t>();
+}
 
 /**
  * @class:	Cosmo_Param
@@ -284,183 +447,4 @@ void Sim_Param::print_info(string out, string app) const
 void Sim_Param::print_info() const
 {
 	Sim_Param::print_info("", "");
-}
-
-void to_json(json& j, const Cosmo_Param& cosmo)
-{
-    j = json{
-        {"A", cosmo.A},
-        {"index", cosmo.ns},
-        {"sigma8", cosmo.sigma8},
-        {"smoothing_k", cosmo.k2_G},
-        {"Omega_c", cosmo.Omega_c()},
-        {"Omega_b", cosmo.Omega_b},
-        {"Omega_m", cosmo.Omega_m},
-        {"h", cosmo.h}
-    };
-    
-    j["transfer_function_method"] = find_value(transfer_function_method, cosmo.config.transfer_function_method);
-    j["matter_power_spectrum_method"] = find_value(matter_power_spectrum_method, cosmo.config.matter_power_spectrum_method);
-    j["mass_function_method"] = find_value(mass_function_method, cosmo.config.mass_function_method);
-    j["baryons_power_spectrum_method"] = find_value(baryons_power_spectrum_method, cosmo.config.baryons_power_spectrum_method);
-}
-
-void from_json(const json& j, Cosmo_Param& cosmo)
-{
-    cosmo.A = j.at("A").get<FTYPE_t>();
-    cosmo.ns = j.at("index").get<FTYPE_t>();
-    cosmo.sigma8 = j.at("sigma8").get<FTYPE_t>();
-    cosmo.k2_G = j.at("smoothing_k").get<FTYPE_t>();
-    cosmo.Omega_b = j.at("Omega_b").get<FTYPE_t>();
-    cosmo.Omega_m = j.at("Omega_m").get<FTYPE_t>();
-    cosmo.h = j.at("h").get<FTYPE_t>();
-    cosmo.H0 = cosmo.h * 100;
-    
-    string tmp;
-    try{
-        tmp = j.at("transfer_function_method").get<string>();
-        cosmo.config.transfer_function_method = transfer_function_method.at(tmp);
-    }catch(const out_of_range& oor){
-        cosmo.config.transfer_function_method = ccl_boltzmann_class;
-    }
-    try{
-        tmp = j.at("matter_power_spectrum_method").get<string>();
-        cosmo.config.matter_power_spectrum_method = matter_power_spectrum_method.at(tmp);
-    }catch(const out_of_range& oor){
-        cosmo.config.matter_power_spectrum_method = ccl_halofit;
-    }
-    try{
-        tmp = j.at("mass_function_method").get<string>();
-        cosmo.config.mass_function_method = mass_function_method.at(tmp);
-    }catch(const out_of_range& oor){
-        cosmo.config.mass_function_method = ccl_tinker10;
-    }
-    try{
-        tmp = j.at("baryons_power_spectrum_method").get<string>();
-        cosmo.config.baryons_power_spectrum_method = baryons_power_spectrum_method.at(tmp);
-    }catch(const out_of_range& oor){
-        cosmo.config.baryons_power_spectrum_method = ccl_nobaryons;
-    }
-    cosmo.init();
-}
-
-void to_json(json& j, const Box_Opt& box_opt)
-{
-    j = json{
-        {"mesh_num", box_opt.mesh_num},
-        {"mesh_num_pwr", box_opt.mesh_num_pwr},
-        {"Ng", box_opt.Ng},
-        {"par_num", box_opt.par_num_1d},
-        {"box_size", box_opt.box_size}
-    };
-}
-
-void from_json(const json& j, Box_Opt& box_opt)
-{
-    box_opt.mesh_num = j.at("mesh_num").get<unsigned>();
-    box_opt.mesh_num_pwr = j.at("mesh_num_pwr").get<unsigned>();
-    box_opt.par_num_1d = j.at("par_num").get<unsigned>();
-    box_opt.box_size = j.at("box_size").get<FTYPE_t>();
-
-    box_opt.init();
-}
-
-void to_json(json& j, const Integ_Opt& integ_opt)
-{
-    j = json{
-        {"redshift", integ_opt.z_in},
-        {"redshift_0", integ_opt.z_out},
-        {"time_step", integ_opt.db}
-    };
-}
-
-void from_json(const json& j, Integ_Opt& integ_opt)
-{
-    integ_opt.z_in = j.at("redshift").get<FTYPE_t>();
-    integ_opt.z_out = j.at("redshift_0").get<FTYPE_t>();
-    integ_opt.db = j.at("time_step").get<FTYPE_t>();
-
-    integ_opt.init();
-}
-
-void to_json(json& j, const App_Opt& app_opt)
-{
-    j = json{
-        {"viscosity", app_opt.nu_dim},
-        {"cut_radius", app_opt.rs}
-    };
-}
-
-void from_json(const json& j, App_Opt& app_op)
-{
-    app_op.nu_dim = j.at("viscosity").get<FTYPE_t>();
-    app_op.nu = app_op.nu_dim;
-    app_op.rs = j.at("cut_radius").get<FTYPE_t>();
-}
-
-void to_json(json& j, const Run_Opt& run_opt)
-{
-    j = json{
-        {"num_thread", run_opt.nt},
-        {"seed", run_opt.seed}
-    };
-}
-
-void from_json(const json& j, Run_Opt& run_opt)
-{
-    run_opt.nt = j.at("num_thread").get<unsigned>();
-    run_opt.seed = j.at("seed").get<unsigned long>();
-    run_opt.init();
-}
-
-void to_json(json& j, const Out_Opt& out_opt)
-{
-    j = json{
-        {"bins_per_decade", out_opt.bins_per_decade},
-        {"points_per_10_Mpc", out_opt.points_per_10_Mpc},
-        {"out_dir", out_opt.out_dir}
-    };
-}
-
-void from_json(const json& j, Out_Opt& out_opt)
-{
-    out_opt.bins_per_decade = j.at("bins_per_decade").get<unsigned>();
-    out_opt.points_per_10_Mpc = j.at("points_per_10_Mpc").get<unsigned>();
-    out_opt.out_dir = j.at("out_dir").get<string>();
-}
-
-void to_json(json& j, const Chi_Opt& chi_opt)
-{
-    j = json{
-        {"beta", chi_opt.beta},
-        {"n", chi_opt.n},
-        {"phi", chi_opt.phi}
-    };
-}
-
-void from_json(const json& j, Chi_Opt& chi_opt)
-{
-    chi_opt.beta = j.at("beta").get<FTYPE_t>();
-    chi_opt.n = j.at("n").get<FTYPE_t>();
-    chi_opt.phi = j.at("phi").get<FTYPE_t>();
-}
-
-void to_json(json& j, const Test_Opt& test_opt)
-{
-    j = json{
-        {"R_sphere", test_opt.R_sphere},
-        {"rho_sphere", test_opt.rho_sphere},
-        {"N_grid", test_opt.N_grid},
-        {"N_min", test_opt.N_min},
-        {"rho_b", test_opt.rho_b}
-    };
-}
-
-void from_json(const json& j, Test_Opt& test_opt)
-{
-    test_opt.R_sphere = j.at("R_sphere").get<FTYPE_t>();
-    test_opt.rho_sphere = j.at("rho_sphere").get<FTYPE_t>();
-    test_opt.N_grid = j.at("N_grid").get<unsigned>();
-    test_opt.N_min = j.at("N_min").get<unsigned>();
-    test_opt.rho_b = j.at("rho_b").get<FTYPE_t>();
 }

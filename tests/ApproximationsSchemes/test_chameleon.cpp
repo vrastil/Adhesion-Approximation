@@ -84,7 +84,7 @@ template <typename T> static int sgn(T val)
 	return (T(0) < val) - (val < T(0));
 }
 
-void print_mesh(const string& file_name, const Mesh& pot, const FTYPE_t mod = -1)
+void print_mesh(const string& file_name, const Mesh& pot, const FTYPE_t mod = -1 - CHI_MIN)
 {
     Ofstream File(file_name);
     unsigned N = pot.N;

@@ -3,6 +3,10 @@
 #include "core_app.h"
 #include "core_mesh.h"
 
+#include <algorithm>
+#include <iomanip>
+#include <sstream>
+
 using namespace std;
 
 namespace {
@@ -232,7 +236,7 @@ public:
     std::string z_suffix() const
     {
         std::stringstream z_suffix_num;
-        z_suffix_num << fixed << setprecision(2) << z();
+        z_suffix_num << std::fixed << std::setprecision(2) << z();
         return z_suffix_const + "z" + z_suffix_num.str();
     }
     
@@ -330,7 +334,7 @@ private:
     void print_sim_name() const
     {
         string app_long_upper(app_long);
-        transform(app_long_upper.begin(), app_long_upper.end(), app_long_upper.begin(), ::toupper);
+        std::transform(app_long_upper.begin(), app_long_upper.end(), app_long_upper.begin(), ::toupper);
         cout << "\n" << std::string(app_long_upper.length(), '*') << "\n"
             << app_long_upper
             << "\n" << std::string(app_long_upper.length(), '*') << "\n";

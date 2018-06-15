@@ -13,11 +13,13 @@
 #include "params.hpp"
 #include "MultiGridSolver/multigrid_solver.h"
 
+#include <algorithm>
+
 using namespace std;
 namespace{
 
 // accuracy of chameleon solver
-typedef long double CHI_PREC_t;
+typedef double CHI_PREC_t;
 
 // mass & chi in units of Planck mass
 constexpr FTYPE_t MPL = (FTYPE_t)1;
@@ -29,11 +31,14 @@ constexpr FTYPE_t c_kms = (FTYPE_t)299792.458;
 constexpr CHI_PREC_t MARK_CHI_BOUND_COND =  (CHI_PREC_t)-2;
 
 // when the relative change in solution is less than this, use Newton`s method. Bisection method otherwise
-constexpr CHI_PREC_t SWITCH_BIS_NEW = (CHI_PREC_t)0.6;
+constexpr CHI_PREC_t SWITCH_BIS_NEW = (CHI_PREC_t)0.1;
+
+// minimum value of chameleon field, in chi_a units it is '0', in phi units it is '-1'
+constexpr CHI_PREC_t CHI_MIN = (CHI_PREC_t)-1;
 
 // convergence criteria
-constexpr double CONVERGENCE_RES = 1e-9; //< stop when total (rms) residual below
-constexpr double CONVERGENCE_RES_MIN = 1e-5; //< do not stop if solution didn`t converge below
+constexpr double CONVERGENCE_RES = 1e-6; //< stop when total (rms) residual below
+constexpr double CONVERGENCE_RES_MIN = 1e-2; //< do not stop if solution didn`t converge below
 constexpr double CONVERGENCE_ERR = 0.97; //< stop when improvements between steps slow below
 constexpr double CONVERGENCE_ERR_MIN = 0.7; //< do not stop if solution is still improving
 constexpr unsigned CONVERGENCE_NUM_FAIL = 5; //< stop when number of failed steps is over
@@ -212,7 +217,7 @@ public:
         if (rho == MARK_CHI_BOUND_COND) return 0;
 
         // The right hand side of the PDE 
-        T source = (1 + rho - pow(chi_i, n - 1)) * chi_prefactor;
+        T source = (1 + rho - pow(chi_i - CHI_MIN, n - 1)) * chi_prefactor;
 
         // Compute the standard kinetic term [D^2 phi] (in 1D this is phi''_i =  phi_{i+1} + phi_{i-1} - 2 phi_{i} )
         T kinetic = -2*chi_i*3; // chi, '-2*3' is factor in 3D discrete laplacian
@@ -242,7 +247,7 @@ public:
         const T chi = this->get_y(level)[ index_list[0] ];
 
         // Derivative of source
-        const T dsource = chi_prefactor*(1-n)*pow(chi, n-2);
+        const T dsource = chi_prefactor*(1-n)*pow(chi - CHI_MIN, n-2);
 
         // Derivative of kinetic term
         const T dkinetic = -2.0*3;
@@ -257,7 +262,7 @@ public:
         for (unsigned j = 0; j < CONVERGENCE_BI_STEPS_INIT; ++j)
         {
             f2 += df;
-            if (f2 <= 0)
+            if (f2 <= CHI_MIN)
             {
                 const unsigned i = index_list[0];
                 const T rho = this->get_external_field(level, 0)[i];
@@ -296,7 +301,7 @@ public:
             l2 = l_new;
         }
 
-        return 0;
+        return CHI_MIN;
     }
 
     T bisection(T f1, T l1, const T df, const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const
@@ -309,7 +314,7 @@ public:
         // iterate
         for (unsigned i = 0; i < m_max_bisection_steps; ++i){
             f_new = bisection_step(f1, l1, f2, l2, level, index_list, h);
-            if (f_new)
+            if (f_new != CHI_MIN)
             {
                 return f_new;
             }
@@ -327,11 +332,11 @@ public:
         T l  =  l_operator(level, index_list, true, h);
         T dl = dl_operator(level, index_list, h);
         T df = -l/dl;
-        T df_rel = abs(df/f);
+        T df_rel = abs(df/(f - CHI_MIN));
 
         static_assert((SWITCH_BIS_NEW < 1), "Newton`s method cannot be allowed with negative values. Adjust 'SWITCH_BIS_NEW < 1'.");
 
-        return df_rel < SWITCH_BIS_NEW ? f + df : bisection(f, l, df, level, index_list, h);
+        return df_rel < SWITCH_BIS_NEW ? f + df : bisection(f, l, df / 2, level, index_list, h);
     }
 
     void correct_sol(Grid<3,T>& f, const Grid<3,T>& corr, const unsigned int level) override
@@ -351,11 +356,11 @@ public:
         {
             // do not change values in screened regions
             if (rho[i] == MARK_CHI_BOUND_COND) continue;
-            else if (abs(corr[i]/f[i]) < SWITCH_BIS_NEW) f[i] += corr[i];
+            else if (abs(corr[i]/(f[i] - CHI_MIN)) < SWITCH_BIS_NEW) f[i] += corr[i];
             else{
                 this->get_neighbor_gridindex(index_list, i, N);
                 T l =  l_operator(level, index_list, true, h);
-                f[i] = bisection(f[i], l, corr[i], level, index_list, h);
+                f[i] = bisection(f[i], l, corr[i] / 2, level, index_list, h);
             }   
         }
     }
@@ -376,56 +381,72 @@ public:
         bool converged = false;
 
         // Print out some information
-        if(_verbose){
+        if (_verbose){
             std::cout << "    Checking for convergence at step = " << _istep_vcycle << "\n";
             std::cout << "        Residual = " << _rms_res << "  Residual_old = " <<  _rms_res_old << "\n";
             std::cout << "        Residual_i = " << _rms_res_i << "  Err = " << err << "\n";
         }
 
-        // Convergence criterion
-        if((_rms_res < _eps_converge) && (err > m_err_stop_min)){ // residuals below treshold
+        // Convergence criteria:
+
+        if (((_rms_res < _eps_converge) || (_eps_converge == 0.0)) && (err > m_err_stop_min))
+        { // residuals below treshold
             std::cout << "\n    The solution has converged res = " << _rms_res << " < " << _eps_converge 
                     << " ( err = " << err << " ) istep = " << _istep_vcycle << "\n\n";
             converged = true;
-        } else if(err > 1){ // reject solution, wait for better one
+        }
+        else if (err > 1)
+        { // reject solution, wait for better one
             if(_verbose) std::cout << "    The solution stopped converging res = " << _rms_res << " !< " << _eps_converge
                                 << " err = " << err << " > 1" << " num(err > 1) = " << m_conv_stop << "\n";
             m_conv_stop++;
-        } else if(err > m_err_stop){ // convergence too slow
-            if (_rms_res > m_rms_stop_min)
+        }
+        else if (err > m_err_stop)
+        { // convergence too slow
+            if ((_rms_res > m_rms_stop_min) || (m_rms_stop_min == 0.0))
             {
                 m_conv_stop++;
-                if (m_conv_stop >= m_num_fail){
+                if (m_conv_stop >= m_num_fail)
+                {
                     std::cout << "\n    The solution stopped converging num(err > 1)  = " << m_conv_stop
                             << " res = " << _rms_res << " > " << _eps_converge  << " ) istep = " << _istep_vcycle << "\n\n";
                     converged = true;
-
                 }
             }
-            else{
+            else
+            {
                 std::cout << "\n    The solution stopped converging fast enough err = " << err << " > " << m_err_stop
                         << " ( res = " << _rms_res << " ) istep = " << _istep_vcycle << "\n\n";
                 converged = true;
             }
-        } else {
-            if (m_conv_stop >= m_num_fail){
+        }
+        else
+        {
+            if (m_conv_stop >= m_num_fail)
+            {
                 std::cout << "\n    The solution stopped converging num(err > 1)  = " << m_conv_stop
                         << " res = " << _rms_res << " > " << _eps_converge  << " ) istep = " << _istep_vcycle << "\n\n";
                 converged = true;
-            } else {
+            }
+            else
+            {
                 if(_verbose) std::cout << "    The solution is still converging err = " << err << " !> " << m_err_stop
                                     << " res = " << _rms_res << " > " << _eps_converge << "\n";
             }
         }
 
         // Define converged if istep exceeds maxsteps to avoid infinite loop...
-        if(_istep_vcycle >= _maxsteps){
+        if(_istep_vcycle >= _maxsteps)
+        {
             std::cout << "    WARNING: MultigridSolver failed to converge! Reached istep = maxsteps = " << _maxsteps << "\n";
             std::cout << "    res = " << _rms_res << " res_old = " << _rms_res_old << " res_i = " << _rms_res_i << "\n";
             converged  = true;
         }
         
-        if (converged) m_conv_stop = 0;
+        if (converged)
+        {
+            m_conv_stop = 0;
+        }
         return converged;
     }
 
@@ -490,7 +511,7 @@ public:
         fftw_execute_dft_c2r(p_B, rho);
 
         // transform dchi into chi, in chi_a units this means only 'chi = 1 + dchi' */
-        rho += 1;
+        rho += 1 + CHI_MIN;
 
         // copy dchi(x) onto Grid at level
         transform_Mesh_to_Grid(rho, this->get_grid(level));
@@ -542,10 +563,10 @@ public:
         #pragma omp parallel for private(index_list)
         for (unsigned i = 0; i < N_tot; ++i)
         {
-            if (chi[i] <= 0) // non-linear regime
+            if (chi[i] <= CHI_MIN) // non-linear regime
             {
-                if (check_surr_dens(rho_grid, index_list, i, N)) chi[i] = 0; //< '0' to indicate high-density region
-                else chi[i] = rho_grid[i] > 0 ? chi_min(rho_grid[i]) : 1/2.;//< phi_s / 2 in underdense region as starting point
+                if (check_surr_dens(rho_grid, index_list, i, N)) chi[i] = CHI_MIN; //< CHI_MIN to indicate high-density region
+                else chi[i] = rho_grid[i] > 0 ? chi_min(rho_grid[i]) : 1/2. + CHI_MIN;//< phi_s / 2 in underdense region as starting point
             }
         }
 
@@ -554,7 +575,7 @@ public:
         // writing into map, do not use omp
         for (unsigned i = 0; i < N_tot; ++i)
         {
-            if (chi[i] == 0) // fix chameleon to bulk value, set unphysical density to indicate screened regime
+            if (chi[i] == CHI_MIN) // fix chameleon to bulk value, set unphysical density to indicate screened regime
             {
 
                 chi[i] = chi_min(rho_grid[i]);
@@ -571,7 +592,9 @@ public:
 
     T chi_min(T delta) const
     {/* get chi_bulk for given overdensity */
-        return delta > -1 ? std::pow(1+delta, 1/(n-1)) : 1;
+        if (delta > -1) return std::pow(1+delta, 1/(n-1)) + CHI_MIN;
+        else if (delta == -1) return 1 + CHI_MIN;
+        else throw std::range_error("invalid values of density: " + to_string(delta) + " < -1)");        
     }
 
 }; // class ChiSolver end
