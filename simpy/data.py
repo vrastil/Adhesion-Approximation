@@ -6,6 +6,10 @@ run analysis of runs
 import os
 import sys
 import traceback
+from pygments import highlight
+from pygments.lexers import get_lexer_by_name
+from pygments.formatters import TerminalFormatter
+
 import fnmatch
 import numpy as np
 from scipy.optimize import curve_fit
@@ -14,6 +18,17 @@ from . import plot
 from .fastsim import Extrap_Pk_Nl_2, Extrap_Pk_Nl_3
 from .struct import SimInfo, StackInfo, insert
 from .power import hybrid_pow_spec, get_Data_vec, corr_func, chi_trans_to_supp
+
+def print_exception(file=sys.stdout):
+    """ print catched exception with colors """
+    tbtext = traceback.format_exc()
+    lexer = get_lexer_by_name("pytb", stripall=True)
+    formatter = TerminalFormatter()
+
+    print "\n"
+    print "=" * 110
+    file.write(highlight(tbtext, lexer, formatter))
+    print "=" * 110            
 
 # *******************
 # FIND, SORT, SLICE *
@@ -233,10 +248,7 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         except KeyboardInterrupt:
             raise
         except Exception:
-            print "\n"
-            print "=" * 110
-            traceback.print_exc(file=sys.stdout)
-            print "=" * 110
+            print_exception()
 
 def analyze_all(out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/',
                 rerun=None, skip=None, only=None):
@@ -267,9 +279,16 @@ def load_data_for_stack(stack_info, subdir, a_file):
     # load everything
     all_data_k = None
     all_data_Pk = None
+    all_zs = None
     for a_sim_info in stack_info:
         # load files for ONE run
         zs, files = try_get_zs_files(a_sim_info, subdir, patterns=a_file)
+
+        # if data are missing for this run
+        if zs is None:
+            continue
+        else:
+            all_zs = zs
 
         # create lists, only for the first run (the rest are assumed to have the same output)
         if all_data_k is None:
@@ -283,7 +302,7 @@ def load_data_for_stack(stack_info, subdir, a_file):
             k, P_k = data[:, 0], data[:, 1]
             all_data_k[i].append(k.tolist())
             all_data_Pk[i].append(P_k.tolist())
-    return zs, all_data_k, all_data_Pk
+    return all_zs, all_data_k, all_data_Pk
 
 def check_data_consistency(all_data_k, all_data_Pk):
     # chceck lengths of lists, delete excess (in case outputs of simulations encountered any errors)
@@ -369,6 +388,10 @@ def stack_files(stack_info, subdir, a_file):
     # load everything
     zs, all_data_k, all_data_Pk = load_data_for_stack(stack_info, subdir, a_file)
 
+    # if data are missing for all runs
+    if zs is None:
+        return None, None
+
     # chceck lengths of lists, delete excess (in case outputs of simulations encountered any errors)
     check_data_consistency(all_data_k, all_data_Pk)
 
@@ -449,13 +472,23 @@ def load_stack_save(stack_info, key, patterns,  # type: StackInfo, str, str,
     """
     print 'step: %-25s' % (key + ' ' + info_str),
     sys.stdout.flush()
+
+    # check only rerun / key / skip -- no files loading
     if stack_info.rerun(rerun, key, skip, True):
         subdir = key.replace('_files', '/') if subdir is None else subdir
-        for z, data in zip(*stack_files(stack_info, subdir, patterns)):
-            z_str = 'init.dat' if z == 'init' else 'z%.2f.dat' % z
-            fname_ = stack_info.dir + subdir + fname + "_%s_%s" % (stack_info.app, z_str)
-            np.savetxt(fname_, np.transpose(data), fmt='%.6e', header=header)
-        stack_info.done(key)
+        zs, data_list = stack_files(stack_info, subdir, patterns)
+
+        # check again if we loaded any data
+        if stack_info.rerun(rerun, key, skip, zs):
+            for z, data in zip(zs, data_list):
+                z_str = 'init.dat' if z == 'init' else 'z%.2f.dat' % z
+                fname_ = stack_info.dir + subdir + fname + "_%s_%s" % (stack_info.app, z_str)
+                np.savetxt(fname_, np.transpose(data), fmt='%.6e', header=header)
+            stack_info.done(key)
+
+
+    
+    
 
 # **********************************
 # RUN ANALYSIS -- STACKING OF RUNS *
@@ -485,10 +518,7 @@ def stack_group(rerun=None, skip=None, **kwargs):
         except KeyboardInterrupt:
             raise
         except Exception:
-            print "\n"
-            print "=" * 110
-            traceback.print_exc(file=sys.stdout)
-            print "=" * 110
+            print_exception()
 
     # load and plot files
     all_steps = [
@@ -522,10 +552,7 @@ def stack_group(rerun=None, skip=None, **kwargs):
         except KeyboardInterrupt:
             raise
         except Exception:
-            print "\n"
-            print "=" * 110
-            traceback.print_exc(file=sys.stdout)
-            print "=" * 110
+            print_exception()
 
 def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/', rerun=None, skip=None, **kwargs):
     # get all runs

@@ -184,7 +184,7 @@ FTYPE_t Omega_lambda(FTYPE_t a, const Cosmo_Param& cosmo)
 {
     // try ccl range
     int status = 0;
-    FTYPE_t OL = ccl_omega_x(cosmo.cosmo, a, ccl_omega_l_label, &status);
+    FTYPE_t OL = ccl_omega_x(cosmo.cosmo, a, ccl_species_l_label, &status);
     if(!status) return OL;
 
     // compute outside range

@@ -297,6 +297,9 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
         ymax = 1
     ymax = math.ceil(ymax / 0.1) * 0.1
     ymin = math.floor(ymin / 0.1) * 0.1
+    if ymax == ymin:
+        ymax += 0.1
+        ymin -= 0.1
     plt.ylim(ymin=ymin, ymax=ymax)
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax.yaxis.grid(True)
@@ -344,7 +347,10 @@ def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto',
     ax.set_xscale('log')
     a = [1 / (1 + z) for z in zs]
     # hack around pcolormesh plotting edges
-    da = (a[-1] - a[0]) / (len(a) - 1)
+    if len(a) == 1:
+        da = 2*a[0]
+    else:
+        da = (a[-1] - a[0]) / (len(a) - 1)
     a = np.array([a[0]-da/2] + [1 / (1 + z) + da/2 for z in zs])
     k = data_array[0][0]
     supp = data_array[:, 1, :] # extract Pk, shape = (zs, k)

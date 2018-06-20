@@ -177,6 +177,9 @@ class StackInfo(SimInfo):
 
     def __init__(self, group_sim_infos=None, stack_info_file=None, **kwargs):
         if group_sim_infos is not None:
+            # use last SimInfo of SORTED list, i.e. the last run (if need to add
+            # info, e.g. coorelation data)
+            SimInfo.__init__(self, group_sim_infos[-1].file, **kwargs)
             self.load_group_sim_infos(group_sim_infos, **kwargs)
         elif stack_info_file is not None:
             SimInfo.__init__(self, stack_info_file, **kwargs)
@@ -190,10 +193,7 @@ class StackInfo(SimInfo):
                 self.results[key] = False
 
     def load_group_sim_infos(self, group_sim_infos, **kwargs):
-        # use last SimInfo of SORTED list, i.e. the last run (if need to add
-        # info, e.g. coorelation data)
-        self.group_sim_infos = group_sim_infos
-        SimInfo.__init__(self, self[-1].file, **kwargs)
+        self.group_sim_infos = group_sim_infos 
         self.dir = self.dir.replace(self.dir.split("/")[-2] + "/", "")
         self.dir += "STACK_%im_%ip_%iM_%ib/" % (
             self.box_opt["mesh_num"], self.box_opt["par_num"],
@@ -240,7 +240,7 @@ def compare(sim_info_1, sim_info_2):
 
         if isinstance(att1, dict):
             for key in att1:
-                if att1[key] != att2[key]:
+                if key not in att2 or att1[key] != att2[key]:
                     return False
         else:
             if att1 != att2:
