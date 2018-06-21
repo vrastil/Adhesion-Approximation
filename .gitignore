@@ -2,6 +2,9 @@
 # output directory, internal documents
 output/
 report/
+doc/html
+doc/latex
+doc/main.html
 
 # program, object files, libraries, depedency files, scripts
 adh_app

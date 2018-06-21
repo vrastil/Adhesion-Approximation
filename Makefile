@@ -69,6 +69,9 @@ swig: $(LIB) swig/*.i
 $(LIB): $(OBJ_FILES)
 	gcc-ar rcs $@ $^
 
+doc:
+	cd doc/ && doxygen Doxyfile && ln -sf html/index.html main.html
+
 check: test
 	./tests/test
 
@@ -103,9 +106,10 @@ clean:
 
 cleanall: clean
 		rm -f swig/*.py swig/*.pyc swig/*.so lib/*
+		rm -rf doc/html doc/latex doc/main.html
 
 -include $(OBJ_FILES:.o=.d)
 -include $(TEST_OBJ_FILES:.o=.d)
 -include $(PCH_O:.gch=.d)
 
-.PHONY: swig check clean test
+.PHONY: swig check clean test doc
