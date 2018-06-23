@@ -1,6 +1,9 @@
 /**
- * @file:	particles.hpp
- * @brief:	particle definitions  (with and without velocity)
+ * @brief particle definitions  (with and without velocity)
+ * 
+ * @file class_particles.hpp
+ * @author Michal Vrastil
+ * @date 2018-06-24
  */
 
 #pragma once
@@ -9,10 +12,12 @@
 
 /**
  * @class:	Particle_x
- * @brief:	class handling particles (position only)
- * @acces:	operator [] to get position coordinates
+ * @brief class handling particles (position only)
+ * 
+ * @tparam T coordinate type (float, double or long double)
+ * 
+ * operator [] to get position coordinates
  */
-
 template<typename T>
 class Particle_x
 {
@@ -26,16 +31,24 @@ public:
 	// VARIABLES
 	Vec_3D<T> position;
 	
-	// OPERATORS
+    /**
+     * @brief get position coordinates
+     * 
+     * @param i axis
+     * @return T& position
+     */
 	T &operator[](int i){ return position[i]; }
 	const T& operator[](int i) const{ return position[i]; }
 };
 
 /**
  * @class:	Particle_v
- * @brief:	class handling particles (with velocitites)
- * @acces:	operator [] to get position coordinates
- * 			operator () to get velocity coordinates
+ * @brief class handling particles (position only)
+ * 
+ * @tparam T coordinate type (float, double or long double)
+ * 
+ * operator [] to get position coordinates
+ * operator () to get velocity coordinates
  */
 
 template<typename T>

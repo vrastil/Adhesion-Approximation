@@ -11,9 +11,10 @@
 class Sim_Param; //< params.hpp
 
 /**
- * @class:	App_Var
- * @brief:	class containing core variables and methods for approximations
- * @temp:   <T> is a type of particle, implemented Particle_x and Particle_v
+ * @class App_Var
+ * @brief class containing core variables and methods for approximations
+ * 
+ * @tparam T type of particle, implemented Particle_x and Particle_v
  */
 
 template <class T> 

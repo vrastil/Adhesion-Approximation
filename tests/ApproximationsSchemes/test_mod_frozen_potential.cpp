@@ -2,7 +2,6 @@
 #include "../test.hpp"
 #include "ApproximationsSchemes/mod_frozen_potential.cpp"
 
-// using namespace std;
 // void force_test(Sim_Param& sim)
 // {
 //     // 1 particle prep

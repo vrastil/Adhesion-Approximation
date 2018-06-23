@@ -7,9 +7,6 @@
 #define ORDER 1
 #endif
 
-using namespace std;
-
-
 template<typename T>
 static T mean(const std::vector<T>& data)
 {
@@ -69,12 +66,12 @@ static void set_unpert_pos_one_par(Vec_3D<int>& unpert_pos, const unsigned par_i
 	unpert_pos[2] = (par_index % par_per_dim) * Ng;
 }
 
-static void set_velocity_one_par(const Vec_3D<int>& unpert_pos, Vec_3D<FTYPE_t>& displ_field, const vector<Mesh> &vel_field)
+static void set_velocity_one_par(const Vec_3D<int>& unpert_pos, Vec_3D<FTYPE_t>& displ_field, const std::vector<Mesh> &vel_field)
 {
 	for (unsigned i = 0; i < 3; i++) displ_field[i] = vel_field[i](unpert_pos);
 }
 
-void set_unpert_pos(const Sim_Param &sim, vector<Particle_x<FTYPE_t>>& particles)
+void set_unpert_pos(const Sim_Param &sim, std::vector<Particle_x<FTYPE_t>>& particles)
 {
 	Vec_3D<int> unpert_pos;
     const unsigned par_per_dim = sim.box_opt.par_num_1d;
@@ -89,7 +86,7 @@ void set_unpert_pos(const Sim_Param &sim, vector<Particle_x<FTYPE_t>>& particles
 	}
 }
 
-void set_unpert_pos_w_vel(const Sim_Param &sim, vector<Particle_v<FTYPE_t>>& particles, const vector<Mesh> &vel_field)
+void set_unpert_pos_w_vel(const Sim_Param &sim, std::vector<Particle_v<FTYPE_t>>& particles, const std::vector<Mesh> &vel_field)
 {
 	Vec_3D<int> unpert_pos;
 	Vec_3D<FTYPE_t> velocity;
@@ -106,7 +103,7 @@ void set_unpert_pos_w_vel(const Sim_Param &sim, vector<Particle_v<FTYPE_t>>& par
 	}
 }
 
-void set_pert_pos(const Sim_Param &sim, const FTYPE_t db, vector<Particle_x<FTYPE_t>>& particles, const vector< Mesh> &vel_field)
+void set_pert_pos(const Sim_Param &sim, const FTYPE_t db, std::vector<Particle_x<FTYPE_t>>& particles, const std::vector< Mesh> &vel_field)
 {
     printf("\nSetting initial positions of particles...\n");
 	Vec_3D<int> unpert_pos;
@@ -129,7 +126,7 @@ void set_pert_pos(const Sim_Param &sim, const FTYPE_t db, vector<Particle_x<FTYP
 	}
 }
 
-void set_pert_pos(const Sim_Param &sim, const FTYPE_t a, vector<Particle_v<FTYPE_t>>& particles, const vector< Mesh> &vel_field)
+void set_pert_pos(const Sim_Param &sim, const FTYPE_t a, std::vector<Particle_v<FTYPE_t>>& particles, const std::vector< Mesh> &vel_field)
 {
     printf("\nSetting initial positions and velocitis of particles...\n");
 	Vec_3D<int> unpert_pos;
@@ -158,7 +155,7 @@ void set_pert_pos(const Sim_Param &sim, const FTYPE_t a, vector<Particle_v<FTYPE
 static void gen_gauss_white_noise(const Sim_Param &sim, Mesh& rho)
 {
 	// Get keys for each slab in the x axis that this rank contains
-	vector<unsigned long> slab_keys;
+	std::vector<unsigned long> slab_keys;
 	slab_keys.resize(rho.N1);
 	GetSlabKeys(slab_keys.data(), 0, rho.N1, sim.run_opt.seed);
 	
@@ -225,12 +222,17 @@ static void gen_rho_w_pow_k(const Sim_Param &sim, Mesh& rho)
 	}
 }
 
+/**
+ * @brief Generate density distributions \f$\rho(k)\f$ in k-space.
+ * 
+ * @param sim 
+ * @param rho 
+ * @param p_F 
+ * 
+ * At first, a gaussian white noise (mean = 0, stdDev = 1) is generated,
+ * then it is convoluted with given power spectrum.
+ */
 void gen_rho_dist_k(const Sim_Param &sim, Mesh& rho, const FFTW_PLAN_TYPE &p_F)
-	/**
-	Generate density distributions \rho(k) in k-space.
-	At first, a gaussian white noise (mean = 0, stdDev = 1) is generated,
-	then it is convoluted with given power spectrum.
-	**/
 {
 	printf("Generating gaussian white noise...\n");
 	gen_gauss_white_noise(sim, rho);
@@ -241,16 +243,16 @@ void gen_rho_dist_k(const Sim_Param &sim, Mesh& rho, const FFTW_PLAN_TYPE &p_F)
 }
 
 template <class T>
-void get_rho_from_par(const vector<T>& particles, Mesh& rho, const Sim_Param &sim)
+void get_rho_from_par(const std::vector<T>& particles, Mesh& rho, const Sim_Param &sim)
 {
     printf("Computing the density field from particle positions...\n");
 
     const unsigned Np = sim.box_opt.par_num;
     if (particles.size() != Np){
-        string msg = "Number of particles (" + to_string(particles.size()) + ") does not correspond with simulation parameters (" + to_string(Np) + ")!";
+        std::string msg = "Number of particles (" + std::to_string(particles.size()) + ") does not correspond with simulation parameters (" + std::to_string(Np) + ")!";
         throw std::range_error(msg);
     }
-    const FTYPE_t m = pow(rho.N, 3) / Np;
+    const FTYPE_t m = pow((FTYPE_t)rho.N, 3) / Np;
     const FTYPE_t mesh_mod = (FTYPE_t)rho.N/sim.box_opt.mesh_num;
     
 
@@ -263,11 +265,11 @@ void get_rho_from_par(const vector<T>& particles, Mesh& rho, const Sim_Param &si
     }
 }
 
-int get_vel_from_par(const vector<Particle_v<FTYPE_t>>& particles, vector<Mesh>& vel_field, const Sim_Param &sim)
+int get_vel_from_par(const std::vector<Particle_v<FTYPE_t>>& particles, std::vector<Mesh>& vel_field, const Sim_Param &sim)
 {
     printf("Computing the velocity field from particle positions...\n");
     const FTYPE_t mesh_mod = (FTYPE_t)sim.box_opt.mesh_num_pwr/sim.box_opt.mesh_num;
-    const FTYPE_t m = pow(sim.box_opt.Ng_pwr, 3);
+    const FTYPE_t m = pow((FTYPE_t)sim.box_opt.Ng_pwr, 3);
     const unsigned Np = sim.box_opt.par_num;
 
     for(Mesh& field : vel_field){
@@ -281,7 +283,7 @@ int get_vel_from_par(const vector<Particle_v<FTYPE_t>>& particles, vector<Mesh>&
     return 1;
 }
 
-int get_vel_from_par(const vector<Particle_x<FTYPE_t>>& particles, vector<Mesh>& vel_field, const Sim_Param &sim)
+int get_vel_from_par(const std::vector<Particle_x<FTYPE_t>>& particles, std::vector<Mesh>& vel_field, const Sim_Param &sim)
 {
     printf("WARNING! Trying to compute velocity divergence with particle positions only! Skipping...\n");
     return 0;
@@ -329,7 +331,7 @@ void pwr_spec_k_init(const Mesh &rho_k, Mesh& power_aux)
 	}
 }
 
-void vel_pwr_spec_k(const vector<Mesh> &vel_field, Mesh& power_aux)
+void vel_pwr_spec_k(const std::vector<Mesh> &vel_field, Mesh& power_aux)
 {
     /* Computing the velocity power spectrum divergence P(k)/L^3 -- dimensionLESS!
 
@@ -381,7 +383,7 @@ void gen_cqty_binned(const FTYPE_t x_min, const FTYPE_t x_max, const unsigned bi
     unsigned req_size = (unsigned)ceil(bins_per_decade*log10(x_max/x_min));
     qty_binned.resize(req_size);
     qty_binned.fill(0);
-    vector<unsigned> tmp(req_size, 0); // for counts in bins
+    std::vector<unsigned> tmp(req_size, 0); // for counts in bins
 
     FTYPE_t x;
     int bin;
@@ -549,7 +551,7 @@ static FTYPE_t CIC_opt(Vec_3D<FTYPE_t> k_vec, const FTYPE_t a)
 #endif
 }
 
-void gen_displ_k_S2(vector<Mesh>& vel_field, const Mesh& pot_k, const FTYPE_t a)
+void gen_displ_k_S2(std::vector<Mesh>& vel_field, const Mesh& pot_k, const FTYPE_t a)
 {   /*
     pot_k can be Mesh of differen (bigger) size than each vel_field,
     !!!> ALL physical FACTORS ARE therefore TAKEN FROM vel_field[0] <!!!
@@ -586,11 +588,11 @@ void gen_displ_k_S2(vector<Mesh>& vel_field, const Mesh& pot_k, const FTYPE_t a)
 	}
 }
 
-void gen_displ_k(vector<Mesh>& vel_field, const Mesh& pot_k) {gen_displ_k_S2(vel_field, pot_k, -1);}
+void gen_displ_k(std::vector<Mesh>& vel_field, const Mesh& pot_k) {gen_displ_k_S2(vel_field, pot_k, -1);}
 
-void gen_displ_k_cic(vector<Mesh>& vel_field, const Mesh& pot_k) {gen_displ_k_S2(vel_field, pot_k, 0.);}
+void gen_displ_k_cic(std::vector<Mesh>& vel_field, const Mesh& pot_k) {gen_displ_k_S2(vel_field, pot_k, 0.);}
 
-void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param &sim)
+void gen_dens_binned(const Mesh& rho, std::vector<int> &dens_binned, const Sim_Param &sim)
 {
 	printf("Computing binned density field...\n");
 	unsigned bin;
@@ -619,7 +621,7 @@ void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param 
 						}
 					}
 				}
-				rho_avg /= pow(Ng_pwr, 3);
+				rho_avg /= pow((FTYPE_t)Ng_pwr, 3);
                 bin = (int)((rho_avg+1)/0.1);
                 if (bin >= dens_binned.size()) bin = dens_binned.size() - 1;
                 // if (bin >= dens_binned.capacity()) dens_binned.resize(bin+1);
@@ -631,6 +633,6 @@ void gen_dens_binned(const Mesh& rho, vector<int> &dens_binned, const Sim_Param 
 	}
 }
 
-template void get_rho_from_par(const vector<Particle_x<FTYPE_t>>&, Mesh&, const Sim_Param&);
-template void get_rho_from_par(const vector<Particle_v<FTYPE_t>>&, Mesh&, const Sim_Param&);
+template void get_rho_from_par(const std::vector<Particle_x<FTYPE_t>>&, Mesh&, const Sim_Param&);
+template void get_rho_from_par(const std::vector<Particle_v<FTYPE_t>>&, Mesh&, const Sim_Param&);
 template void gen_pow_spec_binned_from_extrap(const Sim_Param&, const Extrap_Pk<FTYPE_t, 2>&, Data_Vec<FTYPE_t, 2>&);

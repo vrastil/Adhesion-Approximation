@@ -7,8 +7,6 @@
 #include <iomanip>
 #include <sstream>
 
-using namespace std;
-
 namespace {
 const char *humanSize(uint64_t bytes){
 	char const *suffix[] = {"B", "KB", "MB", "GB", "TB"};
@@ -70,12 +68,12 @@ public:
     void print_track_par(const Sim_Param &sim, std::string out_dir, std::string suffix) const
     {
         out_dir += "par_cut/";
-        string file_name = out_dir + "track_par_pos" + suffix + ".dat";
+        std::string file_name = out_dir + "track_par_pos" + suffix + ".dat";
         Ofstream File(file_name);
 
         FTYPE_t x,y,z;
         const FTYPE_t x_0 = sim.x_0();
-        cout << "Writing positons of " << par_ids.size() << " tracked particles into file " << file_name << "\n";
+        std::cout << "Writing positons of " << par_ids.size() << " tracked particles into file " << file_name << "\n";
         File << "# This file contains positions of particles in units [Mpc/h].\n"
                 "# x [Mpc/h]\tz [Mpc/h]\n";
         for (int i=0; i < par_ids.size(); i++){
@@ -182,7 +180,7 @@ public:
         const Sim_Param& sim = APP.sim; // get rid of 'APP.sim'
 
         if (!FFTW_PLAN_OMP_INIT()){
-            throw runtime_error("Errors during multi-thread initialization");
+            throw std::runtime_error("Errors during multi-thread initialization");
         }
         FFTW_PLAN_OMP(sim.run_opt.nt);
         const unsigned N_pot = sim.box_opt.mesh_num;
@@ -230,7 +228,7 @@ public:
 
     void print_end()
     {
-        cout << app_long << " ended successfully.\n";
+        std::cout << app_long << " ended successfully.\n";
     }
 
     std::string z_suffix() const
@@ -333,9 +331,9 @@ private:
 
     void print_sim_name() const
     {
-        string app_long_upper(app_long);
+        std::string app_long_upper(app_long);
         std::transform(app_long_upper.begin(), app_long_upper.end(), app_long_upper.begin(), ::toupper);
-        cout << "\n" << std::string(app_long_upper.length(), '*') << "\n"
+        std::cout << "\n" << std::string(app_long_upper.length(), '*') << "\n"
             << app_long_upper
             << "\n" << std::string(app_long_upper.length(), '*') << "\n";
     }
@@ -527,13 +525,13 @@ FTYPE_t App_Var<T>::da()
 }
 
 template <class T> 
-string App_Var<T>::get_out_dir() const
+std::string App_Var<T>::get_out_dir() const
 {
     return m_impl->out_dir_app;
 }
 
 template <class T> 
-string App_Var<T>::get_z_suffix() const
+std::string App_Var<T>::get_z_suffix() const
 {
     return m_impl->z_suffix();
 }

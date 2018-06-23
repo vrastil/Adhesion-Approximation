@@ -15,7 +15,6 @@
 
 #include <algorithm>
 
-using namespace std;
 namespace{
 
 // accuracy of chameleon solver
@@ -193,7 +192,7 @@ public:
         ),
         fix_vals(this->get_Nlevel())
         {
-            if ((n <= 0) || (n >= 1) || (chi_0 <= 0)) throw out_of_range("invalid values of chameleon power-law potential parameters");
+            if ((n <= 0) || (n >= 1) || (chi_0 <= 0)) throw std::out_of_range("invalid values of chameleon power-law potential parameters");
         }
 
     ChiSolver(unsigned int N, const Sim_Param& sim, bool verbose = true) : ChiSolver(N, 2, sim, verbose) {}
@@ -481,9 +480,9 @@ public:
     // set chameleon guess to bulk value, need to set time and add rho before call to this function
     void set_bulk_field()
     {
-        if (!chi_prefactor) throw out_of_range("invalid value of scale factor");
-        if (!this->get_external_field_size()) throw out_of_range("overdensity not set"); 
-        cout << "Setting initial guess for chameleon field...\n";
+        if (!chi_prefactor) throw std::out_of_range("invalid value of scale factor");
+        if (!this->get_external_field_size()) throw std::out_of_range("overdensity not set"); 
+        std::cout << "Setting initial guess for chameleon field...\n";
 
         T* const f = this->get_y(); // initial guess
         T const* const rho = this->get_external_field(0, 0); // overdensity
@@ -585,7 +584,7 @@ public:
         }
 
         unsigned num_high_density = fix_vals[level].size();
-        cout << "Identified and fixed " << num_high_density << "(" << std::setprecision(2) << num_high_density*100.0/N_tot <<  "%) points at level " << level << "\n";
+        std::cout << "Identified and fixed " << num_high_density << "(" << std::setprecision(2) << num_high_density*100.0/N_tot <<  "%) points at level " << level << "\n";
 
         set_screened(level + 1); //< recursive call to fix all levels
     }
@@ -594,7 +593,7 @@ public:
     {/* get chi_bulk for given overdensity */
         if (delta > -1) return std::pow(1+delta, 1/(n-1)) + CHI_MIN;
         else if (delta == -1) return 1 + CHI_MIN;
-        else throw std::range_error("invalid values of density: " + to_string(delta) + " < -1)");        
+        else throw std::range_error("invalid values of density: " + std::to_string(delta) + " < -1)");        
     }
 
 }; // class ChiSolver end
@@ -649,17 +648,17 @@ public:
         sol.set_def_convergence();
 
         // save (over)density from particles
-        cout << "Storing density distribution...\n";
+        std::cout << "Storing density distribution...\n";
         get_rho_from_par(particles, chi_force[0], sim);
         transform_Mesh_to_MultiGrid(chi_force[0], drho);
 
         // set guess from linear theory and correct unphysical values
-        cout << "Setting linear guess for chameleon field...\n";
+        std::cout << "Setting linear guess for chameleon field...\n";
         sol.set_linear(chi_force[0], p_F, p_B);
         sol.set_screened();
 
         // get multigrid_solver runnig
-        cout << "Solving equations of motion for chameleon field...\n";
+        std::cout << "Solving equations of motion for chameleon field...\n";
         sol.solve();
     }
 

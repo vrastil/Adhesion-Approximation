@@ -38,7 +38,7 @@ struct integrand_param
 };
 
 /**
- * @note GSL functions are mostly witten for <double> so even with different
+ * @note GSL functions are mostly witten for double so even with different
  * PRECISION set these are computed in double precision 
  */
 

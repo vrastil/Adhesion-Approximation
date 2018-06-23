@@ -10,8 +10,6 @@
 #include "ApproximationsSchemes/mod_frozen_potential.hpp"
 #include "ApproximationsSchemes/zeldovich.hpp"
 
-using namespace std;
-
 template<class T>
 static void init_and_run_app(const Sim_Param& sim)
 {
@@ -75,17 +73,17 @@ int main(int argc, char* argv[]){
 
         return 0;
 	}
-    catch(const string& e){
+    catch(const std::string& e){
         if (e == "help") return 0;
-        cerr << "Error: " << e << "\n";
+        std::cerr << "Error: " << e << "\n";
         return 1;
     }
-	catch(const exception& e){
-		cerr << "Error: " << e.what() << "\n";
+	catch(const std::exception& e){
+		std::cerr << "Error: " << e.what() << "\n";
         return 1;
 	}
 	catch(...){
-		cerr << "Exception of unknown type!\n";
+		std::cerr << "Exception of unknown type!\n";
         return 1;
 	}
 }

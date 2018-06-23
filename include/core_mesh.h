@@ -1,6 +1,9 @@
 /**
- * @file:	core_fce.h
- * @brief:	basic functions to work with mesh
+ * @brief basic functions to work with mesh
+ * 
+ * @file core_mesh.h
+ * @author Michal Vrastil
+ * @date 2018-06-24
  */
 
 #pragma once

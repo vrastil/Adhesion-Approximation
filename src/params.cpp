@@ -11,13 +11,15 @@
 #include "core_power.h"
 #include <json.hpp>
 
-using namespace std;
 using json = nlohmann::json;
 
-namespace{///< anonymous namespace
+/*****************************//**
+ * PRIVATE FUNCTIONS DEFINITIONS *
+ *********************************/
+namespace{
 
 // convert to pyccl transfer_function_types keys
-const map<string, transfer_function_t> transfer_function_method = {
+const std::map<std::string, transfer_function_t> transfer_function_method = {
     {"emulator", ccl_emulator},
     {"eisenstein_hu", ccl_eisenstein_hu},
     {"bbks", ccl_bbks},
@@ -25,26 +27,26 @@ const map<string, transfer_function_t> transfer_function_method = {
     {"boltzmann_camb", ccl_boltzmann_camb}
 };
 // convert to pyccl matter_power_spectrum_types keys
-const map<string, matter_power_spectrum_t> matter_power_spectrum_method = {
+const std::map<std::string, matter_power_spectrum_t> matter_power_spectrum_method = {
     {"linear", ccl_linear},
     {"halofit", ccl_halofit},
     {"halo_model", ccl_halo_model}
 };
 // convert to pyccl mass_function_types keys
-const map<string, mass_function_t> mass_function_method = {
+const std::map<std::string, mass_function_t> mass_function_method = {
     {"tinker", ccl_tinker},
     {"tinker10", ccl_tinker10},
     {"watson", ccl_watson},
     {"angulo", ccl_angulo}
 };
 // convert to pyccl baryons_power_spectrum keys
-const map<string, baryons_power_spectrum_t> baryons_power_spectrum_method = {
+const std::map<std::string, baryons_power_spectrum_t> baryons_power_spectrum_method = {
     {"nobaryons", ccl_nobaryons},
     {"bcm", ccl_bcm}
 };
 
 /**
- * return first occurence of 'value' in std::map
+ * return first occurence of 'value' in std::std::map
  */
 template<typename T, typename U>
 T find_value(const std::map<T, U>& map, const U& value)
@@ -53,7 +55,11 @@ T find_value(const std::map<T, U>& map, const U& value)
     throw std::out_of_range("Value not found");
 }
 
-} ///< end of anonymous namespace
+} ///< end of anonymous namespace (private definitions)
+
+/****************************//**
+ * PUBLIC FUNCTIONS DEFINITIONS *
+ ********************************/
 
 // interaction with json files
 void to_json(json& j, const Cosmo_Param& cosmo)
@@ -86,29 +92,29 @@ void from_json(const json& j, Cosmo_Param& cosmo)
     cosmo.h = j.at("h").get<FTYPE_t>();
     cosmo.H0 = cosmo.h * 100;
     
-    string tmp;
+    std::string tmp;
     try{
-        tmp = j.at("transfer_function_method").get<string>();
+        tmp = j.at("transfer_function_method").get<std::string>();
         cosmo.config.transfer_function_method = transfer_function_method.at(tmp);
-    }catch(const out_of_range& oor){
+    }catch(const std::out_of_range& oor){
         cosmo.config.transfer_function_method = ccl_boltzmann_class;
     }
     try{
-        tmp = j.at("matter_power_spectrum_method").get<string>();
+        tmp = j.at("matter_power_spectrum_method").get<std::string>();
         cosmo.config.matter_power_spectrum_method = matter_power_spectrum_method.at(tmp);
-    }catch(const out_of_range& oor){
+    }catch(const std::out_of_range& oor){
         cosmo.config.matter_power_spectrum_method = ccl_halofit;
     }
     try{
-        tmp = j.at("mass_function_method").get<string>();
+        tmp = j.at("mass_function_method").get<std::string>();
         cosmo.config.mass_function_method = mass_function_method.at(tmp);
-    }catch(const out_of_range& oor){
+    }catch(const std::out_of_range& oor){
         cosmo.config.mass_function_method = ccl_tinker10;
     }
     try{
-        tmp = j.at("baryons_power_spectrum_method").get<string>();
+        tmp = j.at("baryons_power_spectrum_method").get<std::string>();
         cosmo.config.baryons_power_spectrum_method = baryons_power_spectrum_method.at(tmp);
-    }catch(const out_of_range& oor){
+    }catch(const std::out_of_range& oor){
         cosmo.config.baryons_power_spectrum_method = ccl_nobaryons;
     }
     cosmo.init();
@@ -196,7 +202,7 @@ void from_json(const json& j, Out_Opt& out_opt)
 {
     out_opt.bins_per_decade = j.at("bins_per_decade").get<unsigned>();
     out_opt.points_per_10_Mpc = j.at("points_per_10_Mpc").get<unsigned>();
-    out_opt.out_dir = j.at("out_dir").get<string>();
+    out_opt.out_dir = j.at("out_dir").get<std::string>();
 }
 
 void to_json(json& j, const Chi_Opt& chi_opt)
@@ -256,7 +262,7 @@ void Cosmo_Param::init()
     if (status) throw std::runtime_error(cosmo->status_message);
     
     // PRECOMPUTED VALUES
-    D_norm = norm_growth_factor(*this); //< use only when outside CCL range
+    D_norm = norm_growth_factor(*this); ///< use only when outside CCL range
 
     // normalize power spectrum
     norm_pwr(*this);
@@ -357,14 +363,14 @@ Sim_Param::Sim_Param(int ac, const char* const av[])
     other_par.init(box_opt);
 }
 
-Sim_Param::Sim_Param(string file_name)
+Sim_Param::Sim_Param(std::string file_name)
 {
     try{
         Ifstream i(file_name);
         json j;
         i >> j;
         try{ run_opt = j.at("run_opt"); } // sim_param.json has run_opt
-        catch(const out_of_range& oor){ // stack_info.json does not have run_opt
+        catch(const std::out_of_range& oor){ // stack_info.json does not have run_opt
             run_opt.nt = 0; // max
             run_opt.seed = 0; // random
             run_opt.init();
@@ -372,9 +378,9 @@ Sim_Param::Sim_Param(string file_name)
         box_opt = j.at("box_opt");
         integ_opt = j.at("integ_opt");
         try{ out_opt = j.at("out_opt"); } // new format of json files
-        catch(const out_of_range& oor){ // old format does not store Out_Opt
+        catch(const std::out_of_range& oor){ // old format does not store Out_Opt
             try {out_opt.out_dir = j.at("out_dir"); } // stack_info.json doesn`t store out_dir
-            catch(const out_of_range& oor){out_opt.out_dir = "~/home/FASTSIM/output/"; } // do not need it, set to some default
+            catch(const std::out_of_range& oor){out_opt.out_dir = "~/home/FASTSIM/output/"; } // do not need it, set to some default
             out_opt.bins_per_decade = 20;
             out_opt.points_per_10_Mpc = 10;
         }
@@ -386,16 +392,16 @@ Sim_Param::Sim_Param(string file_name)
         try{
             chi_opt = j.at("chi_opt");
             comp_app.chi = true;
-        } catch(const out_of_range& oor){ comp_app.chi = false; }
+        } catch(const std::out_of_range& oor){ comp_app.chi = false; }
         
     }
-    catch(const out_of_range& oor){
-        string err = string(oor.what()) + " in file '" + file_name + "'";
-        throw out_of_range(err);
+    catch(const std::out_of_range& oor){
+        std::string err = std::string(oor.what()) + " in file '" + file_name + "'";
+        throw std::out_of_range(err);
     }
 }
 
-void Sim_Param::print_info(string out, string app) const
+void Sim_Param::print_info(std::string out, std::string app) const
 {
     if (out == "")
     {
@@ -410,10 +416,10 @@ void Sim_Param::print_info(string out, string app) const
         printf("Redshift:\t%G--->%G\n", integ_opt.z_in, integ_opt.z_out);
         printf("Pk:\t\t[sigma_8 = %G, As = %G, ns = %G, k_smooth = %G]\n", 
             cosmo.sigma8, cosmo.A, cosmo.ns, sqrt(cosmo.k2_G));
-        cout <<"\t\t[transfer_function_method = " << find_value(transfer_function_method, cosmo.config.transfer_function_method) << "]\n";
-        cout <<"\t\t[matter_power_spectrum_method = " << find_value(matter_power_spectrum_method, cosmo.config.matter_power_spectrum_method) << "]\n";
-        cout <<"\t\t[mass_function_method = " << find_value(mass_function_method, cosmo.config.mass_function_method) << "]\n";
-        cout << "\t\t[baryons_power_spectrum_method = " << find_value(baryons_power_spectrum_method, cosmo.config.baryons_power_spectrum_method) << "]\n";
+        std::cout <<"\t\t[transfer_function_method = " << find_value(transfer_function_method, cosmo.config.transfer_function_method) << "]\n";
+        std::cout <<"\t\t[matter_power_spectrum_method = " << find_value(matter_power_spectrum_method, cosmo.config.matter_power_spectrum_method) << "]\n";
+        std::cout <<"\t\t[mass_function_method = " << find_value(mass_function_method, cosmo.config.mass_function_method) << "]\n";
+        std::cout << "\t\t[baryons_power_spectrum_method = " << find_value(baryons_power_spectrum_method, cosmo.config.baryons_power_spectrum_method) << "]\n";
         printf("AA:\t\t[nu = %G (Mpc/h)^2]\n", app_opt.nu_dim);
         printf("LL:\t\t[rs = %G, a = %G, M = %i, Hc = %G]\n", app_opt.rs, app_opt.a, app_opt.M, app_opt.Hc);
         if (comp_app.chi) printf("Chameleon:\t[beta = %.3f, n = %.2f, phi = %G\n", chi_opt.beta, chi_opt.n, chi_opt.phi);
@@ -422,8 +428,8 @@ void Sim_Param::print_info(string out, string app) const
     }
     else
     {
-        string file_name = out + "sim_param.json";
-        ofstream o(file_name);
+        std::string file_name = out + "sim_param.json";
+        std::ofstream o(file_name);
 
         json j = {
             {"box_opt", box_opt},
@@ -439,7 +445,7 @@ void Sim_Param::print_info(string out, string app) const
         if (comp_app.chi) j["chi_opt"] = chi_opt;
         if (app == "test") j["test_opt"] = test_opt;
 
-        o << setw(2) << j << endl;
+        o << std::setw(2) << j << std::endl;
         o.close();
     }
 }

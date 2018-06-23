@@ -7,28 +7,36 @@
 
 namespace po = boost::program_options;
 
-using namespace std;
+/*****************************//**
+ * PRIVATE FUNCTIONS DEFINITIONS *
+ *********************************/
+namespace{
 
-struct Dvector { vector<FTYPE_t> v; };
+struct Dvector { std::vector<FTYPE_t> v; };
 
-void validate(boost::any& v, const vector<string>& values, Dvector*, int) {
+void validate(boost::any& v, const std::vector<std::string>& values, Dvector*, int) {
   Dvector dvalues;
   for(auto val : values){
-      cout << val;
+      std::cout << val;
       dvalues.v.push_back(stod(val));
   }
   v = dvalues;
 }
+} ///< end of anonymous namespace (private definitions)
+
+/****************************//**
+ * PUBLIC FUNCTIONS DEFINITIONS *
+ ********************************/
 
 void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
-    string config_file;
+    std::string config_file;
     Dvector print_z;
     int trans_func_cmd, matter_pwr_cmd, baryons_pwr_cmd, mass_func_cmd;
     // options ONLY on command line
     po::options_description generic("Generic options");
     generic.add_options()
         ("help,h", "produce this help message")			
-        ("config,c", po::value<string>(&config_file)->default_value("INPUT.cfg"), "configuration file name (optional)")
+        ("config,c", po::value<std::string>(&config_file)->default_value("INPUT.cfg"), "configuration file name (optional)")
     //	("version,v", "print current version of the program")
         ;
         
@@ -55,7 +63,7 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
         ("print_z", po::value<Dvector>(&print_z)->multitoken(), "save output info at additional redshifts (optional")
         ("pwr_bins", po::value<unsigned>(&sim.out_opt.bins_per_decade)->default_value(30), "number of bins per decade in power spectrum")
         ("corr_pt", po::value<unsigned>(&sim.out_opt.points_per_10_Mpc)->default_value(10), "number of points per 10 Mpc in correlation function")
-        ("out_dir,o", po::value<string>(&sim.out_opt.out_dir)->default_value("output/"), "output folder name")
+        ("out_dir,o", po::value<std::string>(&sim.out_opt.out_dir)->default_value("output/"), "output folder name")
         ("print_par_pos", po::value<bool>(&sim.out_opt.print_par_pos)->default_value(false), "print particles positions")
         ("print_dens", po::value<bool>(&sim.out_opt.print_dens)->default_value(false), "print density map and histogram")
         ("print_pwr", po::value<bool>(&sim.out_opt.print_pwr)->default_value(false), "print power spectrum")
@@ -144,19 +152,19 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
 
 
     if (vm.count("help")) {
-        cout << setprecision(3) << cmdline_options << "\n";
-        throw string("help");
+        std::cout << std::setprecision(3) << cmdline_options << "\n";
+        throw std::string("help");
     }
     
     if (vm.count("config")) {
-        ifstream ifs(config_file.c_str());
+        std::ifstream ifs(config_file.c_str());
         if (ifs){
-        cout << "\nUsing configuration options defined in file " << config_file << " (given command line options have higher priority).\n";
+        std::cout << "\nUsing configuration options defined in file " << config_file << " (given command line options have higher priority).\n";
             po::store(po::parse_config_file(ifs, config_test), vm);
             // po::store(po::parse_config_file(ifs, cmdline_options), vm);
             notify(vm);
         } else{
-            cout << "Cannot open config file '" << config_file << "'. Using default and command lines values.\n";
+            std::cout << "Cannot open config file '" << config_file << "'. Using default and command lines values.\n";
         }
     }
 

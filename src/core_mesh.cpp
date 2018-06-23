@@ -4,8 +4,6 @@
 #define ORDER 1
 #endif
 
-using namespace std;
-
 template <typename T> static int sgn(T val)
 {
 	return (T(0) < val) - (val < T(0));
@@ -34,7 +32,7 @@ FTYPE_t get_k_sq(int N, int index)
 	int k_vec[3];
 	FTYPE_t tmp = 0;
 	get_k_vec(N, index, k_vec);
-	for (int i =0; i<3; i++) tmp += pow(k_vec[i],2);
+	for (int i =0; i<3; i++) tmp += pow2(k_vec[i]);
 	return tmp;
 }
 
@@ -198,12 +196,12 @@ void assign_to(Mesh& field, const Vec_3D<FTYPE_t> &position, const FTYPE_t value
     } while( it.iter() );
 }
 
-void assign_to(vector<Mesh>& field, const Vec_3D<FTYPE_t> &position, const Vec_3D<FTYPE_t>& value)
+void assign_to(std::vector<Mesh>& field, const Vec_3D<FTYPE_t> &position, const Vec_3D<FTYPE_t>& value)
 {
     IT<ORDER+1> it(position);
     FTYPE_t w;
     do{
-        w = wgh_sch<ORDER>(position, it.vec, field[0].N); //< resuse the same weigh for every field in vector
+        w = wgh_sch<ORDER>(position, it.vec, field[0].N); ///< reuse the same weigh for every field in std::vector
         for (unsigned i = 0; i < 3; i++)
         {
             #pragma omp atomic
@@ -221,12 +219,12 @@ void assign_from(const Mesh &field, const Vec_3D<FTYPE_t> &position, FTYPE_t* va
 	} while( it.iter() );
 }
 
-void assign_from(const vector<Mesh> &field, const Vec_3D<FTYPE_t> &position, Vec_3D<FTYPE_t>& value)
+void assign_from(const std::vector<Mesh> &field, const Vec_3D<FTYPE_t> &position, Vec_3D<FTYPE_t>& value)
 {
     IT<ORDER+1> it(position);
     FTYPE_t w;
     do{
-        w = wgh_sch<ORDER>(position, it.vec, field[0].N); //< resuse the same weigh for every field in vector
+        w = wgh_sch<ORDER>(position, it.vec, field[0].N); ///< reuse the same weigh for every field in std::vector
         for (int i = 0; i < 3; i++)
         {
             #pragma omp atomic
@@ -238,7 +236,7 @@ void assign_from(const vector<Mesh> &field, const Vec_3D<FTYPE_t> &position, Vec
 void fftw_execute_dft_r2c(const FFTW_PLAN_TYPE &p_F, Mesh& rho)
 {
 	FFTW_EXEC_R2C(p_F, rho.real(), rho.complex());
-	rho /= pow(rho.N, 3); //< normalization
+	rho /= pow((FTYPE_t)rho.N, 3); //< normalization
 }
 
 void fftw_execute_dft_c2r(const FFTW_PLAN_TYPE &p_B, Mesh& rho)
@@ -246,12 +244,12 @@ void fftw_execute_dft_c2r(const FFTW_PLAN_TYPE &p_B, Mesh& rho)
 	FFTW_EXEC_C2R(p_B, rho.complex(), rho.real());
 }
 
-void fftw_execute_dft_r2c_triple(const FFTW_PLAN_TYPE &p_F, vector<Mesh>& rho)
+void fftw_execute_dft_r2c_triple(const FFTW_PLAN_TYPE &p_F, std::vector<Mesh>& rho)
 {
 	for (int i = 0; i < 3; i++) fftw_execute_dft_r2c(p_F, rho[i]);
 }
 
-void fftw_execute_dft_c2r_triple(const FFTW_PLAN_TYPE &p_B, vector<Mesh>& rho)
+void fftw_execute_dft_c2r_triple(const FFTW_PLAN_TYPE &p_B, std::vector<Mesh>& rho)
 {
 	for (int i = 0; i < 3; i++) fftw_execute_dft_c2r(p_B, rho[i]);
 }

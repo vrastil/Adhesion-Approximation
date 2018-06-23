@@ -5,7 +5,6 @@
 #include "params.hpp"
 
 namespace {
-using namespace std;
 
 /**
  * @class LinkedList
@@ -50,7 +49,7 @@ FTYPE_t force_tot(const FTYPE_t r, const FTYPE_t e2){
 	return 1 / (r*r+e2);
 }
 
-void force_short(const Sim_Param &sim, const FTYPE_t D, const LinkedList& linked_list, const vector<Particle_v<FTYPE_t>>& particles,
+void force_short(const Sim_Param &sim, const FTYPE_t D, const LinkedList& linked_list, const  std::vector<Particle_v<FTYPE_t>>& particles,
 				 const Vec_3D<FTYPE_t>& position, Vec_3D<FTYPE_t>& force, Interp_obj& fs_interp)
 {	// Calculate short range force in position, force is added
     #define FORCE_SHORT_NO_INTER
@@ -58,7 +57,7 @@ void force_short(const Sim_Param &sim, const FTYPE_t D, const LinkedList& linked
 	Vec_3D<FTYPE_t> dr_vec;
     FTYPE_t dr2;
     FTYPE_t dr; // <-- #ifdef FORCE_SHORT_NO_INTER
-    const FTYPE_t m = pow(sim.box_opt.Ng, 3) / D;
+    const FTYPE_t m = pow((FTYPE_t)sim.box_opt.Ng, 3) / D;
     const unsigned Nm = sim.box_opt.mesh_num;
     const FTYPE_t rs2 = pow2(sim.app_opt.rs);
     const FTYPE_t e2 = pow2(sim.box_opt.Ng*0.1); // <-- #ifdef FORCE_SHORT_NO_INTER
@@ -83,7 +82,7 @@ void force_short(const Sim_Param &sim, const FTYPE_t D, const LinkedList& linked
     } while( it.iter() );
 }
 
-void kick_step_w_pp(const Sim_Param &sim, const FTYPE_t a, const FTYPE_t da, vector<Particle_v<FTYPE_t>>& particles, const vector< Mesh> &force_field,
+void kick_step_w_pp(const Sim_Param &sim, const FTYPE_t a, const FTYPE_t da,  std::vector<Particle_v<FTYPE_t>>& particles, const  std::vector< Mesh> &force_field,
                     LinkedList& linked_list, Interp_obj& fs_interp)
 {    // 2nd order ODE with long & short range potential
     const unsigned Np = particles.size();
@@ -98,7 +97,7 @@ void kick_step_w_pp(const Sim_Param &sim, const FTYPE_t a, const FTYPE_t da, vec
     printf("Creating linked list...\n");
 	linked_list.get_linked_list(particles);
 
-    cout << "Computing short and long range parts of the potential...\n";
+    std::cout << "Computing short and long range parts of the potential...\n";
     #pragma omp parallel for private(force)
     for (unsigned i = 0; i < Np; i++)
 	{

@@ -1,6 +1,9 @@
 /**
- * @file:	mesh.hpp
- * @brief:	mesh data structure definitions
+ * @brief mesh data structure definitions
+ * 
+ * @file class_mesh.hpp
+ * @author Michal Vrastil
+ * @date 2018-06-24
  */
 
 #pragma once
