@@ -1,3 +1,11 @@
+/**
+ * @brief definitions of cosmological functions like power spectrum, growth, etc.
+ * 
+ * @file core_power.cpp
+ * @author Michal Vrastil
+ * @date 2018-06-23
+ */
+
 #include "core_power.h"
 #include "templates/class_data_vec.hpp"
 #include "params.hpp"
@@ -8,14 +16,37 @@
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_fit.h>
 #include <gsl/gsl_integration.h>
+#include <gsl/gsl_odeiv2.h>
+#include <gsl/gsl_spline.h>
 
-using namespace std;
+/*****************************//**
+ * PRIVATE FUNCTIONS DEFINITIONS *
+ *********************************/
+namespace{
+    
+/**
+ * @brief general integrand with callable function and one parameter
+ * 
+ * @tparam P callable object with 'operator()(double)'
+ */
+template <class P>
+struct integrand_param
+{
+    integrand_param(double r, const P& P_k): r(r), P_k(P_k) {}
+    double r;
+    const P& P_k;
+};
 
 /**
- * GSL functions are mostly witten for <double> so even with different
+ * @note GSL functions are mostly witten for <double> so even with different
  * PRECISION set these are computed in double precision 
- **/
+ */
 
+/**
+ * @class Integr_obj
+ * @brief basic integration object, wrapper for GSL integration functions
+ * 
+ */
 class Integr_obj
 {
 public:
@@ -47,6 +78,12 @@ protected:
     int gsl_errno;
 };
 
+/**
+ * @class Integr_obj_qag
+ * @brief QAG adaptive integration
+ * 
+ * The QAG algorithm is a simple adaptive integration procedure.
+ */
 class Integr_obj_qag : public Integr_obj
 {
 public:
@@ -56,18 +93,29 @@ public:
     Integr_obj(f, a, b, epsabs, epsrel, limit), key(key) {}
 
     // METHODS
-    double operator()(void* params)
+    double operator()(double r, void* params)
     {
         F.params = params;
         gsl_errno = gsl_integration_qag(&F, a, b, epsabs, epsrel, limit, key, w, &result, &error);
-        if (gsl_errno) throw runtime_error("GSL integration error: " + string(gsl_strerror(gsl_errno)));
+        if (gsl_errno) throw std::runtime_error("GSL integration error: " + std::string(gsl_strerror(gsl_errno)));
         else return result;
     }
+
+    double operator()(void* params)
+    {
+        return this->operator()(0, params);
+    }
+
 protected:
     // VARIABLES
     int key;
 };
 
+/**
+ * @class Integr_obj_qagiu
+ * @brief QAGI adaptive integration on infinite intervals
+ * 
+ */
 class Integr_obj_qagiu : public Integr_obj
 {
 public:
@@ -77,15 +125,27 @@ public:
     Integr_obj(f, a, 0, epsabs, epsrel, limit) {}
 
     // METHODS
-    double operator()(void* params)
+    double operator()(double r, void* params)
     {
         F.params = params;
         gsl_errno = gsl_integration_qagiu(&F, a, epsabs, epsrel, limit, w, &result, &error);
-        if (gsl_errno) throw runtime_error("GSL integration error: " + string(gsl_strerror(gsl_errno)));
+        if (gsl_errno) throw std::runtime_error("GSL integration error: " + std::string(gsl_strerror(gsl_errno)));
         else return result;
+    }
+
+    double operator()(void* params)
+    {
+        return this->operator()(0, params);
     }
 };
 
+/**
+ * @class Integr_obj_qawo
+ * @brief QAWO adaptive integration for oscillatory functions
+ * 
+ * The QAWO algorithm is designed for integrands with an oscillatory factor,
+ * \f$\sin(\omega x)\f$ or \f$\cos(\omega x)\f$.
+ */
 class Integr_obj_qawo : public Integr_obj
 {
 public:
@@ -107,13 +167,18 @@ public:
         gsl_integration_qawo_table_set(wf, r, L, GSL_INTEG_SINE);
         F.params = params;
         gsl_errno = gsl_integration_qawo(&F, a, epsabs, epsrel, limit, w, wf, &result, &error);
-        if (gsl_errno) throw runtime_error("GSL integration error: " + string(gsl_strerror(gsl_errno)));
+        if (gsl_errno) throw std::runtime_error("GSL integration error: " + std::string(gsl_strerror(gsl_errno)));
         else return result;
     }
 protected:
     gsl_integration_qawo_table* wf;
 };
 
+/**
+ * @class Integr_obj_qawf
+ * @brief QAWF adaptive integration for Fourier integrals
+ * 
+ */
 class Integr_obj_qawf : public Integr_obj_qawo
 {
 public:
@@ -135,7 +200,7 @@ public:
         gsl_integration_qawo_table_set(wf, r, L, GSL_INTEG_SINE);
         F.params = params;
         gsl_errno = gsl_integration_qawf(&F, a, epsabs, limit, w, wc, wf, &result, &error);
-        if (gsl_errno) throw runtime_error("GSL integration error: " + string(gsl_strerror(gsl_errno)));
+        if (gsl_errno) throw std::runtime_error("GSL integration error: " + std::string(gsl_strerror(gsl_errno)));
         else return result;
     }
 protected:
@@ -147,54 +212,206 @@ protected:
  * @brief:	Explicit embedded Runge-Kutta Prince-Dormand (8, 9) method.
  */
 
-
-ODE_Solver::ODE_Solver(int (* function) (double, const double[], double[], void*), size_t dim, void* params,
-            const double hstart, const double epsabs, const double epsrel):
-    sys({function, NULL, dim, params}),
-    d(gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rk8pd, hstart, epsabs, epsrel)) {}
-
-ODE_Solver::~ODE_Solver()
+class ODE_Solver
 {
-    gsl_odeiv2_driver_free (d);
+public:
+    ODE_Solver(int (* function) (double t, const double y[], double dydt[], void * params), size_t dim, void* params,
+               const double hstart = 1e-6, const double epsabs = 1e-6, const double epsrel = 0):
+        sys({function, NULL, dim, params}),
+        d(gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rk8pd, hstart, epsabs, epsrel)) {}
+
+    ~ODE_Solver()
+    {
+        gsl_odeiv2_driver_free (d);
+    }
+
+    void update(double &t, const double t1, double y[])
+    {
+        status = gsl_odeiv2_driver_apply (d, &t, t1, y);
+        if (status) throw std::runtime_error("GSL ODE error: " + std::string(gsl_strerror(status)));
+    }
+
+    int status;
+    gsl_odeiv2_system sys;
+    gsl_odeiv2_driver* d;
+};
+
+template<typename T>
+T hubble_param(T a, const Cosmo_Param& cosmo)
+{   // hubble normalize to H(a = 1) == 1
+    return sqrt(cosmo.Omega_m/pow(a, 3) + cosmo.Omega_L());
 }
 
-void ODE_Solver::update(double &t, const double t1, double y[])
-{
-    status = gsl_odeiv2_driver_apply (d, &t, t1, y);
-    if (status) throw runtime_error("GSL ODE error: " + string(gsl_strerror(status)));
+double growth_factor_integrand(double a, void* params)
+{    
+    return pow(a*hubble_param(a, *static_cast<const Cosmo_Param*>(params)), -3);
 }
+
+double growth_factor(double a, void* params)
+{
+    return growth_factor(a, *static_cast<const Cosmo_Param*>(params));
+}
+
+double ln_growth_factor(double log_a, void* parameters)
+{
+    return log(growth_factor(exp(log_a), parameters));
+}
+
+template<typename T>
+int get_nearest(const T val, const std::vector<T>& vec)
+{   // assume data in 'vec' are ordered, vec[0] < vec[1] < ...
+    return lower_bound(vec.begin(), vec.end(), val) - vec.begin();
+}
+
+/**
+ * @brief integrand for correlation function when weight-function 'sin(kr)' is used in integration
+ * 
+ * @tparam P callable object with 'operator()(double)'
+ * @param k 
+ * @param params 
+ * @return double 
+ */
+template <class P>
+double xi_integrand_W(double k, void* params){
+    integrand_param<P>* my_par = (integrand_param<P>*) params;
+    const double r = my_par->r;
+    const P& P_k = my_par->P_k;
+    return 1/(2*PI*PI)*k/r*P_k(k);
+};
+
+/**
+ * @brief integrand for correlation function when non-weighted integration is used
+ * 
+ * @tparam P callable object with 'operator()(double)'
+ * @param k 
+ * @param params 
+ * @return double 
+ */
+template <class P>
+double xi_integrand_G(double k, void* params){
+    integrand_param<P>* my_par = (integrand_param<P>*) params;
+    const double kr = k*my_par->r;
+    double j0 = kr < 1e-6 ? 1 - kr*kr/6. : sin(kr) / (kr);
+    const P& P_k = my_par->P_k;
+    return 1/(2*PI*PI)*k*k*j0*P_k(k);
+};
+
+/**
+ * @brief integrand for amplitude of mass fluctuaton when non-weighted integration is used
+ * 
+ * @tparam P 
+ * @param k 
+ * @param params 
+ * @return double 
+ */
+template <class P>
+double sigma_integrand_G(double k, void* params){
+    integrand_param<P>* my_par = (integrand_param<P>*) params;
+    const double kr = k*my_par->r;
+    const double w = kr < 0.1 ?
+        1.-0.1*kr*kr+0.003571429*kr*kr*kr*kr
+        -6.61376E-5*kr*kr*kr*kr*kr*kr
+        +7.51563E-7*kr*kr*kr*kr*kr*kr*kr*kr
+        :
+        3.*(sin(kr) - kr*cos(kr))/(kr*kr*kr);
+
+    const P& P_k = my_par->P_k;
+    return 1/(2*PI*PI)*k*k*w*w*P_k(k);
+};
+
+/**
+ * @brief compute given function in linear range and store results
+ * 
+ * @tparam P callable object with 'operator()(double)'
+ * @tparam T callable object with 'operator()(double)'
+ * @param x_min starting radius of function evaluation
+ * @param x_max last radius of function evaluation
+ * @param lin_bin linear step between function evaluations
+ * @param P_k power spectrum (callable)
+ * @param fce_binned object to store binned function
+ * @param fce_r callable function
+ */
+
+template <class P, class T> 
+void gen_fce_r_binned_gsl(const double x_min, const double x_max, const double lin_bin, const P& P_k, Data_Vec<FTYPE_t, 2>& fce_binned, T& fce_r)
+{
+    const unsigned req_size = (unsigned)ceil((x_max - x_min)/lin_bin);
+    
+    fce_binned.resize(req_size);
+    integrand_param<P> my_param(0, P_k);
+
+	for(unsigned i = 0; i < req_size; i++){
+        double r = x_min + i*lin_bin;
+        my_param.r = r;
+        fce_binned[0][i] = r;
+        fce_binned[1][i] = fce_r(r, &my_param);
+    }
+}
+
+/**
+ * @brief compute correlation function and store results
+ * 
+ * @tparam P callable object with 'operator()(double)'
+ * @tparam T callable object with 'operator()(double)'
+ * @param sim simulation parameters
+ * @param P_k power spectrum (callable)
+ * @param corr_func_binned object to store binned correlation function
+ * @param xi_r correlation function at given r (callable)
+ */
+
+template <class P, class T> // both callable with 'operator()(double)'
+void gen_corr_func_binned_gsl(const Sim_Param &sim, const P& P_k, Data_Vec<FTYPE_t, 2>& corr_func_binned, T& xi_r)
+{
+    const double x_min = sim.other_par.x_corr.lower;
+    const double x_max = sim.other_par.x_corr.upper;
+    const double lin_bin = 10./sim.out_opt.points_per_10_Mpc;
+    gen_fce_r_binned_gsl(x_min, x_max, lin_bin, P_k, corr_func_binned, xi_r);
+}
+
+/**
+ * @brief compute amplitude of density fluctuation and store results
+ * 
+ * @tparam P callable object with 'operator()(double)'
+ * @tparam T callable object with 'operator()(double)'
+ * @param sim simulation parameters
+ * @param P_k power spectrum (callable)
+ * @param sigma_binned object to store binned amplitude of density fluctuation
+ * @param sigma_r amplitude of density fluctuation at given r (callable)
+ */
+
+template <class P, class T> // both callable with 'operator()(double)'
+void gen_sigma_func_binned_gsl(const Sim_Param &sim, const P& P_k, Data_Vec<FTYPE_t, 2>& sigma_binned, T& sigma_r)
+{
+    const double x_min = sim.other_par.x_corr.lower;
+    const double x_max = sim.other_par.x_corr.upper;
+    const double lin_bin = 10./sim.out_opt.points_per_10_Mpc;
+    gen_fce_r_binned_gsl(x_min, x_max, lin_bin, P_k, sigma_binned, sigma_r);
+}
+
+constexpr double GSL_EPSABS = 1e-9; ///< absolute error
+constexpr size_t GSL_LIMIT = 4000; ///< max. number of subintervals for adaptive integration
+constexpr size_t GSL_N = 50; ///< max. number of bisections of integration interval (QAWO / QAWF)
+
+} ///< end of anonymous namespace (private definitions)
+
+/****************************//**
+ * PUBLIC FUNCTIONS DEFINITIONS *
+ ********************************/
 
 void norm_pwr(Cosmo_Param& cosmo)
 {
     #ifndef LESSINFO
-    cout << "Initializing CCL power spectrum...\n";
+    std::cout << "Initializing CCL power spectrum...\n";
     #endif
     int status = 0;
     ccl_sigma8(cosmo.cosmo, &status);
     if (status) throw std::runtime_error(cosmo.cosmo->status_message);
 }
 
-template<typename T>
-static T hubble_param(T a, const Cosmo_Param& cosmo)
-{   // hubble normalize to H(a = 1) == 1
-    return sqrt(cosmo.Omega_m/pow(a, 3) + cosmo.Omega_L());
-}
-
-FTYPE_t Omega_lambda(FTYPE_t a, const Cosmo_Param& cosmo)
+FTYPE_t norm_growth_factor(const Cosmo_Param& cosmo)
 {
-    // try ccl range
-    int status = 0;
-    FTYPE_t OL = ccl_omega_x(cosmo.cosmo, a, ccl_species_l_label, &status);
-    if(!status) return OL;
-
-    // compute outside range
-    OL = cosmo.Omega_L();
-    return OL/(cosmo.Omega_m/pow(a, 3) + OL);
-}
-
-static double growth_factor_integrand(double a, void* params)
-{    
-    return pow(a*hubble_param(a, *static_cast<const Cosmo_Param*>(params)), -3);
+    Integr_obj_qag D(&growth_factor_integrand, 0, 1, 0, 1e-12, 1000, GSL_INTEG_GAUSS61);
+    return D(static_cast<void*>(cosmo));
 }
 
 FTYPE_t growth_factor(FTYPE_t a, const Cosmo_Param& cosmo)
@@ -212,22 +429,6 @@ FTYPE_t growth_factor(FTYPE_t a, const Cosmo_Param& cosmo)
     return hubble_param(a, cosmo)*D(static_cast<void*>(cosmo))/cosmo.D_norm;
 }
 
-static double growth_factor(double a, void* params)
-{
-    return growth_factor(a, *static_cast<const Cosmo_Param*>(params));
-}
-
-FTYPE_t norm_growth_factor(const Cosmo_Param& cosmo)
-{
-    Integr_obj_qag D(&growth_factor_integrand, 0, 1, 0, 1e-12, 1000, GSL_INTEG_GAUSS61);
-    return D(static_cast<void*>(cosmo));
-}
-
-static double ln_growth_factor(double log_a, void* parameters)
-{
-    return log(growth_factor(exp(log_a), parameters));
-}
-
 FTYPE_t growth_rate(FTYPE_t a, const Cosmo_Param& cosmo)
 {
     // f(0) == 1
@@ -243,7 +444,7 @@ FTYPE_t growth_rate(FTYPE_t a, const Cosmo_Param& cosmo)
     double error;
     status = gsl_deriv_central(&F, log(a), 1e-12, &f, &error);
     if (!status) return f;
-    else throw runtime_error("GSL ODE error: " + string(gsl_strerror(status)));
+    else throw std::runtime_error("GSL ODE error: " + std::string(gsl_strerror(status)));
 }
 
 FTYPE_t growth_change(FTYPE_t a, const Cosmo_Param& cosmo)
@@ -257,8 +458,20 @@ FTYPE_t growth_change(FTYPE_t a, const Cosmo_Param& cosmo)
         double dDda, error;
         int status = gsl_deriv_forward(&F, a, 1e-12, &dDda, &error);
         if (!status) return dDda;
-        else throw runtime_error("GSL ODE error: " + string(gsl_strerror(status)));
+        else throw std::runtime_error("GSL ODE error: " + std::string(gsl_strerror(status)));
     }
+}
+
+FTYPE_t Omega_lambda(FTYPE_t a, const Cosmo_Param& cosmo)
+{
+    // try ccl range
+    int status = 0;
+    FTYPE_t OL = ccl_omega_x(cosmo.cosmo, a, ccl_species_l_label, &status);
+    if(!status) return OL;
+
+    // compute outside range
+    OL = cosmo.Omega_L();
+    return OL/(cosmo.Omega_m/pow(a, 3) + OL);
 }
 
 FTYPE_t lin_pow_spec(FTYPE_t a, FTYPE_t k, const Cosmo_Param& cosmo)
@@ -282,17 +495,6 @@ FTYPE_t non_lin_pow_spec(FTYPE_t a, FTYPE_t k, const Cosmo_Param& cosmo)
     else throw std::runtime_error(cosmo.cosmo->status_message);
 }
 
-template<typename T>
-static int get_nearest(const T val, const vector<T>& vec)
-{   // assume data in 'vec' are ordered, vec[0] < vec[1] < ...
-    return lower_bound(vec.begin(), vec.end(), val) - vec.begin();
-}
-
-/**
- * @class:	Interp_obj
- * @brief:	Steffen interpolation of data [x, y]
- */
-
 template <typename T, unsigned N>
 void Interp_obj::init(const Data_Vec<T, N>& data)
 {
@@ -300,8 +502,8 @@ void Interp_obj::init(const Data_Vec<T, N>& data)
     acc = gsl_interp_accel_alloc ();
     spline = gsl_spline_alloc (gsl_interp_steffen, data.size());
 
-    vector<double> tmp_x(data[0].begin(), data[0].end());
-    vector<double> tmp_y(data[1].begin(), data[1].end());
+    std::vector<double> tmp_x(data[0].begin(), data[0].end());
+    std::vector<double> tmp_y(data[1].begin(), data[1].end());
 
     gsl_spline_init (spline, tmp_x.data(), tmp_y.data(), data.size());
 
@@ -319,13 +521,6 @@ Interp_obj::~Interp_obj()
 }
 
 double Interp_obj::operator()(double x) const{ return gsl_spline_eval(spline, x, acc); }
-
-/**
- * @class:	Extrap_Pk
- * @brief:	linear interpolation of data [k, P(k)] within 'useful' range
-            fit to primordial P_i(k) below the 'useful' range
-            fit to Padé approximant R [0/3] above the 'useful' range
- */
 
 template <typename T, unsigned N>
 Extrap_Pk<T, N>::Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
@@ -371,12 +566,12 @@ void Extrap_Pk<T, N>::fit_lin(const Data_Vec<T, N>& data, const unsigned m, cons
     // for N = 2 perform non-weighted least-square fitting
     // for N = 3 use data[2] as sigma, w = 1/sigma^2
     double Pk;
-    vector<double> Pk_res, w;
+    std::vector<double> Pk_res, w;
     Pk_res.reserve(n-m);
     if (N == 3){
         w.reserve(n-m);
     }
-    vector<double> A_vec(n-m, 1);
+    std::vector<double> A_vec(n-m, 1);
 
     for(unsigned i = m; i < n; i++){
         Pk = lin_pow_spec(1, data[0][i], cosmo);
@@ -388,7 +583,7 @@ void Extrap_Pk<T, N>::fit_lin(const Data_Vec<T, N>& data, const unsigned m, cons
     int gsl_errno;
     if (N == 3) gsl_errno = gsl_fit_wmul(A_vec.data(), 1, w.data(), 1, Pk_res.data(), 1, n-m, &A, &A_sigma2, &sumsq);
     else gsl_errno = gsl_fit_mul(A_vec.data(), 1, Pk_res.data(), 1, n-m, &A, &A_sigma2, &sumsq);
-    if (gsl_errno) throw runtime_error("GSL integration error: " + string(gsl_strerror(gsl_errno)));
+    if (gsl_errno) throw std::runtime_error("GSL integration error: " + std::string(gsl_strerror(gsl_errno)));
 
     #ifndef LESSINFO
     printf("\t[%sfit A = %.1e, err = %.2f%%]\n", N == 3 ? "weighted-" : "", A, 100*sqrt(A_sigma2)/A);
@@ -402,7 +597,7 @@ void Extrap_Pk<T, N>::fit_power_law(const Data_Vec<T, N>& data, const unsigned m
     // fit 'log P(k) = log A + n_s * log k' via A, n_s
     // for N = 2 perform non-weighted least-square fitting
     // for N = 3 use data[2] as sigma, w = 1/sigma^2
-    vector<double> k, Pk, w; //< need double for GSL
+    std::vector<double> k, Pk, w; //< need double for GSL
     k.reserve(n-m);
     Pk.reserve(n-m);
     if (N == 3){
@@ -417,7 +612,7 @@ void Extrap_Pk<T, N>::fit_power_law(const Data_Vec<T, N>& data, const unsigned m
     int gsl_errno;
     if (N == 3) gsl_errno = gsl_fit_wlinear(k.data(), 1, w.data(), 1, Pk.data(), 1, n-m, &A, &n_s, &cov00, &cov01, &cov11, &sumsq);
     else gsl_errno = gsl_fit_linear(k.data(), 1, Pk.data(), 1, n-m, &A, &n_s, &cov00, &cov01, &cov11, &sumsq);
-    if (gsl_errno) throw runtime_error("GSL integration error: " + string(gsl_strerror(gsl_errno)));
+    if (gsl_errno) throw std::runtime_error("GSL integration error: " + std::string(gsl_strerror(gsl_errno)));
 
     A = exp(A); // log A => A
     #ifndef LESSINFO
@@ -437,12 +632,6 @@ double Extrap_Pk<T, N>::operator()(double k) const
     else return A_up*pow(k, n_s);
 }
 
-/**
- * @class:	Extrap_Pk_Nl
- * @brief:	creates Extrapolate object (linear power spectrum) from data and store non-linear parameters
-            call 'operator()(k)' based on k_split (upper range of the linear)
- */
-
 template <typename T, unsigned N>
 Extrap_Pk_Nl<T, N>::Extrap_Pk_Nl(const Data_Vec<T, N>& data, const Sim_Param &sim, T A_nl, T a_eff):
     Extrap_Pk<T, N>(data, sim), A_nl(A_nl), a_eff(a_eff), k_split(this->k_max) {}
@@ -453,71 +642,7 @@ double Extrap_Pk_Nl<T, N>::operator()(double k) const {
     else return (1-A_nl)*lin_pow_spec(a_eff, k, this->cosmo) + A_nl*non_lin_pow_spec(a_eff, k, this->cosmo);
 }
 
-template <class P>
-struct xi_integrand_param
-{
-    xi_integrand_param(double r, const P& P_k): r(r), P_k(P_k) {}
-    double r;
-    const P& P_k;
-};
-
-/**
- * @brief integrand for correlation function when weight-function 'sin(kr)' is used in integration
- */
-template <class P>
-static double xi_integrand_W(double k, void* params){
-    xi_integrand_param<P>* my_par = (xi_integrand_param<P>*) params;
-    const double r = my_par->r;
-    const P& P_k = my_par->P_k;
-    return 1/(2*PI*PI)*k/r*P_k(k);
-};
-
-/**
- * @brief integrand for correlation function when non-weighted integration is used
- */
-template <class P>
-static double xi_integrand_G(double k, void* params){
-    xi_integrand_param<P>* my_par = (xi_integrand_param<P>*) params;
-    const double r = my_par->r;
-    double j0;
-    if (k*r < 1e-6) j0 = 1 - k*k*r*r/6.;
-    else j0 = sin(k*r) / (k*r);
-    const P& P_k = my_par->P_k;
-    return 1/(2*PI*PI)*k*k*j0*P_k(k);
-};
-
-template <class P, class T> // both callable with 'operator()(double)'
-static void gen_corr_func_binned_gsl(const Sim_Param &sim, const P& P_k, Data_Vec<FTYPE_t, 2>& corr_func_binned, T& xi_r)
-{
-    const double x_min = sim.other_par.x_corr.lower;
-    const double x_max = sim.other_par.x_corr.upper;
-
-    xi_integrand_param<P> my_param(0, P_k);
-
-    const double lin_bin = 10./sim.out_opt.points_per_10_Mpc;
-    unsigned req_size = (unsigned)ceil((x_max - x_min)/lin_bin);
-    corr_func_binned.resize(req_size);
-
-	double r;
-	for(unsigned i = 0; i < req_size; i++){
-        r = x_min + i*lin_bin;
-        my_param.r = r;
-        corr_func_binned[0][i] = r;
-        corr_func_binned[1][i] = xi_r(r, &my_param);
-    }
-}
-
-/**
- * GSL_EPSABS - absolute error
- * GSL_LIMIT -  max. number of subintervals for adaptive integration
- * GSL_N - max. number of bisections of integration interval (QAWO / QAWF)
- */
-
-constexpr double GSL_EPSABS = 1e-9;
-constexpr size_t GSL_LIMIT = 4000;
-constexpr size_t GSL_N = 50;
-
-template<class P> // everything callable P_k(k)
+template<class P>
 void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<FTYPE_t, 2>& corr_func_binned)
 {
     #ifndef LESSINFO
@@ -539,6 +664,32 @@ void gen_corr_func_binned_gsl_qawf_nl(const Sim_Param &sim, FTYPE_t a, Data_Vec<
     gen_corr_func_binned_gsl_qawf(sim, P_k, corr_func_binned);
 }
 
+template<class P>
+void gen_sigma_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<FTYPE_t, 2>& sigma_binned)
+{
+    #ifndef LESSINFO
+    printf("Computing mass fluctuations via GSL integration QAWF...\n");
+    #endif
+    Integr_obj_qagiu sigma_r(&sigma_integrand_G<P>, 0, GSL_EPSABS,  GSL_LIMIT, GSL_N);
+    gen_sigma_func_binned_gsl(sim, P_k, sigma_binned, sigma_r);
+}
+
+void gen_sigma_func_binned_gsl_qawf_lin(const Sim_Param &sim, FTYPE_t a, Data_Vec<FTYPE_t, 2>& sigma_binned)
+{
+    auto P_k = [&](FTYPE_t k){ return lin_pow_spec(a, k, sim.cosmo); };
+    gen_sigma_binned_gsl_qawf(sim, P_k, sigma_binned);
+}
+
+void gen_sigma_func_binned_gsl_qawf_nl(const Sim_Param &sim, FTYPE_t a, Data_Vec<FTYPE_t, 2>& sigma_binned)
+{
+    auto P_k = [&](FTYPE_t k){ return non_lin_pow_spec(a, k, sim.cosmo); };
+    gen_sigma_binned_gsl_qawf(sim, P_k, sigma_binned);
+}
+
+/**********************//**
+ * EXPLICIT INSTANTIATION *
+ **************************/
+
 template void Interp_obj::init(const Data_Vec<FTYPE_t, 2>& data);
 template void Interp_obj::init(const Data_Vec<FTYPE_t, 3>& data);
 
@@ -551,3 +702,8 @@ template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk<FT
 template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk<FTYPE_t, 3>&, Data_Vec<FTYPE_t, 2>&);
 template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk_Nl<FTYPE_t, 2>&, Data_Vec<FTYPE_t, 2>&);
 template void gen_corr_func_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk_Nl<FTYPE_t, 3>&, Data_Vec<FTYPE_t, 2>&);
+
+template void gen_sigma_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk<FTYPE_t, 2>&, Data_Vec<FTYPE_t, 2>&);
+template void gen_sigma_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk<FTYPE_t, 3>&, Data_Vec<FTYPE_t, 2>&);
+template void gen_sigma_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk_Nl<FTYPE_t, 2>&, Data_Vec<FTYPE_t, 2>&);
+template void gen_sigma_binned_gsl_qawf(const Sim_Param&, const Extrap_Pk_Nl<FTYPE_t, 3>&, Data_Vec<FTYPE_t, 2>&);
