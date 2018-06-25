@@ -17,7 +17,7 @@ from scipy.optimize import curve_fit
 from . import plot
 from .fastsim import Extrap_Pk_Nl_2, Extrap_Pk_Nl_3
 from .struct import SimInfo, StackInfo, insert
-from .power import hybrid_pow_spec, get_Data_vec, corr_func, chi_trans_to_supp
+from .power import hybrid_pow_spec, get_Data_vec, corr_func, chi_trans_to_supp, sigma_R
 
 def print_exception(file=sys.stdout):
     """ print catched exception with colors """
@@ -141,6 +141,19 @@ def get_plot_corr(files, zs, a_sim_info, load=False):
         a_sim_info.data["corr_func"]["nl"] = [corr_func(a_sim_info.sim, z=z, non_lin=True) for z in zs]
 
     plot.plot_corr_func(a_sim_info.data["corr_func"], zs, a_sim_info)
+    
+def get_plot_sigma(files, zs, a_sim_info, load=False):
+    if "sigma_R" not in a_sim_info.data:
+        a_sim_info.data["sigma_R"] = {}
+        if load:
+            a_sim_info.data["sigma_R"]["par"] = [np.transpose(np.loadtxt(a_file)) for a_file in files]
+        else:
+            get_extrap_pk(a_sim_info, files)
+            a_sim_info.data["sigma_R"]["par"] = [sigma_R(a_sim_info.sim, Pk=Pk) for Pk in a_sim_info.data["pk_list"]]
+        a_sim_info.data["sigma_R"]["lin"] = [sigma_R(a_sim_info.sim, z=z) for z in zs]
+        a_sim_info.data["sigma_R"]["nl"] = [sigma_R(a_sim_info.sim, z=z, non_lin=True) for z in zs]
+
+    plot.plot_corr_func(a_sim_info.data["sigma_R"], zs, a_sim_info, is_sigma=True)
 
 def get_plot_supp(files, zs, a_sim_info, pk_type='dens'):
     a = [1./(z+1.) for z in zs]
@@ -228,8 +241,9 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         ("vel_pwr_spec_supp", '*.dat', get_plot_supp, {'subdir' : 'vel_pwr_diff/', 'pk_type' : 'vel'}),
         ("chi_pwr_spec_supp", '*chi*.dat*', get_plot_supp, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
         ("chi_pwr_spec_supp_map", '*chi*.dat*', get_plot_supp_map, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
-        # Correlation function
+        # Correlation function, amplitude of density fluctuations
         ("corr_func", '*par*.dat *init*.dat', get_plot_corr, {'subdir' : 'pwr_spec/'}),
+        ("sigma_R", '*par*.dat *init*.dat', get_plot_sigma, {'subdir' : 'pwr_spec/'}),
         # Density distribution
         ("dens_hist", '*.dat', load_plot_dens_histo, {'subdir' : 'rho_bin/'}),
         # Particles -- last slice, evolution
@@ -535,8 +549,9 @@ def stack_group(rerun=None, skip=None, **kwargs):
             {'subdir' : 'pwr_diff/', 'info_str' : '(input)', 'ext_title' : 'input'}),
         ("chi_pwr_diff", '*chi*.dat*', load_plot_pwr_spec_diff,
             {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
-        # Correlation function
+        # Correlation function, amplitude of density fluctuations
         ("corr_func", '*par*.dat *init*.dat', get_plot_corr, {'subdir' : 'pwr_spec/'}),
+        ("sigma_R", '*par*.dat *init*.dat', get_plot_sigma, {'subdir' : 'pwr_spec/'}),
         # Power spectrum suppression
         ("pwr_spec_supp", '*par*', get_plot_supp, {'subdir' : 'pwr_diff/'}),
         ("pwr_spec_supp_map", '*par*', get_plot_supp_map, {'subdir' : 'pwr_diff/'}),

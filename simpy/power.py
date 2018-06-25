@@ -121,6 +121,23 @@ def corr_func(sim, Pk=None, z=None, non_lin=False):
         raise KeyError("Function 'corr_func' called without arguments.")
     return get_ndarray(corr)
 
+def sigma_R(sim, Pk=None, z=None, non_lin=False):
+    """ return amplitude of density fluctuations
+    if given Pk -- C++ class Extrap_Pk or Extrap_Pk_Nl -- computes its sigma_R.
+    if given redshift, computes linear or non-linear (emulator) amplitude of density fluctuations  """
+    sigma = fs.Data_Vec_2()
+    if Pk: # compute amplitude of density fluctuations from given continuous power spectrum
+        fs.gen_sigma_binned_gsl_qawf(sim, Pk, sigma)
+    elif z is not None: # compute (non-)linear amplitude of density fluctuations
+        a = 1./(1.+z) if z != 'init' else 1.0
+        if non_lin:
+            fs.gen_sigma_func_binned_gsl_qawf_lin(sim, a, sigma)
+        else:
+            fs.gen_sigma_func_binned_gsl_qawf_nl(sim, a, sigma)
+    else:
+        raise KeyError("Function 'sigma_R' called without arguments.")
+    return get_ndarray(sigma)
+
 def growth_factor(a, cosmo):
     """ return growth factor D at scale factor a, accepts ndarray """
     a = np.array(a)

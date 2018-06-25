@@ -175,9 +175,18 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, err=False, out_dir='aut
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show)
 
-def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_data_nl=None, out_dir='auto', save=True, show=False):
+def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_data_nl=None, out_dir='auto', save=True, show=False, is_sigma=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
+    if is_sigma:
+        suptitle = "Amplitude of density fluctuation"
+        file_name = "sigma"
+        ylabel = r"\sigma^2"
+    else:
+        suptitle = "Correlation function"
+        file_name = "corr_func"
+        ylabel = r"\xi"
+
     z_out = lab if lab == 'init' else 'z' + lab[4:]
     # *****************
     # first plot, xi(r)
@@ -194,9 +203,9 @@ def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_d
         r_nl, xi_nl = corr_data_nl
         plt.plot(r_nl, xi_nl, '-', label=r"$\Lambda$CDM (nl)")
     # adjust figure, labels
-    fig.suptitle("Correlation function", y=0.99, size=20)
+    fig.suptitle(suptitle, y=0.99, size=20)
     plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
-    plt.ylabel(r"$\xi(r)$", fontsize=15)
+    plt.ylabel(r'$' + ylabel + r"(r)$", fontsize=15)
     plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
     plt.yscale("log")
     plt.xscale("log")
@@ -205,7 +214,7 @@ def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_d
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
     # save & show (in jupyter)
-    close_fig(out_dir + 'corr_func_%s.png' % z_out, fig, save=save, show=show)
+    close_fig(out_dir + '%s_%s.png' % (file_name, z_out), fig, save=save, show=show)
 
     # **********************
     # second plot, r*r*xi(r)
@@ -220,9 +229,9 @@ def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_d
         plt.plot(r_nl, r_nl * r_nl * xi_nl,
                  '-', label=r"$\Lambda$CDM (nl)")
     # adjust figure, labels
-    fig.suptitle("Correlation function", y=0.99, size=20)
+    fig.suptitle(suptitle, y=0.99, size=20)
     plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
-    plt.ylabel(r"$r^2\xi(r)$", fontsize=15)
+    plt.ylabel(r"$r^2" + ylabel + r"(r)$", fontsize=15)
     plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
     plt.yscale("linear")
     plt.draw()
@@ -230,14 +239,14 @@ def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_d
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
     # save & show (in jupyter)
-    close_fig(out_dir + 'corr_r2_func_%s.png' % z_out, fig, save=save, show=show)
+    close_fig(out_dir + '%s_r2_%s.png' % (file_name, z_out), fig, save=save, show=show)
 
 # correlation function stacked data, linear and emu corr. func in files
-def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, show=False):
+def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, show=False, is_sigma=False):
     for lab, corr_par, corr_lin, corr_nl in iter_data(zs, [corr_data_all['par'],
                                                       corr_data_all['lin'], corr_data_all['nl']]):
         plot_corr_func_single(
-            corr_par, lab, a_sim_info, corr_lin, corr_nl, out_dir, save, show)
+            corr_par, lab, a_sim_info, corr_lin, corr_nl, out_dir, save, show, is_sigma)
 
 
 def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='par', save=True, show=False):

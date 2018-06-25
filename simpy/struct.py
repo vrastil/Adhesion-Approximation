@@ -12,16 +12,15 @@ from .fastsim import Sim_Param
 
 RESULTS_ALL = {
     "ani" : ["par_ani", "dens_ani"],
-    "corr" : ["corr_func"],
+    "corr" : ["corr_func", "sigma_R"],
     "dens" : ["dens_hist", "dens_slice"],
     "chi" : ["pwr_spec_chi", "chi_pwr_diff", "chi_pwr_spec_supp", "chi_pwr_spec_supp_map"],
     "par" : ["par_slice"],
     "pwr" : ["pwr_spec", "pwr_diff", "pwr_diff_i", "pwr_diff_h", "pwr_spec_supp", "pwr_spec_supp_map"],
     "vel" : ["vel_pwr_spec", "vel_pwr_diff", "vel_pwr_spec_supp"],
-    "files" : ["corr_files", "pwr_spec_files", "pwr_diff_files",
-                        "pwr_diff_files_i", "pwr_diff_files_h", "pwr_spec_chi_files"]
+    "files" : ["corr_files", "sigma_files", "pwr_spec_files", "pwr_diff_files",
+               "pwr_diff_files_i", "pwr_diff_files_h", "pwr_spec_chi_files"]
     }
-
 
 def _is_key_strval(key, strval):
     """ check <strval> (rerun or skip) against <key>, true either for
