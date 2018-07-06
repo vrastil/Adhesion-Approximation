@@ -35,7 +35,7 @@ public:
 };
 
 std::string currentDateTime();
-std::string std_out_dir(std::string pre_subdir, const Sim_Param &sim);
+std::string std_out_dir(const std::string& pre_subdir, const Sim_Param &sim);
 
 void create_dir(const std::string& out_dir);
 void remove_dir(const std::string &out_dir);
