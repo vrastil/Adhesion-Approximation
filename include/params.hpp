@@ -10,7 +10,11 @@
 #include <map>
 #include "precision.hpp"
 
-/* COSMOLOGICAL & CCL PARAMETERS*/
+/**
+ * @brief cosmological & CCL parameters
+ * @class Cosmo_Param
+ * 
+ */
 class Cosmo_Param
 {
 public:
@@ -36,7 +40,11 @@ public:
     explicit operator void*() const;
 };
 
-/* SIMULATION BOX*/
+/**
+ * @brief simulation box options
+ * @struct Box_Opt
+ * 
+ */
 struct Box_Opt {
     void init();
     /* cmd args */
@@ -46,8 +54,11 @@ struct Box_Opt {
     unsigned par_num, Ng, Ng_pwr;
 };
 
-
-/* INTEGRATION */
+/**
+ * @brief integration options
+ * @struct Integ_Opt
+ * 
+ */
 struct Integ_Opt {
     void init();
     /* cmd args */
@@ -57,7 +68,11 @@ struct Integ_Opt {
 };
 
 
-/* OUTPUT */
+/**
+ * @brief output options
+ * @struct Out_Opt
+ * 
+ */
 struct Out_Opt {
     void init();
     /* cmd args */
@@ -70,7 +85,11 @@ struct Out_Opt {
 };
 
 
-/* APPROXIMATIONS */
+/**
+ * @brief specify which approximations are run
+ * @struct Comp_App
+ * 
+ */
 struct Comp_App {
     /* cmd args */
     bool ZA, FF, FP, AA, FP_pp; //< approximations
@@ -78,7 +97,11 @@ struct Comp_App {
 };
 
 
-/* APPROXIMATIONS */
+/**
+ * @brief approximations options
+ * @struct App_Opt
+ * 
+ */
 struct App_Opt {
     void init(const Box_Opt&);
     /* cmd args */
@@ -89,7 +112,11 @@ struct App_Opt {
 };
 
 
-/* RUN */
+/**
+ * @brief run options
+ * @struct Run_Opt
+ * 
+ */
 struct Run_Opt {
     void init();
     bool simulate();
@@ -101,7 +128,11 @@ struct Run_Opt {
     bool phase;
 };
 
-/* TEST */
+/**
+ * @brief testing options
+ * @struct Test_Opt
+ * 
+ */
 struct Test_Opt {
     /* cmd args */
     FTYPE_t R_sphere, rho_sphere;
@@ -114,9 +145,18 @@ struct Test_Opt {
 };
 
 // define Range outside because of SWIG
+/**
+ * @brief lower and upper boundaries
+ * @struct Range
+ * 
+ */
 struct Range { FTYPE_t lower, upper; };
 
-/* OTHER PARAMETERS */
+/**
+ * @brief other parameters
+ * @struct Other_par
+ * 
+ */
 struct Other_par {
     void init(const Box_Opt&);
     // k-range where to use (linear) interpolation and k-range in which print 'pwr_spec_extrap_*'
@@ -125,7 +165,11 @@ struct Other_par {
     std::map<std::string,FTYPE_t> nyquist; //< Nyquist frequencies of potential mesh, analyses mesh and particle separation
 };
 
-/* CHAMELEON */
+/**
+ * @brief chameleon options
+ * @struct Chi_Opt
+ * 
+ */
 struct Chi_Opt {
     /* cmd args */
     FTYPE_t beta, n, phi;
@@ -135,7 +179,6 @@ struct Chi_Opt {
  * @class:	Sim_Param
  * @brief:	class storing simulation parameters
  */
-
 class Sim_Param
 {
 public:

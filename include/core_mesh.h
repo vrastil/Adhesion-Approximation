@@ -30,9 +30,36 @@ void assign_to(std::vector<Mesh>& field, const Vec_3D<FTYPE_t> &position, const 
 void assign_from(const Mesh &field, const Vec_3D<FTYPE_t> &position, FTYPE_t& value);
 void assign_from(const std::vector<Mesh> &field, const Vec_3D<FTYPE_t> &position, Vec_3D<FTYPE_t>& value);
 
+/**
+ * @brief compute forward (real to complex) FFT on mesh (inplace)
+ * 
+ * @param p_F plan for forward transformation
+ * @param rho mesh upon which the transformation is performed
+ */
 void fftw_execute_dft_r2c(const FFTW_PLAN_TYPE &p_F, Mesh& rho);
+
+/**
+ * @brief compute backward (complex to real) FFT on mesh (inplace)
+ * 
+ * @param p_B plan for backward transformation
+ * @param rho mesh upon which the transformation is performed
+ */
 void fftw_execute_dft_c2r(const FFTW_PLAN_TYPE &p_B, Mesh& rho);
+
+/**
+ * @brief compute three forward (real to complex) FFTs on vector of meshes (inplace)
+ * 
+ * @param p_F plan for forward transformations
+ * @param rho vector of meshes upon which the transformations are performed
+ */
 void fftw_execute_dft_r2c_triple(const FFTW_PLAN_TYPE &p_F, std::vector<Mesh>& rho);
+
+/**
+ * @brief compute three backward (complex to real) FFTs on vector of meshes (inplace)
+ * 
+ * @param p_B plan for backward transformations
+ * @param rho vector of meshes upon which the transformations are performed
+ */
 void fftw_execute_dft_c2r_triple(const FFTW_PLAN_TYPE &p_B, std::vector<Mesh>& rho);
 
 template<int points>

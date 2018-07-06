@@ -20,7 +20,6 @@ template<typename T> void get_per(Vec_3D<T> &position, int perx, int pery, int p
  * @brief:	class handling basic mesh functions, the most important are creating and destroing the underlying data structure
  *			creates a mesh of N1*N2*N3 cells
  */
-
 template <typename T>
 class Mesh_base
 {
@@ -93,7 +92,6 @@ public:
  * @class:	Mesh
  * @brief:	creates a mesh of N*N*(N+2) cells
  */
-
 class Mesh : public Mesh_base<FTYPE_t>
 {
 public:
@@ -104,7 +102,19 @@ public:
 	unsigned N; // acces dimension of mesh
 	
 	// METHODS
+
+    /**
+     * @brief get fftw_complex pointer to data
+     * 
+     * @return FFTW_COMPLEX_TYPE* 
+     */
     FFTW_COMPLEX_TYPE* complex() { return reinterpret_cast<FFTW_COMPLEX_TYPE*>(data.data());}
+
+    /**
+     * @brief get const fftw_complex pointer to data
+     * 
+     * @return FFTW_COMPLEX_TYPE* 
+     */
     const FFTW_COMPLEX_TYPE* complex() const { return reinterpret_cast<const FFTW_COMPLEX_TYPE*>(data.data());}
 
     void reset_part(bool part)
