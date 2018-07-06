@@ -116,12 +116,11 @@ private:
 }// * END OF ANONYMOUS NAMESPACE *
 //  ******************************
 
-
 /**
- * @class:	App_Var<T>
- * @brief:	class containing variables and methods for approximations
+ * @brief implementation of class App_Var<T>
+ * @class Impl
+ * 
  */
-
 template <class T> 
 class App_Var<T>::Impl
 {
@@ -442,7 +441,7 @@ private:
         return 1/a - 1;
     }    
 };
- 
+
 template <class T> 
 App_Var<T>::App_Var(const Sim_Param &sim, const std::string& app_short, const std::string& app_long):
 	m_impl(new Impl(sim, app_short, app_long)), sim(sim), dens_binned(500)

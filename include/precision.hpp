@@ -9,11 +9,6 @@
 #define PRECISION 2 // default double precision
 #endif
 
-/**
- * @typedef FTYPE_t
- * @brief precision of the simulation
- * 
- */
 #if PRECISION == 1
 typedef float FTYPE_t;
 #define MAKE_FFTW_NAME(FUNC_NAME) fftwf_ ## FUNC_NAME

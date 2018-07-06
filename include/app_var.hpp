@@ -16,7 +16,6 @@ class Sim_Param; //< params.hpp
  * 
  * @tparam T type of particle, implemented Particle_x and Particle_v
  */
-
 template <class T> 
 class App_Var
 {
