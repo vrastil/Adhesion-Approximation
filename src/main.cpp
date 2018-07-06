@@ -10,14 +10,29 @@
 #include "ApproximationsSchemes/mod_frozen_potential.hpp"
 #include "ApproximationsSchemes/zeldovich.hpp"
 
+#ifdef MPI_ENABLED
+#include <boost/mpi/environment.hpp>
+#include <boost/mpi/communicator.hpp>
+namespace mpi = boost::mpi;
+#endif
+
 template<class T>
 static void init_and_run_app(const Sim_Param& sim)
 {
     T APP(sim);
-    APP.run_simulation();
+    APP.run_simulation();  
 }
 
 int main(int argc, char* argv[]){
+    #ifdef MPI_ENABLED
+    mpi::environment env;
+    mpi::communicator world;
+    std::cout << "I am process " << world.rank() << " of " << world.size()
+            << "." << std::endl;
+
+    if (world.rank() == 0)
+    {
+    #endif
 	try{
     	struct timespec start, finish;
 	    double CPU_time, REAL_time;
@@ -86,4 +101,7 @@ int main(int argc, char* argv[]){
 		std::cerr << "Exception of unknown type!\n";
         return 1;
 	}
+     #ifdef MPI_ENABLED
+    }
+    #endif
 }

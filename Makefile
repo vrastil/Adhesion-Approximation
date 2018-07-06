@@ -72,6 +72,10 @@ $(LIB): $(OBJ_FILES)
 doc:
 	cd doc/ && doxygen Doxyfile && ln -sf html/index.html main.html
 
+mpi: CXX = mpic++ -D MPI_ENABLED
+mpi: CXXLIB += -lboost_mpi
+mpi: adh_app
+
 check: test
 	./tests/test
 
@@ -97,7 +101,7 @@ tests/%.o: src/%.cpp $(PCH_O)
 	$(COMPILE.cc) -o $@ $<
 
 $(PCH_O): $(PCH)
-	$(CXX) $(CXXFLAGS) -o $@ $<
+	$(CXX) $(CXXFLAGS) -nostartfiles -o $@ $<
 
 # keep libraries
 clean:
@@ -112,4 +116,4 @@ cleanall: clean
 -include $(TEST_OBJ_FILES:.o=.d)
 -include $(PCH_O:.gch=.d)
 
-.PHONY: swig check clean test doc
+.PHONY: swig check clean test doc mpi
