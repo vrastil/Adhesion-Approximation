@@ -277,7 +277,7 @@ public:
 
     bool check_bisection_convergence(const T df_new, const T l_new) const
     {
-        return ((abs(l_new) < m_l_stop) || (abs(df_new) < m_dchi_stop));
+        return ((std::abs(l_new) < m_l_stop) || (std::abs(df_new) < m_dchi_stop));
     }
 
     T bisection_step(T& f1, T& l1, T& f2, T& l2, const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const
@@ -331,7 +331,7 @@ public:
         T l  =  l_operator(level, index_list, true, h);
         T dl = dl_operator(level, index_list, h);
         T df = -l/dl;
-        T df_rel = abs(df/(f - CHI_MIN));
+        T df_rel = std::abs(df/(f - CHI_MIN));
 
         static_assert((SWITCH_BIS_NEW < 1), "Newton`s method cannot be allowed with negative values. Adjust 'SWITCH_BIS_NEW < 1'.");
 
@@ -355,7 +355,7 @@ public:
         {
             // do not change values in screened regions
             if (rho[i] == MARK_CHI_BOUND_COND) continue;
-            else if (abs(corr[i]/(f[i] - CHI_MIN)) < SWITCH_BIS_NEW) f[i] += corr[i];
+            else if (std::abs(corr[i]/(f[i] - CHI_MIN)) < SWITCH_BIS_NEW) f[i] += corr[i];
             else{
                 this->get_neighbor_gridindex(index_list, i, N);
                 T l =  l_operator(level, index_list, true, h);

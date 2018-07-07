@@ -44,7 +44,7 @@ void convolution_y1(Mesh& potential, const std::vector<FTYPE_t>& gaussian, const
                 exp_aux.reserve(N);
                 // fill in exponents
                 for (int y1 = 0; y1 < N; y1++){
-                    exp_aux.push_back(expotential_0(y1, y2, y3)+gaussian[abs(x1-y1)]);
+                    exp_aux.push_back(expotential_0(y1, y2, y3)+gaussian[std::abs(x1-y1)]);
 				}
 				potential(x1, y2, y3) = get_summation(exp_aux); // potential is now f1
                 exp_aux.clear();

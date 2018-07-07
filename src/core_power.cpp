@@ -617,7 +617,7 @@ void Extrap_Pk<T, N>::fit_power_law(const Data_Vec<T, N>& data, const unsigned m
     A = exp(A); // log A => A
     #ifndef LESSINFO
     printf("\t[%sfit A = %.1e, err = %.2f%%, n_s = %.3f, err = %.2f%%, corr = %.2f%%]\n",
-            N == 3 ? "weighted-" : "", A, 100*sqrt(cov00), n_s,  100*sqrt(cov11)/abs(n_s), 100*cov01/sqrt(cov00*cov11));
+            N == 3 ? "weighted-" : "", A, 100*sqrt(cov00), n_s,  100*sqrt(cov11)/std::abs(n_s), 100*cov01/sqrt(cov00*cov11));
     #endif
 }
 

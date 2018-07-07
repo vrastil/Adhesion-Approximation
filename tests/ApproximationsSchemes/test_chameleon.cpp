@@ -49,14 +49,14 @@ void init_overdensity(Sim_Param& sim, Mesh& rho, MultiGrid<3, CHI_PREC_t>& rho_g
         {
             for (int iz = 0; iz < N; ++iz)
             {
-                R2_ = pow(ix - ix0, 2) + pow(iy - iy0, 2) + pow(iz - iz0, 2);
+                R2_ = pow2(ix - ix0) + pow2(iy - iy0) + pow2(iz - iz0);
                 rho(ix, iy, iz) = R2_ <= R2 ? rho_0 : 0;
             }
         }
     }
     mean_rho = mean(rho);
 
-    if (mean_rho > 1) throw out_of_range("invalid values of sphere parameters (overdensity: " + to_string(-mean_rho) + " < -1)");
+    if (mean_rho > 1) throw std::out_of_range("invalid values of sphere parameters (overdensity: " + std::to_string(-mean_rho) + " < -1)");
 
     rho -= mean_rho;
     transform_Mesh_to_MultiGrid(rho, rho_grid);
@@ -84,7 +84,7 @@ template <typename T> static int sgn(T val)
 	return (T(0) < val) - (val < T(0));
 }
 
-void print_mesh(const string& file_name, const Mesh& pot, const FTYPE_t mod = -1 - CHI_MIN)
+void print_mesh(const std::string& file_name, const Mesh& pot, const FTYPE_t mod = -1 - CHI_MIN)
 {
     Ofstream File(file_name);
     unsigned N = pot.N;
@@ -94,7 +94,7 @@ void print_mesh(const string& file_name, const Mesh& pot, const FTYPE_t mod = -1
                        (int i, int j, int k)
                         {
                             Vec_3D<int> pos(i, j, k); //< to call periodic position on Mesh
-                            FTYPE_t r = sqrt(pow(i - ix0, 2) + pow(j - iy0, 2) + pow(k - iz0, 2));
+                            FTYPE_t r = sqrt(pow2(i - ix0) + pow2(j - iy0) + pow2(k - iz0));
                             File << r << "\t" << pot(pos) + mod  << "\n";
                         };
 
@@ -220,7 +220,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
 
     // FFTW preparation
     if (!FFTW_PLAN_OMP_INIT()){
-        throw runtime_error("Errors during multi-thread initialization");
+        throw std::runtime_error("Errors during multi-thread initialization");
     }
     FFTW_PLAN_OMP(sim.run_opt.nt);
     const FFTW_PLAN_TYPE p_F = FFTW_PLAN_R2C(N, N, N, rho.real(), rho.complex(), FFTW_ESTIMATE);
@@ -265,7 +265,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
 
         // print chi_full
         transform_MultiGridSolver_to_Mesh(chi_full, sol);
-        print_mesh(out_dir + "chi_istep_" + to_string(istep) + ".dat", chi_full);
+        print_mesh(out_dir + "chi_istep_" + std::to_string(istep) + ".dat", chi_full);
 
         // check max_step and convergence
         if ((max_step <= 0) || ((istep != 0) && (sol.get_istep() < step_per_iter))) break;

@@ -78,7 +78,7 @@ void get_per(std::vector<Particle_v<FTYPE_t>>& particles, const int per)
 template<typename T>
 inline T get_distance_1D(const T x_1, const T x_2, const int per)
 {	
-	T d = abs(x_2 - x_1);
+	T d = std::abs(x_2 - x_1);
 	if (d <= per / 2) return d; // most probable, first condition
 	else if (d <= per) return per - d;
 	else d = fmod(d, T(per)); // fmod unlikely to evaluate, speed up code
@@ -94,10 +94,10 @@ inline T get_sgn_distance_1D(T x_from, T x_to, int per)
 {	// return signed (oriented) distance, e.g. x_to - x_from (no periodicity)
 	// periodicity makes this a little bit trickier
 	T d = x_from - x_to;
-	if (abs(d) <= per / 2) return d; // most probable, first condition
-	else if (abs(d) <= per) return d-sgn(d)*per;
+	if (std::abs(d) <= per / 2) return d; // most probable, first condition
+	else if (std::abs(d) <= per) return d-sgn(d)*per;
 	else d = fmod(d, T(per)); // fmod unlikely to evaluate, speed up code
-	if (abs(d) <= per / 2) return d;
+	if (std::abs(d) <= per / 2) return d;
 	else return d-sgn(d)*per;
 }
 

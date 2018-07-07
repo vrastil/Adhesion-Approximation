@@ -113,7 +113,7 @@ void print_par_pos_cut_small(const std::vector<T>& particles, const Sim_Param &s
        x = particles[i].position[0];
        y = particles[i].position[1];
        z = particles[i].position[2];			
-       dx = abs(y - sim.box_opt.mesh_num/2);
+       dx = std::abs(y - sim.box_opt.mesh_num/2);
        if ((dx < 0.5) && (x < sim.box_opt.mesh_num/4.) && (z < sim.box_opt.mesh_num/4.))
        {
            // cut (L/4 x L/4 x 0.5)

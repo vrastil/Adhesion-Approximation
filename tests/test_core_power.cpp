@@ -1,6 +1,6 @@
 #include <catch.hpp>
 #include "test.hpp"
-#include "core_power.cpp" //< implementation testing
+#include "core_power.cpp" ///< implementation testing
 
 TEST_CASE( "UNIT TEST: growth functions {growth_factor, growth_rate, growth_change}", "[core_power]" )
 {
@@ -24,7 +24,7 @@ TEST_CASE( "UNIT TEST: growth functions {growth_factor, growth_rate, growth_chan
             printf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", a, D, f, dDda, D_to_a*f, Oma, pow(Oma, 0.6), factor);
         }
     }
-    catch(const exception& e){
-		cout << "Error: " << e.what() << "\n";
+    catch(const std::exception& e){
+		std::cout << "Error: " << e.what() << "\n";
     }
 }
