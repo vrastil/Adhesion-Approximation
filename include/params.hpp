@@ -19,7 +19,7 @@ class Cosmo_Param
 {
 public:
     // CONSTRUCTORS, DESTRUCTOR
-    void init(); //< lazy constructor
+    void init(); ///< lazy constructor
     Cosmo_Param();
     ~Cosmo_Param();
 
@@ -46,12 +46,13 @@ public:
  * 
  */
 struct Box_Opt {
-    void init();
+    void init(const Cosmo_Param& cosmo);
     /* cmd args */
     unsigned par_num_1d, mesh_num, mesh_num_pwr;
     FTYPE_t box_size;
     /* derived param*/
     unsigned par_num, Ng, Ng_pwr;
+    FTYPE_t mass_p_log; ///< logarithm of particle mass in \f$M_\circle\f$
 };
 
 /**
@@ -61,10 +62,8 @@ struct Box_Opt {
  */
 struct Integ_Opt {
     void init();
-    /* cmd args */
-    FTYPE_t z_in, z_out, db;
-    /* derived param*/
-    FTYPE_t b_in, b_out;
+    FTYPE_t z_in, z_out, db; ///< cmd args
+    FTYPE_t b_in, b_out; ///< derived parameters
 };
 
 

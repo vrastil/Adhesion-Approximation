@@ -127,7 +127,8 @@ void to_json(json& j, const Box_Opt& box_opt)
         {"mesh_num_pwr", box_opt.mesh_num_pwr},
         {"Ng", box_opt.Ng},
         {"par_num", box_opt.par_num_1d},
-        {"box_size", box_opt.box_size}
+        {"box_size", box_opt.box_size},
+        {"mass_p_log", box_opt.mass_p_log}
     };
 }
 
@@ -137,8 +138,6 @@ void from_json(const json& j, Box_Opt& box_opt)
     box_opt.mesh_num_pwr = j.at("mesh_num_pwr").get<unsigned>();
     box_opt.par_num_1d = j.at("par_num").get<unsigned>();
     box_opt.box_size = j.at("box_size").get<FTYPE_t>();
-
-    box_opt.init();
 }
 
 void to_json(json& j, const Integ_Opt& integ_opt)
@@ -253,18 +252,19 @@ Cosmo_Param::Cosmo_Param():
 
 void Cosmo_Param::init()
 {
+    /// - basic quantities
     k2_G *= k2_G;
     h = H0/100;
 
-    // create flat LCDM cosmology
+    /// - create flat LCDM cosmology
     int status = 0;
     cosmo = ccl_cosmology_create_with_lcdm_params(Omega_c(), Omega_b, 0, h, sigma8, ns, config, &status);
     if (status) throw std::runtime_error(cosmo->status_message);
     
-    // PRECOMPUTED VALUES
-    D_norm = norm_growth_factor(*this); ///< use only when outside CCL range
+    /// - compute value of growth factor normalization, use only when outside CCL range
+    D_norm = norm_growth_factor(*this);
 
-    // normalize power spectrum
+    /// - normalize power spectrum
     norm_pwr(*this);
 }
 
@@ -304,11 +304,12 @@ bool Run_Opt::simulate()
     return mlt_runs;
 }
 
-void Box_Opt::init()
+void Box_Opt::init(const Cosmo_Param& cosmo)
 {
     Ng = mesh_num / par_num_1d;
     Ng_pwr = mesh_num_pwr/par_num_1d;
     par_num = par_num_1d*par_num_1d*par_num_1d;
+    mass_p_log = std::log10(2.78E11*pow(box_size/par_num_1d, 3)*cosmo.Omega_m/cosmo.h);
 }
 
 void Integ_Opt::init()
@@ -355,11 +356,11 @@ Sim_Param::Sim_Param(int ac, const char* const av[])
 {
 	handle_cmd_line(ac, av, *this);//< throw if anything happend
     run_opt.init();
-    box_opt.init();
+    cosmo.init();
+    box_opt.init(cosmo);
     integ_opt.init();
     out_opt.init();
     app_opt.init(box_opt);
-    cosmo.init();
     other_par.init(box_opt);
 }
 
@@ -375,7 +376,12 @@ Sim_Param::Sim_Param(std::string file_name)
             run_opt.seed = 0; // random
             run_opt.init();
         }
+
+        from_json(j.at("cosmo"), cosmo); //< call explicitly, SWIG has some issues with json.hpp
+
         box_opt = j.at("box_opt");
+        box_opt.init(cosmo);
+
         integ_opt = j.at("integ_opt");
         try{ out_opt = j.at("out_opt"); } // new format of json files
         catch(const std::out_of_range& oor){ // old format does not store Out_Opt
@@ -385,7 +391,7 @@ Sim_Param::Sim_Param(std::string file_name)
             out_opt.points_per_10_Mpc = 10;
         }
         app_opt = j.at("app_opt");
-        from_json(j.at("cosmo"), cosmo); //< call explicitly, SWIG has some issues with json.hpp
+        
         app_opt.init(box_opt);
         other_par.init(box_opt);
 
