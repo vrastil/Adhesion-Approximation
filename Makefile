@@ -75,11 +75,15 @@ doc:
 check: test
 	./tests/test
 
-test: tests/test
-test: CXXFLAGS +=-Og -g -w -D PRECISION=$(PRECISION)
-test: CXXLIB += $(CXXLIBP)
-test: COMPILE.cc += -I./src
+test: CXXFLAGS +=-Og -g -D PRECISION=$(PRECISION)
+test: test_aux
 
+testchi: CXXFLAGS +=-Ofast -march=native -D PRECISION=$(PRECISION)
+testchi: test_aux
+
+test_aux: CXXLIB += $(CXXLIBP)
+test_aux: COMPILE.cc += -I./src
+test_aux: tests/test
 
 tests/test: $(TEST_OBJ_FILES)
 	+$(COMPILE.fin) -o tests/test $^ $(CXXLIB)
