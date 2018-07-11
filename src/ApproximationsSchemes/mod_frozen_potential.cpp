@@ -1,3 +1,10 @@
+/**
+ * @brief modified frozen-potential approximation implementation
+ * 
+ * @file mod_frozen_potential.cpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
+ */
 #include "ApproximationsSchemes/mod_frozen_potential.hpp"
 #include "core_app.h"
 #include "core_mesh.h"

@@ -1,8 +1,17 @@
+/**
+ * @brief command line arguments manipulation
+ * 
+ * @file core_cmd.cpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
+ */
+
 #include "stdafx.h"
 #include <boost/any.hpp>
 #include <boost/program_options.hpp>
 #include <iomanip>
 #include <fstream>
+#include "params.hpp"
 #include "core_cmd.h"
 
 namespace po = boost::program_options;

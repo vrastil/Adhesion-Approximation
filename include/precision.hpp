@@ -1,6 +1,9 @@
 /**
- * @file:	precision.hpp
- * @brief:	single / double / long double definitions
+ * @brief single / double / long double definitions
+ * 
+ * @file precision.hpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
  */
 
 #pragma once

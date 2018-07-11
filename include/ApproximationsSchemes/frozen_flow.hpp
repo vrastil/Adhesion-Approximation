@@ -1,3 +1,11 @@
+/**
+ * @brief frozen-flow approximation interface
+ * 
+ * @file frozen_flow.hpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
+ */
+
 #pragma once
 
 #include "stdafx.h"
@@ -5,13 +13,25 @@
 #include "precision.hpp"
 #include "templates/class_particles.hpp"
 
-class Sim_Param; //< declaration / definition in 'params.x'
+/********************//**
+ * FORWARD DECLARATIONS *
+ ************************/
+
+class Sim_Param;
+
+/**************//**
+ * PUBLIC METHODS *
+ ******************/
+
+/**************//**
+ * PUBLIC CLASSES *
+ ******************/
 
 /**
  * @class:	App_Var_FF
  * @brief:	class containing variables and methods for Frozen-flow approximation
+ * @ingroup APP
  */
-
 class App_Var_FF: public App_Var<Particle_v<FTYPE_t>>
 {
 public:

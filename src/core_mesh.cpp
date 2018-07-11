@@ -1,3 +1,11 @@
+/**
+ * @brief basic functions to work with mesh
+ * 
+ * @file core_mesh.cpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
+ */
+
 #include "core_mesh.h"
 
 #ifndef ORDER

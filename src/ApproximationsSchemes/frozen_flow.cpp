@@ -1,3 +1,11 @@
+/**
+ * @brief frozen-flow approximation implementation
+ * 
+ * @file frozen_flow.cpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
+ */
+
 #include "ApproximationsSchemes/frozen_flow.hpp"
 #include "core_app.h"
 #include "core_mesh.h"

@@ -1,3 +1,11 @@
+/**
+ * @brief implementation for common functions for all types of approximations
+ * 
+ * @file core_app.cpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
+ */
+
 #include <algorithm>
 #include "core_app.h"
 #include "core_mesh.h"

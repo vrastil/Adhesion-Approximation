@@ -1,3 +1,11 @@
+/**
+ * @brief define container Data_Vec
+ * 
+ * @file class_data_vec.hpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
+ */
+
 #pragma once
 #include "stdafx.h"
 #include <array>
@@ -6,7 +14,6 @@
  * @class:	Data_Vec
  * @brief:	class containing data [x, y,...]
  */
-
 template <typename T, unsigned N>
 class Data_Vec
 {

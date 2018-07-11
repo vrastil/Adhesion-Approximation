@@ -1,5 +1,5 @@
 /**
- * @brief mesh data structure definitions
+ * @brief define container Mesh
  * 
  * @file class_mesh.hpp
  * @author Michal Vrastil

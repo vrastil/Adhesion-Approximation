@@ -1,6 +1,9 @@
 /**
- * @file:	params.hpp
- * @brief:	various parameter classes declarations
+ * @brief various simulation parameters
+ * 
+ * @file params.hpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
  */
 
 #pragma once
@@ -52,7 +55,7 @@ struct Box_Opt {
     FTYPE_t box_size;
     /* derived param*/
     unsigned par_num, Ng, Ng_pwr;
-    FTYPE_t mass_p_log; ///< logarithm of particle mass in \f$M_\circle\f$
+    FTYPE_t mass_p_log; ///< logarithm of particle mass in \f$M_\odot\f$
 };
 
 /**

@@ -1,3 +1,11 @@
+/**
+ * @brief functions handling output of the program
+ * 
+ * @file core_out.cpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
+ */
+
 #include <boost/filesystem.hpp>
 #include "core_out.h"
 #include "templates/class_particles.hpp"

@@ -1,6 +1,9 @@
 /**
- * @file:	chameleon.cpp
- * @brief:	chameleon solver
+ * @brief chameleon model of gravity implementation
+ * 
+ * @file chameleon.cpp
+ * @author Michal Vrastil
+ * @date 2018-07-08
  * @note:   chameleon field is in units of 'chi_a = 2*beta*Mpl*Phi_s*a^3/1-n)
  */
 
@@ -17,22 +20,46 @@
 
 namespace{
 
-// accuracy of chameleon solver
+/**
+ * @brief accuracy of chameleon solver
+ * @typedef CHI_PREC_t
+ * 
+ */
 typedef double CHI_PREC_t;
 
-// mass & chi in units of Planck mass
+/**
+ * @brief mass & chi in units of Planck mass
+ * @var MPL
+ * 
+ */
 constexpr FTYPE_t MPL = (FTYPE_t)1;
 
-// speed of light [km / s]
+/**
+ * @brief speed of light [km / s]
+ * @var c_kms
+ * 
+ */
 constexpr FTYPE_t c_kms = (FTYPE_t)299792.458;
 
-// unphysical value of overdensity (< -1) used to indicate that chameleon filed at this point should not be changed
+/**
+ * @brief unphysical value of overdensity (< -1) used to indicate that chameleon filed at this point should not be changed
+ * @var MARK_CHI_BOUND_COND
+ * 
+ */
 constexpr CHI_PREC_t MARK_CHI_BOUND_COND =  (CHI_PREC_t)-2;
 
-// when the relative change in solution is less than this, use Newton`s method. Bisection method otherwise
+/**
+ * @brief when the relative change in solution is less than this, use Newton`s method. Bisection method otherwise
+ * @var SWITCH_BIS_NEW
+ * 
+ */
 constexpr CHI_PREC_t SWITCH_BIS_NEW = (CHI_PREC_t)0.1;
 
-// minimum value of chameleon field, in chi_a units it is '0', in phi units it is '-1'
+/**
+ * @brief minimum value of chameleon field, in chi_a units it is '0', in phi units it is '-1'
+ * @var CHI_MIN
+ * 
+ */
 constexpr CHI_PREC_t CHI_MIN = (CHI_PREC_t)-1;
 
 // convergence criteria

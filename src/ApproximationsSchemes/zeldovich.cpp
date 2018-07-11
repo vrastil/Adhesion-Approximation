@@ -1,3 +1,10 @@
+/**
+ * @brief Zel`dovich approximation implementation
+ * 
+ * @file zeldovich.cpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
+ */
 #include "ApproximationsSchemes/zeldovich.hpp"
 #include "core_app.h"
 #include "core_mesh.h"

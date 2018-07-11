@@ -1,3 +1,10 @@
+/**
+ * @brief modified frozen-potential approximation interface
+ * 
+ * @file mod_frozen_potential.hpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
+ */
 #pragma once
 
 #include "stdafx.h"
@@ -5,13 +12,25 @@
 #include "precision.hpp"
 #include "templates/class_particles.hpp"
 
-class Sim_Param; //< declaration / definition in 'params.x'
+/********************//**
+ * FORWARD DECLARATIONS *
+ ************************/
+
+class Sim_Param;
+
+/**************//**
+ * PUBLIC METHODS *
+ ******************/
+
+/**************//**
+ * PUBLIC CLASSES *
+ ******************/
 
 /**
  * @class:	App_Var_FP_mod
  * @brief:	class containing variables and methods for modified Frozen-potential approximation
+ * @ingroup APP
  */
-
 class App_Var_FP_mod: public App_Var<Particle_v<FTYPE_t>>
 {
 public:

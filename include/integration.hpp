@@ -1,10 +1,18 @@
+/**
+ * @brief functions for integration of particle trajectories
+ * 
+ * @file integration.hpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
+ */
+
 #pragma once
 #include "stdafx.h"
 #include "precision.hpp"
 #include "templates/class_mesh.hpp"
 #include "templates/class_particles.hpp"
 
-class Cosmo_Param; //< params.hpp
+class Cosmo_Param;
 
 void stream_step(const FTYPE_t da, std::vector<Particle_v<FTYPE_t>>& particles);
 void stream_kick_stream(const FTYPE_t da, std::vector<Particle_v<FTYPE_t>>& particles, std::function<void()> kick_step, unsigned per);

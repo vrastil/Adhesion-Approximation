@@ -1,3 +1,10 @@
+/**
+ * @brief classes handling approximations data
+ * 
+ * @file app_var.cpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
+ */
 #include "app_var.hpp"
 #include "core_out.h"
 #include "core_app.h"

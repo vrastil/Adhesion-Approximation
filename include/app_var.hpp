@@ -1,6 +1,9 @@
 /**
- * @file:	app_var.hpp
- * @brief:	classes handling approximations data
+ * @brief classes handling approximations data
+ * 
+ * @file app_var.hpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
  */
 
 #pragma once
@@ -8,9 +11,26 @@
 #include "precision.hpp"
 #include "templates/class_data_vec.hpp"
 #include "templates/class_mesh.hpp"
-class Sim_Param; //< params.hpp
+
+/********************//**
+ * FORWARD DECLARATIONS *
+ ************************/
+
+class Sim_Param;
+
+/**************//**
+ * PUBLIC METHODS *
+ ******************/
+
+/**************//**
+ * PUBLIC CLASSES *
+ ******************/
 
 /**
+ * @defgroup APP Approximations
+ * Different approximation schemes and methods.
+ * @{
+ * 
  * @class App_Var
  * @brief class containing core variables and methods for approximations
  * 
@@ -60,3 +80,4 @@ private:
     friend class Impl;
     const std::unique_ptr<Impl> m_impl;
 };
+/**@}*/

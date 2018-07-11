@@ -1,6 +1,9 @@
 /**
- * @file:	stdafx.h
- * @brief:	system include files and for project-specific include files that are used frequently but are changed infrequently
+ * @brief system include files and for project-specific include files that are used frequently but are changed infrequently
+ * 
+ * @file stdafx.h
+ * @author Michal Vrastil
+ * @date 2018-07-11
  */
 
 #pragma once

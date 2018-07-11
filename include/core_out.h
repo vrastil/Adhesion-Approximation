@@ -1,6 +1,9 @@
 /**
- * @file:	core_out.h
- * @brief:	functions handling output of the program
+ * @brief functions handling output of the program
+ * 
+ * @file core_out.h
+ * @author Michal Vrastil
+ * @date 2018-07-11
  */
 
 #pragma once

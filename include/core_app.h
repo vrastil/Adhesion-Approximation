@@ -1,6 +1,9 @@
 /**
- * @file:	core_app.h
- * @brief:	common functions for all types of approximations
+ * @brief interface for common functions for all types of approximations
+ * 
+ * @file core_app.h
+ * @author Michal Vrastil
+ * @date 2018-07-11
  */
  
 #pragma once

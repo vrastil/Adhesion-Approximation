@@ -1,3 +1,10 @@
+/**
+ * @brief main file
+ * 
+ * @file main.cpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
+ */
 
 #include <ctime>
 #include "stdafx.h"
@@ -17,6 +24,13 @@ static void init_and_run_app(const Sim_Param& sim)
     APP.run_simulation();
 }
 
+/**
+ * @brief initialize program and run all simulations
+ * 
+ * @param argc number of command line arguments
+ * @param argv command line arguments
+ * @return int exit status
+ */
 int main(int argc, char* argv[]){
 	try{
     	struct timespec start, finish;
@@ -84,6 +98,6 @@ int main(int argc, char* argv[]){
 	}
 	catch(...){
 		std::cerr << "Exception of unknown type!\n";
-        return 1;
+        return 2;
 	}
 }

@@ -1,3 +1,11 @@
+/**
+ * @brief chameleon model of gravity interface
+ * 
+ * @file chameleon.hpp
+ * @author Michal Vrastil
+ * @date 2018-07-08
+ */
+
 #pragma once
 
 #include "stdafx.h"
@@ -5,13 +13,25 @@
 #include "precision.hpp"
 #include "templates/class_particles.hpp"
 
-class Sim_Param; //< declaration / definition in 'params.x'
+/********************//**
+ * FORWARD DECLARATIONS *
+ ************************/
+
+class Sim_Param;
+
+/**************//**
+ * PUBLIC METHODS *
+ ******************/
+
+/**************//**
+ * PUBLIC CLASSES *
+ ******************/
 
 /**
  * @class:	App_Var_Chi
  * @brief:	class containing variables and methods for chameleon gravity
+ * @ingroup APP
  */
- 
 class App_Var_Chi: public App_Var<Particle_v<FTYPE_t>>
 {
 public:

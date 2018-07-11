@@ -1,5 +1,5 @@
 /**
- * @brief particle definitions  (with and without velocity)
+ * @brief define container Particle (with and without velocity)
  * 
  * @file class_particles.hpp
  * @author Michal Vrastil

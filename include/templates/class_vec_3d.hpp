@@ -1,3 +1,11 @@
+/**
+ * @brief define container Vec_3D
+ * 
+ * @file class_vec_3d.hpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
+ */
+
 #pragma once
 #include <array>
 

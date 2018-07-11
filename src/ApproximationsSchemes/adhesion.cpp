@@ -1,3 +1,10 @@
+/**
+ * @brief ahesion approximation implementation
+ * 
+ * @file adhesion.cpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
+ */
 
 #include "ApproximationsSchemes/adhesion.hpp"
 #include "core_app.h"

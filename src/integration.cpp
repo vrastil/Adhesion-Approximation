@@ -1,3 +1,11 @@
+/**
+ * @brief functions for integration of particle trajectories
+ * 
+ * @file integration.cpp
+ * @author Michal Vrastil
+ * @date 2018-07-11
+ */
+
 #include "core_mesh.h"
 #include "core_power.h"
 #include "integration.hpp"
