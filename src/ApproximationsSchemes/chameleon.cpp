@@ -18,6 +18,9 @@
 
 #include <algorithm>
 
+/*****************************//**
+ * PRIVATE FUNCTIONS DEFINITIONS *
+ *********************************/
 namespace{
 
 /**
@@ -62,16 +65,25 @@ constexpr CHI_PREC_t SWITCH_BIS_NEW = (CHI_PREC_t)0.1;
  */
 constexpr CHI_PREC_t CHI_MIN = (CHI_PREC_t)-1;
 
-// convergence criteria
-constexpr double CONVERGENCE_RES = 1e-6; //< stop when total (rms) residual below
-constexpr double CONVERGENCE_RES_MIN = 1e-2; //< do not stop if solution didn`t converge below
-constexpr double CONVERGENCE_ERR = 0.97; //< stop when improvements between steps slow below
-constexpr double CONVERGENCE_ERR_MIN = 0.7; //< do not stop if solution is still improving
-constexpr unsigned CONVERGENCE_NUM_FAIL = 5; //< stop when number of failed steps is over
-constexpr unsigned CONVERGENCE_BI_STEPS = 5; //< maximal number of steps inside bisection rootfindg method
-constexpr unsigned CONVERGENCE_BI_STEPS_INIT = 3; //< maximal number of steps inside bisection initialization method
-constexpr CHI_PREC_t CONVERGENCE_BI_DCHI = (CHI_PREC_t)1e-2; //< stop bisection method when chi doesn`t chanege
-constexpr CHI_PREC_t CONVERGENCE_BI_L = (CHI_PREC_t)1e-2; //< stop bisection method when residual below
+/**
+ * \defgroup CHICON Chameleon convergence criteria
+ * @{
+ */
+constexpr double CONVERGENCE_RES = 0; ///< stop when total (rms) residual below
+constexpr double CONVERGENCE_RES_MIN = 0; ///< do not stop if solution didn`t converge below
+constexpr double CONVERGENCE_ERR = 0.97; ///< stop when improvements between steps slow below
+constexpr double CONVERGENCE_ERR_MIN = 0.8; ///< do not stop if solution is still improving
+constexpr unsigned CONVERGENCE_NUM_FAIL = 5; ///< stop when number of failed steps is over
+constexpr unsigned CONVERGENCE_BI_STEPS = 5; ///< maximal number of steps inside bisection rootfindg method
+constexpr unsigned CONVERGENCE_BI_STEPS_INIT = 3; ///< maximal number of steps inside bisection initialization method
+constexpr CHI_PREC_t CONVERGENCE_BI_DCHI = (CHI_PREC_t)1e-2; ///< stop bisection method when chi doesn`t chanege
+constexpr CHI_PREC_t CONVERGENCE_BI_L = (CHI_PREC_t)1e-2; ///< stop bisection method when residual below
+/**@}*/
+
+/**
+ * @brief acces \p Exit_Status namespace
+ */
+using ES = MultiGridSolver<3, CHI_PREC_t>::Exit_Status;
 
 template<typename T>
 void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
@@ -146,14 +158,14 @@ class ChiSolver : public MultiGridSolver<3, T>
 private:
     // Parameters
     const T n;       // Hu-Sawicki paramater
-    const T chi_0;   // 2*beta*Mpl*phi_scr
+    const T chi_0;   // 2*beta*Mpl*phi_scr///<
     const T phi_prefactor;   // prefactor for Poisson equation for gravitational potential
     const T chi_prefactor_0; // dimensionless prefactor to poisson equation at a = 1
     T chi_prefactor; // time-dependent prefactor
 
     // convergence parameters
     unsigned m_conv_stop = 0; // number of unsuccessful sweeps
-    double m_rms_stop_min;      // iterate at least until _rms_res > m_conv_eps_min
+    double m_rms_stop_min;      // iterate at least until _rms_res < m_conv_eps_min
     double m_err_stop;     // stop iteration when: 1 >  err > m_err_stop
     double m_err_stop_min; // iterate at least until: err > m_err_stop_min
     unsigned m_num_fail;     // give up converging if number of failed iteration (err > 1) is > m_num_fail
@@ -164,7 +176,7 @@ private:
     T m_l_stop;                     // if residuum is small, stop halving
 
     // variables for checking solution in deep-screened regime, for each level
-    std::vector<std::map<unsigned, T>> fix_vals; //< <index, value>
+    std::vector<std::map<unsigned, T>> fix_vals; ///< <index, value>
 
     void get_chi_k(Mesh& rho_k)
     {/* transform input density in k-space into linear prediction for chameleon field,
@@ -391,9 +403,14 @@ public:
         }
     }
 
-    bool check_convergence() override
-    {/* Criterion for defining convergence */
-        // bring variables from this-> namespace here
+    /**
+     * @brief check if solution already converged
+     * 
+     * @return ES exit status (SUCCESS, FAILURE, SLOW, ITERATE, MAX_STEPS)
+     */
+    ES check_convergence() override
+    {
+        /// - bring variables from this-> namespace here
         const double _rms_res_i = this->_rms_res_i;
         const double _rms_res = this->_rms_res;
         const double _rms_res_old = this->_rms_res_old;
@@ -402,74 +419,91 @@ public:
         const double _eps_converge = this->_eps_converge;
         const double _maxsteps = this->_maxsteps;
 
-        // Compute ratio of residual to previous residual
-        double err = _rms_res_old != 0.0 ? _rms_res/_rms_res_old : 0.0;
-        bool converged = false;
+        /// - Compute ratio of residual to previous residual
+        const double err = _rms_res_old != 0.0 ? _rms_res/_rms_res_old : 0.0;
+        ES converged = ES::ITERATE;
 
-        // Print out some information
+        /// - convergence criteria
+        bool res_below_optimal_tresh = (_rms_res < _eps_converge) || (_eps_converge == 0.0);
+        bool res_below_minimal_tresh = (_rms_res < m_rms_stop_min) || (m_rms_stop_min == 0.0);
+        bool fast_convergence = err < m_err_stop_min;
+        bool slow_convergence = err > m_err_stop;
+        bool worse_solution = err > 1;
+        bool over_max_steps = _istep_vcycle >= _maxsteps;
+
+        /// - print some information
+        auto print_success = [=](unsigned m_conv_stop){
+            std::cout << "\n\tSUCCESS: res = " << _rms_res << ", err = " << err << ", num_err = " << m_conv_stop << " (istep = " << _istep_vcycle << ")\n";
+            };
+        auto print_failure = [=](unsigned m_conv_stop){
+            std::cout << "\tFAILURE: res = " << _rms_res << ", err = " << err << ", num_err = " << m_conv_stop << " (istep = " << _istep_vcycle << ")\n";
+            };
+
+        auto print_iterate = [=](unsigned m_conv_stop){
+            std::cout << "\tITERATE: res = " << _rms_res << ", err = " << err << ", num_err = " << m_conv_stop << " (istep = " << _istep_vcycle << ")\n";
+            };
+
+        /// - Print out some information
         if (_verbose){
             std::cout << "    Checking for convergence at step = " << _istep_vcycle << "\n";
             std::cout << "        Residual = " << _rms_res << "  Residual_old = " <<  _rms_res_old << "\n";
             std::cout << "        Residual_i = " << _rms_res_i << "  Err = " << err << "\n";
         }
 
-        // Convergence criteria:
-
-        if (((_rms_res < _eps_converge) || (_eps_converge == 0.0)) && (err > m_err_stop_min))
-        { // residuals below treshold
-            std::cout << "\n    The solution has converged res = " << _rms_res << " < " << _eps_converge 
-                    << " ( err = " << err << " ) istep = " << _istep_vcycle << "\n\n";
-            converged = true;
+        /// - check individual conditions
+        if (res_below_optimal_tresh && !fast_convergence){
+            print_success(m_conv_stop);
+            converged = ES::SUCCESS;
         }
-        else if (err > 1)
-        { // reject solution, wait for better one
-            if(_verbose) std::cout << "    The solution stopped converging res = " << _rms_res << " !< " << _eps_converge
-                                << " err = " << err << " > 1" << " num(err > 1) = " << m_conv_stop << "\n";
+        else if (worse_solution)
+        {
+            if(_verbose) print_failure(m_conv_stop);
             m_conv_stop++;
+            converged = ES::ITERATE;
         }
-        else if (err > m_err_stop)
-        { // convergence too slow
-            if ((_rms_res > m_rms_stop_min) || (m_rms_stop_min == 0.0))
+        else if (slow_convergence)
+        {
+            if (res_below_minimal_tresh)
+            {
+                print_success(m_conv_stop);
+                converged = ES::SLOW;
+            }
+            else
             {
                 m_conv_stop++;
                 if (m_conv_stop >= m_num_fail)
                 {
-                    std::cout << "\n    The solution stopped converging num(err > 1)  = " << m_conv_stop
-                            << " res = " << _rms_res << " > " << _eps_converge  << " ) istep = " << _istep_vcycle << "\n\n";
-                    converged = true;
+                    print_failure(m_conv_stop);
+                    converged = ES::FAILURE;
                 }
-            }
-            else
-            {
-                std::cout << "\n    The solution stopped converging fast enough err = " << err << " > " << m_err_stop
-                        << " ( res = " << _rms_res << " ) istep = " << _istep_vcycle << "\n\n";
-                converged = true;
+                else
+                {
+                     if(_verbose) print_iterate(m_conv_stop);
+                    converged = ES::ITERATE;
+                }
             }
         }
         else
         {
             if (m_conv_stop >= m_num_fail)
             {
-                std::cout << "\n    The solution stopped converging num(err > 1)  = " << m_conv_stop
-                        << " res = " << _rms_res << " > " << _eps_converge  << " ) istep = " << _istep_vcycle << "\n\n";
-                converged = true;
+                print_failure(m_conv_stop);
+                converged = ES::FAILURE;
             }
             else
             {
-                if(_verbose) std::cout << "    The solution is still converging err = " << err << " !> " << m_err_stop
-                                    << " res = " << _rms_res << " > " << _eps_converge << "\n";
+                if(_verbose) print_iterate(m_conv_stop);
+               converged = ES::ITERATE;
             }
         }
 
-        // Define converged if istep exceeds maxsteps to avoid infinite loop...
-        if(_istep_vcycle >= _maxsteps)
+        if(over_max_steps)
         {
-            std::cout << "    WARNING: MultigridSolver failed to converge! Reached istep = maxsteps = " << _maxsteps << "\n";
-            std::cout << "    res = " << _rms_res << " res_old = " << _rms_res_old << " res_i = " << _rms_res_i << "\n";
-            converged  = true;
+            print_failure(m_conv_stop);
+            converged = ES::MAX_STEPS;
         }
         
-        if (converged)
+        if (converged != ES::ITERATE)
         {
             m_conv_stop = 0;
         }
@@ -578,7 +612,7 @@ public:
 
     void set_screened(unsigned level = 0)
     {/* check solution for invalid values (non-linear regime), fix values in high density regions, try to improve guess in others */
-        if (level >= this->get_Nlevel()) return; //< we are at the bottom level
+        if (level >= this->get_Nlevel()) return; ///< we are at the bottom level
 
         Grid<3, T>& chi = this->get_grid(level); // guess
         const unsigned N_tot = this->get_Ntot(level);
@@ -591,7 +625,7 @@ public:
         {
             if (chi[i] <= CHI_MIN) // non-linear regime
             {
-                if (check_surr_dens(rho_grid, index_list, i, N)) chi[i] = CHI_MIN; //< CHI_MIN to indicate high-density region
+                if (check_surr_dens(rho_grid, index_list, i, N)) chi[i] = CHI_MIN; ///< CHI_MIN to indicate high-density region
                 else chi[i] = rho_grid[i] > 0 ? chi_min(rho_grid[i]) : 1/2. + CHI_MIN;//< phi_s / 2 in underdense region as starting point
             }
         }
@@ -613,7 +647,7 @@ public:
         unsigned num_high_density = fix_vals[level].size();
         std::cout << "Identified and fixed " << num_high_density << "(" << std::setprecision(2) << num_high_density*100.0/N_tot <<  "%) points at level " << level << "\n";
 
-        set_screened(level + 1); //< recursive call to fix all levels
+        set_screened(level + 1); ///< recursive call to fix all levels
     }
 
     T chi_min(T delta) const
@@ -624,8 +658,11 @@ public:
     }
 
 }; // class ChiSolver end
+} ///< end of anonymous namespace (private definitions)
 
-} // namespace <unique> end
+/****************************//**
+ * PUBLIC FUNCTIONS DEFINITIONS *
+ ********************************/
 
 /**
  * @class:	App_Var_Chi
@@ -637,7 +674,7 @@ class App_Var_Chi::ChiImpl
 public:
     // CONSTRUCTOR
     ChiImpl(const Sim_Param &sim):
-        sol(sim.box_opt.mesh_num, sim, false), drho(sim.box_opt.mesh_num)
+        sol(sim.box_opt.mesh_num, sim, false), drho(sim.box_opt.mesh_num), N_level_orig(sol.get_Nlevel())
     {
         // EFFICIENTLY ALLOCATE VECTOR OF MESHES
         chi_force.reserve(3);
@@ -652,11 +689,8 @@ public:
         memory_alloc += sizeof(CHI_PREC_t)*8*(sol.get_Ntot()-1)/7;// MultiGrid<3, CHI_PREC_t> drho
 
         // SET CHI SOLVER
-        
         sol.add_external_grid(&drho);
         sol.set_bisection_convergence(CONVERGENCE_BI_STEPS_INIT, CONVERGENCE_BI_DCHI, CONVERGENCE_BI_L);
-        sol.set_ngs_sweeps(3, 5); //< fine, coarse
-        sol.set_maxsteps(10);
     }
 
     // VARIABLES
@@ -668,25 +702,26 @@ public:
     // METHODS
     void solve(FTYPE_t a, const std::vector<Particle_v<FTYPE_t>>& particles, const Sim_Param &sim, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B)
     {
-        // set prefactor
+        /// - set prefactor
         sol.set_time(a, sim.cosmo);
 
-        // set convergence -- compensate for units in which we compute laplace operator
+        /// - set convergence -- compensate for units in which we compute laplace operator
         sol.set_def_convergence();
 
-        // save (over)density from particles
+        /// - save (over)density from particles
         std::cout << "Storing density distribution...\n";
         get_rho_from_par(particles, chi_force[0], sim);
         transform_Mesh_to_MultiGrid(chi_force[0], drho);
 
-        // set guess from linear theory and correct unphysical values
+        /// - set guess from linear theory and correct unphysical values
         std::cout << "Setting linear guess for chameleon field...\n";
         sol.set_linear(chi_force[0], p_F, p_B);
         sol.set_screened();
 
-        // get multigrid_solver runnig
+        /// - get multigrid_solver runnig
         std::cout << "Solving equations of motion for chameleon field...\n";
-        sol.solve();
+        solve_multigrid(); ///< solve using multigrid teqniques
+        solve_finest(); ///< solve only on the finest mesh using NGS sweeps
     }
 
     void gen_pow_spec_binned(const Sim_Param &sim, Data_Vec<FTYPE_t,2>& pwr_spec_binned, const FFTW_PLAN_TYPE& p_F)
@@ -695,6 +730,25 @@ public:
         fftw_execute_dft_r2c(p_F, chi_force[0]); // get chi(k)
         pwr_spec_k_init(chi_force[0], chi_force[0]); // get chi(k)^2, NO w_k correction
         ::gen_pow_spec_binned(sim, chi_force[0], pwr_spec_binned); // get average Pk
+    }
+
+private:
+    const unsigned N_level_orig;
+
+    void solve_multigrid()
+    {
+        sol.set_ngs_sweeps(3, 6); ///< fine, coarse
+        sol.set_Nlevel(N_level_orig);
+        sol.set_maxsteps(30);
+        ES status = sol.solve();
+    }
+
+    void solve_finest()
+    {
+        sol.set_ngs_sweeps(5, 0); ///< fine, coarse
+        sol.set_Nlevel(1);
+        sol.set_maxsteps(30);
+        ES status = sol.solve();
     }
 };
 

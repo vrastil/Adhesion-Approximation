@@ -83,7 +83,7 @@ T MultiGridSolver<NDIM,T>::upd_operator(const T f, const unsigned int level, con
 //================================================
 
 template<unsigned int NDIM, typename T>
-void MultiGridSolver<NDIM,T>::solve(){
+typename MultiGridSolver<NDIM,T>::Exit_Status MultiGridSolver<NDIM,T>::solve(){
   // Init some variables
   _istep_vcycle = 0;
   _tot_sweeps_domain_grid = 0;
@@ -104,10 +104,10 @@ void MultiGridSolver<NDIM,T>::solve(){
   _rms_res_old = 0.0;
 
   // Check if we already have convergence
-  if(check_convergence()) return;
+  Exit_Status status = check_convergence();
 
   // The V-cycle
-  while(1) {
+  while(status == Exit_Status::ITERATE) {
     ++_istep_vcycle;
     
     if(_verbose){
@@ -132,8 +132,10 @@ void MultiGridSolver<NDIM,T>::solve(){
     _f.get_grid(0).check_for_nan(true);
     
     // Check for convergence
-    if(check_convergence()) break;
+    status = check_convergence();
   }
+
+  return status;
 }
 
 template<unsigned int NDIM, typename T>
@@ -171,6 +173,18 @@ template<unsigned int NDIM, typename T>
 void MultiGridSolver<NDIM,T>::set_ngs_sweeps(unsigned int ngs_fine, unsigned int ngs_coarse){
   _ngs_fine = ngs_fine; 
   _ngs_coarse = ngs_coarse; 
+}
+
+template<unsigned int NDIM, typename T>
+void MultiGridSolver<NDIM,T>::set_Nlevel(unsigned N){
+    // Check that N is divisible by 2^{Nlevel - 1} which is required for the restriction to make sense
+    assert( ( _N / power(2, N - 1) ) * power(2, N - 1) == _N); 
+
+    // We should have atleast 1 level
+    assert(N >= 1); 
+
+    // set new _Nlevel
+    _Nlevel = N;
 }
 
 template<unsigned int NDIM, typename T>
@@ -291,10 +305,10 @@ double MultiGridSolver<NDIM,T>::calculate_residual(unsigned int level, Grid<NDIM
 //================================================
 
 template<unsigned int NDIM, typename T>
-bool MultiGridSolver<NDIM,T>::check_convergence(){
+typename MultiGridSolver<NDIM,T>::Exit_Status MultiGridSolver<NDIM,T>::check_convergence(){
   // Compute ratio of residual to initial residual
   double err = _rms_res_i != 0.0 ? _rms_res/_rms_res_i : 1.0;
-  bool converged = false;
+  Exit_Status converged = Exit_Status::ITERATE;
 
   // Print out some information
   if(_verbose){
@@ -312,7 +326,7 @@ bool MultiGridSolver<NDIM,T>::check_convergence(){
         std::cout << std::endl;
         std::cout << "    The solution has converged res = " << _rms_res << " < " << _eps_converge << " istep = " << _istep_vcycle << "\n" << std::endl;
       }
-      converged = true;
+      converged = Exit_Status::SUCCESS;
     } else {
       if(_verbose){
         std::cout << "    The solution has not yet converged res = " << _rms_res << " !< " << _eps_converge << std::endl; 
@@ -327,7 +341,7 @@ bool MultiGridSolver<NDIM,T>::check_convergence(){
         std::cout << std::endl;
         std::cout << "    The solution has converged err = " << err << " < " << _eps_converge << " ( res = " << _rms_res << " ) istep = " << _istep_vcycle << "\n" << std::endl;
       }
-      converged = true;
+      converged = Exit_Status::SUCCESS;
     } else {
       if(_verbose){
        std::cout << "    The solution has not yet converged err = " << err << " !< " << _eps_converge << std::endl;
@@ -343,7 +357,7 @@ bool MultiGridSolver<NDIM,T>::check_convergence(){
   if(_istep_vcycle >= _maxsteps){
     std::cout << "    WARNING: MultigridSolver failed to converge! Reached istep = maxsteps = " << _maxsteps << std::endl;
     std::cout << "    res = " << _rms_res << " res_old = " << _rms_res_old << " res_i = " << _rms_res_i << std::endl;
-    converged  = true;
+    converged  = Exit_Status::MAX_STEPS;
   }
 
   return converged;

@@ -101,6 +101,8 @@ protected:
     double _rms_res_old;                   // The residual at the old step
 
 public:
+    // exit status of solver
+    enum class Exit_Status {SUCCESS, FAILURE, SLOW, ITERATE, MAX_STEPS };
 
     bool _store_all_residual = false;         // Store the residual after every sweep
     std::vector<double> _res_domain_array;    // Array with the residuals after each step
@@ -140,6 +142,7 @@ public:
     void set_maxsteps(unsigned int maxsteps);
     void set_ngs_sweeps(unsigned int ngs_fine, unsigned int ngs_coarse);
     void set_convergence_criterion_residual(bool use_residual);
+    void set_Nlevel(unsigned N);
     
     // Fetch info about the grids
     unsigned int get_N(unsigned int level = 0) const;
@@ -155,7 +158,7 @@ public:
     void set_initial_guess(Grid<NDIM,T>& guess);
 
     // Solve the PDE
-    void solve();
+    Exit_Status solve();
 
     // Free up all memory
     void clear();
@@ -165,7 +168,7 @@ public:
     virtual T l_operator(const unsigned int level, const std::vector<unsigned int>& index_list, bool addsource, const T h) const;
     virtual T dl_operator(const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const;
     virtual void correct_sol(Grid<NDIM,T>& f, const Grid<NDIM,T>& corr, const unsigned int level);
-    virtual bool check_convergence();
+    virtual Exit_Status check_convergence();
     virtual void check_solution(unsigned level, Grid<NDIM,T>& sol);
     void check_solution(unsigned level); //< automatically retrieves reference to solution
 };
