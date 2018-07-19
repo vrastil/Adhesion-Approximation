@@ -27,6 +27,9 @@ endif
 CXXLIB +=-lgsl -lgslcblas
 CXXLIB +=-lccl
 
+# supress boost warning
+CXXFLAGS +=-Wno-deprecated-declarations
+
 COMPILE.cc = $(CXX) $(CXXFLAGS) -c -I./include# -D_GLIBCXX_USE_CXX11_ABI=0
 COMPILE.fin = $(CXX) $(CXXFLAGS) $(CXXLIB_PATH)
 
