@@ -9,6 +9,7 @@
 #include "core_out.h"
 #include "core_mesh.h"
 #include "core_power.h"
+#include <ccl_error.h>
 #include <json.hpp>
 
 using json = nlohmann::json;
@@ -258,6 +259,7 @@ void Cosmo_Param::init()
 
     /// - create flat LCDM cosmology
     int status = 0;
+    ccl_set_error_policy(CCL_ERROR_POLICY_CONTINUE);
     cosmo = ccl_cosmology_create_with_lcdm_params(Omega_c(), Omega_b, 0, h, sigma8, ns, config, &status);
     if (status) throw std::runtime_error(cosmo->status_message);
     
