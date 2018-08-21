@@ -218,21 +218,21 @@ void assign_to(std::vector<Mesh>& field, const Vec_3D<FTYPE_t> &position, const 
 	} while( it.iter() );
 }
 
-void assign_from(const Mesh &field, const Vec_3D<FTYPE_t> &position, FTYPE_t* value)
+void assign_from(const Mesh &field, const Vec_3D<FTYPE_t> &position, FTYPE_t& value, FTYPE_t mod)
 {
 	IT<ORDER+1> it(position);
     do{
         #pragma omp atomic
-        *value += field(it.vec) * wgh_sch<ORDER>(position, it.vec, field.N);
+        value += field(it.vec) * mod * wgh_sch<ORDER>(position, it.vec, field.N);
 	} while( it.iter() );
 }
 
-void assign_from(const std::vector<Mesh> &field, const Vec_3D<FTYPE_t> &position, Vec_3D<FTYPE_t>& value)
+void assign_from(const std::vector<Mesh> &field, const Vec_3D<FTYPE_t> &position, Vec_3D<FTYPE_t>& value, FTYPE_t mod)
 {
     IT<ORDER+1> it(position);
     FTYPE_t w;
     do{
-        w = wgh_sch<ORDER>(position, it.vec, field[0].N); ///< reuse the same weigh for every field in std::vector
+        w = mod * wgh_sch<ORDER>(position, it.vec, field[0].N); ///< reuse the same weigh for every field in std::vector
         for (int i = 0; i < 3; i++)
         {
             #pragma omp atomic

@@ -155,13 +155,14 @@ FTYPE_t min(const MultiGrid<3, T> &grid){ return min(grid.get_grid()); }
 template<typename T>
 class ChiSolver : public MultiGridSolver<3, T>
 {
-private:
+public:
     // Parameters
-    const T n;       // Hu-Sawicki paramater
-    const T chi_0;   // 2*beta*Mpl*phi_scr///<
-    const T phi_prefactor;   // prefactor for Poisson equation for gravitational potential
-    const T chi_prefactor_0; // dimensionless prefactor to poisson equation at a = 1
-    T chi_prefactor; // time-dependent prefactor
+    const T n;       ///< Hu-Sawicki paramater
+    const T beta;   ///< Chameleon coupling constant
+    const T chi_0;   ///< 2*beta*Mpl*phi_scr
+    const T phi_prefactor;   ///< prefactor for Poisson equation for gravitational potential
+    const T chi_prefactor_0; ///< dimensionless prefactor to poisson equation at a = 1
+    T chi_prefactor; ///< time-dependent prefactor
 
     // convergence parameters
     unsigned m_conv_stop = 0; // number of unsuccessful sweeps
@@ -177,6 +178,34 @@ private:
 
     // variables for checking solution in deep-screened regime, for each level
     std::vector<std::map<unsigned, T>> fix_vals; ///< <index, value>
+
+
+    ChiSolver(unsigned int N, int Nmin, const Sim_Param& sim, bool verbose = true) :
+        MultiGridSolver<3, T>(N, Nmin, verbose), n(sim.chi_opt.n), beta(sim.chi_opt.beta), chi_0(2*beta*MPL*sim.chi_opt.phi),
+        phi_prefactor( // prefactor for Poisson equation for gravitational potential, [] = (h/Mpc)^2
+            // 4*pi*G*rho_m,0 + computing units [Mpc/h]
+            3/2.*sim.cosmo.Omega_m*pow(sim.cosmo.H0 * sim.cosmo.h / c_kms ,2)
+        ),
+        chi_prefactor_0( // dimensionless prefactor to poisson equation
+            // beta*rho_m,0 / (Mpl*chi_0) + computing units [Mpc/h]; additional a^(-3 -3/(1-n)) at each timestep
+            phi_prefactor*pow(sim.box_opt.box_size ,2) / sim.chi_opt.phi
+        ),
+        fix_vals(this->get_Nlevel())
+        {
+            if ((n <= 0) || (n >= 1) || (chi_0 <= 0)) throw std::out_of_range("invalid values of chameleon power-law potential parameters");
+        }
+
+    ChiSolver(unsigned int N, const Sim_Param& sim, bool verbose = true) : ChiSolver(N, 2, sim, verbose) {}
+
+    T chi_a(T a) const
+    {
+        return chi_0*pow(a, 3/(1-n));
+    }
+
+    T chi_force_units(T a) const
+    {
+        return beta/MPL*chi_a(a)/phi_prefactor;
+    }
 
     void get_chi_k(Mesh& rho_k)
     {/* transform input density in k-space into linear prediction for chameleon field,
@@ -217,24 +246,6 @@ private:
         // if current point has the highest density, fix chameleon value
         return true;
     }
-
-public:
-    ChiSolver(unsigned int N, int Nmin, const Sim_Param& sim, bool verbose = true) :
-        MultiGridSolver<3, T>(N, Nmin, verbose), n(sim.chi_opt.n), chi_0(2*sim.chi_opt.beta*MPL*sim.chi_opt.phi),
-        phi_prefactor( // prefactor for Poisson equation for gravitational potential, [] = (h/Mpc)^2
-            // 4*pi*G*rho_m,0 + computing units [Mpc/h]
-            3/2.*sim.cosmo.Omega_m*pow(sim.cosmo.H0 * sim.cosmo.h / c_kms ,2)
-        ),
-        chi_prefactor_0( // dimensionless prefactor to poisson equation
-            // beta*rho_m,0 / (Mpl*chi_0) + computing units [Mpc/h]; additional a^(-3 -3/(1-n)) at each timestep
-            phi_prefactor*pow(sim.box_opt.box_size ,2) / sim.chi_opt.phi
-        ),
-        fix_vals(this->get_Nlevel())
-        {
-            if ((n <= 0) || (n >= 1) || (chi_0 <= 0)) throw std::out_of_range("invalid values of chameleon power-law potential parameters");
-        }
-
-    ChiSolver(unsigned int N, const Sim_Param& sim, bool verbose = true) : ChiSolver(N, 2, sim, verbose) {}
 
     void set_time(T a, const Cosmo_Param& cosmo)
     {
@@ -674,7 +685,7 @@ class App_Var_Chi::ChiImpl
 public:
     // CONSTRUCTOR
     ChiImpl(const Sim_Param &sim):
-        sol(sim.box_opt.mesh_num, sim, false), drho(sim.box_opt.mesh_num), N_level_orig(sol.get_Nlevel())
+        sol(sim.box_opt.mesh_num, sim, false), drho(sim.box_opt.mesh_num), N_level_orig(sol.get_Nlevel()), x_0(sim.x_0())
     {
         // EFFICIENTLY ALLOCATE VECTOR OF MESHES
         chi_force.reserve(3);
@@ -726,19 +737,60 @@ public:
 
     void gen_pow_spec_binned(const Sim_Param &sim, Data_Vec<FTYPE_t,2>& pwr_spec_binned, const FFTW_PLAN_TYPE& p_F)
     {
-        transform_MultiGridSolver_to_Mesh(chi_force[0], sol); // get solution
-        fftw_execute_dft_r2c(p_F, chi_force[0]); // get chi(k)
-        pwr_spec_k_init(chi_force[0], chi_force[0]); // get chi(k)^2, NO w_k correction
-        ::gen_pow_spec_binned(sim, chi_force[0], pwr_spec_binned); // get average Pk
+        transform_MultiGridSolver_to_Mesh(chi_force[0], sol); // - get solution
+        fftw_execute_dft_r2c(p_F, chi_force[0]); // - get chi(k)
+        pwr_spec_k_init(chi_force[0], chi_force[0]); // - get chi(k)^2, NO w_k correction
+        ::gen_pow_spec_binned(sim, chi_force[0], pwr_spec_binned); // - get average Pk
+    }
+
+    void get_chi_force(const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B)
+    {
+        transform_MultiGridSolver_to_Mesh(chi_force[0], sol); // - get solution
+        fftw_execute_dft_r2c(p_F, chi_force[0]); // - get chi(k)
+        gen_displ_k_cic(chi_force, chi_force[0]); // - get -k*chi(k)
+        fftw_execute_dft_c2r_triple(p_B, chi_force);// - get chi force
+    }
+
+    void kick_step_w_chi(const Cosmo_Param &cosmo, const FTYPE_t a, const FTYPE_t da, std::vector<Particle_v<FTYPE_t>>& particles, const std::vector< Mesh> &force_field)
+    {
+        const unsigned Np = particles.size();
+        Vec_3D<FTYPE_t> force;
+        const FTYPE_t D = growth_factor(a, cosmo);
+        const FTYPE_t OL = cosmo.Omega_L()*pow(a,3);
+        const FTYPE_t Om = cosmo.Omega_m;
+        const FTYPE_t OLa = OL/(Om+OL);
+
+        /// - -3/2a represents usual EOM, the rest are LCDM corrections
+        const FTYPE_t f1 = 3/(2*a)*(1 + OLa);
+        const FTYPE_t f2 = 3/(2*a)*(1 - OLa)*D/a;
+        /// - chameleon force factor + units
+        const FTYPE_t f3 = a/D*sol.chi_force_units(a)/pow2(x_0);
+
+        // force.fill(0.);
+        // assign_from(force_field, particles[0].position, force);
+        // std::cout << "\n=======> Gr = " << force.norm() << "\tGr_x = " << force[0];
+        // force.fill(0.);
+        // assign_from(chi_force, particles[0].position, force, f3);
+        // std::cout << "\tChi = " << force.norm() << "\tChi_x = " << force[0] << "\n";        
+        
+        #pragma omp parallel for private(force)
+        for (unsigned i = 0; i < Np; i++)
+        {
+            force.fill(0.);
+            assign_from(force_field, particles[i].position, force);
+            assign_from(chi_force, particles[i].position, force, f3);
+            force = force*f2 - particles[i].velocity*f1;		
+            particles[i].velocity += force*da;
+        }
     }
 
 private:
     const unsigned N_level_orig;
+    const FTYPE_t x_0;
 
     void solve_multigrid()
     {
         sol.set_ngs_sweeps(3, 6); ///< fine, coarse
-        sol.set_Nlevel(N_level_orig);
         sol.set_maxsteps(30);
         ES status = sol.solve();
     }
@@ -749,6 +801,7 @@ private:
         sol.set_Nlevel(1);
         sol.set_maxsteps(30);
         ES status = sol.solve();
+        sol.set_Nlevel(N_level_orig);
     }
 };
 
@@ -779,7 +832,9 @@ void App_Var_Chi::upd_pos()
     auto kick_step = [&]()
     {
         m_impl->solve(a_half(), particles, sim, p_F, p_B);
-        kick_step_w_momentum(sim.cosmo, a_half(), da(), particles, app_field);
+        m_impl->get_chi_force(p_F, p_B);
+        //kick_step_w_momentum(sim.cosmo, a_half(), da(), particles, app_field);
+        m_impl->kick_step_w_chi(sim.cosmo, a_half(), da(), particles, app_field);
     };
     stream_kick_stream(da(), particles, kick_step, sim.box_opt.mesh_num);
 }

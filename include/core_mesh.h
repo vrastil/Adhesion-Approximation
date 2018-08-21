@@ -27,8 +27,8 @@ Vec_3D<FTYPE_t> get_sgn_distance(const Vec_3D<FTYPE_t> &x_from, const Vec_3D<FTY
 
 void assign_to(Mesh& field, const Vec_3D<FTYPE_t> &position, const FTYPE_t value);
 void assign_to(std::vector<Mesh>& field, const Vec_3D<FTYPE_t> &position, const Vec_3D<FTYPE_t>& value);
-void assign_from(const Mesh &field, const Vec_3D<FTYPE_t> &position, FTYPE_t& value);
-void assign_from(const std::vector<Mesh> &field, const Vec_3D<FTYPE_t> &position, Vec_3D<FTYPE_t>& value);
+void assign_from(const Mesh &field, const Vec_3D<FTYPE_t> &position, FTYPE_t& value, FTYPE_t mod = 1);
+void assign_from(const std::vector<Mesh> &field, const Vec_3D<FTYPE_t> &position, Vec_3D<FTYPE_t>& value, FTYPE_t mod = 1);
 
 /**
  * @brief compute forward (real to complex) FFT on mesh (inplace)
