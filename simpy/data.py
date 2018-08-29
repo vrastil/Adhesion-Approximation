@@ -129,6 +129,11 @@ def load_plot_chi_pwr(files, zs, a_sim_info, **kwargs):
     data_list = [np.transpose(np.loadtxt(x)) for x in files]
     plot.plot_chi_pwr_spec(data_list, zs, a_sim_info, **kwargs)
 
+def load_plot_slope(files, zs, a_sim_info, **kwargs):
+    data_list = [np.transpose(np.loadtxt(x)) for x in files]
+    get_extrap_pk(a_sim_info, files)
+    plot.plot_slope(data_list, zs, a_sim_info, a_sim_info.data["pk_list"], **kwargs)
+
 def get_plot_corr(files, zs, a_sim_info, load=False):
     if "corr_func" not in a_sim_info.data:
         a_sim_info.data["corr_func"] = {}
@@ -221,10 +226,11 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
     # Steps to perform -- each entry represents full information needed to perform one step
     # type: Tuple[step_key, data_file_patterns, plot_func, opt_kwargs]
     all_steps = [
-        # Power spectrum -- particle, velocity, chameleon
+        # Power spectrum -- particle, velocity, chameleon, slope
         ("pwr_spec", '*par*.dat *init*.dat', load_plot_pwr, {}),
         ("pwr_spec_chi", '*chi*.dat*', load_plot_chi_pwr, {'subdir' : 'pwr_spec/'}),
         ("vel_pwr_spec", '*.dat', load_plot_pwr, {'pk_type' : 'vel'}),
+        ("pwr_slope", '*par*.dat*', load_plot_slope, {'subdir' : 'pwr_spec/'}),
         # Power spectrum difference -- input, hybrid, particle, velocity, chameleon
         ("pwr_diff", '*par*', load_plot_pwr_spec_diff,
             {'info_str' : '(particle)', 'ext_title' : 'par'}),
@@ -498,11 +504,7 @@ def load_stack_save(stack_info, key, patterns,  # type: StackInfo, str, str,
                 z_str = 'init.dat' if z == 'init' else 'z%.2f.dat' % z
                 fname_ = stack_info.dir + subdir + fname + "_%s_%s" % (stack_info.app, z_str)
                 np.savetxt(fname_, np.transpose(data), fmt='%.6e', header=header)
-            stack_info.done(key)
-
-
-    
-    
+            stack_info.done(key)    
 
 # **********************************
 # RUN ANALYSIS -- STACKING OF RUNS *
@@ -540,6 +542,7 @@ def stack_group(rerun=None, skip=None, **kwargs):
         ("pwr_spec", '*par*.dat *init*.dat', load_plot_pwr, {'err' : True}),
         ("pwr_spec_chi", '*chi*.dat*', load_plot_chi_pwr,
             {'subdir' : 'pwr_spec/', 'err' : True}),
+        ("pwr_slope", '*par*.dat*', load_plot_slope, {'subdir' : 'pwr_spec/'}),
         # Power spectrum difference -- input, hybrid, particle
         ("pwr_diff", '*par*', load_plot_pwr_spec_diff,
             {'info_str' : '(particle)', 'ext_title' : 'par'}),

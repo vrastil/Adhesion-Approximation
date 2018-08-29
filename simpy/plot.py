@@ -12,13 +12,14 @@ from matplotlib.colors import SymLogNorm
 from matplotlib.ticker import FormatStrFormatter
 import numpy as np
 from itertools import izip
+from scipy.misc import derivative
 
 from . import power
 
 matplotlib.rcParams['legend.numpoints'] = 1
 matplotlib.rcParams.update({'font.size': 15})
 
-def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True, get_a=False):
+def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True, get_a=False, only_last=False):
     """ Generator: iterate through data in list 'iterables'
     yield list of values when a_i > a_slice*a_i-1 and a_i < a_slice*a_end
     stops when a_i > a_end, a_end is the last value in zs, if not specified
@@ -34,11 +35,13 @@ def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True, get_a=Fals
             a = 1./(1.+z)
             if ((a < a_slice * a_) or (a_slice * a > a_end)) and a != a_end:
                 continue
+            if only_last and a != a_end:
+                continue
             elif a > a_end:
                 raise StopIteration()
             a_ = a
             lab = 'z = ' + str(z)
-        elif skip_init:
+        elif skip_init or only_last:
             continue
         else:
             a = 0
@@ -174,6 +177,58 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, err=False, out_dir='aut
 
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show)
+
+
+def get_slope(k, P_k, dx=0.01,order=5):
+    logk = np.log(k)
+    logP_k = lambda logk : np.log(P_k(np.exp(logk)))
+    return [derivative(logP_k, logk_, dx=dx, order=order) for logk_ in logk]
+
+
+def plot_slope(data, zs, a_sim_info, Pk_list_extrap,
+                  out_dir='auto', save=True, show=False):
+    """" Plot slope of power spectrum -- points and extrapolated values """
+    if out_dir == 'auto':
+        out_dir = a_sim_info.res_dir
+    out_file = 'pwr_slope.png'
+    suptitle = "Power spectrum slope"
+    fig = plt.figure(figsize=(15, 11))
+    ax = plt.gca()
+    ax.set_xscale('log')
+    ax.set_ylim(-4,2)
+
+    # get_slope = lambda k, P_k : [k_/P_k(k_)*derivative(P_k, k_, dx=k_/4) for k_ in k]
+
+    for lab, Pkk, Pk_ext in iter_data(zs, [data, Pk_list_extrap], only_last=True):
+        k, P_k = Pkk[0], Pkk[1]
+        slope = np.diff(np.log(P_k))/np.diff(np.log(k))
+        k_half = (k[1:] + k[:-1]) / 2.
+        ax.plot(k_half, slope, 'o', ms=3, label=lab)
+        k = np.geomspace(k[0]/5,k[-1], num=400) # extra half a decade for lin-/nl-/extrpolated-pk
+        slope = get_slope(k, Pk_ext, dx=0.2)
+        ax.plot(k, slope, '--')
+
+    add_nyquist_info(ax, a_sim_info)
+
+    # plot non/linear power spectra
+    a_0 = 1./(1.+zs[-1])
+    P_0 = lambda x : power.lin_pow_spec(a_0, x, a_sim_info.sim.cosmo)
+    P_0_nl = lambda x : power.non_lin_pow_spec(a_0, x, a_sim_info.sim.cosmo)
+    slope = get_slope(k, P_0)
+    ax.plot(k, slope, '-', label=r"$\Lambda$CDM (lin)")
+    slope = get_slope(k, P_0_nl)
+    ax.plot(k, slope, '-', label=r"$\Lambda$CDM (nl)")
+
+    fig.suptitle(suptitle, y=0.99, size=20)
+    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=15)
+    ax.set_ylabel(r"d$\ln P(k)/$d$\ln k$]", fontsize=15)
+
+    # LEGEND manipulation
+    legend_manipulation(ax, a_sim_info.info_tr())
+
+    # close & save figure
+    close_fig(out_dir + out_file, fig, save=save, show=show)
+    
 
 def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_data_nl=None, out_dir='auto', save=True, show=False, is_sigma=False):
     if out_dir == 'auto':

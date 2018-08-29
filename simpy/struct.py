@@ -16,7 +16,7 @@ RESULTS_ALL = {
     "dens" : ["dens_hist", "dens_slice"],
     "chi" : ["pwr_spec_chi", "chi_pwr_diff", "chi_pwr_spec_supp", "chi_pwr_spec_supp_map"],
     "par" : ["par_slice"],
-    "pwr" : ["pwr_spec", "pwr_diff", "pwr_diff_i", "pwr_diff_h", "pwr_spec_supp", "pwr_spec_supp_map"],
+    "pwr" : ["pwr_spec", "pwr_diff", "pwr_diff_i", "pwr_diff_h", "pwr_spec_supp", "pwr_spec_supp_map", "pwr_slope"],
     "vel" : ["vel_pwr_spec", "vel_pwr_diff", "vel_pwr_spec_supp"],
     "files" : ["corr_files", "sigma_files", "pwr_spec_files", "pwr_diff_files",
                "pwr_diff_files_i", "pwr_diff_files_h", "pwr_spec_chi_files"]
