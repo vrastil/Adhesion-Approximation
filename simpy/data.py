@@ -584,7 +584,7 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
         insert(a_sim_info, sep_files)
     del sim_infos
 
-    # print info about separated files
+    # count number of runs
     num_all_runs = num_all_sep_runs = num_sep_runs = 0
     for sep_sim_infos in sep_files:
         num_all_runs += len(sep_sim_infos)
@@ -599,6 +599,7 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
     for sep_sim_infos in sep_files:
         sep_sim_infos.sort(key=lambda x: x.dir)
 
+    # print info about separated files
     print "There are in total %i different runs, from which %i share the same parameters, constituting %i group(s) eligible for stacking:" % (
         num_all_runs, num_all_sep_runs, num_sep_runs)
     for sep_sim_infos in sep_files:

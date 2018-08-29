@@ -194,9 +194,11 @@ class StackInfo(SimInfo):
     def load_group_sim_infos(self, group_sim_infos, **kwargs):
         self.group_sim_infos = group_sim_infos 
         self.dir = self.dir.replace(self.dir.split("/")[-2] + "/", "")
-        self.dir += "STACK_%im_%ip_%iM_%ib/" % (
+        self.dir += "STACK_%im_%ip_%iM_%ib" % (
             self.box_opt["mesh_num"], self.box_opt["par_num"],
             self.box_opt["mesh_num_pwr"], self.box_opt["box_size"])
+        if self.app == "CHI": self.dir += "_%.0eY" % self.chi_opt["phi"]
+        self.dir += "/"
         self.file = self.dir + 'stack_info.json'
         self.res_dir = self.dir + 'results/'
 
