@@ -68,7 +68,14 @@ def chi_bulk_a_n(a, chi_opt, MPL=1, CHI_A_UNITS=True):
     n = chi_opt["n"]
     return chi_bulk_a(a, chi_opt, MPL=MPL, CHI_A_UNITS=CHI_A_UNITS)/(1-n)
 
-def chi_mass_sq(a, k, cosmo, chi_opt, MPL=1, c_kms=299792.458):
+def chi_psi_a(a, chi_opt):
+    """ return value of screening potential at given time """
+    phi = chi_opt["phi"]
+    n = chi_opt["n"]
+    phi *= pow(a, -3.*(2.-n)/(1.-n))
+    return phi
+
+def chi_mass_sq(a, cosmo, chi_opt, MPL=1, c_kms=299792.458):
     """ return mass squared of chameleon field sitting at chi_bulk(a, 0) """
     prefactor = (3*MPL*chi_opt["beta"]*cosmo.Omega_m *pow(cosmo.H0 # beta*rho_m,0 / Mpl
                * cosmo.h / c_kms # units factor for 'c = 1' and [L] = Mpc / h
@@ -77,9 +84,13 @@ def chi_mass_sq(a, k, cosmo, chi_opt, MPL=1, c_kms=299792.458):
     prefactor /= pow(a, 3)
     return prefactor/chi_bulk_a_n(a, chi_opt, MPL=MPL, CHI_A_UNITS=False)
 
+def chi_compton_wavelength(a, cosmo, chi_opt, MPL=1, c_kms=299792.458):
+    m_sq = chi_mass_sq(a, cosmo, chi_opt, MPL=MPL, c_kms=c_kms)
+    return 1/np.sqrt(m_sq)
+
 def chi_lin_pow_spec(a, k, cosmo, chi_opt, MPL=1, c_kms=299792.458):
     """ return ndarray of linear power spectrum for chameleon in units of chi_prefactor """
-    mass_sq = chi_mass_sq(a, k, cosmo, chi_opt, MPL=MPL, c_kms=c_kms)
+    mass_sq = chi_mass_sq(a, cosmo, chi_opt, MPL=MPL, c_kms=c_kms)
     k = np.array(k)
     chi_mod = pow(mass_sq/(mass_sq+k*k), 2)
 

@@ -73,14 +73,14 @@ def add_nyquist_info(ax, a_sim_info):
         ax.axvline(val, ls=next(ls), c='k', label=lab + r")")
 
 def legend_manipulation(ax, figtext):
-    #handles, labels = zip(*sorted(zip(*ax.get_legend_handles_labels()), key=lambda x: x[1], reverse=True))
     handles, labels = ax.get_legend_handles_labels()
-    plt.legend(handles, labels, loc='upper left',
+    ax.legend(handles, labels, loc='upper left',
                bbox_to_anchor=(1.0, 1.0), fontsize=14)
     plt.draw()
-    plt.figtext(0.5, 0.95, figtext,
+    if figtext != "":
+        plt.figtext(0.5, 0.95, figtext,
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)    
+    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
 
 def get_a_init_from_zs(zs):
     """ from list of redshifts returns initial scale factor, i.e. value after 'init' """
@@ -699,6 +699,57 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir='auto', save=True):
     del ani
     fig.clf()
     plt.close(fig)
+
+
+def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=False):
+    """" Plot evolution of chameleon background values -- Compton wavelength and screening potential """
+    if out_dir == 'auto':
+        out_dir = a_sim_info.res_dir
+    out_file = 'chi_evol.png'
+    suptitle = "Evolution of Chameleon"
+    fig = plt.figure(figsize=(15, 13))
+    cosmo = a_sim_info.sim.cosmo
+    if chi_opt is None:
+        chi_opt = [a_sim_info.chi_opt]
+        
+    ax1 = plt.subplot(311)
+    ax2 = plt.subplot(313, sharex=ax1)
+    ax3 = plt.subplot(312, sharex=ax1)
+    
+    ax1.set_yscale('log')
+    ax2.set_yscale('log')
+    ax3.set_yscale('log')
+    
+    zs = [z for z in zs if z != 'init']
+    a = [1./(z+1) for z in zs]
+    
+    for chi in chi_opt:
+        wavelengths = [power.chi_compton_wavelength(a_, cosmo, chi) for a_ in a]
+        psi_a = [power.chi_psi_a(a_, chi) for a_ in a]
+        chi_a = [power.chi_bulk_a(a_, chi, CHI_A_UNITS=False) for a_ in a]
+        ax1.plot(zs, wavelengths, '-', label=r"$\Phi_{scr} = 10^{%i}$, $n=%.1f$" % (np.log10(chi["phi"]), chi["n"]))
+        ax2.plot(zs, psi_a, '-')
+        ax3.plot(zs, chi_a, '-')
+    
+
+    # fig.suptitle(suptitle, y=0.95, size=25)
+    plt.setp(ax1.get_xticklabels(), visible=False)
+    plt.setp(ax3.get_xticklabels(), visible=False)
+    
+    ax1.set_ylabel(r"$\lambda_C [$Mpc$/h]$", fontsize=20)
+    ax2.set_ylabel(r"$\phi_{scr}$", fontsize=20)
+    ax3.set_ylabel(r"$\chi/M_{pl}$", fontsize=20)
+    ax2.set_xlabel(r"z", fontsize=20)
+    
+    # legend
+    handles, labels = ax1.get_legend_handles_labels()
+    ax1.legend(handles, labels, loc='best',
+               bbox_to_anchor=(1.0, 1.0), fontsize=14)
+    plt.draw()
+    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89, hspace=0)
+
+    # close & save figure
+    close_fig(out_dir + out_file, fig, save=save, show=show)
 
 
 def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle='', save=True, show=False):

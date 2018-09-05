@@ -572,18 +572,19 @@ def stack_group(rerun=None, skip=None, **kwargs):
         except Exception:
             print_exception()
 
-def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/', rerun=None, skip=None, **kwargs):
+def get_runs_siminfo(in_dir):
     # get all runs
     files = get_files_in_traverse_dir(in_dir, 'sim_param.json')
-    sim_infos = [SimInfo(a_file) for a_file in files]
-    del files
+    sim_infos =  [SimInfo(a_file) for a_file in files]
 
     # separate files according to run parameters
-    sep_files = []
+    sep_infos = []
     for a_sim_info in sim_infos:
-        insert(a_sim_info, sep_files)
-    del sim_infos
+        insert(a_sim_info, sep_infos)
+    
+    return sep_infos
 
+def count_runs(sep_files):
     # count number of runs
     num_all_runs = num_all_sep_runs = num_sep_runs = 0
     for sep_sim_infos in sep_files:
@@ -592,14 +593,9 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
             num_sep_runs += 1
             num_all_sep_runs += len(sep_sim_infos)
 
-    # remove 1-length sep_sim_infos
-    sep_files[:] = [x for x in sep_files if len(x) != 1]
+    return num_all_runs, num_all_sep_runs, num_sep_runs
 
-    # sort sim_infos
-    for sep_sim_infos in sep_files:
-        sep_sim_infos.sort(key=lambda x: x.dir)
-
-    # print info about separated files
+def print_runs_info(sep_files, num_all_runs, num_all_sep_runs, num_sep_runs):
     print "There are in total %i different runs, from which %i share the same parameters, constituting %i group(s) eligible for stacking:" % (
         num_all_runs, num_all_sep_runs, num_sep_runs)
     for sep_sim_infos in sep_files:
@@ -610,6 +606,22 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
                 break
             print "\t" + a_sim_info.dir
 
+def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/', rerun=None, skip=None, **kwargs):
+    # get & count all runs
+    sep_files = get_runs_siminfo(in_dir)
+    num_all_runs, num_all_sep_runs, num_sep_runs = count_runs(sep_files)
+    
+    # remove 1-length sep_sim_infos
+    sep_files[:] = [x for x in sep_files if len(x) != 1]
+
+    # sort sim_infos
+    for sep_sim_infos in sep_files:
+        sep_sim_infos.sort(key=lambda x: x.dir)
+
+    # print info about separated files
+    print_runs_info(sep_files, num_all_runs, num_all_sep_runs, num_sep_runs)
+
+    # analysis
     for sep_sim_infos in sep_files:
         info = "Stacking group %s" % sep_sim_infos[0].info_tr()
         print '*'*len(info), '\n', info, '\n', '*'*len(info)
