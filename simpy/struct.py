@@ -4,11 +4,15 @@
  - Sim_Info : basic class storing all information about one particular simulation run
  - Stack_Info : subclass of Sim_Info, collects and stores information about all runs
    with the same parameters
+ - Results : collects results, compare approximation, show plots
 """
 
 import json
 import os
+import subprocess
+from IPython.display import Image, display
 from .fastsim import Sim_Param
+import data as dt
 
 RESULTS_ALL = {
     "ani" : ["par_ani", "dens_ani"],
@@ -256,3 +260,82 @@ def insert(a_sim_info, sep_files):
             sep_sim_infos.append(a_sim_info)
             return
     sep_files.append([a_sim_info])
+
+class Results(object):
+    """
+    Class to handle all the results. Find, sort, show.
+    """
+    def __init__(self, out_dir=''):
+        if out_dir != '':
+            self.load(out_dir)
+        else: sim_infos = []
+
+    def sort(self):
+        self.sim_infos = sorted(self.sim_infos, key=lambda si: si.app_opt["viscosity"])
+        self.sim_infos = sorted(self.sim_infos, key=lambda si: si.box_opt["mesh_num_pwr"])
+        self.sim_infos = sorted(self.sim_infos, key=lambda si: si.app)
+
+    def load(self, out_dir):
+        self.sim_infos = []
+        files = dt.get_files_in_traverse_dir(out_dir, 'stack_info.json')
+        for a_file in files:
+            self.sim_infos.append(StackInfo(stack_info_file=a_file))
+        self.sort()
+
+    def get_subfiles(self, Nm=0, NM=0, Np=0, L=0, nu=0, rs=0, phi=0, app=''):
+        subfiles = []
+        for a_sim_info in self.sim_infos:
+            check = bool (
+                    (Nm == 0 or a_sim_info.box_opt["mesh_num"] == Nm) and
+                    (NM == 0 or a_sim_info.box_opt["mesh_num_pwr"] == NM) and
+                    (Np == 0 or a_sim_info.box_opt["par_num"]  == Np) and
+                    (L == 0 or a_sim_info.box_opt["box_size"]  == L) and
+                    (nu == 0 or a_sim_info.app_opt["viscosity"] == nu) and
+                    (rs == 0 or a_sim_info.app_opt["cut_radius"] == rs) and
+                    (app == '' or a_sim_info.app == app)
+                )
+            if a_sim_info.chi_opt:
+                check = check and (phi == 0 or a_sim_info.chi_opt["phi"] == phi)
+            if check:
+                subfiles.append(a_sim_info)
+
+        return subfiles
+
+    def info(self, Nm=0, Np=0, L=0, nu=0, rs=0, phi=0, app=''):
+        for a_sim_info in self.get_subfiles(Nm=Nm, Np=Np, L=L, nu=nu, rs=rs, phi=phi, app=app):
+            print a_sim_info.info_tr()
+
+    def show_folder(self, a_sim_info):
+        subprocess.Popen(["xdg-open", a_sim_info.dir + 'results/'])
+
+    def show_results(self, Nm=0, Np=0, L=0, nu=0, rs=0, phi=0, app='', plots=None):
+        if plots is None:
+            return
+        elif plots == "all":
+            return
+
+        for a_sim_info in self.get_subfiles(Nm=Nm, Np=Np, L=L, nu=nu, rs=rs, phi=phi, app=app):
+            results_dir = a_sim_info.dir + 'results/'
+            for plot in plots:
+                try:
+                    filename=results_dir + plot + ".png"
+                    display(Image(filename=filename))
+                except:
+                    pass
+    
+    # def load_k_supp(self, a_sim_info):
+    #     if not hasattr(a_sim_info, "supp"):
+    #         zs, files = try_get_zs_files(a_sim_info, 'pwr_diff/')
+    #         if zs is not None:
+    #             a_sim_info.supp = load_k_supp(files)
+    #             a_sim_info.a = [1./(z+1) for z in zs]
+
+    # def plot_supp_compare(self, out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/supp_comparison/',
+    #                       Nm=0, Np=0, L=0, nu=0, rs=0, app='', scale=['small', 'medium', 'large'], show_k_lms=False, res=None):
+    #     subfiles = self.get_subfiles(Nm=Nm, Np=Np, L=L, nu=nu, rs=rs, app=app)
+
+    #     for a_sim_info in subfiles:
+    #         self.load_k_supp(a_sim_info)
+    #     for sc in scale:
+    #         plot_supp(subfiles, out_dir+sc, suptitle=' on %s scales' % sc, save=True, show=True, scale=sc, show_k_lms=show_k_lms, res=res)
+                    
