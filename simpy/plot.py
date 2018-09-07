@@ -72,7 +72,8 @@ def add_nyquist_info(ax, a_sim_info):
     for val, lab in val_lab.iteritems():
         ax.axvline(val, ls=next(ls), c='k', label=lab + r")")
 
-def legend_manipulation(ax, figtext):
+def legend_manipulation(ax=None, figtext=""):
+    ax = plt.gca() if ax is None else ax
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles, labels, loc='upper left',
                bbox_to_anchor=(1.0, 1.0), fontsize=14)
@@ -167,7 +168,6 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, err=False, out_dir='aut
                              facecolor='darkgrey', alpha=0.5)
 
     add_nyquist_info(ax, a_sim_info)
-    
     fig.suptitle(suptitle, y=0.99, size=20)
     ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=15)
     ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=15)
@@ -178,6 +178,42 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, err=False, out_dir='aut
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show)
 
+
+def plot_chi_fp_map(data, zs, a_sim_info):
+    pass
+
+def plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir='auto', suptitle='auto', save=True, show=False):
+    if out_dir == 'auto':
+        out_dir = a_sim_info.res_dir
+    out_file = 'chi_pwr_diff_fp.png'
+    if suptitle == 'auto':
+        suptitle = "Relative chameleon power spectrum"
+
+    fig = plt.figure(figsize=(15, 11))
+    ax = plt.gca()
+    plt.xscale('log')
+    ymax = 1
+    ymin = 0.95
+    for data_chi, phi in izip(data_z, phi_s): # each chi
+        k = data_chi[0]
+        Pk = data_chi[1]
+        std = data_chi[2]
+        ymax = max(ymax, np.max(Pk))
+        ax.errorbar(k, Pk, fmt='o', yerr=std, ms=3, label=r"$\Phi_{scr}=%.1e$" % phi)
+
+    add_nyquist_info(ax, a_sim_info)
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax.yaxis.grid(True)
+
+    ymax *= 1.1
+    ax.set_ylim(ymin, ymax)
+
+    fig.suptitle(suptitle, y=0.99, size=20)
+    plt.xlabel(r"$k [h/$Mpc$]$", fontsize=15)
+    plt.ylabel(r"${P_\chi(k)}/{P_{FP}(k)}$", fontsize=25)
+    figtext = a_sim_info.info_tr().replace("FP: ", "")
+    legend_manipulation(ax, figtext)
+    close_fig(out_dir + out_file, fig, save=save, show=show)
 
 def get_slope(k, P_k, dx=0.01,order=5):
     logk = np.log(k)
@@ -230,7 +266,51 @@ def plot_slope(data, zs, a_sim_info, Pk_list_extrap,
     close_fig(out_dir + out_file, fig, save=save, show=show)
     
 
-def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_data_nl=None, out_dir='auto', save=True, show=False, is_sigma=False):
+def plot_corr_func_universal(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabel,
+                             figtext, out_dir, file_name, save, show, r2, extra_data=None):
+    
+    z_out = lab if lab == 'init' else 'z' + lab[4:]
+    fig = plt.figure(figsize=(15, 11))
+
+    if extra_data is None: extra_data = []
+
+    # check for r2 multiplier
+    mlt = mlt_lin = mlt_nl = 1
+    if r2:
+        mlt = r*r
+        if xi_lin is not None: mlt_lin = r_lin*r_lin
+        if xi_nl is not None: mlt_nl = r_nl*r_nl
+        ylabel = r"$r^2" + ylabel + r"(r)$"
+        out_dir + '%s_r2_%s.png'
+        plt.xscale("linear")
+        plt.yscale("linear")
+        for data in extra_data:
+            data["mlt"] = data["r"]*data["r"]
+    else:
+        ylabel = r'$' + ylabel + r"(r)$"
+        out_dir += '%s_%s.png' % (file_name, z_out)
+        plt.xscale("log")
+        plt.yscale("log")
+
+    # plot all -- sim, lin, non-lin
+    plt.plot(r, xi*mlt, 'o', ms=3, label=lab)
+    for data in extra_data:
+        plt.plot(data["r"], data["xi"]*data["mlt"], 'o', ms=3, label=data["lab"])
+    if xi_lin is not None: plt.plot(r_lin, xi_lin*mlt_lin, '-', label=r"$\Lambda$CDM (lin)")
+    if xi_nl is not None: plt.plot(r_nl, xi_nl*mlt_nl, '-', label=r"$\Lambda$CDM (nl)")
+
+    # adjust figure, labels
+    fig.suptitle(suptitle, y=0.99, size=20)
+    plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
+    plt.ylabel(ylabel, fontsize=15)
+    legend_manipulation(figtext=figtext)
+
+    # save & show (in jupyter)
+    file_name = out_dir + '%s_%s.png' % (file_name, z_out)
+    close_fig(file_name, fig, save=save, show=show)
+
+
+def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_data_nl=None, out_dir='auto', save=True, show=False, is_sigma=False, only_r2=True, extra_data=None):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if is_sigma:
@@ -242,66 +322,35 @@ def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_d
         file_name = "corr_func"
         ylabel = r"\xi"
 
-    z_out = lab if lab == 'init' else 'z' + lab[4:]
-    # *****************
-    # first plot, xi(r)
-    # *****************
-    fig = plt.figure(figsize=(15, 11))
-    
-    # load all data, plot xi(r)
-    r, xi = corr_data
-    plt.plot(r, xi, 'o', ms=3, label=lab)
-    if corr_data_lin is not None:
-        r_lin, xi_lin = corr_data_lin
-        plt.plot(r_lin, xi_lin, '-', label=r"$\Lambda$CDM (lin)")
-    if corr_data_nl is not None:
-        r_nl, xi_nl = corr_data_nl
-        plt.plot(r_nl, xi_nl, '-', label=r"$\Lambda$CDM (nl)")
-    # adjust figure, labels
-    fig.suptitle(suptitle, y=0.99, size=20)
-    plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
-    plt.ylabel(r'$' + ylabel + r"(r)$", fontsize=15)
-    plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
-    plt.yscale("log")
-    plt.xscale("log")
-    plt.draw()
-    plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
-                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
-    # save & show (in jupyter)
-    close_fig(out_dir + '%s_%s.png' % (file_name, z_out), fig, save=save, show=show)
+    figtext = a_sim_info.info_tr()
 
-    # **********************
+    # modify labels if we are plotting multiple data
+    if extra_data is not None:
+        figtext = figtext.replace(a_sim_info.app + ": ", "")
+        suptitle += ", " + lab
+        lab = a_sim_info.app
+
+    # get data
+    r, xi = corr_data
+    r_lin, xi_lin = corr_data_lin if corr_data_lin is not None else (None, None)
+    r_nl, xi_nl = corr_data_nl if corr_data_nl is not None else (None, None)
+
+    # first plot, xi(r)
+    if not only_r2: plot_corr_func_universal(
+        r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabel, figtext,
+        out_dir, file_name, save, show, False, extra_data)
+
     # second plot, r*r*xi(r)
-    # **********************
-    fig = plt.figure(figsize=(15, 11))
-    # plot r*r*xi(r)
-    plt.plot(r, r * r * xi, 'o', ms=3, label=lab)
-    if corr_data_lin is not None:
-        plt.plot(r_lin, r_lin * r_lin * xi_lin,
-                 '-', label=r"$\Lambda$CDM (lin)")
-    if corr_data_nl is not None:
-        plt.plot(r_nl, r_nl * r_nl * xi_nl,
-                 '-', label=r"$\Lambda$CDM (nl)")
-    # adjust figure, labels
-    fig.suptitle(suptitle, y=0.99, size=20)
-    plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
-    plt.ylabel(r"$r^2" + ylabel + r"(r)$", fontsize=15)
-    plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
-    plt.yscale("linear")
-    plt.draw()
-    plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
-                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
-    # save & show (in jupyter)
-    close_fig(out_dir + '%s_r2_%s.png' % (file_name, z_out), fig, save=save, show=show)
+    plot_corr_func_universal(
+        r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabel, figtext,
+        out_dir, file_name, save, show, True, extra_data)
 
 # correlation function stacked data, linear and emu corr. func in files
-def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, show=False, is_sigma=False):
+def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, show=False, is_sigma=False, only_r2=True, extra_data=None):
     for lab, corr_par, corr_lin, corr_nl in iter_data(zs, [corr_data_all['par'],
                                                       corr_data_all['lin'], corr_data_all['nl']]):
         plot_corr_func_single(
-            corr_par, lab, a_sim_info, corr_lin, corr_nl, out_dir, save, show, is_sigma)
+            corr_par, lab, a_sim_info, corr_lin, corr_nl, out_dir, save, show, is_sigma, only_r2, extra_data)
 
 
 def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='par', save=True, show=False):
@@ -371,12 +420,7 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
     fig.suptitle(suptitle, y=0.99, size=20)
     plt.xlabel(r"$k [h/$Mpc$]$", fontsize=15)
     plt.ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$", fontsize=25)
-    plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
-    plt.draw()
-    plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
-                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
-
+    legend_manipulation(ax, a_sim_info.info_tr())
     close_fig(out_dir + out_file, fig, save=save, show=show)
 
 

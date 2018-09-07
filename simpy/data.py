@@ -9,6 +9,7 @@ import traceback
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import TerminalFormatter
+from itertools import izip
 
 import fnmatch
 import numpy as np
@@ -16,7 +17,7 @@ from scipy.optimize import curve_fit
 
 from . import plot
 from .fastsim import Extrap_Pk_Nl_2, Extrap_Pk_Nl_3
-from .struct import SimInfo, StackInfo, insert
+from .struct import *
 from .power import hybrid_pow_spec, get_Data_vec, corr_func, chi_trans_to_supp, sigma_R
 
 def print_exception(file=sys.stdout):
@@ -54,24 +55,28 @@ def get_files_in_traverse_dir(a_dir, patterns):
         for name in fnmatch.filter(files, pattern) # pattern matching
         ]))
 
-def sort_get_z(files, a_sim_info):
+def sort_lists(*lists):
+    return zip(*sorted(zip(*lists), reverse=True))
+
+def sort_get_z(files, a_sim_info, skip_init=False):
     # type: (List[str], SimInfo) -> List[str], List[TypeVar(str, float)]
     zs = []
     for a_file in files:
         if a_sim_info.app + '_z' in a_file:
             zs.append(float(a_file[a_file.index(a_sim_info.app + '_z') + len(a_sim_info.app+'_z'):-4]))
-        elif a_sim_info.app + '_init' in a_file:
+        elif a_sim_info.app + '_init' in a_file and not skip_init:
             zs.append('init')
         else:
             print "WARNING! Skipping file '%s', unknown format." % a_file
-    return zip(*sorted(zip(zs, files), reverse=True))
+    return sort_lists(zs, files)
 
-def sort_get_fl_get_z(a_sim_info, subdir, patterns='*.dat'):
-    return sort_get_z(get_files_in_traverse_dir(a_sim_info.dir + subdir, patterns), a_sim_info)
+def sort_get_fl_get_z(a_sim_info, subdir, patterns='*.dat', skip_init=False):
+    files = get_files_in_traverse_dir(a_sim_info.dir + subdir, patterns)
+    return sort_get_z(files, a_sim_info, skip_init=skip_init)
 
-def try_get_zs_files(a_sim_info, subdir, patterns):
+def try_get_zs_files(a_sim_info, subdir, patterns, skip_init=False):
     try:
-        zs, files = sort_get_fl_get_z(a_sim_info, subdir, patterns=patterns)
+        zs, files = sort_get_fl_get_z(a_sim_info, subdir, patterns=patterns, skip_init=skip_init)
         return list(zs), list(files)
     except ValueError:
         return None, None
@@ -134,7 +139,7 @@ def load_plot_slope(files, zs, a_sim_info, **kwargs):
     get_extrap_pk(a_sim_info, files)
     plot.plot_slope(data_list, zs, a_sim_info, a_sim_info.data["pk_list"], **kwargs)
 
-def get_plot_corr(files, zs, a_sim_info, load=False):
+def get_corr_func(files, zs, a_sim_info, load=False):
     if "corr_func" not in a_sim_info.data:
         a_sim_info.data["corr_func"] = {}
         if load:
@@ -145,7 +150,14 @@ def get_plot_corr(files, zs, a_sim_info, load=False):
         a_sim_info.data["corr_func"]["lin"] = [corr_func(a_sim_info.sim, z=z) for z in zs]
         a_sim_info.data["corr_func"]["nl"] = [corr_func(a_sim_info.sim, z=z, non_lin=True) for z in zs]
 
-    plot.plot_corr_func(a_sim_info.data["corr_func"], zs, a_sim_info)
+def find_nearest_idx(array, value):
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return idx
+
+def get_plot_corr(files, zs, a_sim_info, load=False, **kwargs):
+    get_corr_func(files, zs, a_sim_info, load=load)
+    plot.plot_corr_func(a_sim_info.data["corr_func"], zs, a_sim_info, **kwargs)
     
 def get_plot_sigma(files, zs, a_sim_info, load=False):
     if "sigma_R" not in a_sim_info.data:
@@ -631,3 +643,112 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
             print 'Exiting...'
             return
     print '*'*len(info), '\n', 'All groups analyzed!'
+
+# ********************************
+# RUN ANALYSIS -- CHI COMPARISON *
+# ********************************
+
+def plot_chi_wave_pot(a_file="/home/vrastil/Documents/GIT/Adhesion-Approximation/output/CHI_run/STACK_512m_512p_1024M_2000b_1e-06Y/stack_info.json",
+                      outdir = "/home/vrastil/Documents/GIT/Adhesion-Approximation/report/plots/"):
+    a_sim_info = SimInfo(a_file)
+    zs = np.linspace(0,5)
+    beta = a_sim_info.chi_opt["beta"]
+    n = [0.1,0.5,0.7]
+    phi = [10**(-5)]
+    chi_opt = [{'beta' : beta, 'n' : n_, 'phi' : phi_} for phi_ in phi for n_ in n]
+    plot.plot_chi_evol(zs, a_sim_info, chi_opt=chi_opt, out_dir=outdir, show=True)
+
+
+def get_data_fp_chi_ratio(group):
+    data_all = []
+    
+    data_fp = [np.transpose(np.loadtxt(a_file)) for a_file in group["FP_files"]]
+    for files in group["CHI_files"]:
+        data_chi = [np.transpose(np.loadtxt(a_file)) for a_file in files]
+        data = []
+        for data_fp_s, data_chi_s in izip(data_fp, data_chi):
+            shape = data_fp_s.shape
+            data_ = np.empty(shape)
+            data_[0] = data_fp_s[0] # k
+            data_[1] = data_chi_s[1] / data_fp_s[1] # Pk
+            data_[2] = data_[1]*np.sqrt(np.square(data_chi_s[2] / data_chi_s[1]) + np.square(data_fp_s[2] / data_fp_s[1]))
+            data.append(data_)
+        data_all.append(data)
+
+    return data_all
+
+def rm_extra_zs(zs_unique, zs_list, other_list):
+    i = 0
+    for z in zs_list:
+        if z not in zs_unique:
+            del other_list[i]
+        else:
+            i += 1
+
+def load_chi_fp_files(group, subdir, patterns):
+    zs_fp, files = try_get_zs_files(group["FP"], subdir, patterns)
+    group["FP_zs"] = zs_fp
+    group["FP_files"] = files
+    group["CHI_zs"] = []
+    group["CHI_files"] = []
+    for chi_info in group["CHI"]:
+        zs, files = try_get_zs_files(chi_info, subdir, patterns)
+        group["CHI_zs"].append(zs)
+        group["CHI_files"].append(files)
+
+    # create zs which are in all subgroups
+    zs_unique = set(zs_fp)
+    for zs in group["CHI_zs"]:
+        zs_unique &= set(zs)
+    zs_unique = list(sort_lists(zs_unique)[0])
+
+    # remove extra files from all list
+    rm_extra_zs(zs_unique, zs_fp, group["FP_files"])
+    for zs_list, other_list in izip(group["CHI_zs"], group["CHI_files"]):
+        rm_extra_zs(zs_unique, zs_list, other_list)
+
+    group["FP_zs"] = zs_unique
+    group["CHI_zs"] = None
+
+def get_fp_chi_groups(in_dir):
+    res = Results(in_dir)
+    groups = []
+    for a_sim_info in res.get_subfiles(app='FP'):
+        Nm = a_sim_info.box_opt["mesh_num"]
+        NM = a_sim_info.box_opt["mesh_num_pwr"]
+        Np = a_sim_info.box_opt["par_num"]
+        L = a_sim_info.box_opt["box_size"]
+        chi_infos = res.get_subfiles(Nm=Nm, NM=NM, Np=Np, L=L, app='CHI')
+        groups.append({ "FP" : a_sim_info, "CHI" : chi_infos})
+
+    for group in groups:
+        load_chi_fp_files(group, 'pwr_spec', '*par*')
+    
+    return groups
+
+def my_shape(data):
+    try:
+        data = np.array(data)
+        return data.shape
+    except ValueError:
+        return len(data)
+        
+def compare_chi_fp(in_dir="/home/vrastil/Documents/GIT/Adhesion-Approximation/output/",
+                   out_dir="/home/vrastil/Documents/GIT/Adhesion-Approximation/report/plots/"):
+    groups = get_fp_chi_groups(in_dir)    
+    data_all = [get_data_fp_chi_ratio(group) for group in groups]
+    #return data_all
+    
+    for group, data_g in izip(groups, data_all): # per group
+        # SimInfo, zs should be the same for all FP / CHI
+        a_sim_info = group["FP"]
+        zs = group["FP_zs"]
+        phi_s = [si.chi_opt["phi"] for si in group["CHI"]]
+        
+        plot.plot_chi_fp_map(data_g, zs, a_sim_info)
+
+        data_g_tr = map(list, zip(*data_g)) # transpoose
+        
+        for lab, data_z in plot.iter_data(zs, [data_g_tr]): # per redshift
+            suptitle = "Relative chameleon power spectrum, " + lab
+            plot.plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir=out_dir ,suptitle=suptitle, show=True, save=False)
