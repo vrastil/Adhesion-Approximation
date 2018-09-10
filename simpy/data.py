@@ -17,7 +17,8 @@ from scipy.optimize import curve_fit
 
 from . import plot
 from .fastsim import Extrap_Pk_Nl_2, Extrap_Pk_Nl_3
-from .struct import *
+from .struct import SimInfo, StackInfo, Results, Map, insert
+from . import power as pwr
 from .power import hybrid_pow_spec, get_Data_vec, corr_func, chi_trans_to_supp, sigma_R
 
 def print_exception(file=sys.stdout):
@@ -115,19 +116,29 @@ def load_k_supp(files, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens'):
         supp[i][2] = [k[j*idx], k[(j+1)*idx]]
     return supp
 
-def get_extrap_pk(a_sim_info, files):
-    if "extrap_pk" in a_sim_info.data:
-        return
-    a_sim_info.data["extrap_pk"] = [
-        get_hybrid_pow_spec_amp(
-            a_sim_info.sim, np.transpose(np.loadtxt(x)),
-            a_sim_info.k_nyquist["particle"])
-        for x in files]
-    a_sim_info.data["pk_list"] = [x["Pk_par"] for x in a_sim_info.data["extrap_pk"]]
+def get_single_hybrid_pow_spec_amp_w_z(sim, a_file, z, k_nyquist_par):
+    data = np.transpose(np.loadtxt(a_file))
+    x = get_hybrid_pow_spec_amp(sim, data, k_nyquist_par)
+    x["z"] = z
+    return x
+
+def get_extrap_pk(a_sim_info, files, zs):
+    if "extrap_pk" not in a_sim_info.data:
+        # needed variables
+        sim = a_sim_info.sim
+        k_nyquist_par = a_sim_info.k_nyquist["particle"]
+        func = lambda a_file, z : get_single_hybrid_pow_spec_amp_w_z(sim, a_file, z, k_nyquist_par)
+
+        # get hybrid power spectrum with redshift for each file
+        a_sim_info.data["extrap_pk"] = list(map(func, files, zs))
+
+        # extract 'Pk_par' and 'z' for convenience
+        a_sim_info.data["pk_list"] = [x["Pk_par"] for x in a_sim_info.data["extrap_pk"]]
+        a_sim_info.data["zs"] = [x["z"] for x in a_sim_info.data["extrap_pk"]]
 
 def load_plot_pwr(files, zs, a_sim_info, **kwargs):
     data_list = [np.transpose(np.loadtxt(x)) for x in files]
-    get_extrap_pk(a_sim_info, files)
+    get_extrap_pk(a_sim_info, files, zs)
     plot.plot_pwr_spec(data_list, zs, a_sim_info, a_sim_info.data["pk_list"], **kwargs)
 
 def load_plot_chi_pwr(files, zs, a_sim_info, **kwargs):
@@ -136,41 +147,43 @@ def load_plot_chi_pwr(files, zs, a_sim_info, **kwargs):
 
 def load_plot_slope(files, zs, a_sim_info, **kwargs):
     data_list = [np.transpose(np.loadtxt(x)) for x in files]
-    get_extrap_pk(a_sim_info, files)
+    get_extrap_pk(a_sim_info, files, zs)
     plot.plot_slope(data_list, zs, a_sim_info, a_sim_info.data["pk_list"], **kwargs)
 
-def get_corr_func(files, zs, a_sim_info, load=False):
-    if "corr_func" not in a_sim_info.data:
-        a_sim_info.data["corr_func"] = {}
-        if load:
-            a_sim_info.data["corr_func"]["par"] = [np.transpose(np.loadtxt(a_file)) for a_file in files]
-        else:
-            get_extrap_pk(a_sim_info, files)
-            a_sim_info.data["corr_func"]["par"] = [corr_func(a_sim_info.sim, Pk=Pk) for Pk in a_sim_info.data["pk_list"]]
-        a_sim_info.data["corr_func"]["lin"] = [corr_func(a_sim_info.sim, z=z) for z in zs]
-        a_sim_info.data["corr_func"]["nl"] = [corr_func(a_sim_info.sim, z=z, non_lin=True) for z in zs]
+def get_key_func(files, zs, a_sim_info, key, load=False):
+    """ key must be name of callable function placed in power with signature:
+        key(sim, Pk=None, z=None, non_lin=False) """
 
-def find_nearest_idx(array, value):
-    array = np.asarray(array)
-    idx = (np.abs(array - value)).argmin()
-    return idx
+    if key not in a_sim_info.data:
+        a_sim_info.data[key] = {}
+        gen_func = getattr(pwr, key)
+        if load:
+            a_sim_info.data[key]["par"] = [np.transpose(np.loadtxt(a_file)) for a_file in files]
+        else:
+            get_extrap_pk(a_sim_info, files, zs)
+            a_sim_info.data[key]["par"] = [gen_func(a_sim_info.sim, Pk=Pk) for Pk in a_sim_info.data["pk_list"]]
+        a_sim_info.data[key]["lin"] = [gen_func(a_sim_info.sim, z=z) for z in zs]
+        a_sim_info.data[key]["nl"] = [gen_func(a_sim_info.sim, z=z, non_lin=True) for z in zs]
+        a_sim_info.data[key]["zs"] = zs
+
+def get_corr_func(files, zs, a_sim_info, load=False):
+    get_key_func(files, zs, a_sim_info, "corr_func", load=load)
 
 def get_plot_corr(files, zs, a_sim_info, load=False, **kwargs):
     get_corr_func(files, zs, a_sim_info, load=load)
     plot.plot_corr_func(a_sim_info.data["corr_func"], zs, a_sim_info, **kwargs)
     
-def get_plot_sigma(files, zs, a_sim_info, load=False):
-    if "sigma_R" not in a_sim_info.data:
-        a_sim_info.data["sigma_R"] = {}
-        if load:
-            a_sim_info.data["sigma_R"]["par"] = [np.transpose(np.loadtxt(a_file)) for a_file in files]
-        else:
-            get_extrap_pk(a_sim_info, files)
-            a_sim_info.data["sigma_R"]["par"] = [sigma_R(a_sim_info.sim, Pk=Pk) for Pk in a_sim_info.data["pk_list"]]
-        a_sim_info.data["sigma_R"]["lin"] = [sigma_R(a_sim_info.sim, z=z) for z in zs]
-        a_sim_info.data["sigma_R"]["nl"] = [sigma_R(a_sim_info.sim, z=z, non_lin=True) for z in zs]
+def get_sigma_R(files, zs, a_sim_info, load=False):
+    get_key_func(files, zs, a_sim_info, "sigma_R", load=load)
 
+def get_plot_sigma(files, zs, a_sim_info, load=False):
+    get_sigma_R(files, zs, a_sim_info, load=load)
     plot.plot_corr_func(a_sim_info.data["sigma_R"], zs, a_sim_info, is_sigma=True)
+
+def find_nearest_idx(array, value, axis=None):
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin(axis=axis)
+    return idx
 
 def get_plot_supp(files, zs, a_sim_info, pk_type='dens'):
     a = [1./(z+1.) for z in zs]
@@ -229,6 +242,46 @@ def load_check_plot(a_sim_info, key, patterns, # type: SimInfo, str, str,
     if a_sim_info.rerun(rerun, key, skip, zs):
         plot_func(files, zs, a_sim_info, **kwargs)
         a_sim_info.done(key)
+
+def cut_zs_files(zs, files, z=None):
+    if z is not None:
+        if z == 'init':
+            zs = zs[:1]
+            files = files[:1]
+        else:
+            zs = zs[1:]
+            files = files[1:]
+            idx = find_nearest_idx(zs, z)
+            zs = [zs[idx]]
+            files = [files[idx]]
+    return zs, files
+
+def get_initialized_StackInfo(a_file, z=None, get_corr=False, get_sigma=False):
+    # get StackInfo
+    a_sim_info = StackInfo(stack_info_file=a_file)
+
+    # get files for extrapolated power spectrum
+    zs, files = try_get_zs_files(a_sim_info, subdir='pwr_spec/', patterns='*par*.dat')
+
+    # if z is specified, find nearest-value file
+    zs, files = cut_zs_files(zs, files, z)
+
+    # get data
+    get_extrap_pk(a_sim_info, files, zs)
+
+    # get correlation function
+    if get_corr:
+        get_corr_func(files, zs, a_sim_info)
+
+    # get amplitude of density fluctuations
+    if get_sigma:
+        get_sigma_R(files, zs, a_sim_info)
+
+    # return initialized object
+    if z is None:
+        return a_sim_info
+    else:
+        a_sim_info, zs
 
 # ****************************
 # RUN ANALYSIS -- SINGLE RUN *
@@ -470,6 +523,38 @@ def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par):
 
     # return all info in dict
     return {"Pk_par" : Pk_par, "popt" : popt, "pcov" : pcov, 'perr' : perr, 'pcor' : pcor}
+
+def get_a_eff_from_dens_fluct(a_sim_info):
+    """ fit data [r, sigma] to """
+    # sigma_R_0
+    data_par_0 = np.array(a_sim_info.data["sigma_R"]["par"])[1,1]
+    data_nl_0 = np.array(a_sim_info.data["sigma_R"]["nl"])[1,1]
+
+    # sigma_R
+    data_par = np.array(a_sim_info.data["sigma_R"]["par"])[1:,1]
+    data_nl = np.array(a_sim_info.data["sigma_R"]["nl"])[1:,1]
+
+    # ratio and its std
+    data_D_eff = np.sqrt(data_par / data_par_0 * data_nl_0 / data_nl)
+    D_eff_ratio = np.mean(data_D_eff, axis=1)
+    D_eff_std = np.std(data_D_eff, axis=1)
+
+    # save data
+    a_sim_info.data["sigma_R"]["D_eff_ratio"] = D_eff_ratio
+    a_sim_info.data["sigma_R"]["D_eff_std"] = D_eff_std
+
+def get_a_eff_from_Pk(stack_info):
+    # go through all extrapolated Pk
+    a, popt, pcov, perr = map(np.array, zip(*[ # extract back, store as np.array
+        (1/(Pk['z'] + 1), Pk['popt'], Pk['pcov'], Pk['perr']) # a, popt, pcov, perr
+        for Pk in stack_info.data["extrap_pk"] if Pk["z"] != 'init']))
+    
+    # derived variables
+    a_eff = popt[:,0]
+    A = popt[:,1]
+    
+    # store
+    stack_info.data["eff_time"] = {'a' : a, 'popt' : popt, 'pcov' : pcov, 'a_eff' : a_eff, 'A' : A, 'perr' : perr}
 
 # **************************
 # LOAD & SAVE STACKED DATA *
@@ -752,3 +837,46 @@ def compare_chi_fp(in_dir="/home/vrastil/Documents/GIT/Adhesion-Approximation/ou
         for lab, data_z in plot.iter_data(zs, [data_g_tr]): # per redshift
             suptitle = "Relative chameleon power spectrum, " + lab
             plot.plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir=out_dir ,suptitle=suptitle, show=True, save=False)
+
+# *********************************
+# RUN ANALYSIS -- CORR COMPARISON *
+# *********************************
+
+def load_get_corr(a_file, z=None):
+    # get StackInfo
+    a_sim_info = StackInfo(stack_info_file=a_file)
+    
+    # get files for correlation function
+    patterns = '*par*.dat *init*.dat'
+    subdir = 'pwr_spec/'
+    zs, files = try_get_zs_files(a_sim_info, subdir, patterns)
+    
+    # if z is specified, find nearest-value file
+    zs, files = cut_zs_files(zs, files, z)
+    
+    # get correlation function
+    get_corr_func(files, zs, a_sim_info)
+    
+    # return SimInfo with all loaded data and redshifts
+    return a_sim_info, zs
+    
+def corr_func_ZA_FP(ZA_file="/home/vrastil/Documents/GIT/Adhesion-Approximation/output/FP_run/STACK_512m_512p_1024M_2000b/stack_info.json",
+                    FP_file="/home/vrastil/Documents/GIT/Adhesion-Approximation/output/ZA_run/STACK_512m_512p_1024M_2000b/stack_info.json",
+                    outdir = "/home/vrastil/Documents/GIT/Adhesion-Approximation/report/plots/",
+                    z=1.):
+    # load SimInfo and get correlation data
+    ZA_ST, z_ZA = load_get_corr(ZA_file, z=z)
+    FP_ST, z_FP = load_get_corr(FP_file, z=z_ZA)
+    
+    # check redshifts
+    if z_ZA != z_FP:
+        raise IndexError("ZA and FP do not have the same redshift-slice.")
+    
+    # plot all (one for 'z=None') correlation plots
+    r, xi = FP_ST.data["corr_func"]["par"][0]
+    extra_data = [
+        {'r' : r, 'xi' : xi, 'lab' : FP_ST.app, 'mlt' : 1}
+    ]
+
+    plot.plot_corr_func(ZA_ST.data["corr_func"], z_ZA, ZA_ST, out_dir='auto', save=False, show=True, extra_data=extra_data)
+    

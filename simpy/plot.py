@@ -15,8 +15,10 @@ from itertools import izip
 from scipy.misc import derivative
 
 from . import power
+from .struct import Map
 
 matplotlib.rcParams['legend.numpoints'] = 1
+label_size = 20
 matplotlib.rcParams.update({'font.size': 15})
 
 def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True, get_a=False, only_last=False):
@@ -134,8 +136,8 @@ def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False,
     ax.plot(k, P_i, '-')
     
     fig.suptitle(suptitle, y=0.99, size=20)
-    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=15)
-    ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=15)
+    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
+    ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=label_size)
 
     # LEGEND manipulation
     legend_manipulation(ax, a_sim_info.info_tr())
@@ -169,8 +171,8 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, err=False, out_dir='aut
 
     add_nyquist_info(ax, a_sim_info)
     fig.suptitle(suptitle, y=0.99, size=20)
-    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=15)
-    ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=15)
+    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
+    ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=label_size)
 
     # LEGEND manipulation
     legend_manipulation(ax, a_sim_info.info_tr())
@@ -209,8 +211,8 @@ def plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir='auto', suptitle='auto', sa
     ax.set_ylim(ymin, ymax)
 
     fig.suptitle(suptitle, y=0.99, size=20)
-    plt.xlabel(r"$k [h/$Mpc$]$", fontsize=15)
-    plt.ylabel(r"${P_\chi(k)}/{P_{FP}(k)}$", fontsize=25)
+    plt.xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
+    plt.ylabel(r"${P_\chi(k)}/{P_{FP}(k)}$", fontsize=label_size)
     figtext = a_sim_info.info_tr().replace("FP: ", "")
     legend_manipulation(ax, figtext)
     close_fig(out_dir + out_file, fig, save=save, show=show)
@@ -256,8 +258,8 @@ def plot_slope(data, zs, a_sim_info, Pk_list_extrap,
     ax.plot(k, slope, '-', label=r"$\Lambda$CDM (nl)")
 
     fig.suptitle(suptitle, y=0.99, size=20)
-    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=15)
-    ax.set_ylabel(r"d$\ln P(k)/$d$\ln k$]", fontsize=15)
+    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
+    ax.set_ylabel(r"d$\ln P(k)/$d$\ln k$]", fontsize=label_size)
 
     # LEGEND manipulation
     legend_manipulation(ax, a_sim_info.info_tr())
@@ -281,7 +283,7 @@ def plot_corr_func_universal(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, y
         if xi_lin is not None: mlt_lin = r_lin*r_lin
         if xi_nl is not None: mlt_nl = r_nl*r_nl
         ylabel = r"$r^2" + ylabel + r"(r)$"
-        out_dir + '%s_r2_%s.png'
+        out_dir += '%s_r2_%s.png'
         plt.xscale("linear")
         plt.yscale("linear")
         for data in extra_data:
@@ -301,8 +303,8 @@ def plot_corr_func_universal(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, y
 
     # adjust figure, labels
     fig.suptitle(suptitle, y=0.99, size=20)
-    plt.xlabel(r"$r [$Mpc$/h]$", fontsize=15)
-    plt.ylabel(ylabel, fontsize=15)
+    plt.xlabel(r"$r [$Mpc$/h]$", fontsize=label_size)
+    plt.ylabel(ylabel, fontsize=label_size)
     legend_manipulation(figtext=figtext)
 
     # save & show (in jupyter)
@@ -351,6 +353,41 @@ def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, sho
                                                       corr_data_all['lin'], corr_data_all['nl']]):
         plot_corr_func_single(
             corr_par, lab, a_sim_info, corr_lin, corr_nl, out_dir, save, show, is_sigma, only_r2, extra_data)
+
+def plot_eff_time(stack_infos, a_eff_type="sigma_R"):
+    # figure
+    fig = plt.figure(figsize=(15,11))
+    ax = plt.gca()
+    
+    for stack_info in stack_infos:
+        if a_eff_type == "sigma_R":
+            D_eff_ratio = stack_info.data["sigma_R"]["D_eff_ratio"]
+            # D_eff_std = stack_info.data["sigma_R"]["D_eff_std"]
+            a = [1./(1+z) for z in stack_info.data["sigma_R"]["zs"] if z != 'init']
+            ax.plot(a, D_eff_ratio, label=stack_info.info_tr())
+            # ax.errorbar(a, D_eff_ratio, yerr=D_eff_std, label=stack_info.info_tr())
+        elif a_eff_type == "Pk":
+            #extract variables
+            cosmo = stack_info.sim.cosmo
+            eff = Map(stack_info.data["eff_time"])
+            a = eff.a
+            a_eff = eff.a_eff
+            a_err = eff.perr[:,0]
+
+            # derived variables
+            D = power.growth_factor(a, cosmo)
+            D_eff = power.growth_factor(a_eff, cosmo)
+            
+            #plot -- effective growth
+            ax.errorbar(a, D_eff / D, yerr=a_err, label=stack_info.info_tr())
+            ax.set_ylim(ymin=0.8)
+    
+    ax.set_ylabel(r'$D_{eff}/D_{GR}$', fontsize=label_size)
+    ax.set_xlabel(r'$a$', fontsize=label_size)
+    ax.legend()
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax.yaxis.grid(True)
+    plt.show()
 
 
 def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='par', save=True, show=False):
@@ -418,7 +455,7 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
     ax.yaxis.grid(True)
 
     fig.suptitle(suptitle, y=0.99, size=20)
-    plt.xlabel(r"$k [h/$Mpc$]$", fontsize=15)
+    plt.xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
     plt.ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$", fontsize=25)
     legend_manipulation(ax, a_sim_info.info_tr())
     close_fig(out_dir + out_file, fig, save=save, show=show)
@@ -492,8 +529,8 @@ def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto',
             ax.axvline(val, ls=next(ls), c='k')
 
     fig.suptitle(suptitle, y=0.99, size=20)
-    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=15)
-    ax.set_ylabel(r"$a(t)$", fontsize=15)
+    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
+    ax.set_ylabel(r"$a(t)$", fontsize=label_size)
     plt.draw()
     plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
@@ -539,13 +576,12 @@ def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, scale='', 
 
     #plt.ylim(ymin=-1, ymax=0)
     fig.suptitle("Power spectrum suppression" + suptitle, y=0.99, size=20)
-    plt.xlabel(r"$a(t)$", fontsize=15)
+    plt.xlabel(r"$a(t)$", fontsize=label_size)
     ylabel = r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$"
     if res is not None:
         ylabel += r', residual from $\nu=%.1f$' % res.nu
     plt.ylabel(ylabel, fontsize=25)
-    plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
-    plt.subplots_adjust(left=0.1, right=0.7, bottom=0.1, top=0.89)
+    legend_manipulation()
     close_fig(out_dir + 'supp.png', fig, save=save, show=show)
 
 
@@ -606,8 +642,8 @@ def plot_par_last_slice(files, files_t, zs, a_sim_info, out_dir='auto', save=Tru
 
     plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=13)
-    ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=13)
+    ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=label_size)
+    ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=label_size)
     fig.suptitle("Slice through simulation box (particles), z = %.2f" %
                  zs[-1], y=0.99, size=20)
     close_fig(out_dir + 'par_evol_last.png', fig, save=save, show=show)
@@ -635,8 +671,8 @@ def plot_par_evol(files, files_t, zs, a_sim_info, out_dir='auto', save=True):
 
     plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=13)
-    ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=13)
+    ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=label_size)
+    ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=label_size)
     del x, y, data
 
     def animate(j):
@@ -679,8 +715,8 @@ def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=Fals
 
     plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=13)
-    ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=13)
+    ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=label_size)
+    ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=label_size)
     L = int(np.sqrt(rho.shape[0]))
     rho.shape = L, L
     im = ax.imshow(rho, interpolation='bicubic', cmap='gnuplot',
@@ -714,8 +750,8 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir='auto', save=True):
     cbar_ax = plt.subplot(gs[0, -1])
     plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=13)
-    ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=13)
+    ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=label_size)
+    ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=label_size)
 
     def animate(j):
         if j < num:
@@ -786,11 +822,7 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
     ax2.set_xlabel(r"z", fontsize=20)
     
     # legend
-    handles, labels = ax1.get_legend_handles_labels()
-    ax1.legend(handles, labels, loc='best',
-               bbox_to_anchor=(1.0, 1.0), fontsize=14)
-    plt.draw()
-    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89, hspace=0)
+    legend_manipulation()
 
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show)
@@ -829,15 +861,13 @@ def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle=
     ax.yaxis.grid(True)
         
     fig.suptitle(suptitle, y=0.99, size=20)
-    plt.xlabel(r"$a(t)$", fontsize=15)
+    plt.xlabel(r"$a(t)$", fontsize=label_size)
     plt.ylabel(
         r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$", fontsize=25)
-    plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=14)
- #   plt.subplots_adjust(left=0.1, right=0.7, top=0.9, bottom=0.1)
-    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
-    plt.draw()
-    plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
-                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
+    
+    # legend
+    legend_manipulation(figtext=a_sim_info.info_tr())
+
     close_fig(out_dir + out_file, fig, save=save, show=show)
 
 
@@ -848,3 +878,20 @@ def plot_all_single_supp(res, out_dir='/home/vrastil/Documents/GIT/Adhesion-Appr
         res.load_k_supp(a_sim_info)
         plot_supp_lms(a_sim_info.supp[0], a_sim_info.a, a_sim_info,
                       k_lms=a_sim_info.supp[1], show=True, save=True)
+
+
+from matplotlib.patches import Ellipse
+
+def get_err_ell(ax, opt, cov):
+    if opt.shape != (2,): raise IndexError("'opt' argument has wrong shape")
+    if cov.shape != (2,2): raise IndexError("'cov' argument has wrong shape")
+    x, y = opt[0], opt[1]
+    lambda_, v = np.linalg.eig(cov)
+    lambda_ = np.sqrt(lambda_)
+    height = lambda_[1]*2
+    width = lambda_[0]*2
+    angle = np.rad2deg(np.arccos(v[0, 0]))
+    ell = Ellipse(xy=(x, y), width=width, height=height, angle=angle,
+                  edgecolor='k', facecolor='none')
+    ax.add_artist(ell)
+    ax.plot(x, y, 'ko', ms=3)
