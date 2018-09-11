@@ -256,7 +256,7 @@ def cut_zs_files(zs, files, z=None):
             files = [files[idx]]
     return zs, files
 
-def get_initialized_StackInfo(a_file, z=None, get_corr=False, get_sigma=False):
+def get_initialized_StackInfo(a_file, z=None, get_corr=False, get_sigma=False, get_data=False):
     # get StackInfo
     a_sim_info = StackInfo(stack_info_file=a_file)
 
@@ -277,11 +277,12 @@ def get_initialized_StackInfo(a_file, z=None, get_corr=False, get_sigma=False):
     if get_sigma:
         get_sigma_R(files, zs, a_sim_info)
 
+    # get data about power spectrum
+    if get_data:
+        a_sim_info.data["pk_data_par"] = [np.transpose(np.loadtxt(x)) for x in files]
+
     # return initialized object
-    if z is None:
-        return a_sim_info
-    else:
-        a_sim_info, zs
+    return a_sim_info
 
 # ****************************
 # RUN ANALYSIS -- SINGLE RUN *
@@ -502,7 +503,7 @@ def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par):
     """ fit data [k, Pk, std] to hybrid power spectrum (1-A)*P_lin(k) + A*P_nl(k)
     return dictionary with C++ class Extrap_Pk_Nl, fit values and covariance """
     # extract data
-    kk, Pk = data[0], data[1]
+    kk, Pk = np.array(data[0]), np.array(data[1])
     
     # get proper slice of data -- last decade befor half of particle nyquist
     idx = (np.abs(kk-0.5*k_nyquist_par)).argmin()
@@ -526,13 +527,17 @@ def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par):
 
 def get_a_eff_from_dens_fluct(a_sim_info):
     """ fit data [r, sigma] to """
+    # check zs
+    zs = a_sim_info.data["sigma_R"]["zs"]
+    idx = 1 if zs[0] == 'init' else 0
+
     # sigma_R_0
-    data_par_0 = np.array(a_sim_info.data["sigma_R"]["par"])[1,1]
-    data_nl_0 = np.array(a_sim_info.data["sigma_R"]["nl"])[1,1]
+    data_par_0 = np.array(a_sim_info.data["sigma_R"]["par"])[idx,1]
+    data_nl_0 = np.array(a_sim_info.data["sigma_R"]["nl"])[idx,1]
 
     # sigma_R
-    data_par = np.array(a_sim_info.data["sigma_R"]["par"])[1:,1]
-    data_nl = np.array(a_sim_info.data["sigma_R"]["nl"])[1:,1]
+    data_par = np.array(a_sim_info.data["sigma_R"]["par"])[idx:,1]
+    data_nl = np.array(a_sim_info.data["sigma_R"]["nl"])[idx:,1]
 
     # ratio and its std
     data_D_eff = np.sqrt(data_par / data_par_0 * data_nl_0 / data_nl)
@@ -819,8 +824,11 @@ def my_shape(data):
         return len(data)
         
 def compare_chi_fp(in_dir="/home/vrastil/Documents/GIT/Adhesion-Approximation/output/",
-                   out_dir="/home/vrastil/Documents/GIT/Adhesion-Approximation/report/plots/"):
+                   out_dir="/home/vrastil/Documents/GIT/Adhesion-Approximation/report/plots/",
+                   use_group=None):
     groups = get_fp_chi_groups(in_dir)    
+    if use_group is not None:
+        groups = [groups[use_group]]
     data_all = [get_data_fp_chi_ratio(group) for group in groups]
     #return data_all
     
@@ -836,7 +844,7 @@ def compare_chi_fp(in_dir="/home/vrastil/Documents/GIT/Adhesion-Approximation/ou
         
         for lab, data_z in plot.iter_data(zs, [data_g_tr]): # per redshift
             suptitle = "Relative chameleon power spectrum, " + lab
-            plot.plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir=out_dir ,suptitle=suptitle, show=True, save=False)
+            plot.plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir=out_dir ,suptitle=suptitle, show=True, save=True)
 
 # *********************************
 # RUN ANALYSIS -- CORR COMPARISON *
@@ -880,3 +888,82 @@ def corr_func_ZA_FP(ZA_file="/home/vrastil/Documents/GIT/Adhesion-Approximation/
 
     plot.plot_corr_func(ZA_ST.data["corr_func"], z_ZA, ZA_ST, out_dir='auto', save=False, show=True, extra_data=extra_data)
     
+
+def get_pk_broad_k(data_list, sim_infos):
+    data_list_new = [[] for i in range(3)]
+    
+    # sort from lowest k
+    data_list, sim_infos = zip(*sorted(zip(data_list, sim_infos), key=lambda x : x[0][0][0]))
+
+    # go through sorted list from, do not go higher values than k_nyqist / 2
+    # start from k = 2*k_min
+    k_last = data_list[0][0][0] * 2
+    k_last = 0
+    for data, a_sim_info in zip(data_list, sim_infos):
+        k, Pk, Pk_std = data
+        k_max = a_sim_info.k_nyquist["particle"] / 10
+        idx = (k >= k_last) & (k < k_max)
+        data_list_new[0] += k[idx].tolist()
+        data_list_new[1] += Pk[idx].tolist()
+        data_list_new[2] += Pk_std[idx].tolist()
+        k_last = k_max
+        
+    # last data get up to k_nyquist
+    k_nq = a_sim_info.k_nyquist["particle"]
+    idx = (k >= k_last) & (k <= k_nq)
+    data_list_new[0] =  np.array(data_list_new[0] + k[idx].tolist())
+    data_list_new[1] =  np.array(data_list_new[1] + Pk[idx].tolist())
+    data_list_new[2] =  np.array(data_list_new[2] + Pk_std[idx].tolist())
+        
+    # get new extrapolated Pk, use last a_sim_info for k_nyquist and simulation param.
+    sim = a_sim_info.sim
+    extrap_pk = get_hybrid_pow_spec_amp(sim, data_list_new, k_nq)
+    
+    # plot data only to half nyquist frequency (previusly needed for extra_pk)
+    idx = (data_list_new[0] <= k_nq/2)
+    data_list_new[0] = data_list_new[0][idx]
+    data_list_new[1] = data_list_new[1][idx]
+    data_list_new[2] = data_list_new[2][idx]
+    
+    return np.array(data_list_new), extrap_pk
+
+def get_check_pk_broad(stack_infos):
+    data_list = []
+    zs = []
+    for a_sim_info in stack_infos:    
+        data_list += a_sim_info.data["pk_data_par"]
+        zs += a_sim_info.data["zs"]
+
+    # check of consistency
+    if len(set(zs)) != 1:
+        raise IndexError("Redshift do not have same value.")
+        
+    APP = [x.app for x in stack_infos]
+    if len(set(APP)) != 1:
+        raise IndexError("Different simulations.")
+
+    # get data
+    data_list_new, extrap_pk = get_pk_broad_k(data_list, stack_infos)
+    return data_list_new, extrap_pk
+
+def get_plot_mlt_pk_broad(stack_infos):
+    # sort according to app
+    app_all = set([x.app for x in stack_infos])
+    groups = {app : [] for app in app_all}
+    for a_sim_info in stack_infos:
+        app = a_sim_info.app
+        groups[app].append(a_sim_info)
+
+    zs, Pk_list_extrap, data_all = [], [], []
+    a_sim_info = stack_infos[0]
+    for app in app_all:
+        infos = groups[app]
+        data_list_new, extrap_pk = get_check_pk_broad(infos)
+        groups[app + "_data"] = data_list_new
+        groups[app + "_pk"] = extrap_pk
+        zs.append(groups[app][0].data["zs"][0])
+        Pk_list_extrap.append(extrap_pk["Pk_par"])
+        data_all.append(data_list_new)
+    
+    # plot
+    plot.plot_pwr_spec_comparison(data_all, zs, app_all, stack_infos[0].sim.cosmo, save=True, show=True)
