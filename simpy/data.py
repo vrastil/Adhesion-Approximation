@@ -886,7 +886,7 @@ def corr_func_ZA_FP(ZA_file="/home/vrastil/Documents/GIT/Adhesion-Approximation/
         {'r' : r, 'xi' : xi, 'lab' : FP_ST.app, 'mlt' : 1}
     ]
 
-    plot.plot_corr_func(ZA_ST.data["corr_func"], z_ZA, ZA_ST, out_dir='auto', save=False, show=True, extra_data=extra_data)
+    plot.plot_corr_func(ZA_ST.data["corr_func"], z_ZA, ZA_ST, out_dir=outdir, save=True, show=True, extra_data=extra_data)
     
 
 def get_pk_broad_k(data_list, sim_infos):

@@ -20,6 +20,9 @@ from .struct import Map
 matplotlib.rcParams['legend.numpoints'] = 1
 label_size = 20
 suptitle_size = 25
+fig_size = (9, 7)
+subplt_adj_sym = {'left' : 0.15, 'right' : 0.95, 'bottom' : 0.15, 'top' : 0.95}
+
 matplotlib.rcParams.update({'font.size': 15})
 
 def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True, get_a=False, only_last=False):
@@ -57,7 +60,7 @@ def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True, get_a=Fals
 def close_fig(filename, fig, save=True, show=False):
     """save and/or show figure, close figure"""
     if save:
-        fig.savefig(filename)
+        fig.savefig(filename, dpi=500)
     if show:
         plt.show()
     fig.clf()
@@ -75,11 +78,11 @@ def add_nyquist_info(ax, a_sim_info):
     for val, lab in val_lab.iteritems():
         ax.axvline(val, ls=next(ls), c='k', label=lab + r")")
 
-def legend_manipulation(ax=None, figtext="", loc='upper left'):
+def legend_manipulation(ax=None, figtext="", loc='upper left', bbox_to_anchor=(1.0, 1.0)):
     ax = plt.gca() if ax is None else ax
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles, labels, loc=loc,
-               bbox_to_anchor=(1.0, 1.0), fontsize=14)
+               bbox_to_anchor=bbox_to_anchor, fontsize=14)
     plt.draw()
     if figtext != "":
         plt.figtext(0.5, 0.95, figtext,
@@ -104,7 +107,7 @@ def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False,
     elif pk_type == "vel":
         out_file = 'vel_pwr_spec.png'
         suptitle = r"Power spectrum $(\nabla\cdot u)$"
-    fig = plt.figure(figsize=(15, 11))
+    fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
     ax.set_yscale('log')
     ax.set_xscale('log')
@@ -155,7 +158,7 @@ def plot_pwr_spec_comparison(data, zs, labels, cosmo,
     out_file = 'pwr_spec.png'
     suptitle = "Power spectrum"
 
-    fig = plt.figure(figsize=(15, 11))
+    fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
     ax.set_yscale('log')
     ax.set_xscale('log')
@@ -183,6 +186,7 @@ def plot_pwr_spec_comparison(data, zs, labels, cosmo,
 
     # LEGEND manipulation
     legend_manipulation(ax, "", loc='best')
+    plt.subplots_adjust(**subplt_adj_sym)
 
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show)
@@ -194,7 +198,7 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, err=False, out_dir='aut
     suptitle = "Chameleon power spectrum"
     out_file = "pwr_spec_chi.png"
 
-    fig = plt.figure(figsize=(15, 11))
+    fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
     ax.set_yscale('log')
     ax.set_xscale('log')
@@ -234,7 +238,7 @@ def plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir='auto', suptitle='auto', sa
     if suptitle == 'auto':
         suptitle = "Relative chameleon power spectrum"
 
-    fig = plt.figure(figsize=(15, 11))
+    fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
     plt.xscale('log')
     ymax = 1
@@ -257,7 +261,8 @@ def plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir='auto', suptitle='auto', sa
     plt.xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
     plt.ylabel(r"${P_\chi(k)}/{P_{FP}(k)}$", fontsize=label_size)
     figtext = a_sim_info.info_tr().replace("FP: ", "")
-    legend_manipulation(ax, figtext="", loc='best')
+    legend_manipulation(ax, figtext="", loc='upper left', bbox_to_anchor=(0.0,1.0))
+    plt.subplots_adjust(**subplt_adj_sym)
     close_fig(out_dir + out_file, fig, save=save, show=show)
 
 def get_slope(k, P_k, dx=0.01,order=5):
@@ -273,7 +278,7 @@ def plot_slope(data, zs, a_sim_info, Pk_list_extrap,
         out_dir = a_sim_info.res_dir
     out_file = 'pwr_slope.png'
     suptitle = "Power spectrum slope"
-    fig = plt.figure(figsize=(15, 11))
+    fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
     ax.set_xscale('log')
     ax.set_ylim(-4,2)
@@ -315,7 +320,7 @@ def plot_corr_func_universal(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, y
                              figtext, out_dir, file_name, save, show, r2, extra_data=None):
     
     z_out = lab if lab == 'init' else 'z' + lab[4:]
-    fig = plt.figure(figsize=(15, 11))
+    fig = plt.figure(figsize=fig_size)
 
     if extra_data is None: extra_data = []
 
@@ -345,10 +350,11 @@ def plot_corr_func_universal(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, y
     if xi_nl is not None: plt.plot(r_nl, xi_nl*mlt_nl, '-', label=r"$\Lambda$CDM (nl)")
 
     # adjust figure, labels
-    fig.suptitle(suptitle, y=0.99, size=suptitle_size)
+    #fig.suptitle(suptitle, y=0.99, size=suptitle_size)
     plt.xlabel(r"$r [$Mpc$/h]$", fontsize=label_size)
     plt.ylabel(ylabel, fontsize=label_size)
-    legend_manipulation(figtext=figtext)
+    legend_manipulation(figtext="", loc='best')
+    plt.subplots_adjust(**subplt_adj_sym)
 
     # save & show (in jupyter)
     close_fig(file_name, fig, save=save, show=show)
@@ -401,7 +407,7 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="sigma_R", save=True, 
         out_dir = '/home/vrastil/Documents/GIT/Adhesion-Approximation/report/plots/D_eff.png'
 
     # figure
-    fig = plt.figure(figsize=(15,11))
+    fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
     
     for stack_info in stack_infos:
@@ -409,7 +415,8 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="sigma_R", save=True, 
             D_eff_ratio = stack_info.data["sigma_R"]["D_eff_ratio"]
             # D_eff_std = stack_info.data["sigma_R"]["D_eff_std"]
             a = [1./(1+z) for z in stack_info.data["sigma_R"]["zs"] if z != 'init']
-            ax.plot(a, D_eff_ratio, label=stack_info.info_tr())
+            label = stack_info.app +  '$: L = %i$ Mpc/h' % stack_info.box_opt["box_size"]
+            ax.plot(a, D_eff_ratio, label=label)
             # ax.errorbar(a, D_eff_ratio, yerr=D_eff_std, label=stack_info.info_tr())
         elif a_eff_type == "Pk":
             #extract variables
@@ -430,6 +437,7 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="sigma_R", save=True, 
     ax.set_ylabel(r'$D_{eff}/D_{GR}$', fontsize=label_size)
     ax.set_xlabel(r'$a$', fontsize=label_size)
     ax.legend()
+    plt.subplots_adjust(**subplt_adj_sym)
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax.yaxis.grid(True)
     
@@ -462,7 +470,7 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
     out_file += '_%s.png' % ext_title
     suptitle += ' (ref: %s)' % ext_title
 
-    fig = plt.figure(figsize=(15, 11))
+    fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
     plt.xscale('log')
 
@@ -531,7 +539,7 @@ def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto',
     out_file += '_%s_map.png' % ext_title
     suptitle += ' (ref: %s)' % ext_title
 
-    fig = plt.figure(figsize=(10, 10))
+    fig = plt.figure(figsize=(8, 8))
     gs = gridspec.GridSpec(1, 15, wspace=0.5)
     ax = plt.subplot(gs[0, : -1])
     cbar_ax = plt.subplot(gs[0, -1])
@@ -575,18 +583,19 @@ def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto',
         for val in val_set:
             ax.axvline(val, ls=next(ls), c='k')
 
-    fig.suptitle(suptitle, y=0.99, size=suptitle_size)
+    #fig.suptitle(suptitle, y=0.99, size=suptitle_size)
     ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
     ax.set_ylabel(r"$a(t)$", fontsize=label_size)
     plt.draw()
-    plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
+    plt.figtext(0.5, 0.95, "",
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
+    plt.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9)
 
     close_fig(out_dir + out_file, fig, save=save, show=show)
 
 def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, scale='', show_k_lms=False, res=None):
-    fig = plt.figure(figsize=(15, 11))
+    fig = plt.figure(figsize=fig_size)
     cmap = plt.get_cmap('gist_ncar')
     colors = [cmap(i) for i in np.linspace(0, 1, len(sim_infos) + 1)]
     for i, a_sim_info in enumerate(sim_infos):
@@ -834,7 +843,7 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
         out_dir = a_sim_info.res_dir
     out_file = 'chi_evol.png'
     suptitle = "Evolution of Chameleon"
-    fig = plt.figure(figsize=(15, 13))
+    fig = plt.figure(figsize=fig_size)
     cosmo = a_sim_info.sim.cosmo
     if chi_opt is None:
         chi_opt = [a_sim_info.chi_opt]
@@ -868,8 +877,8 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
     ax3.set_ylabel(r"$\chi/M_{pl}$", fontsize=label_size)
     ax2.set_xlabel(r"z", fontsize=label_size)
     
-    # legend
-    legend_manipulation()
+    # subplots
+    plt.subplots_adjust(hspace=0, **subplt_adj_sym)
 
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show)
@@ -888,7 +897,7 @@ def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle=
         out_file = 'supp_chi.png'
         suptitle = "Chameleon power spectrum suppression"
 
-    fig = plt.figure(figsize=(15, 11))
+    fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
     cmap = cm.get_cmap('gnuplot')
 
