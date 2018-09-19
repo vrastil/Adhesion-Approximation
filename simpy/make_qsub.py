@@ -195,17 +195,11 @@ def make_qsub(job):
              "#PBS -e logs/\n\n\n"
              "trap 'clean_scratch' TERM EXIT\n"
              "export MYDIR=/storage/brno2/home/vrastilm\n"
-             "source /software/modules/init\n"
-             "source $MYDIR/.profile\n"
              "export OMP_NUM_THREADS=$PBS_NUM_PPN\n"
              "cd $SCRATCHDIR\n"
-             "cp -r $MYDIR/Adhesion-Approximation/include ./\n"
-             "cp -r $MYDIR/Adhesion-Approximation/src ./\n"
-             "cp $MYDIR/Adhesion-Approximation/Makefile ./\n"
-             "make clean\n"
-             "make -j $PBS_NUM_PPN\n\n"
+             "singularity pull --name fastsim.simg shub://vrastil/FastSim-Container\n"
              )
-    qsub += "time ./adh_app -c $MYDIR/Adhesion-Approximation/input/generic_input.cfg %s" % job.sim_opt
+    qsub += "singularity exec -B $MYDIR/Adhesion-Approximation:/data fastsim.simg adh_app -c /data/input/generic_input.cfg %s --out_dir=/data/output/" % job.sim_opt
     return qsub
 
 

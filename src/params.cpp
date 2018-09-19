@@ -11,6 +11,7 @@
 #include "core_power.h"
 #include <ccl_error.h>
 #include <json.hpp>
+#include <iomanip>
 
 using json = nlohmann::json;
 
