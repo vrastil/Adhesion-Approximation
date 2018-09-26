@@ -46,18 +46,18 @@ class Tracking
 {
 public:
 	// CONSTRUCTOR
-	Tracking(unsigned sqr_num_track_par, unsigned par_num_per_dim)
+	Tracking(size_t sqr_num_track_par, size_t par_num_per_dim)
     {
         set_par_ids(sqr_num_track_par, par_num_per_dim);
     }
 
     // METHODS
-    unsigned get_num_track_par() const
+    size_t get_num_track_par() const
     {
         return par_ids.size();
     }
 
-    unsigned get_num_steps() const
+    size_t get_num_steps() const
     {
         return par_pos.size();
     }
@@ -66,7 +66,7 @@ public:
     {
         std::vector<Particle_x<FTYPE_t>> par_pos_step;
         par_pos_step.reserve(par_ids.size());
-        for (unsigned i=0; i < par_ids.size(); i++){
+        for (size_t i=0; i < par_ids.size(); i++){
             par_pos_step.emplace_back(particles[par_ids[i]].position);
         }
         par_pos.push_back(par_pos_step);
@@ -95,9 +95,9 @@ public:
     }
 
 private:
-    void set_par_ids(unsigned sqr_num_track_par, unsigned par_num_per_dim)
+    void set_par_ids(size_t sqr_num_track_par, size_t par_num_per_dim)
     {
-        unsigned num_track_par = sqr_num_track_par*sqr_num_track_par;
+        size_t num_track_par = sqr_num_track_par*sqr_num_track_par;
         par_ids.reserve(num_track_par);
         int x, y, z;
         FTYPE_t s;
@@ -115,7 +115,7 @@ private:
     }
 	
 	// VARIABLES
-	std::vector<unsigned> par_ids;
+	std::vector<size_t> par_ids;
 	std::vector<std::vector<Particle_x<FTYPE_t>>> par_pos;
 };
 
@@ -159,7 +159,7 @@ public:
 
     uint64_t alloc_bin_spec(App_Var<T>& APP)
     {
-        unsigned bin_num = (unsigned)ceil(log10(APP.sim.box_opt.mesh_num_pwr)*APP.sim.out_opt.bins_per_decade);
+        size_t bin_num = (size_t)ceil(log10(APP.sim.box_opt.mesh_num_pwr)*APP.sim.out_opt.bins_per_decade);
         APP.pwr_spec_binned.reserve(bin_num);
         APP.pwr_spec_binned_0.reserve(bin_num);
         APP.vel_pwr_spec_binned_0.reserve(bin_num);
@@ -169,7 +169,7 @@ public:
 
     uint64_t alloc_bin_corr(App_Var<T>& APP)
     {
-        unsigned bin_num =  (unsigned)ceil((APP.sim.other_par.x_corr.upper - APP.sim.other_par.x_corr.lower)/ 10. * APP.sim.out_opt.points_per_10_Mpc);
+        size_t bin_num =  (size_t)ceil((APP.sim.other_par.x_corr.upper - APP.sim.other_par.x_corr.lower)/ 10. * APP.sim.out_opt.points_per_10_Mpc);
         APP.corr_func_binned.reserve(bin_num);
 
         return sizeof(FTYPE_t)*APP.corr_func_binned.dim()*APP.corr_func_binned.size();
@@ -189,8 +189,8 @@ public:
             throw std::runtime_error("Errors during multi-thread initialization");
         }
         FFTW_PLAN_OMP(sim.run_opt.nt);
-        const unsigned N_pot = sim.box_opt.mesh_num;
-        const unsigned N_pwr = sim.box_opt.mesh_num_pwr;
+        const size_t N_pot = sim.box_opt.mesh_num;
+        const size_t N_pwr = sim.box_opt.mesh_num_pwr;
 
         APP.p_F = FFTW_PLAN_R2C(N_pot, N_pot, N_pot, APP.app_field[0].real(), APP.app_field[0].complex(), FFTW_ESTIMATE);
         APP.p_B = FFTW_PLAN_C2R(N_pot, N_pot, N_pot, APP.app_field[0].complex(), APP.app_field[0].real(), FFTW_ESTIMATE);

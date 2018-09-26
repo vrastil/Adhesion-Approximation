@@ -17,14 +17,14 @@ T mean(const std::vector<T>& data)
 
 FTYPE_t mean(const Mesh& data){ return mean(data.data); }
 
-void get_neighbor_gridindex(std::vector<unsigned int>& index_list, unsigned int i, unsigned int N)
+void get_neighbor_gridindex(std::vector<size_t>& index_list, size_t i, size_t N)
 {
-    index_list = std::vector<unsigned int>(7);
+    index_list = std::vector<size_t>(7);
     index_list[0] = i;
-    for(unsigned int j = 0, n = 1; j < 3; j++, n *= N){
-        unsigned int ii = i/n % N;
-        unsigned int iminus = ii >= 1   ? ii - 1 : N - 1;
-        unsigned int iplus  = ii <= N-2 ? ii + 1 : 0;
+    for(size_t j = 0, n = 1; j < 3; j++, n *= N){
+        size_t ii = i/n % N;
+        size_t iminus = ii >= 1   ? ii - 1 : N - 1;
+        size_t iplus  = ii <= N-2 ? ii + 1 : 0;
         index_list[2*j+1] = i + (iminus - ii) * n;
         index_list[2*j+2] = i + (iplus - ii) * n;
     }
@@ -32,7 +32,7 @@ void get_neighbor_gridindex(std::vector<unsigned int>& index_list, unsigned int 
 
 void init_overdensity(Sim_Param& sim, Mesh& rho, MultiGrid<3, CHI_PREC_t>& rho_grid)
 {
-    const unsigned N = sim.test_opt.N_grid;
+    const size_t N = sim.test_opt.N_grid;
     const FTYPE_t R = sim.test_opt.R_sphere;
     const FTYPE_t rho_0 = sim.test_opt.rho_sphere;
     const int N_tot = rho.length;
@@ -87,7 +87,7 @@ template <typename T> static int sgn(T val)
 void print_mesh(const std::string& file_name, const Mesh& pot, const FTYPE_t mod = -1 - CHI_MIN)
 {
     Ofstream File(file_name);
-    unsigned N = pot.N;
+    size_t N = pot.N;
     int ix0 = N/2, iy0 = N/2, iz0 = N/2;
 
     auto print_r_chi = [&File, ix0, iy0, iz0,&pot, mod]
@@ -112,23 +112,23 @@ TEST_CASE( "UNIT TEST: create Multigrid and copy data to/from Mesh", "[multigrid
 {
     print_unit_msg("create Multigrid and copy data to/from Mesh");
 
-    constexpr unsigned N = 32;
+    constexpr size_t N = 32;
     srand(time(0));
     MultiGrid<3, FTYPE_t> grid(N);
     Mesh mesh_from(N);
     Mesh mesh_to(N);
 
-    const std::vector<unsigned> some_indices = // Mesh indices = N*N*(N+2)
+    const std::vector<size_t> some_indices = // Mesh indices = N*N*(N+2)
                                             {4, // (0, 0, 4)
                                             (N+2)*2+5, // (0, 2, 5)
                                             N*(N+2)*4+8*(N+2)+5}; // (4, 8, 5)
-    for(unsigned i : some_indices) mesh_from[i] = 2.0*rand()/RAND_MAX - 1;
+    for(size_t i : some_indices) mesh_from[i] = 2.0*rand()/RAND_MAX - 1;
 
     transform_Mesh_to_MultiGrid(mesh_from, grid);
     CHECK(min(mesh_from) == min(grid));
     transform_MultiGrid_to_Mesh(mesh_to, grid);
 
-    for(unsigned i : some_indices) CHECK( mesh_from[i] == mesh_to[i] );
+    for(size_t i : some_indices) CHECK( mesh_from[i] == mesh_to[i] );
     CHECK(min(mesh_from) == min(grid));
     CHECK(min(mesh_to) == min(grid));
 }
@@ -137,10 +137,10 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[cha
 {
     print_unit_msg("create and initialize ChiSolver, check bulk field");
 
-    constexpr unsigned N = 32;
+    constexpr size_t N = 32;
     constexpr FTYPE_t a = 0.5;
     constexpr FTYPE_t rho_0 = 0.3;
-    const std::vector<unsigned> some_indices = // Mesh indices = N*N*(N+2)
+    const std::vector<size_t> some_indices = // Mesh indices = N*N*(N+2)
                                             {4, // (0, 0, 4)
                                             (N+2)*2+5, // (0, 2, 5)
                                             N*(N+2)*4+8*(N+2)+5}; // (4, 8, 5)
@@ -174,7 +174,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[cha
     }
 
     // check density
-    for(unsigned i : some_indices) CHECK( rho_grid[0][i] == rho_0 );
+    for(size_t i : some_indices) CHECK( rho_grid[0][i] == rho_0 );
 
     // set ChiSolver -- bulk field
     sol.set_time(a, sim.cosmo);
@@ -185,14 +185,14 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, check bulk field", "[cha
     {
         const FTYPE_t chi_bulk = sol.chi_min(rho_0);
         FTYPE_t const* const chi = sol.get_y();
-        for(unsigned i : some_indices) REQUIRE( chi[i] == Approx(chi_bulk));
+        for(size_t i : some_indices) REQUIRE( chi[i] == Approx(chi_bulk));
     }
 
     // check that EOM is satisfied
-    std::vector<unsigned int> index_list;
-    unsigned level = 0;
+    std::vector<size_t> index_list;
+    size_t level = 0;
     const FTYPE_t h = 1.0/FTYPE_t( sol.get_N(level) );
-    for(unsigned i : some_indices)
+    for(size_t i : some_indices)
     {
         get_neighbor_gridindex(index_list, i, N);
         CHECK( sol.l_operator(level, index_list, true, h) == Approx(0.));
@@ -206,8 +206,8 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     // initialize Sim_Param
     const char* const argv[1] = {"test"};
     Sim_Param sim(1, argv);
-    const unsigned N = sim.test_opt.N_grid;
-    const unsigned N_min = sim.test_opt.N_min;
+    const size_t N = sim.test_opt.N_grid;
+    const size_t N_min = sim.test_opt.N_min;
     const bool verbose = sim.test_opt.verbose;
 
     // initialize ChiSolver
@@ -256,7 +256,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     std::cout << "Starting V-cycles with intermediate output...\n";
     
     int istep = 0;
-    const unsigned step_per_iter = sim.test_opt.step_per_iter;
+    const size_t step_per_iter = sim.test_opt.step_per_iter;
     while(1)
     {
         // istep, max_step (use int for the last iteration -- negative max_step)

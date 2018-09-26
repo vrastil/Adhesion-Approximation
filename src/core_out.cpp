@@ -62,7 +62,7 @@ std::string std_out_dir(const std::string& pre_subdir, const Sim_Param &sim)
     /// try appending numbers starting at 2
     else
     {
-        for(unsigned i = 2; ; ++i)
+        for(size_t i = 2; ; ++i)
         {
             const std::string out_dir_new = out_dir  + "_" + std::to_string(i);
             if (!fs::exists(fs::path(out_dir_new.c_str()))) return out_dir_new + "/";
@@ -91,7 +91,7 @@ void remove_dir(const std::string &out_dir)
 void remove_all_files(const std::string &out_dir)
 {
     const fs::path dir(out_dir.c_str());
-    unsigned i = 0;
+    size_t i = 0;
 
     for(auto & p : fs::directory_iterator(dir))
     {
@@ -115,8 +115,8 @@ void print_par_pos_cut_small(const std::vector<T>& particles, const Sim_Param &s
    File << "# This file contains positions of particles in units [Mpc/h].\n";
    FTYPE_t x, y, z, dx;
    const FTYPE_t x_0 = sim.x_0();
-   const unsigned N = sim.box_opt.par_num;
-   for(unsigned i=0; i < N; i++)
+   const size_t N = sim.box_opt.par_num;
+   for(size_t i=0; i < N; i++)
    {
        x = particles[i].position[0];
        y = particles[i].position[1];
@@ -141,9 +141,9 @@ void print_pow_spec(const Data_Vec<FTYPE_t, 2> &pwr_spec_binned, std::string out
 	        "# k [h/Mpc]\tP(k) [(Mpc/h)^3]\n";
 
     File << std::scientific;
-    const unsigned size = pwr_spec_binned.size();
-	for (unsigned j = 0; j < size; j++){
-        for (unsigned i = 0; i < 2; i++){
+    const size_t size = pwr_spec_binned.size();
+	for (size_t j = 0; j < size; j++){
+        for (size_t i = 0; i < 2; i++){
             File << pwr_spec_binned[i][j] << "\t";
         }
         File << "\n";
@@ -161,9 +161,9 @@ void print_vel_pow_spec(const Data_Vec<FTYPE_t, 2> &pwr_spec_binned, std::string
 	        "# k [h/Mpc]\tP(k) [(Mpc/h)^3]\n";
 
     File << std::scientific;
-    const unsigned size = pwr_spec_binned.size();
-	for (unsigned j = 0; j < size; j++){
-        for (unsigned i = 0; i < 2; i++){
+    const size_t size = pwr_spec_binned.size();
+	for (size_t j = 0; j < size; j++){
+        for (size_t i = 0; i < 2; i++){
             File << pwr_spec_binned[i][j] << "\t";
         }
         File << "\n";
@@ -180,8 +180,8 @@ void print_corr_func(const Data_Vec<FTYPE_t, 2> &pwr_spec_binned, std::string ou
 	File << "# This file contains correlation function depending on distance r in units [Mpc/h].\n"
 	        "# x [Mpc/h]\txsi(r)\n";
     
-    const unsigned N = pwr_spec_binned.size();
-	for (unsigned j = 0; j < N; j++){
+    const size_t N = pwr_spec_binned.size();
+	for (size_t j = 0; j < N; j++){
 		if (pwr_spec_binned[1][j]) File << pwr_spec_binned[0][j] << "\t" << pwr_spec_binned[1][j] << "\n";
 	}
 }
@@ -193,7 +193,7 @@ T rel_error(const T& a, const T& b)
 }
 
 template<typename T>
-bool is_err(const std::vector<T>& vec1, const std::vector<T>& vec2, unsigned bin)
+bool is_err(const std::vector<T>& vec1, const std::vector<T>& vec2, size_t bin)
 {
     const T err = rel_error( vec1[bin], vec2[bin]);
     constexpr T prec_err = std::is_same<T, float>::value ? 1e-3f : 1e-7;
@@ -222,8 +222,8 @@ void print_pow_spec_diff(const Data_Vec<FTYPE_t, 2> &pwr_spec_binned, const Data
 
 	FTYPE_t P_k, P_lin;
     std::cout.precision(10);
-    const unsigned size = pwr_spec_binned.size();
-	for (unsigned j = 0; j < size; j++){
+    const size_t size = pwr_spec_binned.size();
+	for (size_t j = 0; j < size; j++){
         if (is_err(pwr_spec_binned[0], pwr_spec_binned_0[0], j)) continue;
         P_k = pwr_spec_binned[1][j];
         P_lin = pwr_spec_binned_0[1][j] * pow2(growth);
@@ -245,8 +245,8 @@ void print_pow_spec_diff(const Data_Vec<FTYPE_t, 2> &pwr_spec_binned, const Inte
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 
 	FTYPE_t k, P_k, P_lin;
-    const unsigned size = pwr_spec_binned.size();
-	for (unsigned j = 0; j < size; j++){
+    const size_t size = pwr_spec_binned.size();
+	for (size_t j = 0; j < size; j++){
         k = pwr_spec_binned[0][j];
         if (k < pwr_spec_input.x_min) continue;
         else if(k > pwr_spec_input.x_max) break;
@@ -274,8 +274,8 @@ void print_pow_spec_diff(const Data_Vec<FTYPE_t, 2> &pwr_spec_binned, const Data
 
 	FTYPE_t k, P_k, P_input, P_par;
     std::cout.precision(10);
-    const unsigned size = pwr_spec_binned.size();
-	for (unsigned j = 0; j < size; j++){
+    const size_t size = pwr_spec_binned.size();
+	for (size_t j = 0; j < size; j++){
         if (is_err(pwr_spec_binned[0], pwr_spec_binned_0[0], j)) continue;
         k = pwr_spec_binned_0[0][j];
         if (k < pwr_spec_input.x_min) continue;
@@ -304,8 +304,8 @@ void print_vel_pow_spec_diff(const Data_Vec<FTYPE_t, 2> &pwr_spec_binned, const 
 	
 	FTYPE_t P_k, P_ZA;
     std::cout.precision(10);
-    const unsigned size = pwr_spec_binned.size();
-	for (unsigned j = 0; j < size; j++){
+    const size_t size = pwr_spec_binned.size();
+	for (size_t j = 0; j < size; j++){
         if (is_err(pwr_spec_binned[0], pwr_spec_binned_0[0], j)) continue;
         P_k = pwr_spec_binned[1][j];
         P_ZA = pwr_spec_binned_0[1][j] * pow2(dDda);
@@ -323,9 +323,9 @@ void print_rho_map(const Mesh& delta, const Sim_Param &sim, std::string out_dir,
 	std::cout << "Writing density map into file " << file_name << "\n";
 	File << "# This file contains density map delta(x).\n";
     File << "# x [Mpc/h]\tz [Mpc/h]\tdelta\n";
-    const unsigned N = sim.box_opt.mesh_num_pwr;
-	for (unsigned i = 0; i < N; i++){
-		for (unsigned j = 0; j < N; j++){
+    const size_t N = sim.box_opt.mesh_num_pwr;
+	for (size_t i = 0; i < N; i++){
+		for (size_t j = 0; j < N; j++){
             File << i*x_0 << "\t" << j*x_0 << "\t" << delta(i, sim.box_opt.mesh_num_pwr/2, j) << "\n";
 		}
 		File << "\n";
@@ -343,11 +343,11 @@ void print_projected_rho(const Mesh& delta, const Sim_Param &sim, std::string ou
 	File << "# This file contains density map delta(x).\n"
 	        "# x [Mpc/h]\tz [Mpc/h]\tdelta\n";
     FTYPE_t rho, rho_tmp;
-    const unsigned N = sim.box_opt.mesh_num_pwr;
-	for (unsigned i = 0; i < N; i++){
-		for (unsigned j = 0; j < N; j++){
+    const size_t N = sim.box_opt.mesh_num_pwr;
+	for (size_t i = 0; i < N; i++){
+		for (size_t j = 0; j < N; j++){
 			rho = 0;
-			for (unsigned k = 0; k < N; k++){
+			for (size_t k = 0; k < N; k++){
 				rho_tmp = delta(i, k, j);
 			//	if (rho_tmp != -1) printf("Density in (%i, %i, %i) = %f\n", i, j, k, rho_tmp);
 				rho+=rho_tmp + 1;
@@ -367,8 +367,8 @@ void print_dens_bin(const std::vector<int> &dens_binned, std::string out_dir, st
 	File << "# This file contains binned density field.\n"
 	        "# dens\tbin_num\n";
     FTYPE_t dens;
-    const unsigned N = dens_binned.size();
-	for (unsigned j = 0; j < N; j++)
+    const size_t N = dens_binned.size();
+	for (size_t j = 0; j < N; j++)
 	{
         dens = j*0.1-0.9;
         File << dens << "\t" << dens_binned[j] << "\n";       

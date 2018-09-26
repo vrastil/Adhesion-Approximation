@@ -24,7 +24,7 @@ void gen_init_expot(const Mesh& potential, Mesh& expotential, FTYPE_t nu)
     // store exponent only
     // *expotential = potential; !!! <- do not use this in case potential and expotential are meshes of different size
     #pragma omp parallel for
-    for (unsigned i = 0; i < expotential.length; i++) expotential[i] = -potential[i] / (2*nu);
+    for (size_t i = 0; i < expotential.length; i++) expotential[i] = -potential[i] / (2*nu);
 }
 
 FTYPE_t get_summation(const std::vector<FTYPE_t>& exp_aux)
@@ -133,7 +133,7 @@ void gen_expot(Mesh& potential,  const Mesh& expotential_0, FTYPE_t nu, FTYPE_t 
 	std::vector<FTYPE_t> gaussian(expotential_0.N);
 
 	#pragma omp parallel for
-	for (unsigned i = 0; i < expotential_0.N; i++){
+	for (size_t i = 0; i < expotential_0.N; i++){
 		gaussian[i]=-i*i/(4*b*nu);
 	}
 

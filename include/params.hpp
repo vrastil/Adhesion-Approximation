@@ -51,10 +51,10 @@ public:
 struct Box_Opt {
     void init(const Cosmo_Param& cosmo);
     /* cmd args */
-    unsigned par_num_1d, mesh_num, mesh_num_pwr;
+    size_t par_num_1d, mesh_num, mesh_num_pwr;
     FTYPE_t box_size;
     /* derived param*/
-    unsigned par_num, Ng, Ng_pwr;
+    size_t par_num, Ng, Ng_pwr;
     FTYPE_t mass_p_log; ///< logarithm of particle mass in \f$M_\odot\f$
 };
 
@@ -78,7 +78,7 @@ struct Integ_Opt {
 struct Out_Opt {
     void init();
     /* cmd args */
-    unsigned print_every, bins_per_decade, points_per_10_Mpc;
+    size_t print_every, bins_per_decade, points_per_10_Mpc;
     std::vector<FTYPE_t> print_z; //< for which redshifts print output on top of print_every (optional)
     std::string out_dir; //< where to save output of the simulation
     bool print_par_pos, print_dens, print_pwr, print_extrap_pwr, print_corr, print_vel_pwr;
@@ -110,7 +110,7 @@ struct App_Opt {
     FTYPE_t nu, rs;
     /* derived param*/
     FTYPE_t Hc, a, nu_dim;
-    unsigned M;
+    size_t M;
 };
 
 
@@ -123,8 +123,8 @@ struct Run_Opt {
     void init();
     bool simulate();
     /* cmd args */
-    unsigned nt, mlt_runs;
-    unsigned long seed;
+    size_t nt, mlt_runs;
+    size_t seed;
     bool pair;        
     /* other*/
     bool phase;
@@ -138,8 +138,8 @@ struct Run_Opt {
 struct Test_Opt {
     /* cmd args */
     FTYPE_t R_sphere, rho_sphere;
-    unsigned fine_sweeps, coarse_sweeps, max_steps, step_per_iter;
-    unsigned N_grid, N_min;
+    size_t fine_sweeps, coarse_sweeps, max_steps, step_per_iter;
+    size_t N_grid, N_min;
     bool verbose;
 
     /* derived param*/

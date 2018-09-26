@@ -2,9 +2,9 @@
 #include <iostream>
 
 // Simple int-int a^b power-function
-inline unsigned int power(unsigned int a, unsigned int b){
-  unsigned int res = 1;
-  for(unsigned int i = 0; i < b; i++) {
+inline size_t power(size_t a, size_t b){
+  size_t res = 1;
+  for(size_t i = 0; i < b; i++) {
     res *= a;
   }
 #ifdef _BOUNDSCHECK
@@ -17,15 +17,15 @@ inline unsigned int power(unsigned int a, unsigned int b){
 // The L operator ( EOM is written as L(f) = 0 )
 //================================================
 
-template<unsigned int NDIM, typename T>
-T MultiGridSolver<NDIM,T>::l_operator(const unsigned int level, const std::vector<unsigned int>& index_list, const bool addsource, const T h) const
+template<size_t NDIM, typename T>
+T MultiGridSolver<NDIM,T>::l_operator(const size_t level, const std::vector<size_t>& index_list, const bool addsource, const T h) const
 {
   T l, source, kinetic;
-  unsigned int i = index_list[0];
+  size_t i = index_list[0];
 
   // Compute the standard kinetic term [D^2 f]
   kinetic = -2.0 * NDIM * _f[level][ i ];
-  for(unsigned int k = 1; k < 2*NDIM + 1; k++){
+  for(size_t k = 1; k < 2*NDIM + 1; k++){
     kinetic += _f[level][ index_list[k] ];
   }
 
@@ -49,8 +49,8 @@ T MultiGridSolver<NDIM,T>::l_operator(const unsigned int level, const std::vecto
 // or more accurately dL_{ijk..} / df_{ijk..}
 //================================================
 
-template<unsigned int NDIM, typename T>
-T MultiGridSolver<NDIM,T>::dl_operator(const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const
+template<size_t NDIM, typename T>
+T MultiGridSolver<NDIM,T>::dl_operator(const size_t level, const std::vector<size_t>& index_list, const T h) const
 {
   // The derivtive dL/df
   T dl = -2.0*NDIM/(h*h);
@@ -70,8 +70,8 @@ T MultiGridSolver<NDIM,T>::dl_operator(const unsigned int level, const std::vect
 // f_new = f_old - L / dL/df
 //================================================
 
-template<unsigned int NDIM, typename T>
-T MultiGridSolver<NDIM,T>::upd_operator(const T f, const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const
+template<size_t NDIM, typename T>
+T MultiGridSolver<NDIM,T>::upd_operator(const T f, const size_t level, const std::vector<size_t>& index_list, const T h) const
 {
     T l  =  l_operator(level, index_list, true, h);
     T dl = dl_operator(level, index_list, h);
@@ -82,7 +82,7 @@ T MultiGridSolver<NDIM,T>::upd_operator(const T f, const unsigned int level, con
 // The driver routine for solving the PDE
 //================================================
 
-template<unsigned int NDIM, typename T>
+template<size_t NDIM, typename T>
 typename MultiGridSolver<NDIM,T>::Exit_Status MultiGridSolver<NDIM,T>::solve(){
   // Init some variables
   _istep_vcycle = 0;
@@ -138,45 +138,45 @@ typename MultiGridSolver<NDIM,T>::Exit_Status MultiGridSolver<NDIM,T>::solve(){
   return status;
 }
 
-template<unsigned int NDIM, typename T>
-T* MultiGridSolver<NDIM,T>::get_y(unsigned int level){ 
+template<size_t NDIM, typename T>
+T* MultiGridSolver<NDIM,T>::get_y(size_t level){ 
   return _f.get_y(level);
 }
 
-template<unsigned int NDIM, typename T>
-T const* const MultiGridSolver<NDIM,T>::get_y(unsigned int level) const{
+template<size_t NDIM, typename T>
+T const* const MultiGridSolver<NDIM,T>::get_y(size_t level) const{
     return _f.get_y(level);
 } 
 
-template<unsigned int NDIM, typename T>
+template<size_t NDIM, typename T>
 void MultiGridSolver<NDIM,T>::set_epsilon(double eps_converge){ 
   _eps_converge = eps_converge; 
 }
 
-template<unsigned int NDIM, typename T>
+template<size_t NDIM, typename T>
 void MultiGridSolver<NDIM,T>::add_external_grid(MultiGrid<NDIM,T> *field){ 
   assert(field->get_Nlevel() >= _Nlevel);
   _ext_field.push_back(field); 
 }
 
-template<unsigned int NDIM, typename T>
-void MultiGridSolver<NDIM,T>::set_maxsteps(unsigned int maxsteps){ 
+template<size_t NDIM, typename T>
+void MultiGridSolver<NDIM,T>::set_maxsteps(size_t maxsteps){ 
   _maxsteps = maxsteps; 
 }
 
-template<unsigned int NDIM, typename T>
+template<size_t NDIM, typename T>
 void MultiGridSolver<NDIM,T>::set_convergence_criterion_residual(bool use_residual){
   _conv_criterion_residual = use_residual;
 }
 
-template<unsigned int NDIM, typename T>
-void MultiGridSolver<NDIM,T>::set_ngs_sweeps(unsigned int ngs_fine, unsigned int ngs_coarse){
+template<size_t NDIM, typename T>
+void MultiGridSolver<NDIM,T>::set_ngs_sweeps(size_t ngs_fine, size_t ngs_coarse){
   _ngs_fine = ngs_fine; 
   _ngs_coarse = ngs_coarse; 
 }
 
-template<unsigned int NDIM, typename T>
-void MultiGridSolver<NDIM,T>::set_Nlevel(unsigned N){
+template<size_t NDIM, typename T>
+void MultiGridSolver<NDIM,T>::set_Nlevel(size_t N){
     // Check that N is divisible by 2^{Nlevel - 1} which is required for the restriction to make sense
     assert( ( _N / power(2, N - 1) ) * power(2, N - 1) == _N); 
 
@@ -187,23 +187,23 @@ void MultiGridSolver<NDIM,T>::set_Nlevel(unsigned N){
     _Nlevel = N;
 }
 
-template<unsigned int NDIM, typename T>
-unsigned int  MultiGridSolver<NDIM,T>::get_N(unsigned int level) const{ 
+template<size_t NDIM, typename T>
+size_t  MultiGridSolver<NDIM,T>::get_N(size_t level) const{ 
   return _f.get_N(level); 
 }
 
-template<unsigned int NDIM, typename T>
-unsigned int  MultiGridSolver<NDIM,T>::get_Ntot(unsigned int level) const{ 
+template<size_t NDIM, typename T>
+size_t  MultiGridSolver<NDIM,T>::get_Ntot(size_t level) const{ 
   return _f.get_Ntot(level); 
 }
 
-template<unsigned int NDIM, typename T>
-unsigned int  MultiGridSolver<NDIM,T>::get_Nlevel() const{ 
+template<size_t NDIM, typename T>
+size_t  MultiGridSolver<NDIM,T>::get_Nlevel() const{ 
   return _Nlevel;
 }
 
-template<unsigned int NDIM, typename T>
-MultiGridSolver<NDIM,T>::MultiGridSolver(unsigned int N, unsigned int Nmin, bool verbose) :
+template<size_t NDIM, typename T>
+MultiGridSolver<NDIM,T>::MultiGridSolver(size_t N, size_t Nmin, bool verbose) :
   _N(N), _Ntot(power(N, NDIM)), _Nmin(Nmin), _Nlevel(int(log2(N / _Nmin) + 1)), _verbose(verbose), 
   _rms_res(0.0), _rms_res_i(0.0), _rms_res_old(0.0) {
 
@@ -224,19 +224,19 @@ MultiGridSolver<NDIM,T>::MultiGridSolver(unsigned int N, unsigned int Nmin, bool
 // domain level (level = 0)
 //================================================
 
-template<unsigned int NDIM, typename T>
+template<size_t NDIM, typename T>
 void MultiGridSolver<NDIM,T>::set_initial_guess(T guess){
   T *f = _f.get_y(0);
   std::fill_n(f, _Ntot, guess);
 }
 
-template<unsigned int NDIM, typename T>
+template<size_t NDIM, typename T>
 void MultiGridSolver<NDIM,T>::set_initial_guess(T *guess){
   T *f = _f.get_y(0);
   std::copy( &guess[0], &guess[0] + _Ntot, &f[0] );
 }
 
-template<unsigned int NDIM, typename T>
+template<size_t NDIM, typename T>
 void MultiGridSolver<NDIM,T>::set_initial_guess(Grid<NDIM,T>& guessgrid){
   T *f = _f.get_y(0);
   T *guess = guessgrid.get_y();
@@ -256,14 +256,14 @@ void MultiGridSolver<NDIM,T>::set_initial_guess(Grid<NDIM,T>& guessgrid){
 // Assuming periodic boundary conditions
 //================================================
 
-template<unsigned int NDIM, typename T>
-void MultiGridSolver<NDIM,T>::get_neighbor_gridindex(std::vector<unsigned int>& index_list, unsigned int i, unsigned int N){
-  index_list = std::vector<unsigned int>(2*NDIM+1);
+template<size_t NDIM, typename T>
+void MultiGridSolver<NDIM,T>::get_neighbor_gridindex(std::vector<size_t>& index_list, size_t i, size_t N){
+  index_list = std::vector<size_t>(2*NDIM+1);
   index_list[0] = i;
-  for(unsigned int j = 0, n = 1; j < NDIM; j++, n *= N){
-    unsigned int ii = i/n % N;
-    unsigned int iminus = ii >= 1   ? ii - 1 : N - 1;
-    unsigned int iplus  = ii <= N-2 ? ii + 1 : 0;
+  for(size_t j = 0, n = 1; j < NDIM; j++, n *= N){
+    size_t ii = i/n % N;
+    size_t iminus = ii >= 1   ? ii - 1 : N - 1;
+    size_t iplus  = ii <= N-2 ? ii + 1 : 0;
     index_list[2*j+1] = i + (iminus - ii) * n;
     index_list[2*j+2] = i + (iplus - ii) * n;
   }
@@ -275,10 +275,10 @@ void MultiGridSolver<NDIM,T>::get_neighbor_gridindex(std::vector<unsigned int>& 
 // the rms-residual over the whole grid
 //================================================
 
-template<unsigned int NDIM, typename T>
-double MultiGridSolver<NDIM,T>::calculate_residual(unsigned int level, Grid<NDIM,T> &res){
-  unsigned int N    = get_N(level);
-  unsigned int Ntot = get_Ntot(level);
+template<size_t NDIM, typename T>
+double MultiGridSolver<NDIM,T>::calculate_residual(size_t level, Grid<NDIM,T> &res){
+  size_t N    = get_N(level);
+  size_t Ntot = get_Ntot(level);
 
   // Gridspacing
   const T h = 1.0/T( get_N(level) );
@@ -287,8 +287,8 @@ double MultiGridSolver<NDIM,T>::calculate_residual(unsigned int level, Grid<NDIM
 #ifdef OPENMP
 #pragma omp parallel for
 #endif
-  for (unsigned int i = 0; i < Ntot; i++) {
-    std::vector<unsigned int> index_list;
+  for (size_t i = 0; i < Ntot; i++) {
+    std::vector<size_t> index_list;
     get_neighbor_gridindex(index_list, i, N);
     res[i] = -l_operator(level, index_list, true, h);
   }
@@ -304,7 +304,7 @@ double MultiGridSolver<NDIM,T>::calculate_residual(unsigned int level, Grid<NDIM
 // residual (err).
 //================================================
 
-template<unsigned int NDIM, typename T>
+template<size_t NDIM, typename T>
 typename MultiGridSolver<NDIM,T>::Exit_Status MultiGridSolver<NDIM,T>::check_convergence(){
   // Compute ratio of residual to initial residual
   double err = _rms_res_i != 0.0 ? _rms_res/_rms_res_i : 1.0;
@@ -363,28 +363,28 @@ typename MultiGridSolver<NDIM,T>::Exit_Status MultiGridSolver<NDIM,T>::check_con
   return converged;
 }
 
-template<unsigned int NDIM, typename T>
-void MultiGridSolver<NDIM,T>::check_solution(unsigned, Grid<NDIM,T>&) { }
+template<size_t NDIM, typename T>
+void MultiGridSolver<NDIM,T>::check_solution(size_t, Grid<NDIM,T>&) { }
 
-template<unsigned int NDIM, typename T>
-void MultiGridSolver<NDIM,T>::check_solution(unsigned level) { check_solution(level, get_grid(level)); }
+template<size_t NDIM, typename T>
+void MultiGridSolver<NDIM,T>::check_solution(size_t level) { check_solution(level, get_grid(level)); }
 
 //================================================
 // Prolonge up solution phi from course grid
 // to fine grid. Using trilinear prolongation
 //================================================
 
-template<unsigned int NDIM, typename T>
-void MultiGridSolver<NDIM,T>::prolonge_up_array(unsigned int to_level, Grid<NDIM,T>& Bottom, Grid<NDIM,T>& Top){
-  unsigned int twotondim = 1 << NDIM;
-  unsigned int NTop      = get_N(to_level);
-  unsigned int NtotTop   = get_Ntot(to_level);
-  unsigned int NBottom   = NTop/2;
+template<size_t NDIM, typename T>
+void MultiGridSolver<NDIM,T>::prolonge_up_array(size_t to_level, Grid<NDIM,T>& Bottom, Grid<NDIM,T>& Top){
+  size_t twotondim = 1 << NDIM;
+  size_t NTop      = get_N(to_level);
+  size_t NtotTop   = get_Ntot(to_level);
+  size_t NBottom   = NTop/2;
   
   // Compute NTop, Ntop^2, ... , Ntop^{Ndim-1} and similar for Nbottom
-  std::vector<unsigned int> nBottomPow(NDIM, 1);
-  std::vector<unsigned int> nTopPow(NDIM, 1);
-  for(unsigned int j = 0, n = 1, m = 1; j < NDIM; j++, n *= NBottom, m *= NTop){
+  std::vector<size_t> nBottomPow(NDIM, 1);
+  std::vector<size_t> nTopPow(NDIM, 1);
+  for(size_t j = 0, n = 1, m = 1; j < NDIM; j++, n *= NBottom, m *= NTop){
     nBottomPow[j] = n;
     nTopPow[j] = m;
   }
@@ -393,7 +393,7 @@ void MultiGridSolver<NDIM,T>::prolonge_up_array(unsigned int to_level, Grid<NDIM
 #ifdef OPENMP
 #pragma omp parallel for  
 #endif
-  for (unsigned int i = 0; i < NtotTop; i++) {
+  for (size_t i = 0; i < NtotTop; i++) {
     std::vector<double> fac(NDIM, 0.0);
     std::vector<int> iplus(NDIM, 0);
 
@@ -402,9 +402,9 @@ void MultiGridSolver<NDIM,T>::prolonge_up_array(unsigned int to_level, Grid<NDIM
 
     // Compute the shift in index from iBottom to the cells corresponding to ix -> ix+1
     // The fac is the weight for the trilinear interpolation
-    for(unsigned int j = 0; j < NDIM; j++){
-      unsigned int ii = i/nTopPow[j] % NTop;
-      unsigned int iiBottom = ii/2;
+    for(size_t j = 0; j < NDIM; j++){
+      size_t ii = i/nTopPow[j] % NTop;
+      size_t iiBottom = ii/2;
       iplus[j] = (iiBottom == NBottom-1 ? 1 - NBottom : 1) * nBottomPow[j];
       fac[j]   = ii % 2 == 0 ? 0.0 : 1.0;
       iBottom += iiBottom * nBottomPow[j];
@@ -417,11 +417,11 @@ void MultiGridSolver<NDIM,T>::prolonge_up_array(unsigned int to_level, Grid<NDIM
     //                        + ... +
     //                        + fac_1 ... fac_NDIM * Top[iBottom + d_1 + ... + d_NDIM]
     Top[i] = Bottom[iBottom];
-    for(unsigned int k = 1; k < twotondim; k++){
+    for(size_t k = 1; k < twotondim; k++){
       double termfac = 1.0;
       int iAdd = 0;
       std::bitset<NDIM> bits = std::bitset<NDIM>(k);
-      for(unsigned int j = 0; j < NDIM; j++){
+      for(size_t j = 0; j < NDIM; j++){
         iAdd = bits[j] * iplus[j];
         termfac *= 1.0 + bits[j] * (fac[j] - 1.0) ;
       }
@@ -437,10 +437,10 @@ void MultiGridSolver<NDIM,T>::prolonge_up_array(unsigned int to_level, Grid<NDIM
 // gridnodes if _ngridcolours = 2 
 //================================================
 
-template<unsigned int NDIM, typename T>
-void MultiGridSolver<NDIM,T>::GaussSeidelSweep(unsigned int level, unsigned int curcolor, T *f){
-  unsigned int N    = get_N(level);
-  unsigned int Ntot = get_Ntot(level);
+template<size_t NDIM, typename T>
+void MultiGridSolver<NDIM,T>::GaussSeidelSweep(size_t level, size_t curcolor, T *f){
+  size_t N    = get_N(level);
+  size_t Ntot = get_Ntot(level);
 
   // Gridspacing
   const T h = 1.0/T( get_N(level) );
@@ -448,10 +448,10 @@ void MultiGridSolver<NDIM,T>::GaussSeidelSweep(unsigned int level, unsigned int 
 #ifdef OPENMP
 #pragma omp parallel for 
 #endif
-  for (unsigned int i = 0; i < Ntot; i++) {
+  for (size_t i = 0; i < Ntot; i++) {
     // Compute cell-color
-    unsigned int color = 0;
-    for(unsigned int j = 0, n = 1; j < NDIM; j++, n *= N){
+    size_t color = 0;
+    for(size_t j = 0, n = 1; j < NDIM; j++, n *= N){
       color += ( i / n % N );
     }
     color = color % _ngridcolours;
@@ -460,7 +460,7 @@ void MultiGridSolver<NDIM,T>::GaussSeidelSweep(unsigned int level, unsigned int 
     if( color == curcolor ){
 
       // Update the solution f = f - L / (dL/df)
-      std::vector<unsigned int> index_list;
+      std::vector<size_t> index_list;
       get_neighbor_gridindex(index_list, i, N);
       f[i] = upd_operator(f[i], level, index_list, h);
     }
@@ -471,9 +471,9 @@ void MultiGridSolver<NDIM,T>::GaussSeidelSweep(unsigned int level, unsigned int 
 // Solve the equation on the current level
 //================================================
 
-template<unsigned int NDIM, typename T>
-void MultiGridSolver<NDIM,T>::solve_current_level(unsigned int level){
-  unsigned int ngs_sweeps;
+template<size_t NDIM, typename T>
+void MultiGridSolver<NDIM,T>::solve_current_level(size_t level){
+  size_t ngs_sweeps;
  
   if(_verbose)
     std::cout << "    Performing Newton-Gauss-Seidel sweeps at level " << level << std::endl;
@@ -485,13 +485,13 @@ void MultiGridSolver<NDIM,T>::solve_current_level(unsigned int level){
     ngs_sweeps = _ngs_coarse;
 
   // Do N Gauss-Seidel Sweeps
-  for (unsigned int i = 0; i < ngs_sweeps; i++) {
+  for (size_t i = 0; i < ngs_sweeps; i++) {
     if(level == 0)
       ++_tot_sweeps_domain_grid;
 
     // Sweep through grid according to sum of coord's mod _ngridcolours
     // Standard is _ngridcolours = 2 -> chess-board ordering
-    for(unsigned int j = 0; j < _ngridcolours; j++)
+    for(size_t j = 0; j < _ngridcolours; j++)
       GaussSeidelSweep(level, j, _f[level]);
 
     // Calculate residual and output quite often.
@@ -525,9 +525,9 @@ void MultiGridSolver<NDIM,T>::solve_current_level(unsigned int level){
 // V-cycle go all the way up
 //================================================
 
-template<unsigned int NDIM, typename T>
-void MultiGridSolver<NDIM,T>::recursive_go_up(unsigned int to_level){
-  unsigned int from_level = to_level + 1;
+template<size_t NDIM, typename T>
+void MultiGridSolver<NDIM,T>::recursive_go_up(size_t to_level){
+  size_t from_level = to_level + 1;
 
   // Restrict down R[f] and store in _res (used as temp-array)
   _f.restrict_down(to_level, _res.get_grid(from_level));
@@ -558,8 +558,8 @@ void MultiGridSolver<NDIM,T>::recursive_go_up(unsigned int to_level){
   }
 }
 
-template<unsigned int NDIM, typename T>
-void MultiGridSolver<NDIM,T>::correct_sol(Grid<NDIM,T>& f, const Grid<NDIM,T>& corr, const unsigned int level)
+template<size_t NDIM, typename T>
+void MultiGridSolver<NDIM,T>::correct_sol(Grid<NDIM,T>& f, const Grid<NDIM,T>& corr, const size_t level)
 {
     f += corr;
 }
@@ -571,9 +571,9 @@ void MultiGridSolver<NDIM,T>::correct_sol(Grid<NDIM,T>& f, const Grid<NDIM,T>& c
 // containing df = f - R[f]
 //================================================
 
-template<unsigned int NDIM, typename T>
+template<size_t NDIM, typename T>
 void MultiGridSolver<NDIM,T>::make_prolongation_array(Grid<NDIM,T>& f, Grid<NDIM,T>& Rf, Grid<NDIM,T>& df){
-  unsigned int Ntot = f.get_Ntot();
+  size_t Ntot = f.get_Ntot();
   df = f - Rf;
 }
 
@@ -581,10 +581,10 @@ void MultiGridSolver<NDIM,T>::make_prolongation_array(Grid<NDIM,T>& f, Grid<NDIM
 // Make new source
 //================================================
 
-template<unsigned int NDIM, typename T>
-void MultiGridSolver<NDIM,T>::make_new_source(unsigned int level){
-  unsigned int N    = get_N(level);
-  unsigned int Ntot = get_Ntot(level);
+template<size_t NDIM, typename T>
+void MultiGridSolver<NDIM,T>::make_new_source(size_t level){
+  size_t N    = get_N(level);
+  size_t Ntot = get_Ntot(level);
 
   // Gridspacing
   const T h = 1.0/T( get_N(level) );
@@ -593,8 +593,8 @@ void MultiGridSolver<NDIM,T>::make_new_source(unsigned int level){
 #ifdef OPENMP
 #pragma omp parallel for
 #endif
-  for(unsigned int i = 0; i < Ntot; i++){
-    std::vector<unsigned int> index_list;
+  for(size_t i = 0; i < Ntot; i++){
+    std::vector<size_t> index_list;
     get_neighbor_gridindex(index_list, i, N);
     T res = l_operator(level, index_list, false, h);
     _source[level][i] = _res[level][i] + res;
@@ -605,9 +605,9 @@ void MultiGridSolver<NDIM,T>::make_new_source(unsigned int level){
 // V-cycle go all the way down
 //================================================
 
-template<unsigned int NDIM, typename T>
-void MultiGridSolver<NDIM,T>::recursive_go_down(unsigned int from_level){
-  unsigned int to_level = from_level + 1;
+template<size_t NDIM, typename T>
+void MultiGridSolver<NDIM,T>::recursive_go_down(size_t from_level){
+  size_t to_level = from_level + 1;
 
   // Check if we are at the bottom
   if(to_level >= _Nlevel) {
@@ -637,7 +637,7 @@ void MultiGridSolver<NDIM,T>::recursive_go_down(unsigned int from_level){
   recursive_go_down(to_level);
 }
 
-template<unsigned int NDIM, typename T>
+template<size_t NDIM, typename T>
 void  MultiGridSolver<NDIM,T>::clear() {
   _N = _Ntot = _Nlevel = 0;
   _f.clear();

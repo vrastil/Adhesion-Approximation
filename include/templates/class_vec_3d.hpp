@@ -41,14 +41,14 @@ public:
     template<typename U>
 	Vec_3D<T>& operator+=(const Vec_3D<U>& rhs)
     {
-        for(unsigned i = 0; i < 3; ++i) (*this)[i] += rhs[i];
+        for(size_t i = 0; i < 3; ++i) (*this)[i] += rhs[i];
         return *this;
     }
     
     template<typename U>
     Vec_3D<T>& operator-=(const Vec_3D<U>& rhs)
     {
-        for(unsigned i = 0; i < 3; ++i) (*this)[i] -= rhs[i];
+        for(size_t i = 0; i < 3; ++i) (*this)[i] -= rhs[i];
         return *this;
     }
 
@@ -93,7 +93,7 @@ template <typename T, typename U>
 Vec_3D<T> operator*(T lhs, const Vec_3D<U>& rhs)
 {
     Vec_3D<T> tmp;
-    for(unsigned i = 0; i < 3; ++i) tmp[i] = lhs*rhs[i];
+    for(size_t i = 0; i < 3; ++i) tmp[i] = lhs*rhs[i];
     return tmp;
 }
 

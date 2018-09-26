@@ -52,9 +52,9 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
     // options both on command line	and in configuration file
     po::options_description config_mesh("Simulation box options");
     config_mesh.add_options()
-        ("mesh_num,m", po::value<unsigned>(&sim.box_opt.mesh_num)->default_value(128), "number of mesh cells per dimension (potential)")
-        ("mesh_num_pwr,M", po::value<unsigned>(&sim.box_opt.mesh_num_pwr)->default_value(256), "number of mesh cells per dimension (power spectrum)")
-        ("par_num,p", po::value<unsigned>(&sim.box_opt.par_num_1d)->default_value(128), "number of particles per dimension")
+        ("mesh_num,m", po::value<size_t>(&sim.box_opt.mesh_num)->default_value(128), "number of mesh cells per dimension (potential)")
+        ("mesh_num_pwr,M", po::value<size_t>(&sim.box_opt.mesh_num_pwr)->default_value(256), "number of mesh cells per dimension (power spectrum)")
+        ("par_num,p", po::value<size_t>(&sim.box_opt.par_num_1d)->default_value(128), "number of particles per dimension")
         ("box_size,L", po::value<FTYPE_t>(&sim.box_opt.box_size)->default_value(512, "512"), "box size in units of Mpc/h")
         ;
         
@@ -67,11 +67,11 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
     
     po::options_description config_output("Output options");
     config_output.add_options()
-        ("print_every", po::value<unsigned>(&sim.out_opt.print_every)->default_value(1, "1"), "save particle positions and power spectrum "
+        ("print_every", po::value<size_t>(&sim.out_opt.print_every)->default_value(1, "1"), "save particle positions and power spectrum "
                                                                                         "every n-th step, set 0 for no printing")
         ("print_z", po::value<Dvector>(&print_z)->multitoken(), "save output info at additional redshifts (optional")
-        ("pwr_bins", po::value<unsigned>(&sim.out_opt.bins_per_decade)->default_value(30), "number of bins per decade in power spectrum")
-        ("corr_pt", po::value<unsigned>(&sim.out_opt.points_per_10_Mpc)->default_value(10), "number of points per 10 Mpc in correlation function")
+        ("pwr_bins", po::value<size_t>(&sim.out_opt.bins_per_decade)->default_value(30), "number of bins per decade in power spectrum")
+        ("corr_pt", po::value<size_t>(&sim.out_opt.points_per_10_Mpc)->default_value(10), "number of points per 10 Mpc in correlation function")
         ("out_dir,o", po::value<std::string>(&sim.out_opt.out_dir)->default_value("output/"), "output folder name")
         ("print_par_pos", po::value<bool>(&sim.out_opt.print_par_pos)->default_value(false), "print particles positions")
         ("print_dens", po::value<bool>(&sim.out_opt.print_dens)->default_value(false), "print density map and histogram")
@@ -108,10 +108,10 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
 
     po::options_description config_run("Run options");
     config_run.add_options()
-        ("num_thread,t", po::value<unsigned>(&sim.run_opt.nt)->default_value(0), "number of threads the program will use, set 0 for max. available")
-        ("seed", po::value<unsigned long>(&sim.run_opt.seed)->default_value(0), "seed to random number generator, use 0 for random")
+        ("num_thread,t", po::value<size_t>(&sim.run_opt.nt)->default_value(0), "number of threads the program will use, set 0 for max. available")
+        ("seed", po::value<size_t>(&sim.run_opt.seed)->default_value(0), "seed to random number generator, use 0 for random")
         ("pair", po::value<bool>(&sim.run_opt.pair)->default_value(false), "if true run two simulations with opposite phases of random field")
-        ("mlt_runs", po::value<unsigned>(&sim.run_opt.mlt_runs)->default_value(1), "how many runs should be simulated (only if seed = 0)")
+        ("mlt_runs", po::value<size_t>(&sim.run_opt.mlt_runs)->default_value(1), "how many runs should be simulated (only if seed = 0)")
         ;
     
     po::options_description config_other("Approximation`s options");
@@ -137,12 +137,12 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
     config_test.add_options()
         ("R_sphere", po::value<FTYPE_t>(&sim.test_opt.R_sphere)->default_value(1., "3.0"), "radius of a sphere sitting in a vacuum")
         ("rho_sphere", po::value<FTYPE_t>(&sim.test_opt.rho_sphere)->default_value(2.7, "1.0"), "density  of a sphere sitting in a vacuum")
-        ("N_grid", po::value<unsigned>(&sim.test_opt.N_grid)->default_value(64, "64"), "finest grid size")
-        ("N_min", po::value<unsigned>(&sim.test_opt.N_min)->default_value(2, "2"), "coarsest grid size")
-        ("step_per_iter", po::value<unsigned>(&sim.test_opt.step_per_iter)->default_value(5, "5"), "print chameleon results after X steps")
-        ("fine_sweeps", po::value<unsigned>(&sim.test_opt.fine_sweeps)->default_value(3, "3"), "number of sweeps on fine grid")
-        ("coarse_sweeps", po::value<unsigned>(&sim.test_opt.coarse_sweeps)->default_value(3, "3"), "number of sweeps on coarse grids")
-        ("max_steps", po::value<unsigned>(&sim.test_opt.max_steps)->default_value(1, "1"), "max number of V-cycles")
+        ("N_grid", po::value<size_t>(&sim.test_opt.N_grid)->default_value(64, "64"), "finest grid size")
+        ("N_min", po::value<size_t>(&sim.test_opt.N_min)->default_value(2, "2"), "coarsest grid size")
+        ("step_per_iter", po::value<size_t>(&sim.test_opt.step_per_iter)->default_value(5, "5"), "print chameleon results after X steps")
+        ("fine_sweeps", po::value<size_t>(&sim.test_opt.fine_sweeps)->default_value(3, "3"), "number of sweeps on fine grid")
+        ("coarse_sweeps", po::value<size_t>(&sim.test_opt.coarse_sweeps)->default_value(3, "3"), "number of sweeps on coarse grids")
+        ("max_steps", po::value<size_t>(&sim.test_opt.max_steps)->default_value(1, "1"), "max number of V-cycles")
         ("verbose", po::value<bool>(&sim.test_opt.verbose)->default_value(true, "true"), "verbosity")
         ;
 

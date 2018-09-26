@@ -26,11 +26,11 @@
 //     printf("Creating linked list...\n");
 //     APP.linked_list.get_linked_list(APP.particles);
 
-//     for (unsigned i = 0; i <sim.par_num; i++)
+//     for (size_t i = 0; i <sim.par_num; i++)
 //     {
 //         cout << "LL[" << i << "] = " << APP.linked_list.LL[i] << "\n";
 //     }
-//     for (unsigned i = 0; i < APP.linked_list.HOC.length; i++){
+//     for (size_t i = 0; i < APP.linked_list.HOC.length; i++){
 //         if (APP.linked_list.HOC[i] != -1){
 //             cout << "HOC [" << i << "] = " << APP.linked_list.HOC[i]
 //             << "\tChain position = "

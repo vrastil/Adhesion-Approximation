@@ -16,7 +16,7 @@
 
 class Cosmo_Param; ///< declaration in params.hpp
 class Sim_Param; ///< declaration in params.hpp
-template <typename T, unsigned N> class Data_Vec; ///< declaration in class_data_vec.hpp
+template <typename T, size_t N> class Data_Vec; ///< declaration in class_data_vec.hpp
 
 /**
  * @brief Initialize CCL power spectrum
@@ -99,7 +99,7 @@ public:
     Interp_obj(): is_init(false) {}
     ~Interp_obj();
     double operator()(double x) const;
-    template <typename T, unsigned N>
+    template <typename T, size_t N>
     void init(const Data_Vec<T, N>& data);
     double x_min, x_max;
 
@@ -118,18 +118,18 @@ private:
  *  Steffen interpolation of data [k, P(k)] within range k_min, k_max
  *  fit to primordial P_i(k) below this range, fit A*k^ns above
  */
-template <typename T, unsigned N>
+template <typename T, size_t N>
 class Extrap_Pk : public Interp_obj
 {
 public:
     Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim);
-    Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_u);
-    Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
-              const unsigned m_u, const unsigned n_u);
+    Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim, const size_t m_l, const size_t n_u);
+    Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim, const size_t m_l, const size_t n_l,
+              const size_t m_u, const size_t n_u);
     double operator()(double k) const;
 
-    void fit_lin(const Data_Vec<T, N>& data, const unsigned m, const unsigned n, double& A);
-    void fit_power_law(const Data_Vec<T, N>& data, const unsigned m, const unsigned n, double& A, double& n_s);
+    void fit_lin(const Data_Vec<T, N>& data, const size_t m, const size_t n, double& A);
+    void fit_power_law(const Data_Vec<T, N>& data, const size_t m, const size_t n, double& A, double& n_s);
 
     double A_low; ///< amplitude of linear power in lower range
     const Cosmo_Param& cosmo;
@@ -142,7 +142,7 @@ public:
  * @brief:	creates Extrapolate object (linear power spectrum) from data and store non-linear parameters
             call 'operator()(k)' based on k_split (upper range of the linear)
  */
-template <typename T, unsigned N>
+template <typename T, size_t N>
 class Extrap_Pk_Nl : public Extrap_Pk<T, N>
 {
 public:

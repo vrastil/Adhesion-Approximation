@@ -75,9 +75,9 @@ void get_per(Vec_3D<T> &position, int perx, int pery, int perz)
 
 void get_per(std::vector<Particle_v<FTYPE_t>>& particles, const int per)
 {
-    const unsigned Np = particles.size();
+    const size_t Np = particles.size();
     #pragma omp parallel for
-    for (unsigned i = 0; i < Np; i++)
+    for (size_t i = 0; i < Np; i++)
     {
         get_per(particles[i].position, per);
     }
@@ -123,7 +123,7 @@ Vec_3D<FTYPE_t> get_sgn_distance(const Vec_3D<FTYPE_t> &x_from, const Vec_3D<FTY
 	return dst;
 }
 
-template<unsigned N> static FTYPE_t wgh_sch(const Vec_3D<FTYPE_t> &x, const Vec_3D<int>& y, int mesh_num);
+template<size_t N> static FTYPE_t wgh_sch(const Vec_3D<FTYPE_t> &x, const Vec_3D<int>& y, int mesh_num);
 // The weighting scheme used to assign values to the mesh points or vice versa
 // Return value of assigment function on mesh point y from particle in x
 
@@ -167,7 +167,7 @@ template<> FTYPE_t wgh_sch<2>(const Vec_3D<FTYPE_t> &x, const Vec_3D<int>& y, in
 template<int points>
 IT<points>::IT(const Vec_3D<FTYPE_t> &pos): counter(0)
 {
-    for(unsigned i = 0; i < 3; i++){
+    for(size_t i = 0; i < 3; i++){
         vec[i] = (int)(pos[i] - 0.5*(points - 2));
     }
 }
@@ -175,7 +175,7 @@ IT<points>::IT(const Vec_3D<FTYPE_t> &pos): counter(0)
 template<int points>
 IT<points>::IT(const Vec_3D<FTYPE_t> &pos, FTYPE_t Hc): counter(0)
 {
-    for(unsigned i = 0; i < 3; i++){
+    for(size_t i = 0; i < 3; i++){
         vec[i] = (int)(pos[i]/Hc) - 1;
     }
 }
@@ -210,7 +210,7 @@ void assign_to(std::vector<Mesh>& field, const Vec_3D<FTYPE_t> &position, const 
     FTYPE_t w;
     do{
         w = wgh_sch<ORDER>(position, it.vec, field[0].N); ///< reuse the same weigh for every field in std::vector
-        for (unsigned i = 0; i < 3; i++)
+        for (size_t i = 0; i < 3; i++)
         {
             #pragma omp atomic
             field[i](it.vec) += value[i] * w;

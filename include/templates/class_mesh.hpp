@@ -25,11 +25,11 @@ class Mesh_base
 {
 public:
 	// CONSTRUCTOR
-	Mesh_base(unsigned n1, unsigned n2, unsigned n3):
+	Mesh_base(size_t n1, size_t n2, size_t n3):
     N1(n1), N2(n2), N3(n3), length(n1*n2*n3), data(length) {}
 	
 	// VARIABLES
-	unsigned N1, N2, N3, length; // acces dimensions and length of mesh
+	size_t N1, N2, N3, length; // acces dimensions and length of mesh
     std::vector<T> data; // data stored on the mesh
 	
 	// METHODS
@@ -38,7 +38,7 @@ public:
 	void assign(T val)
     {
         #pragma omp parallel for
-        for (unsigned i = 0; i < length; i++) this->data[i]=val;
+        for (size_t i = 0; i < length; i++) this->data[i]=val;
     }
 	
 	// OPERATORS
@@ -66,7 +66,7 @@ public:
 	Mesh_base& operator+=(const T& rhs)
     {
         #pragma omp parallel for
-        for (unsigned i = 0; i < length; i++) this->data[i]+=rhs; 
+        for (size_t i = 0; i < length; i++) this->data[i]+=rhs; 
         return *this;
     }
 
@@ -75,14 +75,14 @@ public:
 	Mesh_base& operator*=(const T& rhs)
     {
         #pragma omp parallel for
-        for (unsigned i = 0; i < length; i++) this->data[i]*=rhs; 
+        for (size_t i = 0; i < length; i++) this->data[i]*=rhs; 
         return *this;
     }
 
 	Mesh_base& operator/=(const T& rhs)
     {
         #pragma omp parallel for
-        for (unsigned i = 0; i < length; i++) this->data[i]/=rhs; 
+        for (size_t i = 0; i < length; i++) this->data[i]/=rhs; 
         return *this;
     }
 
@@ -96,10 +96,10 @@ class Mesh : public Mesh_base<FTYPE_t>
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR
-    Mesh(unsigned n): Mesh_base(n, n, n+2), N(n) {}
+    Mesh(size_t n): Mesh_base(n, n, n+2), N(n) {}
 	
 	// VARIABLES
-	unsigned N; // acces dimension of mesh
+	size_t N; // acces dimension of mesh
 	
 	// METHODS
 
@@ -120,7 +120,7 @@ public:
     void reset_part(bool part)
     {/* nullify real (part = 0) or complex (part = 1) part of a field */
         #pragma omp parallel for
-        for (unsigned i = part; i < this->length; i+=2){
+        for (size_t i = part; i < this->length; i+=2){
             data[i] = 0;
         }
     }

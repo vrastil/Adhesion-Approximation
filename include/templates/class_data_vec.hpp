@@ -14,7 +14,7 @@
  * @class:	Data_Vec
  * @brief:	class containing data [x, y,...]
  */
-template <typename T, unsigned N>
+template <typename T, size_t N>
 class Data_Vec
 {
 public:
@@ -41,7 +41,7 @@ public:
     void reserve(size_t n){
         for (auto &vec : data) vec.reserve(n);
     }
-    void erase(unsigned index){
+    void erase(size_t index){
         for (auto &vec : data) vec.erase(vec.begin() + index);
     }
     // MODIFIERS

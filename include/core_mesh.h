@@ -69,7 +69,7 @@ public:
     IT(const Vec_3D<FTYPE_t> &pos); // ctor for assignment scheme
     IT(const Vec_3D<FTYPE_t> &pos, FTYPE_t Hc); // ctor for chaining mesh
 
-    unsigned counter;
+    size_t counter;
     Vec_3D<int> vec;
 
     bool iter();

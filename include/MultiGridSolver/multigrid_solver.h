@@ -44,14 +44,14 @@
     //                                           //
     //===========================================//
 
-template<unsigned int NDIM, typename T>
+template<size_t NDIM, typename T>
 class MultiGridSolver {
 private:
 
-    unsigned int _N;      // The number of cells per dim in the main grid
-    unsigned int _Ntot;   // Total number of cells in the main grid
-    unsigned int _Nmin;   // The number of cells per dim in the smallest grid
-    unsigned int _Nlevel; // Number of levels
+    size_t _N;      // The number of cells per dim in the main grid
+    size_t _Ntot;   // Total number of cells in the main grid
+    size_t _Nmin;   // The number of cells per dim in the smallest grid
+    size_t _Nlevel; // Number of levels
 
     // All the grids needed
     MultiGrid<NDIM, T> _f;      // The solution
@@ -63,23 +63,23 @@ private:
     std::vector<MultiGrid<NDIM,T> * > _ext_field;
     
     // Solver parameters
-    unsigned int _ngs_coarse      = 2;     // Number of NGS sweeps on coarse grid
-    unsigned int _ngs_fine        = 2;     // Number of NGS sweeps on the main grid
-    unsigned int _ngridcolours    = 2;     // The order we go through the grid: 
+    size_t _ngs_coarse      = 2;     // Number of NGS sweeps on coarse grid
+    size_t _ngs_fine        = 2;     // Number of NGS sweeps on the main grid
+    size_t _ngridcolours    = 2;     // The order we go through the grid: 
                                            // [Sum_i coord[i] % ngridcolour == j for j = 0,1,..,ngridcolour-1]
     
     // Book-keeping variables
-    unsigned int _tot_sweeps_domain_grid = 0; // Total number of sweeps on the domaingrid (level = 0)
+    size_t _tot_sweeps_domain_grid = 0; // Total number of sweeps on the domaingrid (level = 0)
 
     // Internal methods:
-    double calculate_residual(unsigned int level, Grid<NDIM,T>& res);
-    void   prolonge_up_array(unsigned int to_level, Grid<NDIM,T>& BottomGrid, Grid<NDIM,T>& TopGrid);
+    double calculate_residual(size_t level, Grid<NDIM,T>& res);
+    void   prolonge_up_array(size_t to_level, Grid<NDIM,T>& BottomGrid, Grid<NDIM,T>& TopGrid);
     void   make_prolongation_array(Grid<NDIM,T>& f, Grid<NDIM,T>& Rf, Grid<NDIM,T>& df);
-    void   GaussSeidelSweep(unsigned int level, unsigned int curcolor, T *f);
-    void   solve_current_level(unsigned int level);
-    void   recursive_go_up(unsigned int to_level);
-    void   recursive_go_down(unsigned int from_level);
-    void   make_new_source(unsigned int level);
+    void   GaussSeidelSweep(size_t level, size_t curcolor, T *f);
+    void   solve_current_level(size_t level);
+    void   recursive_go_up(size_t to_level);
+    void   recursive_go_down(size_t from_level);
+    void   make_new_source(size_t level);
 
 protected:
 
@@ -87,13 +87,13 @@ protected:
     bool _verbose;
 
     // Internal methods:
-    void get_neighbor_gridindex(std::vector<unsigned int>& index_list, unsigned int i, unsigned int ngrid);
+    void get_neighbor_gridindex(std::vector<size_t>& index_list, size_t i, size_t ngrid);
 
     // Convergence criterion (if the convergence check is not overwritten)
     bool _conv_criterion_residual = true;  // [True]: residual < eps [False]: residual/residual_i < eps
     double _eps_converge          = 1e-5;  // Convergence criterion
-    unsigned int _maxsteps        = 1000;  // Maximum number of V-cycles
-    unsigned int _istep_vcycle = 0;        // The number of V-cycles we are currenlty at
+    size_t _maxsteps        = 1000;  // Maximum number of V-cycles
+    size_t _istep_vcycle = 0;        // The number of V-cycles we are currenlty at
 
     // Residual information
     double _rms_res;                       // Residual
@@ -109,45 +109,45 @@ public:
  
     // Constructors
     MultiGridSolver() {}
-    MultiGridSolver(unsigned int N) : MultiGridSolver(N, true) {}
-    MultiGridSolver(unsigned int N, bool verbose) : MultiGridSolver(N, 2, verbose) {}
-    MultiGridSolver(unsigned int N, unsigned int Nmin, bool verbose);
+    MultiGridSolver(size_t N) : MultiGridSolver(N, true) {}
+    MultiGridSolver(size_t N, bool verbose) : MultiGridSolver(N, 2, verbose) {}
+    MultiGridSolver(size_t N, size_t Nmin, bool verbose);
 
-    unsigned get_istep() const { return _istep_vcycle; };
+    size_t get_istep() const { return _istep_vcycle; };
 
     // Get a pointer to the solution array / grid
-    T *get_y(unsigned int level = 0);
-    T const* const get_y(unsigned int level = 0) const;
+    T *get_y(size_t level = 0);
+    T const* const get_y(size_t level = 0) const;
 
-    Grid<NDIM, T> &get_grid(unsigned int level = 0){ return _f.get_grid(level); };
-    const Grid<NDIM, T> &get_grid(unsigned int level = 0) const { return _f.get_grid(level); };
+    Grid<NDIM, T> &get_grid(size_t level = 0){ return _f.get_grid(level); };
+    const Grid<NDIM, T> &get_grid(size_t level = 0) const { return _f.get_grid(level); };
 
-    MultiGrid<NDIM, T> &get_mlt_grid(unsigned int level = 0){ return _f; };
-    const MultiGrid<NDIM, T> &get_mlt_grid(unsigned int level = 0) const { return _f; };
+    MultiGrid<NDIM, T> &get_mlt_grid(size_t level = 0){ return _f; };
+    const MultiGrid<NDIM, T> &get_mlt_grid(size_t level = 0) const { return _f; };
 
     // Fetch values in externally added fields
-    T* get_external_field(unsigned int level, unsigned int field) { return _ext_field[field]->get_y(level); };
-    T const* const get_external_field(unsigned int level, unsigned int field) const { return _ext_field[field]->get_y(level); };
+    T* get_external_field(size_t level, size_t field) { return _ext_field[field]->get_y(level); };
+    T const* const get_external_field(size_t level, size_t field) const { return _ext_field[field]->get_y(level); };
 
-    Grid<NDIM, T> &get_external_grid(unsigned int level, unsigned field) { return _ext_field[field]->get_grid(level); };
-    const Grid<NDIM, T> &get_external_grid(unsigned int level, unsigned field) const { return _ext_field[field]->get_grid(level); };
+    Grid<NDIM, T> &get_external_grid(size_t level, size_t field) { return _ext_field[field]->get_grid(level); };
+    const Grid<NDIM, T> &get_external_grid(size_t level, size_t field) const { return _ext_field[field]->get_grid(level); };
 
     size_t get_external_field_size() const { return _ext_field.size(); };
     
     // Get values of the multigrid-source used to store the restricted residual during the solve step
-    T get_multigrid_source(unsigned int level, unsigned int i) const { return _source[level][i]; };
+    T get_multigrid_source(size_t level, size_t i) const { return _source[level][i]; };
 
     // Set precision parameters
     void set_epsilon(double eps_converge);
-    void set_maxsteps(unsigned int maxsteps);
-    void set_ngs_sweeps(unsigned int ngs_fine, unsigned int ngs_coarse);
+    void set_maxsteps(size_t maxsteps);
+    void set_ngs_sweeps(size_t ngs_fine, size_t ngs_coarse);
     void set_convergence_criterion_residual(bool use_residual);
-    void set_Nlevel(unsigned N);
+    void set_Nlevel(size_t N);
     
     // Fetch info about the grids
-    unsigned int get_N(unsigned int level = 0) const;
-    unsigned int get_Ntot(unsigned int level = 0) const;
-    unsigned int get_Nlevel() const;
+    size_t get_N(size_t level = 0) const;
+    size_t get_Ntot(size_t level = 0) const;
+    size_t get_Nlevel() const;
 
     // Add a pointer to an external grid if this grid is needed to define the PDE
     void add_external_grid(MultiGrid<NDIM,T> *field);
@@ -164,13 +164,13 @@ public:
     void clear();
 
     // Methods that may be implemented by user
-    virtual T upd_operator(const T f, const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const;
-    virtual T l_operator(const unsigned int level, const std::vector<unsigned int>& index_list, bool addsource, const T h) const;
-    virtual T dl_operator(const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const;
-    virtual void correct_sol(Grid<NDIM,T>& f, const Grid<NDIM,T>& corr, const unsigned int level);
+    virtual T upd_operator(const T f, const size_t level, const std::vector<size_t>& index_list, const T h) const;
+    virtual T l_operator(const size_t level, const std::vector<size_t>& index_list, bool addsource, const T h) const;
+    virtual T dl_operator(const size_t level, const std::vector<size_t>& index_list, const T h) const;
+    virtual void correct_sol(Grid<NDIM,T>& f, const Grid<NDIM,T>& corr, const size_t level);
     virtual Exit_Status check_convergence();
-    virtual void check_solution(unsigned level, Grid<NDIM,T>& sol);
-    void check_solution(unsigned level); //< automatically retrieves reference to solution
+    virtual void check_solution(size_t level, Grid<NDIM,T>& sol);
+    void check_solution(size_t level); //< automatically retrieves reference to solution
 };
 
 #endif

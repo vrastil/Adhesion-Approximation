@@ -335,12 +335,12 @@ double sigma_integrand_G(double k, void* params){
 template <class P, class T> 
 void gen_fce_r_binned_gsl(const double x_min, const double x_max, const double lin_bin, const P& P_k, Data_Vec<FTYPE_t, 2>& fce_binned, T& fce_r)
 {
-    const unsigned req_size = (unsigned)ceil((x_max - x_min)/lin_bin);
+    const size_t req_size = (size_t)ceil((x_max - x_min)/lin_bin);
     
     fce_binned.resize(req_size);
     integrand_param<P> my_param(0, P_k);
 
-	for(unsigned i = 0; i < req_size; i++){
+	for(size_t i = 0; i < req_size; i++){
         double r = x_min + i*lin_bin;
         my_param.r = r;
         fce_binned[0][i] = r;
@@ -495,7 +495,7 @@ FTYPE_t non_lin_pow_spec(FTYPE_t a, FTYPE_t k, const Cosmo_Param& cosmo)
     else throw std::runtime_error(cosmo.cosmo->status_message);
 }
 
-template <typename T, unsigned N>
+template <typename T, size_t N>
 void Interp_obj::init(const Data_Vec<T, N>& data)
 {
     is_init = true;
@@ -522,9 +522,9 @@ Interp_obj::~Interp_obj()
 
 double Interp_obj::operator()(double x) const{ return gsl_spline_eval(spline, x, acc); }
 
-template <typename T, unsigned N>
-Extrap_Pk<T, N>::Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_l,
-    const unsigned m_u, const unsigned n_u):
+template <typename T, size_t N>
+Extrap_Pk<T, N>::Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim, const size_t m_l, const size_t n_l,
+    const size_t m_u, const size_t n_u):
     cosmo(sim.cosmo)
 {
     this->init(data);//< initialize Interp_obj
@@ -543,23 +543,23 @@ Extrap_Pk<T, N>::Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim, con
     fit_power_law(data, m_u, n_u, A_up, n_s);
 }
 
-template <typename T, unsigned N>
-Extrap_Pk<T, N>::Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim, const unsigned m_l, const unsigned n_u):
+template <typename T, size_t N>
+Extrap_Pk<T, N>::Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim, const size_t m_l, const size_t n_u):
     Extrap_Pk(data, sim,
         // fit over first and last half of a decade
         m_l, m_l + sim.out_opt.bins_per_decade/2,
         n_u - sim.out_opt.bins_per_decade/2, n_u
     ) {}
 
-template <typename T, unsigned N>
+template <typename T, size_t N>
 Extrap_Pk<T, N>::Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim):
     Extrap_Pk(data, sim,
         // trust simulation up to HALF k_nq
         0, get_nearest(sim.other_par.nyquist.at("particle")/2, data[0]) + 1
     ) {}
 
-template <typename T, unsigned N>
-void Extrap_Pk<T, N>::fit_lin(const Data_Vec<T, N>& data, const unsigned m, const unsigned n, double &A)
+template <typename T, size_t N>
+void Extrap_Pk<T, N>::fit_lin(const Data_Vec<T, N>& data, const size_t m, const size_t n, double &A)
 {
     // FIT linear power spectrum to data[m:n)
     // fit 'P(k) = A * P_lin(k)' via A
@@ -573,7 +573,7 @@ void Extrap_Pk<T, N>::fit_lin(const Data_Vec<T, N>& data, const unsigned m, cons
     }
     std::vector<double> A_vec(n-m, 1);
 
-    for(unsigned i = m; i < n; i++){
+    for(size_t i = m; i < n; i++){
         Pk = lin_pow_spec(1, data[0][i], cosmo);
         Pk_res.push_back(data[1][i] / Pk);
         if (N == 3) w.push_back(pow2(Pk/data[2][i]));
@@ -590,8 +590,8 @@ void Extrap_Pk<T, N>::fit_lin(const Data_Vec<T, N>& data, const unsigned m, cons
     #endif
 }
 
-template <typename T, unsigned N>
-void Extrap_Pk<T, N>::fit_power_law(const Data_Vec<T, N>& data, const unsigned m, const unsigned n, double &A, double &n_s)
+template <typename T, size_t N>
+void Extrap_Pk<T, N>::fit_power_law(const Data_Vec<T, N>& data, const size_t m, const size_t n, double &A, double &n_s)
 {
     // FIT scale-free power spectrum to data[m,n)
     // fit 'log P(k) = log A + n_s * log k' via A, n_s
@@ -603,7 +603,7 @@ void Extrap_Pk<T, N>::fit_power_law(const Data_Vec<T, N>& data, const unsigned m
     if (N == 3){
         w.reserve(n-m);
     }
-    for(unsigned i = m; i < n; i++){
+    for(size_t i = m; i < n; i++){
         k.push_back(log(data[0][i]));
         Pk.push_back(log(data[1][i]));
         if (N == 3)w.push_back(pow2(data[1][i]/data[2][i])); // weight = 1/sigma^2, approx log(1+x) = x for x rel. error
@@ -621,7 +621,7 @@ void Extrap_Pk<T, N>::fit_power_law(const Data_Vec<T, N>& data, const unsigned m
     #endif
 }
 
-template <typename T, unsigned N>
+template <typename T, size_t N>
 double Extrap_Pk<T, N>::operator()(double k) const
 {
     if (k < k_min)
@@ -632,11 +632,11 @@ double Extrap_Pk<T, N>::operator()(double k) const
     else return A_up*pow(k, n_s);
 }
 
-template <typename T, unsigned N>
+template <typename T, size_t N>
 Extrap_Pk_Nl<T, N>::Extrap_Pk_Nl(const Data_Vec<T, N>& data, const Sim_Param &sim, T A_nl, T a_eff):
     Extrap_Pk<T, N>(data, sim), A_nl(A_nl), a_eff(a_eff), k_split(this->k_max) {}
 
-template <typename T, unsigned N>
+template <typename T, size_t N>
 double Extrap_Pk_Nl<T, N>::operator()(double k) const {
     if (k < k_split) return Extrap_Pk<T, N>::operator()(k);
     else return (1-A_nl)*lin_pow_spec(a_eff, k, this->cosmo) + A_nl*non_lin_pow_spec(a_eff, k, this->cosmo);

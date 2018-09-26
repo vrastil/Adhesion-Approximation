@@ -73,9 +73,9 @@ constexpr double CONVERGENCE_RES = 0; ///< stop when total (rms) residual below
 constexpr double CONVERGENCE_RES_MIN = 0; ///< do not stop if solution didn`t converge below
 constexpr double CONVERGENCE_ERR = 0.97; ///< stop when improvements between steps slow below
 constexpr double CONVERGENCE_ERR_MIN = 0.8; ///< do not stop if solution is still improving
-constexpr unsigned CONVERGENCE_NUM_FAIL = 5; ///< stop when number of failed steps is over
-constexpr unsigned CONVERGENCE_BI_STEPS = 5; ///< maximal number of steps inside bisection rootfindg method
-constexpr unsigned CONVERGENCE_BI_STEPS_INIT = 3; ///< maximal number of steps inside bisection initialization method
+constexpr size_t CONVERGENCE_NUM_FAIL = 5; ///< stop when number of failed steps is over
+constexpr size_t CONVERGENCE_BI_STEPS = 5; ///< maximal number of steps inside bisection rootfindg method
+constexpr size_t CONVERGENCE_BI_STEPS_INIT = 3; ///< maximal number of steps inside bisection initialization method
 constexpr CHI_PREC_t CONVERGENCE_BI_DCHI = (CHI_PREC_t)1e-2; ///< stop bisection method when chi doesn`t chanege
 constexpr CHI_PREC_t CONVERGENCE_BI_L = (CHI_PREC_t)1e-2; ///< stop bisection method when residual below
 /**@}*/
@@ -88,14 +88,14 @@ using ES = MultiGridSolver<3, CHI_PREC_t>::Exit_Status;
 template<typename T>
 void transform_Mesh_to_Grid(const Mesh& mesh, Grid<3, T> &grid)
 {/* copy data in Mesh 'N*N*(N+2)' onto MultiGrid 'N*N*N' */
-    unsigned int ix, iy, iz;
-    const unsigned N_tot = grid.get_Ntot();
-    const unsigned N = grid.get_N();
+    size_t ix, iy, iz;
+    const size_t N_tot = grid.get_Ntot();
+    const size_t N = grid.get_N();
 
     if (mesh.N != N) throw std::range_error("Mesh of a different size than Grid!");
 
     #pragma omp parallel for private(ix, iy, iz)
-    for (unsigned i = 0; i < N_tot; ++i)
+    for (size_t i = 0; i < N_tot; ++i)
     {
         ix = i % N;
         iy = i / N % N;
@@ -114,14 +114,14 @@ void transform_Mesh_to_MultiGrid(const Mesh& mesh, MultiGrid<3, T> &mltgrid)
 template<typename T>
 void transform_Grid_to_Mesh(Mesh& mesh, const Grid<3, T> &grid)
 {/* copy data in MultiGrid 'N*N*N' onto Mesh 'N*N*(N+2)' */
-    unsigned int ix, iy, iz;
-    const unsigned N_tot = grid.get_Ntot();
-    const unsigned N = grid.get_N();
+    size_t ix, iy, iz;
+    const size_t N_tot = grid.get_Ntot();
+    const size_t N = grid.get_N();
 
     if (mesh.N != N) throw std::range_error("Mesh of a different size than Grid!");
 
     #pragma omp parallel for private(ix, iy, iz)
-    for (unsigned i = 0; i < N_tot; ++i)
+    for (size_t i = 0; i < N_tot; ++i)
     {
         ix = i % N;
         iy = i / N % N;
@@ -165,22 +165,22 @@ public:
     T chi_prefactor; ///< time-dependent prefactor
 
     // convergence parameters
-    unsigned m_conv_stop = 0; // number of unsuccessful sweeps
+    size_t m_conv_stop = 0; // number of unsuccessful sweeps
     double m_rms_stop_min;      // iterate at least until _rms_res < m_conv_eps_min
     double m_err_stop;     // stop iteration when: 1 >  err > m_err_stop
     double m_err_stop_min; // iterate at least until: err > m_err_stop_min
-    unsigned m_num_fail;     // give up converging if number of failed iteration (err > 1) is > m_num_fail
+    size_t m_num_fail;     // give up converging if number of failed iteration (err > 1) is > m_num_fail
 
     // bisection convergence parameters
-    unsigned m_max_bisection_steps; // at given point perfom max this number of inteval halving
+    size_t m_max_bisection_steps; // at given point perfom max this number of inteval halving
     T m_dchi_stop;                  // if change in chi is small, stop halving
     T m_l_stop;                     // if residuum is small, stop halving
 
     // variables for checking solution in deep-screened regime, for each level
-    std::vector<std::map<unsigned, T>> fix_vals; ///< <index, value>
+    std::vector<std::map<size_t, T>> fix_vals; ///< <index, value>
 
 
-    ChiSolver(unsigned int N, int Nmin, const Sim_Param& sim, bool verbose = true) :
+    ChiSolver(size_t N, int Nmin, const Sim_Param& sim, bool verbose = true) :
         MultiGridSolver<3, T>(N, Nmin, verbose), n(sim.chi_opt.n), beta(sim.chi_opt.beta), chi_0(2*beta*MPL*sim.chi_opt.phi),
         phi_prefactor( // prefactor for Poisson equation for gravitational potential, [] = (h/Mpc)^2
             // 4*pi*G*rho_m,0 + computing units [Mpc/h]
@@ -195,7 +195,7 @@ public:
             if ((n <= 0) || (n >= 1) || (chi_0 <= 0)) throw std::out_of_range("invalid values of chameleon power-law potential parameters");
         }
 
-    ChiSolver(unsigned int N, const Sim_Param& sim, bool verbose = true) : ChiSolver(N, 2, sim, verbose) {}
+    ChiSolver(size_t N, const Sim_Param& sim, bool verbose = true) : ChiSolver(N, 2, sim, verbose) {}
 
     T chi_a(T a) const
     {
@@ -210,15 +210,15 @@ public:
     void get_chi_k(Mesh& rho_k)
     {/* transform input density in k-space into linear prediction for chameleon field,
         includes w(k) corrections for interpolation of particles */
-        const unsigned N = rho_k.N;
-        const unsigned l_half = rho_k.length/2;
+        const size_t N = rho_k.N;
+        const size_t l_half = rho_k.length/2;
         const T mass_sq = (1-n)*chi_prefactor/pow(2*PI, 2); // dimensionless square mass, with derivative factor k* = 2*PI / L
         const T chi_a_n = -1/(1-n); // prefactor for chi(k), in chi_a units
         
         T k2, g_k;
 
         #pragma omp parallel for private(k2, g_k)
-        for(unsigned i=0; i < l_half;i++){
+        for(size_t i=0; i < l_half;i++){
             k2 = get_k_sq(N, i);
             if (k2 == 0)
             {
@@ -234,14 +234,14 @@ public:
         }
     }
     
-    bool check_surr_dens(T const* const rho_grid, std::vector<unsigned int> index_list, unsigned i, unsigned N)
+    bool check_surr_dens(T const* const rho_grid, std::vector<size_t> index_list, size_t i, size_t N)
     {/* internal method for finding highest density in nearby points */
         // never fix bulk field in under-dense region
         if (rho_grid[i] <= 0) return false;
 
         // check surrounding points if theres is higher density
         this->get_neighbor_gridindex(index_list, i, N);
-        for(unsigned i_s : index_list) if (rho_grid[i_s] > rho_grid[i]) return false;
+        for(size_t i_s : index_list) if (rho_grid[i_s] > rho_grid[i]) return false;
 
         // if current point has the highest density, fix chameleon value
         return true;
@@ -255,10 +255,10 @@ public:
     T get_chi_prefactor() const { return chi_prefactor; }
     T get_phi_prefactor() const { return phi_prefactor; }
 
-    T  l_operator(const T chi_i, const unsigned int level, const std::vector<unsigned int>& index_list, const bool addsource, const T h) const 
+    T  l_operator(const T chi_i, const size_t level, const std::vector<size_t>& index_list, const bool addsource, const T h) const 
     {/* The dicretized equation L(phi) */
         // Solution and pde-source grid at current level
-        const unsigned int i = index_list[0];
+        const size_t i = index_list[0];
         T const* const chi = this->get_y(level); // solution
         const T rho = this->get_external_field(level, 0)[i];
         
@@ -280,17 +280,17 @@ public:
         return kinetic/(h*h) - source;
     }
 
-    T  l_operator(const unsigned int level, const std::vector<unsigned int>& index_list, const bool addsource, const T h) const override
+    T  l_operator(const size_t level, const std::vector<size_t>& index_list, const bool addsource, const T h) const override
     {/* The dicretized equation L(phi) */
         // Solution and pde-source grid at current level
-        const unsigned int i = index_list[0];
+        const size_t i = index_list[0];
         T const* const chi = this->get_y(level); // solution
         const T chi_i = chi[i];
         return l_operator(chi_i, level, index_list, addsource, h);
     }
 
     // Differential of the L operator: dL_{ijk...}/dphi_{ijk...}
-    T dl_operator(const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const override
+    T dl_operator(const size_t level, const std::vector<size_t>& index_list, const T h) const override
     {
         // solution
         const T chi = this->get_y(level)[ index_list[0] ];
@@ -304,16 +304,16 @@ public:
         return dkinetic/(h*h) - dsource;
     }
 
-    bool find_opposite_l_sign(const T f1, const T l1, T df, T& f2, T& l2, const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const
+    bool find_opposite_l_sign(const T f1, const T l1, T df, T& f2, T& l2, const size_t level, const std::vector<size_t>& index_list, const T h) const
     {/* find such 'f2' that 'l_operator(f2)' has opposite sign than l1
         use df as a guess in which direction to be looking */
         f2 = f1;
-        for (unsigned j = 0; j < CONVERGENCE_BI_STEPS_INIT; ++j)
+        for (size_t j = 0; j < CONVERGENCE_BI_STEPS_INIT; ++j)
         {
             f2 += df;
             if (f2 <= CHI_MIN)
             {
-                const unsigned i = index_list[0];
+                const size_t i = index_list[0];
                 const T rho = this->get_external_field(level, 0)[i];
 
                 f2 = chi_min(rho);
@@ -330,7 +330,7 @@ public:
         return ((std::abs(l_new) < m_l_stop) || (std::abs(df_new) < m_dchi_stop));
     }
 
-    T bisection_step(T& f1, T& l1, T& f2, T& l2, const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const
+    T bisection_step(T& f1, T& l1, T& f2, T& l2, const size_t level, const std::vector<size_t>& index_list, const T h) const
     {/* given 'f1' and 'f2' with different signs of l_operator(f_i) perform one step of bisection:
         f_new = (f1 + f2) / 2
         change whichever l_operator(f_i) has the same sign as l_operator(f_new)
@@ -353,7 +353,7 @@ public:
         return CHI_MIN;
     }
 
-    T bisection(T f1, T l1, const T df, const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const
+    T bisection(T f1, T l1, const T df, const size_t level, const std::vector<size_t>& index_list, const T h) const
     {/* initialize bisection solver -- find two values with opposite value of l_operator -- and start iterating */
         T f_new, f2, l2;
 
@@ -361,7 +361,7 @@ public:
         if (!find_opposite_l_sign(f1, l1, df, f2, l2, level, index_list, h)) return f2;
 
         // iterate
-        for (unsigned i = 0; i < m_max_bisection_steps; ++i){
+        for (size_t i = 0; i < m_max_bisection_steps; ++i){
             f_new = bisection_step(f1, l1, f2, l2, level, index_list, h);
             if (f_new != CHI_MIN)
             {
@@ -374,7 +374,7 @@ public:
     }
 
     
-    T upd_operator(const T f, const unsigned int level, const std::vector<unsigned int>& index_list, const T h) const override
+    T upd_operator(const T f, const size_t level, const std::vector<size_t>& index_list, const T h) const override
     {/* Method for updating solution:
         if df is large, try bisection, otherwise Newton`s method
         try Newton`s method and check for unphysical values */
@@ -388,20 +388,20 @@ public:
         return df_rel < SWITCH_BIS_NEW ? f + df : bisection(f, l, df / 2, level, index_list, h);
     }
 
-    void correct_sol(Grid<3,T>& f, const Grid<3,T>& corr, const unsigned int level) override
+    void correct_sol(Grid<3,T>& f, const Grid<3,T>& corr, const size_t level) override
     {/* Method for correcting solution when going up,
         check for unphysical values */
 
-        const unsigned Ntot  = f.get_Ntot();
+        const size_t Ntot  = f.get_Ntot();
         const T * const rho = this->get_external_field(level, 0);
 
         // bisection variables
-        const unsigned int N = this->get_N(level);
+        const size_t N = this->get_N(level);
         const T h = 1.0/T( N );
-        std::vector<unsigned int> index_list;
+        std::vector<size_t> index_list;
         
         #pragma omp parallel for private(index_list)
-        for(unsigned i = 0; i < Ntot; i++)
+        for(size_t i = 0; i < Ntot; i++)
         {
             // do not change values in screened regions
             if (rho[i] == MARK_CHI_BOUND_COND) continue;
@@ -443,14 +443,14 @@ public:
         bool over_max_steps = _istep_vcycle >= _maxsteps;
 
         /// - print some information
-        auto print_success = [=](unsigned m_conv_stop){
+        auto print_success = [=](size_t m_conv_stop){
             std::cout << "\n\tSUCCESS: res = " << _rms_res << ", err = " << err << ", num_err = " << m_conv_stop << " (istep = " << _istep_vcycle << ")\n";
             };
-        auto print_failure = [=](unsigned m_conv_stop){
+        auto print_failure = [=](size_t m_conv_stop){
             std::cout << "\tFAILURE: res = " << _rms_res << ", err = " << err << ", num_err = " << m_conv_stop << " (istep = " << _istep_vcycle << ")\n";
             };
 
-        auto print_iterate = [=](unsigned m_conv_stop){
+        auto print_iterate = [=](size_t m_conv_stop){
             std::cout << "\tITERATE: res = " << _rms_res << ", err = " << err << ", num_err = " << m_conv_stop << " (istep = " << _istep_vcycle << ")\n";
             };
 
@@ -521,12 +521,12 @@ public:
         return converged;
     }
 
-    void check_solution(unsigned level, Grid<3,T>& chi) override
+    void check_solution(size_t level, Grid<3,T>& chi) override
     {
         for (auto fv : fix_vals[level]) chi[fv.first] = fv.second;
     }
 
-    void set_convergence(double eps, double err_stop, double err_stop_min, double rms_stop_min, unsigned num_fail)
+    void set_convergence(double eps, double err_stop, double err_stop_min, double rms_stop_min, size_t num_fail)
     {
         this->set_epsilon(eps);
         m_err_stop = err_stop;
@@ -535,7 +535,7 @@ public:
         m_num_fail = num_fail;
     }
 
-    void set_bisection_convergence(unsigned max_bi_step, T dchi_stop, T l_stop)
+    void set_bisection_convergence(size_t max_bi_step, T dchi_stop, T l_stop)
     {
         m_max_bisection_steps = max_bi_step;
         m_dchi_stop = dchi_stop;
@@ -558,16 +558,16 @@ public:
 
         T* const f = this->get_y(); // initial guess
         T const* const rho = this->get_external_field(0, 0); // overdensity
-        const unsigned N_tot = this->get_Ntot();
+        const size_t N_tot = this->get_Ntot();
 
         #pragma omp parallel for
-        for (unsigned i = 0; i < N_tot; ++i)
+        for (size_t i = 0; i < N_tot; ++i)
         {
             f[i] = chi_min(rho[i]);
         }
     }
 
-    void set_linear_sol_at_level(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B, unsigned level)
+    void set_linear_sol_at_level(Mesh& rho, const FFTW_PLAN_TYPE& p_F, const FFTW_PLAN_TYPE& p_B, size_t level)
     {/* set chameleon guess to linear prediction at specific level */
         // check we have the right grids
         if (this->get_N(level) != rho.N) throw std::range_error("Mesh of a different size than Grid at current level!");
@@ -588,13 +588,13 @@ public:
         transform_Mesh_to_Grid(rho, this->get_grid(level));
     }
 
-    void set_linear_recursively(unsigned level)
+    void set_linear_recursively(size_t level)
     {
         // we are at the bottom level
         if (level >= this->get_Nlevel()) return;
 
         // extract parameters
-        const unsigned N = this->get_N(level);
+        const size_t N = this->get_N(level);
 
         // create temporary Mesh to compute linear potential, copy density
         Mesh rho(N);
@@ -621,18 +621,18 @@ public:
         set_linear_recursively(1);
     }
 
-    void set_screened(unsigned level = 0)
+    void set_screened(size_t level = 0)
     {/* check solution for invalid values (non-linear regime), fix values in high density regions, try to improve guess in others */
         if (level >= this->get_Nlevel()) return; ///< we are at the bottom level
 
         Grid<3, T>& chi = this->get_grid(level); // guess
-        const unsigned N_tot = this->get_Ntot(level);
-        const unsigned N = this->get_N(level);
+        const size_t N_tot = this->get_Ntot(level);
+        const size_t N = this->get_N(level);
         T* const rho_grid = this->get_external_field(level, 0); // overdensity
-        std::vector<unsigned int> index_list;
+        std::vector<size_t> index_list;
 
         #pragma omp parallel for private(index_list)
-        for (unsigned i = 0; i < N_tot; ++i)
+        for (size_t i = 0; i < N_tot; ++i)
         {
             if (chi[i] <= CHI_MIN) // non-linear regime
             {
@@ -644,7 +644,7 @@ public:
         fix_vals[level].clear();
 
         // writing into map, do not use omp
-        for (unsigned i = 0; i < N_tot; ++i)
+        for (size_t i = 0; i < N_tot; ++i)
         {
             if (chi[i] == CHI_MIN) // fix chameleon to bulk value, set unphysical density to indicate screened regime
             {
@@ -655,7 +655,7 @@ public:
             }
         }
 
-        unsigned num_high_density = fix_vals[level].size();
+        size_t num_high_density = fix_vals[level].size();
         std::cout << "Identified and fixed " << num_high_density << "(" << std::setprecision(2) << num_high_density*100.0/N_tot <<  "%) points at level " << level << "\n";
 
         set_screened(level + 1); ///< recursive call to fix all levels
@@ -753,7 +753,7 @@ public:
 
     void kick_step_w_chi(const Cosmo_Param &cosmo, const FTYPE_t a, const FTYPE_t da, std::vector<Particle_v<FTYPE_t>>& particles, const std::vector< Mesh> &force_field)
     {
-        const unsigned Np = particles.size();
+        const size_t Np = particles.size();
         Vec_3D<FTYPE_t> force;
         const FTYPE_t D = growth_factor(a, cosmo);
         const FTYPE_t OL = cosmo.Omega_L()*pow(a,3);
@@ -774,7 +774,7 @@ public:
         // std::cout << "\tChi = " << force.norm() << "\tChi_x = " << force[0] << "\n";        
         
         #pragma omp parallel for private(force)
-        for (unsigned i = 0; i < Np; i++)
+        for (size_t i = 0; i < Np; i++)
         {
             force.fill(0.);
             assign_from(force_field, particles[i].position, force);
@@ -785,7 +785,7 @@ public:
     }
 
 private:
-    const unsigned N_level_orig;
+    const size_t N_level_orig;
     const FTYPE_t x_0;
 
     void solve_multigrid()

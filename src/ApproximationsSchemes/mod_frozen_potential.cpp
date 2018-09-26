@@ -22,11 +22,11 @@ class LinkedList
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR
-	LinkedList(unsigned par_num, int m, FTYPE_t hc):
+	LinkedList(size_t par_num, int m, FTYPE_t hc):
 	    par_num(par_num), Hc(hc), LL(par_num), HOC(m, m, m) {}
 	
 	// VARIABLES
-	unsigned par_num;
+	size_t par_num;
 	FTYPE_t Hc;
 	std::vector<int> LL;
 	Mesh_base<int> HOC;
@@ -35,7 +35,7 @@ public:
 	void get_linked_list(const std::vector<Particle_v<FTYPE_t>>& particles)
     {
         HOC.assign(-1);
-        for (unsigned i = 0; i < par_num; i++)
+        for (size_t i = 0; i < par_num; i++)
         {
             LL[i] = HOC(particles[i].position/Hc);
             HOC(particles[i].position/Hc) = i;
@@ -65,7 +65,7 @@ void force_short(const Sim_Param &sim, const FTYPE_t D, const LinkedList& linked
     FTYPE_t dr2;
     FTYPE_t dr; // <-- #ifdef FORCE_SHORT_NO_INTER
     const FTYPE_t m = pow((FTYPE_t)sim.box_opt.Ng, 3) / D;
-    const unsigned Nm = sim.box_opt.mesh_num;
+    const size_t Nm = sim.box_opt.mesh_num;
     const FTYPE_t rs2 = pow2(sim.app_opt.rs);
     const FTYPE_t e2 = pow2(sim.box_opt.Ng*0.1); // <-- #ifdef FORCE_SHORT_NO_INTER
 
@@ -92,7 +92,7 @@ void force_short(const Sim_Param &sim, const FTYPE_t D, const LinkedList& linked
 void kick_step_w_pp(const Sim_Param &sim, const FTYPE_t a, const FTYPE_t da,  std::vector<Particle_v<FTYPE_t>>& particles, const  std::vector< Mesh> &force_field,
                     LinkedList& linked_list, Interp_obj& fs_interp)
 {    // 2nd order ODE with long & short range potential
-    const unsigned Np = particles.size();
+    const size_t Np = particles.size();
     Vec_3D<FTYPE_t> force;
     const FTYPE_t D = growth_factor(a, sim.cosmo);
     const FTYPE_t OL = sim.cosmo.Omega_L()*pow(a,3);
@@ -106,7 +106,7 @@ void kick_step_w_pp(const Sim_Param &sim, const FTYPE_t a, const FTYPE_t da,  st
 
     std::cout << "Computing short and long range parts of the potential...\n";
     #pragma omp parallel for private(force)
-    for (unsigned i = 0; i < Np; i++)
+    for (size_t i = 0; i < Np; i++)
 	{
         force.fill(0.);
         assign_from(force_field, particles[i].position, force); // long-range force
@@ -139,7 +139,7 @@ public:
         const FTYPE_t e2 = pow2(sim.box_opt.Ng*0.1); // softening of 10% of average interparticle length
 
         #pragma omp parallel for private(r)
-        for(unsigned i = 0; i < res; i++)
+        for(size_t i = 0; i < res; i++)
         {
             r = i*r0;
             data[0][i] = pow2(r); // store square of r

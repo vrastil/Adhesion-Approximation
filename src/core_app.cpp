@@ -67,7 +67,7 @@ static FTYPE_t max(const Mesh& data){
     return max(data.data);
 }
 
-static void set_unpert_pos_one_par(Vec_3D<int>& unpert_pos, const unsigned par_index, const unsigned par_per_dim, const unsigned Ng)
+static void set_unpert_pos_one_par(Vec_3D<int>& unpert_pos, const size_t par_index, const size_t par_per_dim, const size_t Ng)
 {
 	unpert_pos[0] = (par_index / (par_per_dim * par_per_dim)) * Ng;
 	unpert_pos[1] = ((par_index / par_per_dim) % par_per_dim) * Ng;
@@ -76,18 +76,18 @@ static void set_unpert_pos_one_par(Vec_3D<int>& unpert_pos, const unsigned par_i
 
 static void set_velocity_one_par(const Vec_3D<int>& unpert_pos, Vec_3D<FTYPE_t>& displ_field, const std::vector<Mesh> &vel_field)
 {
-	for (unsigned i = 0; i < 3; i++) displ_field[i] = vel_field[i](unpert_pos);
+	for (size_t i = 0; i < 3; i++) displ_field[i] = vel_field[i](unpert_pos);
 }
 
 void set_unpert_pos(const Sim_Param &sim, std::vector<Particle_x<FTYPE_t>>& particles)
 {
 	Vec_3D<int> unpert_pos;
-    const unsigned par_per_dim = sim.box_opt.par_num_1d;
-    const unsigned Ng = sim.box_opt.Ng;
-    const unsigned Np = sim.box_opt.par_num;
+    const size_t par_per_dim = sim.box_opt.par_num_1d;
+    const size_t Ng = sim.box_opt.Ng;
+    const size_t Np = sim.box_opt.par_num;
 	
 	#pragma omp parallel for private(unpert_pos)
-	for(unsigned i=0; i< Np; i++)
+	for(size_t i=0; i< Np; i++)
 	{
 		set_unpert_pos_one_par(unpert_pos, i, par_per_dim, Ng);		
 		particles[i] = Particle_x<FTYPE_t>(unpert_pos);
@@ -98,12 +98,12 @@ void set_unpert_pos_w_vel(const Sim_Param &sim, std::vector<Particle_v<FTYPE_t>>
 {
 	Vec_3D<int> unpert_pos;
 	Vec_3D<FTYPE_t> velocity;
-	const unsigned par_per_dim = sim.box_opt.par_num_1d;
-    const unsigned Ng = sim.box_opt.Ng;
+	const size_t par_per_dim = sim.box_opt.par_num_1d;
+    const size_t Ng = sim.box_opt.Ng;
     
-    const unsigned Np = sim.box_opt.par_num;
+    const size_t Np = sim.box_opt.par_num;
 	#pragma omp parallel for private(unpert_pos, velocity)
-	for(unsigned i=0; i< Np; i++)
+	for(size_t i=0; i< Np; i++)
 	{
 		set_unpert_pos_one_par(unpert_pos, i, par_per_dim, Ng);
 		set_velocity_one_par(unpert_pos, velocity, vel_field);
@@ -118,13 +118,13 @@ void set_pert_pos(const Sim_Param &sim, const FTYPE_t db, std::vector<Particle_x
 	Vec_3D<FTYPE_t> displ_field;
 	Vec_3D<FTYPE_t> pert_pos;
 	
-    const unsigned par_per_dim = sim.box_opt.par_num_1d;
-    const unsigned Ng = sim.box_opt.Ng;
-    const unsigned Nm = sim.box_opt.mesh_num;
-    const unsigned Np = sim.box_opt.par_num;
+    const size_t par_per_dim = sim.box_opt.par_num_1d;
+    const size_t Ng = sim.box_opt.Ng;
+    const size_t Nm = sim.box_opt.mesh_num;
+    const size_t Np = sim.box_opt.par_num;
 	
 	#pragma omp parallel for private(unpert_pos, displ_field, pert_pos)
-	for(unsigned i=0; i< Np; i++)
+	for(size_t i=0; i< Np; i++)
 	{
 		set_unpert_pos_one_par(unpert_pos, i, par_per_dim, Ng);
 		set_velocity_one_par(unpert_pos, displ_field, vel_field);
@@ -141,16 +141,16 @@ void set_pert_pos(const Sim_Param &sim, const FTYPE_t a, std::vector<Particle_v<
 	Vec_3D<FTYPE_t> velocity;
 	Vec_3D<FTYPE_t> pert_pos;
 	
-	const unsigned par_per_dim = sim.box_opt.par_num_1d;
-	const unsigned Ng = sim.box_opt.Ng;
-    const unsigned Nm = sim.box_opt.mesh_num;
-    const unsigned Np = sim.box_opt.par_num;
+	const size_t par_per_dim = sim.box_opt.par_num_1d;
+	const size_t Ng = sim.box_opt.Ng;
+    const size_t Nm = sim.box_opt.mesh_num;
+    const size_t Np = sim.box_opt.par_num;
 
     const FTYPE_t D = growth_factor(a, sim.cosmo); // growth factor
     const FTYPE_t dDda = growth_change(a, sim.cosmo); // dD / da
 
 	#pragma omp parallel for private(unpert_pos, velocity, pert_pos)
-	for(unsigned i=0; i< Np; i++)
+	for(size_t i=0; i< Np; i++)
 	{
 		set_unpert_pos_one_par(unpert_pos, i, par_per_dim, Ng);
 		set_velocity_one_par(unpert_pos, velocity, vel_field);
@@ -163,22 +163,22 @@ void set_pert_pos(const Sim_Param &sim, const FTYPE_t a, std::vector<Particle_v<
 static void gen_gauss_white_noise(const Sim_Param &sim, Mesh& rho)
 {
 	// Get keys for each slab in the x axis that this rank contains
-	std::vector<unsigned long> slab_keys;
+	std::vector<size_t> slab_keys;
 	slab_keys.resize(rho.N1);
 	GetSlabKeys(slab_keys.data(), 0, rho.N1, sim.run_opt.seed);
 	
-	unsigned long ikey, index;
+	size_t ikey, index;
     FTYPE_t rn1, rn2, rn, tmp;
-    const unsigned N = rho.N;
+    const size_t N = rho.N;
 		
 	#pragma omp parallel for private(ikey, index, rn1, rn2, rn, tmp)
-	for(unsigned long i=0; i < N; ++i)
+	for(size_t i=0; i < N; ++i)
 	{
 		ikey = slab_keys[i];
-		for(unsigned long j=0; j < N; ++j) 
+		for(size_t j=0; j < N; ++j) 
 		{
             #ifndef NOISE_HALF
-			for(unsigned long k=0; k< N; ++k)
+			for(size_t k=0; k< N; ++k)
 			{
                 index = j*N + k; 
 				GetRandomDoublesWhiteNoise(rn1, rn2, rn, ikey, index);
@@ -186,7 +186,7 @@ static void gen_gauss_white_noise(const Sim_Param &sim, Mesh& rho)
                 rho(i, j, k) = rn2 * tmp;
             }
             #else
-            for(unsigned long k=0; k < N/2; ++k) // go over half, use both random numbers
+            for(size_t k=0; k < N/2; ++k) // go over half, use both random numbers
 			{
                 index = j*N + k;
 				GetRandomDoublesWhiteNoise(rn1, rn2, rn, ikey, index);
@@ -217,12 +217,12 @@ static void gen_rho_w_pow_k(const Sim_Param &sim, Mesh& rho)
     const FTYPE_t L = sim.box_opt.box_size;
     const FTYPE_t k0 = 2*PI/L;
     const int phase = sim.run_opt.phase ? 1 : -1;
-    const unsigned N = rho.N;
-    const unsigned len = rho.length / 2;
+    const size_t N = rho.N;
+    const size_t len = rho.length / 2;
     const FTYPE_t mod = phase * pow(N / L, 3/2.); // pair sim, gaussian real -> fourier factor, dimension trans. Pk -> Pk*
     
 	#pragma omp parallel for private(k)
-	for(unsigned i=0; i < len; i++)
+	for(size_t i=0; i < len; i++)
 	{
         k = k0*sqrt(get_k_sq(N, i));
         rho[2*i] *= mod*sqrt(lin_pow_spec(1, k, sim.cosmo));
@@ -255,7 +255,7 @@ void get_rho_from_par(const std::vector<T>& particles, Mesh& rho, const Sim_Para
 {
     printf("Computing the density field from particle positions...\n");
 
-    const unsigned Np = sim.box_opt.par_num;
+    const size_t Np = sim.box_opt.par_num;
     if (particles.size() != Np){
         std::string msg = "Number of particles (" + std::to_string(particles.size()) + ") does not correspond with simulation parameters (" + std::to_string(Np) + ")!";
         throw std::range_error(msg);
@@ -267,7 +267,7 @@ void get_rho_from_par(const std::vector<T>& particles, Mesh& rho, const Sim_Para
     rho.assign(-1.);
     
     #pragma omp parallel for
-    for (unsigned i = 0; i < Np; i++)
+    for (size_t i = 0; i < Np; i++)
     {
         assign_to(rho, particles[i].position*mesh_mod, m);
     }
@@ -278,13 +278,13 @@ int get_vel_from_par(const std::vector<Particle_v<FTYPE_t>>& particles, std::vec
     printf("Computing the velocity field from particle positions...\n");
     const FTYPE_t mesh_mod = (FTYPE_t)sim.box_opt.mesh_num_pwr/sim.box_opt.mesh_num;
     const FTYPE_t m = pow((FTYPE_t)sim.box_opt.Ng_pwr, 3);
-    const unsigned Np = sim.box_opt.par_num;
+    const size_t Np = sim.box_opt.par_num;
 
     for(Mesh& field : vel_field){
         field.assign(0.);
     }
     #pragma omp parallel for
-    for (unsigned i = 0; i < Np; i++)
+    for (size_t i = 0; i < Np; i++)
     {
         assign_to(vel_field, particles[i].position*mesh_mod, particles[i].velocity*(m*mesh_mod));
     }
@@ -308,11 +308,11 @@ void pwr_spec_k(const Mesh &rho_k, Mesh& power_aux)
 	
 	FTYPE_t w_k;
     Vec_3D<int> k_vec;
-    const unsigned NM = rho_k.N;
-    const unsigned half_length = rho_k.length / 2;
+    const size_t NM = rho_k.N;
+    const size_t half_length = rho_k.length / 2;
 
 	#pragma omp parallel for private(w_k, k_vec)
-	for(unsigned i=0; i < half_length;i++)
+	for(size_t i=0; i < half_length;i++)
 	{
 		w_k = 1.;
 		get_k_vec(NM, i, k_vec);
@@ -327,11 +327,11 @@ void pwr_spec_k_init(const Mesh &rho_k, Mesh& power_aux)
     /* same as above but now there is NO w_k correction */
 
     Vec_3D<int> k_vec;
-    const unsigned NM = rho_k.N;
-    const unsigned half_length = rho_k.length / 2;
+    const size_t NM = rho_k.N;
+    const size_t half_length = rho_k.length / 2;
 
 	#pragma omp parallel for private(k_vec)
-	for(unsigned i=0; i < half_length;i++)
+	for(size_t i=0; i < half_length;i++)
 	{
 		get_k_vec(NM, i, k_vec);
         power_aux[2*i] = pow2(rho_k[2*i]) + pow2(rho_k[2*i+1]);
@@ -351,13 +351,13 @@ void vel_pwr_spec_k(const std::vector<Mesh> &vel_field, Mesh& power_aux)
 	FTYPE_t w_k;
     Vec_3D<int> k_vec;
 
-    const unsigned NM = vel_field[0].N;
-    const unsigned half_length = vel_field[0].length / 2;
+    const size_t NM = vel_field[0].N;
+    const size_t half_length = vel_field[0].length / 2;
 
     FTYPE_t vel_div_re, vel_div_im, k; // temporary store of Pk in case vel_field[0] = power_aux
 
 	#pragma omp parallel for private(w_k, k_vec, k, vel_div_re, vel_div_im)
-	for(unsigned i=0; i < half_length; i++)
+	for(size_t i=0; i < half_length; i++)
 	{
         w_k = 1.;
         vel_div_re = vel_div_im = 0;
@@ -374,8 +374,8 @@ void vel_pwr_spec_k(const std::vector<Mesh> &vel_field, Mesh& power_aux)
 	}
 }
 
-void gen_cqty_binned(const FTYPE_t x_min, const FTYPE_t x_max, const unsigned bins_per_decade,
-                    const Mesh &qty_mesh, const unsigned half_length, Data_Vec<FTYPE_t,2>& qty_binned, const FTYPE_t mod_q, const FTYPE_t mod_x)
+void gen_cqty_binned(const FTYPE_t x_min, const FTYPE_t x_max, const size_t bins_per_decade,
+                    const Mesh &qty_mesh, const size_t half_length, Data_Vec<FTYPE_t,2>& qty_binned, const FTYPE_t mod_q, const FTYPE_t mod_x)
 {
     /* bin some complex quantity on mesh in logarithmic bins, assuming:
        Q(x) = mod_q*qty_mesh[2*i]
@@ -388,17 +388,17 @@ void gen_cqty_binned(const FTYPE_t x_min, const FTYPE_t x_max, const unsigned bi
              overloaded function exists when this is not the case
     */
 
-    unsigned req_size = (unsigned)ceil(bins_per_decade*log10(x_max/x_min));
+    size_t req_size = (size_t)ceil(bins_per_decade*log10(x_max/x_min));
     qty_binned.resize(req_size);
     qty_binned.fill(0);
-    std::vector<unsigned> tmp(req_size, 0); // for counts in bins
+    std::vector<size_t> tmp(req_size, 0); // for counts in bins
 
     FTYPE_t x;
     int bin;
     
     /* compute sum x, Q(x), Q^2(x) in bins */
     #pragma omp parallel for private(x, bin)
-    for (unsigned i = 0; i < half_length; i++){
+    for (size_t i = 0; i < half_length; i++){
         x = qty_mesh[2*i+1];
         if ((x <x_max) && (x>=x_min)){
             bin = (int)((log10(x) - log10(x_min)) * bins_per_decade);
@@ -412,8 +412,8 @@ void gen_cqty_binned(const FTYPE_t x_min, const FTYPE_t x_max, const unsigned bi
     }
 
     /* compute average x, Q(x) in bins */
-    unsigned count;
-    for (unsigned j = 0; j < qty_binned.size(); ){
+    size_t count;
+    for (size_t j = 0; j < qty_binned.size(); ){
         count = tmp[j];
         if (count){
             qty_binned[0][j] *= mod_x / count;
@@ -427,7 +427,7 @@ void gen_cqty_binned(const FTYPE_t x_min, const FTYPE_t x_max, const unsigned bi
 }
 
 
-void gen_cqty_binned(const FTYPE_t x_min, const FTYPE_t x_max, const unsigned bins_per_decade,
+void gen_cqty_binned(const FTYPE_t x_min, const FTYPE_t x_max, const size_t bins_per_decade,
                     const Mesh &qty_mesh, Data_Vec<FTYPE_t, 2>& qty_binned, const FTYPE_t mod_q, const FTYPE_t mod_x)
 {
     gen_cqty_binned(x_min, x_max, bins_per_decade, qty_mesh, qty_mesh.length / 2, qty_binned, mod_q, mod_x);
@@ -441,7 +441,7 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_Vec<F
 	gen_cqty_binned(1, sim.box_opt.mesh_num_pwr,  sim.out_opt.bins_per_decade, power_aux, pwr_spec_binned, mod_pk, mod_k);
 }
 
-void gen_pow_spec_binned_init(const Sim_Param &sim, const Mesh &power_aux, const unsigned half_length, Data_Vec<FTYPE_t, 2>& pwr_spec_binned)
+void gen_pow_spec_binned_init(const Sim_Param &sim, const Mesh &power_aux, const size_t half_length, Data_Vec<FTYPE_t, 2>& pwr_spec_binned)
 {
     /* same as above but now  power_aux is storing only data [0...mesh_num], NOT mesh_num_pwr */
     const FTYPE_t mod_pk = pow(sim.box_opt.box_size, 3); // P(k) -> dimensionFULL!
@@ -450,18 +450,18 @@ void gen_pow_spec_binned_init(const Sim_Param &sim, const Mesh &power_aux, const
 	gen_cqty_binned(1, sim.box_opt.mesh_num,  sim.out_opt.bins_per_decade, power_aux, half_length, pwr_spec_binned, mod_pk, mod_k);
 }
 
-template<class P, typename T, unsigned N> // P = everything callable P_k(k), T = float-type, N = number
+template<class P, typename T, size_t N> // P = everything callable P_k(k), T = float-type, N = number
 void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const P &P_k, Data_Vec<T, N>& pwr_spec_binned)
 {
     const T k_max = sim.other_par.k_print.upper;
     const T k_min = sim.other_par.k_print.lower;
     const T log_bin = T(1) / sim.out_opt.bins_per_decade;
     T k;
-    unsigned req_size = (unsigned)ceil( sim.out_opt.bins_per_decade*log10(k_max/k_min));
+    size_t req_size = (size_t)ceil( sim.out_opt.bins_per_decade*log10(k_max/k_min));
     pwr_spec_binned.resize(req_size);
 
     #pragma omp parallel for private(k)
-	for (unsigned j = 0; j < pwr_spec_binned.size(); j++){
+	for (size_t j = 0; j < pwr_spec_binned.size(); j++){
         k = k_min*pow(T(10), j*log_bin);
 		pwr_spec_binned[0][j] = k;
         pwr_spec_binned[1][j] = P_k(k);
@@ -476,12 +476,12 @@ void gen_pot_k(const Mesh& rho_k, Mesh& pot_k)
     */
 	printf("Computing potential in k-space...\n");
     FTYPE_t k2;
-    const unsigned N = rho_k.N; // for case when pot_k is different mesh than vel_field
+    const size_t N = rho_k.N; // for case when pot_k is different mesh than vel_field
     const FTYPE_t d2_k = pow2(2*PI/N); // factor from second derivative with respect to the mesh coordinates
-    const unsigned l_half = rho_k.length/2;
+    const size_t l_half = rho_k.length/2;
 
 	#pragma omp parallel for private(k2)
-	for(unsigned i=0; i < l_half;i++){				
+	for(size_t i=0; i < l_half;i++){				
 		k2 = get_k_sq(N, i);
 		if (k2 == 0){
 			pot_k[2*i] = 0;
@@ -573,12 +573,12 @@ void gen_displ_k_S2(std::vector<Mesh>& vel_field, const Mesh& pot_k, const FTYPE
     Vec_3D<FTYPE_t> k_vec_phys;
     FTYPE_t potential_tmp[2];
     
-    const unsigned N = vel_field[0].N; // for case when pot_k is different mesh than vel_field
+    const size_t N = vel_field[0].N; // for case when pot_k is different mesh than vel_field
     const FTYPE_t d_k = 2*PI/N;  // 2*PI/N comes from derivative WITH RESPECT to the mesh coordinates
-    const unsigned l_half = vel_field[0].length/2;
+    const size_t l_half = vel_field[0].length/2;
 	
 	#pragma omp parallel for private(opt, k_vec, k_vec_phys, potential_tmp)
-	for(unsigned i=0; i < l_half;i++)
+	for(size_t i=0; i < l_half;i++)
 	{
 		potential_tmp[0] = pot_k[2*i]; // prevent overwriting if vel_field[0] == pot_k
         potential_tmp[1] = pot_k[2*i+1]; // prevent overwriting if vel_field[0] == pot_k
@@ -588,7 +588,7 @@ void gen_displ_k_S2(std::vector<Mesh>& vel_field, const Mesh& pot_k, const FTYPE
         if (a == -1) opt = 1.;
         // optimalization for CIC and S2 shaped particle
         else opt = CIC_opt(k_vec_phys, a);
-		for(unsigned j=0; j<3;j++)
+		for(size_t j=0; j<3;j++)
 		{
 			vel_field[j][2*i] = k_vec_phys[j]*potential_tmp[1]*opt;
 			vel_field[j][2*i+1] = -k_vec_phys[j]*potential_tmp[0]*opt;
@@ -603,27 +603,27 @@ void gen_displ_k_cic(std::vector<Mesh>& vel_field, const Mesh& pot_k) {gen_displ
 void gen_dens_binned(const Mesh& rho, std::vector<int> &dens_binned, const Sim_Param &sim)
 {
 	printf("Computing binned density field...\n");
-	unsigned bin;
+	size_t bin;
     FTYPE_t rho_avg;
-    const unsigned Ng_pwr = sim.box_opt.Ng_pwr;
-    const unsigned N = rho.N;
+    const size_t Ng_pwr = sim.box_opt.Ng_pwr;
+    const size_t N = rho.N;
 
 	dens_binned.assign(dens_binned.size(), 0);
     
     #pragma omp parallel for private(bin, rho_avg)
-	for (unsigned i = 0; i < N; i+=Ng_pwr)
+	for (size_t i = 0; i < N; i+=Ng_pwr)
 	{
-		for (unsigned j = 0; j < N; j+=Ng_pwr)
+		for (size_t j = 0; j < N; j+=Ng_pwr)
 		{
-			for (unsigned k = 0; k < N; k+=Ng_pwr)
+			for (size_t k = 0; k < N; k+=Ng_pwr)
 			{
 				// Need to go through all mesh cells [i, i+Ng-1]*[j, j+Ng-1], [k, k+Ng, -1]
 				rho_avg = 0;
-				for (unsigned ii = i; ii < i+Ng_pwr; ii++)
+				for (size_t ii = i; ii < i+Ng_pwr; ii++)
 				{
-					for (unsigned jj = j; jj  < j+Ng_pwr; jj++)
+					for (size_t jj = j; jj  < j+Ng_pwr; jj++)
 					{
-						for (unsigned kk = k; kk < k+Ng_pwr; kk++)
+						for (size_t kk = k; kk < k+Ng_pwr; kk++)
 						{
 							rho_avg+=rho(ii, jj, kk);
 						}

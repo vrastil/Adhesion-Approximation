@@ -36,7 +36,7 @@ typedef long double FTYPE_t;
 
 constexpr FTYPE_t PI = FTYPE_t(3.14159265358979323846); // 20 digits
 
-inline float pow(float base, unsigned exp)
+inline float pow(float base, unsigned long int exp)
 {
     float result = 1.f;
     while (exp)

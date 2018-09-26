@@ -136,9 +136,9 @@ void to_json(json& j, const Box_Opt& box_opt)
 
 void from_json(const json& j, Box_Opt& box_opt)
 {
-    box_opt.mesh_num = j.at("mesh_num").get<unsigned>();
-    box_opt.mesh_num_pwr = j.at("mesh_num_pwr").get<unsigned>();
-    box_opt.par_num_1d = j.at("par_num").get<unsigned>();
+    box_opt.mesh_num = j.at("mesh_num").get<size_t>();
+    box_opt.mesh_num_pwr = j.at("mesh_num_pwr").get<size_t>();
+    box_opt.par_num_1d = j.at("par_num").get<size_t>();
     box_opt.box_size = j.at("box_size").get<FTYPE_t>();
 }
 
@@ -185,8 +185,8 @@ void to_json(json& j, const Run_Opt& run_opt)
 
 void from_json(const json& j, Run_Opt& run_opt)
 {
-    run_opt.nt = j.at("num_thread").get<unsigned>();
-    run_opt.seed = j.at("seed").get<unsigned long>();
+    run_opt.nt = j.at("num_thread").get<size_t>();
+    run_opt.seed = j.at("seed").get<size_t>();
     run_opt.init();
 }
 
@@ -201,8 +201,8 @@ void to_json(json& j, const Out_Opt& out_opt)
 
 void from_json(const json& j, Out_Opt& out_opt)
 {
-    out_opt.bins_per_decade = j.at("bins_per_decade").get<unsigned>();
-    out_opt.points_per_10_Mpc = j.at("points_per_10_Mpc").get<unsigned>();
+    out_opt.bins_per_decade = j.at("bins_per_decade").get<size_t>();
+    out_opt.points_per_10_Mpc = j.at("points_per_10_Mpc").get<size_t>();
     out_opt.out_dir = j.at("out_dir").get<std::string>();
 }
 
@@ -237,8 +237,8 @@ void from_json(const json& j, Test_Opt& test_opt)
 {
     test_opt.R_sphere = j.at("R_sphere").get<FTYPE_t>();
     test_opt.rho_sphere = j.at("rho_sphere").get<FTYPE_t>();
-    test_opt.N_grid = j.at("N_grid").get<unsigned>();
-    test_opt.N_min = j.at("N_min").get<unsigned>();
+    test_opt.N_grid = j.at("N_grid").get<size_t>();
+    test_opt.N_min = j.at("N_min").get<size_t>();
     test_opt.rho_b = j.at("rho_b").get<FTYPE_t>();
 }
 
