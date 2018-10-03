@@ -48,9 +48,9 @@ LIB = lib/fastsim.a
 PCH = include/stdafx.h
 PCH_O = $(PCH).gch
 
-adh_app: CXXFLAGS +=-O2 -D PRECISION=$(PRECISION)
-adh_app: CXXLIB += $(CXXLIBP)
-adh_app: $(OBJ_FILES)
+fastsim: CXXFLAGS +=-Ofast -march=native -D PRECISION=$(PRECISION)
+fastsim: CXXLIB += $(CXXLIBP)
+fastsim: $(OBJ_FILES)
 	+$(COMPILE.fin) -o $@ $^ $(CXXLIB)
 	
 debug: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -Wfloat-conversion -D PRECISION=$(PRECISION)
@@ -107,8 +107,8 @@ $(PCH_O): $(PCH)
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
 # copy binaries into /usr/local
-install:
-	cp adh_app /usr/local/bin
+install: fastsim
+	cp fastsim /usr/local/bin
 # keep libraries
 clean:
 	find . -type f \( -name *~ -o -name *.o -o -name *.d -o -name *.gch \) -exec rm -f {} \;
