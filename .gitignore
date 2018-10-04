@@ -7,7 +7,7 @@ doc/latex
 doc/main.html
 
 # program, object files, libraries, depedency files, scripts
-adh_app
+fastsim
 debug
 tests/test
 *.o

@@ -47,8 +47,9 @@ TEST_OBJ_FILES += $(filter-out $(subst test_,,$(TEST_OBJ_FILES)), $(patsubst src
 LIB = lib/fastsim.a
 PCH = include/stdafx.h
 PCH_O = $(PCH).gch
+ARCH = native
 
-fastsim: CXXFLAGS +=-Ofast -march=native -D PRECISION=$(PRECISION)
+fastsim: CXXFLAGS +=-Ofast -march=$(ARCH) -mtune=$(ARCH) -D PRECISION=$(PRECISION)
 fastsim: CXXLIB += $(CXXLIBP)
 fastsim: $(OBJ_FILES)
 	+$(COMPILE.fin) -o $@ $^ $(CXXLIB)
@@ -112,7 +113,7 @@ install: fastsim
 # keep libraries
 clean:
 	find . -type f \( -name *~ -o -name *.o -o -name *.d -o -name *.gch \) -exec rm -f {} \;
-	rm -f swig/*.cpp adh_app debug tests/test
+	rm -f swig/*.cpp fastsim debug tests/test
 
 cleanall: clean
 		rm -f swig/*.py swig/*.pyc swig/*.so lib/*
@@ -122,4 +123,4 @@ cleanall: clean
 -include $(TEST_OBJ_FILES:.o=.d)
 -include $(PCH_O:.gch=.d)
 
-.PHONY: swig check clean test doc
+.PHONY: swig check clean test doc install
