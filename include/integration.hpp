@@ -8,6 +8,7 @@
 
 #pragma once
 #include "stdafx.h"
+#include <functional>
 #include "precision.hpp"
 #include "templates/class_mesh.hpp"
 #include "templates/class_particles.hpp"
