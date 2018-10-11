@@ -72,7 +72,7 @@ def chi_psi_a(a, chi_opt):
     """ return value of screening potential at given time """
     phi = chi_opt["phi"]
     n = chi_opt["n"]
-    phi *= pow(a, -3.*(2.-n)/(1.-n))
+    phi *= pow(a, (5.-2*n)/(1.-n))
     return phi
 
 def chi_mass_sq(a, cosmo, chi_opt, MPL=1, c_kms=299792.458):

@@ -738,8 +738,8 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
 # RUN ANALYSIS -- CHI COMPARISON *
 # ********************************
 
-def plot_chi_wave_pot(a_file="/home/vrastil/Documents/GIT/Adhesion-Approximation/output/CHI_run/STACK_512m_512p_1024M_2000b_1e-06Y/stack_info.json",
-                      outdir = "/home/vrastil/Documents/GIT/Adhesion-Approximation/report/plots/"):
+def plot_chi_wave_pot(a_file="/home/vrastil/Documents/GIT/FastSim/jobs/output/CHI_run/STACK_512m_512p_1024M_2000b_1e-06Y/stack_info.json",
+                      outdir = "/home/vrastil/Documents/GIT/FastSim/report/plots/"):
     a_sim_info = SimInfo(a_file)
     zs = np.linspace(0,5)
     beta = a_sim_info.chi_opt["beta"]

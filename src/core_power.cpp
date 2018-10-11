@@ -10,6 +10,7 @@
 #include "templates/class_data_vec.hpp"
 #include "params.hpp"
 
+#include <ccl_defs.h>
 #include <ccl_background.h>
 #include <ccl_power.h>
 #include <gsl/gsl_deriv.h>

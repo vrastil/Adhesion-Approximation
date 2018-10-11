@@ -60,7 +60,7 @@ debug: $(OBJ_FILES)
 	+$(COMPILE.fin) -o $@ $^ $(CXXLIB)
 
 # SWIG wrapper build always in double precision, single precision not working now with scipy optimization
-swig: CXXFLAGS +=-Ofast -march=native -D LESSINFO -D PRECISION=2
+swig: CXXFLAGS +=-Ofast -march=$(ARCH) -mtune=$(ARCH) -D LESSINFO -D PRECISION=2
 swig: CXXLIB += -lfftw3 -lfftw3_omp
 swig: $(LIB) swig/*.i
 	swig -python -c++ -DPRECISION=2 -I/usr/local/include/ -I./include -o swig/swig_wrap.cpp swig/all.i
@@ -82,7 +82,7 @@ check: test
 test: CXXFLAGS +=-Og -g -D PRECISION=$(PRECISION)
 test: test_aux
 
-testchi: CXXFLAGS +=-Ofast -march=native -D PRECISION=$(PRECISION)
+testchi: CXXFLAGS +=-Ofast -march=$(ARCH) -mtune=$(ARCH) -D PRECISION=$(PRECISION)
 testchi: test_aux
 
 test_aux: CXXLIB += $(CXXLIBP)

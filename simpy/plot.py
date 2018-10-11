@@ -57,10 +57,10 @@ def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True, get_a=Fals
         else:
             yield [lab] + values
 
-def close_fig(filename, fig, save=True, show=False):
+def close_fig(filename, fig, save=True, show=False, dpi=100):
     """save and/or show figure, close figure"""
     if save:
-        fig.savefig(filename, dpi=500)
+        fig.savefig(filename, dpi=dpi)
     if show:
         plt.show()
     fig.clf()
@@ -877,6 +877,9 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
     ax3.set_ylabel(r"$\chi/M_{pl}$", fontsize=label_size)
     ax2.set_xlabel(r"z", fontsize=label_size)
     
+    # legend
+    legend_manipulation(ax=ax1, loc='upper right')
+
     # subplots
     plt.subplots_adjust(hspace=0, **subplt_adj_sym)
 
