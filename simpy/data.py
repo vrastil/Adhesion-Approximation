@@ -17,9 +17,8 @@ from scipy.optimize import curve_fit
 
 from . import plot
 from .fastsim import Extrap_Pk_Nl_2, Extrap_Pk_Nl_3
-from .struct import SimInfo, StackInfo, Results, Map, insert
+from . import struct
 from . import power as pwr
-from .power import hybrid_pow_spec, get_Data_vec, corr_func, chi_trans_to_supp, sigma_R
 
 def print_exception(file=sys.stdout):
     """ print catched exception with colors """
@@ -60,7 +59,7 @@ def sort_lists(*lists):
     return zip(*sorted(zip(*lists), reverse=True))
 
 def sort_get_z(files, a_sim_info, skip_init=False):
-    # type: (List[str], SimInfo) -> List[str], List[TypeVar(str, float)]
+    # type: (List[str], struct.SimInfo) -> List[str], List[TypeVar(str, float)]
     zs = []
     for a_file in files:
         if a_sim_info.app + '_z' in a_file:
@@ -109,7 +108,7 @@ def load_k_supp(files, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens'):
             k = data[0]
             P_diff = data[1]
             if pk_type == 'chi':
-                P_diff = -1 + chi_trans_to_supp(a[ii], k, P_diff, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
+                P_diff = -1 + pwr.chi_trans_to_supp(a[ii], k, P_diff, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
             idx = (np.abs(k-0.5*k_nyquist_par)).argmin() / 7
             supp[i][0].append(np.mean(P_diff[j*idx:(j+1)*idx]))
             supp[i][1].append(np.std(P_diff[j*idx:(j+1)*idx]))
@@ -222,7 +221,7 @@ def load_plot_dens_histo(files, zs, a_sim_info):
                  for a_file in files]
     plot.plot_dens_histo(data_list, zs, a_sim_info)
 
-def load_check_plot(a_sim_info, key, patterns, # type: SimInfo, str, str,
+def load_check_plot(a_sim_info, key, patterns, # type: struct.SimInfo, str, str,
                     rerun, skip, plot_func,    # type: List[str], List[str], Callable[List[str], List[str], kwargs],
                     info_str='', subdir=None,  # type: str, str
                     **kwargs                   # type: Dict
@@ -257,8 +256,8 @@ def cut_zs_files(zs, files, z=None):
     return zs, files
 
 def get_initialized_StackInfo(a_file, z=None, get_corr=False, get_sigma=False, get_data=False):
-    # get StackInfo
-    a_sim_info = StackInfo(stack_info_file=a_file)
+    # get struct.StackInfo
+    a_sim_info = struct.StackInfo(stack_info_file=a_file)
 
     # get files for extrapolated power spectrum
     zs, files = try_get_zs_files(a_sim_info, subdir='pwr_spec/', patterns='*par*.dat')
@@ -341,7 +340,7 @@ def analyze_all(out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/outp
     files = get_files_in_traverse_dir(out_dir, 'sim_param.json')
     sim_infos = []
     for a_file in files:
-        sim_infos.append(SimInfo(a_file))
+        sim_infos.append(struct.SimInfo(a_file))
 
     if only is not None:
         sim_infos = sim_infos[only]
@@ -510,7 +509,7 @@ def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par):
     idx = slice(idx - sim.out_opt.bins_per_decade, idx)
 
     # define functions which will be used in fitting
-    pk_hyb_func = lambda k, a, A: hybrid_pow_spec(a, k, A, sim.cosmo)
+    pk_hyb_func = lambda k, a, A: pwr.hybrid_pow_spec(a, k, A, sim.cosmo)
     
     # fit data, a = <0, 1>, A = <0, 1>
     sigma = data[2][idx] if len(data) > 2 else None
@@ -520,7 +519,7 @@ def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par):
 
     # get hybrid Extrap
     Pk_par = Extrap_Pk_Nl_2 if sigma is None else Extrap_Pk_Nl_3
-    Pk_par = Pk_par(get_Data_vec(data), sim, popt[1], popt[0])
+    Pk_par = Pk_par(pwr.get_Data_vec(data), sim, popt[1], popt[0])
 
     # return all info in dict
     return {"Pk_par" : Pk_par, "popt" : popt, "pcov" : pcov, 'perr' : perr, 'pcor' : pcor}
@@ -579,7 +578,7 @@ HEADER_PWR_DIFF_HYBRID = HEADER_PWR_DIFF.replace("<STRING_TO_REPLACE>", "'hybrid
 HEADER_CORR = ("This file contains correlation function depending on distance r in units [Mpc/h]."
                "r [Mpc/h]\txsi(r)")
 
-def load_stack_save(stack_info, key, patterns,  # type: StackInfo, str, str,
+def load_stack_save(stack_info, key, patterns,  # type: struct.StackInfo, str, str,
                     rerun, skip, header, fname, # type: List[str], List[str], str, str
                     info_str='', subdir=None    # type: str, str
                    ):
@@ -614,7 +613,7 @@ def load_stack_save(stack_info, key, patterns,  # type: StackInfo, str, str,
 
 def stack_group(rerun=None, skip=None, **kwargs):
     # load & save all info about stack
-    stack_info = StackInfo(**kwargs)
+    stack_info = struct.StackInfo(**kwargs)
 
     # load, stack & save all files
     all_files_steps = [
@@ -677,12 +676,12 @@ def stack_group(rerun=None, skip=None, **kwargs):
 def get_runs_siminfo(in_dir):
     # get all runs
     files = get_files_in_traverse_dir(in_dir, 'sim_param.json')
-    sim_infos =  [SimInfo(a_file) for a_file in files]
+    sim_infos =  [struct.SimInfo(a_file) for a_file in files]
 
     # separate files according to run parameters
     sep_infos = []
     for a_sim_info in sim_infos:
-        insert(a_sim_info, sep_infos)
+        struct.insert(a_sim_info, sep_infos)
     
     return sep_infos
 
@@ -740,7 +739,7 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
 
 def plot_chi_wave_pot(a_file="/home/vrastil/Documents/GIT/FastSim/jobs/output/CHI_run/STACK_512m_512p_1024M_2000b_1e-06Y/stack_info.json",
                       outdir = "/home/vrastil/Documents/GIT/FastSim/report/plots/"):
-    a_sim_info = SimInfo(a_file)
+    a_sim_info = struct.SimInfo(a_file)
     zs = np.linspace(0,5)
     beta = a_sim_info.chi_opt["beta"]
     n = [0.1,0.5,0.7]
@@ -801,7 +800,7 @@ def load_chi_fp_files(group, subdir, patterns):
     group["CHI_zs"] = None
 
 def get_fp_chi_groups(in_dir):
-    res = Results(in_dir)
+    res = struct.Results(in_dir)
     groups = []
     for a_sim_info in res.get_subfiles(app='FP'):
         Nm = a_sim_info.box_opt["mesh_num"]
@@ -833,7 +832,7 @@ def compare_chi_fp(in_dir="/home/vrastil/Documents/GIT/Adhesion-Approximation/ou
     #return data_all
     
     for group, data_g in izip(groups, data_all): # per group
-        # SimInfo, zs should be the same for all FP / CHI
+        # struct.SimInfo, zs should be the same for all FP / CHI
         a_sim_info = group["FP"]
         zs = group["FP_zs"]
         phi_s = [si.chi_opt["phi"] for si in group["CHI"]]
@@ -851,8 +850,8 @@ def compare_chi_fp(in_dir="/home/vrastil/Documents/GIT/Adhesion-Approximation/ou
 # *********************************
 
 def load_get_corr(a_file, z=None):
-    # get StackInfo
-    a_sim_info = StackInfo(stack_info_file=a_file)
+    # get struct.StackInfo
+    a_sim_info = struct.StackInfo(stack_info_file=a_file)
     
     # get files for correlation function
     patterns = '*par*.dat *init*.dat'
@@ -865,14 +864,14 @@ def load_get_corr(a_file, z=None):
     # get correlation function
     get_corr_func(files, zs, a_sim_info)
     
-    # return SimInfo with all loaded data and redshifts
+    # return struct.SimInfo with all loaded data and redshifts
     return a_sim_info, zs
     
 def corr_func_ZA_FP(ZA_file="/home/vrastil/Documents/GIT/Adhesion-Approximation/output/FP_run/STACK_512m_512p_1024M_2000b/stack_info.json",
                     FP_file="/home/vrastil/Documents/GIT/Adhesion-Approximation/output/ZA_run/STACK_512m_512p_1024M_2000b/stack_info.json",
                     outdir = "/home/vrastil/Documents/GIT/Adhesion-Approximation/report/plots/",
                     z=1.):
-    # load SimInfo and get correlation data
+    # load struct.SimInfo and get correlation data
     ZA_ST, z_ZA = load_get_corr(ZA_file, z=z)
     FP_ST, z_FP = load_get_corr(FP_file, z=z_ZA)
     
@@ -896,8 +895,6 @@ def get_pk_broad_k(data_list, sim_infos):
     data_list, sim_infos = zip(*sorted(zip(data_list, sim_infos), key=lambda x : x[0][0][0]))
 
     # go through sorted list from, do not go higher values than k_nyqist / 2
-    # start from k = 2*k_min
-    k_last = data_list[0][0][0] * 2
     k_last = 0
     for data, a_sim_info in zip(data_list, sim_infos):
         k, Pk, Pk_std = data
@@ -955,7 +952,6 @@ def get_plot_mlt_pk_broad(stack_infos):
         groups[app].append(a_sim_info)
 
     zs, Pk_list_extrap, data_all = [], [], []
-    a_sim_info = stack_infos[0]
     for app in app_all:
         infos = groups[app]
         data_list_new, extrap_pk = get_check_pk_broad(infos)

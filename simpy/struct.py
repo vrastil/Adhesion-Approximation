@@ -12,7 +12,6 @@ import os
 import subprocess
 from IPython.display import Image, display
 from .fastsim import Sim_Param
-import data as dt
 
 RESULTS_ALL = {
     "ani" : ["par_ani", "dens_ani"],
@@ -52,6 +51,19 @@ def _is_key_val(key, val):
     # None or unknown type
     else:
         return False
+
+def get_files_in_traverse_dir(a_dir, patterns):
+    # type: (str, str) -> List[str]
+    """ return list of all files in directory which matches 'patterns'
+    support Unix filename pattern matching ('*', '?', [seq], [!seq])
+    and multiple option in 'patterns' (space delimetered) """
+
+    return list(set([ # throw away duplicate files
+        os.path.join(root, name) # full file name
+        for root, _, files in os.walk(a_dir) # go through all subdirectores
+        for pattern in patterns.split() # if multiple patterns given
+        for name in fnmatch.filter(files, pattern) # pattern matching
+        ]))
 
 def create_dir(out_dir):
     if not os.path.exists(out_dir):
@@ -268,7 +280,7 @@ class Results(object):
     def __init__(self, out_dir=''):
         if out_dir != '':
             self.load(out_dir)
-        else: sim_infos = []
+        else: self.sim_infos = []
 
     def sort(self):
         self.sim_infos = sorted(self.sim_infos, key=lambda si: si.app_opt["viscosity"])
@@ -277,7 +289,7 @@ class Results(object):
 
     def load(self, out_dir):
         self.sim_infos = []
-        files = dt.get_files_in_traverse_dir(out_dir, 'stack_info.json')
+        files = get_files_in_traverse_dir(out_dir, 'stack_info.json')
         for a_file in files:
             self.sim_infos.append(StackInfo(stack_info_file=a_file))
         self.sort()

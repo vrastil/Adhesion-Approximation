@@ -15,7 +15,7 @@ from itertools import izip
 from scipy.misc import derivative
 
 from . import power
-from .struct import Map
+from . import struct
 
 matplotlib.rcParams['legend.numpoints'] = 1
 label_size = 20
@@ -156,7 +156,7 @@ def plot_pwr_spec_comparison(data, zs, labels, cosmo,
     if out_dir == 'auto':
         out_dir = "/home/vrastil/Documents/GIT/Adhesion-Approximation/report/plots/"
     out_file = 'pwr_spec.png'
-    suptitle = "Power spectrum"
+    #suptitle = "Power spectrum"
 
     fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
@@ -235,8 +235,8 @@ def plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir='auto', suptitle='auto', sa
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     out_file = 'chi_pwr_diff_fp.png'
-    if suptitle == 'auto':
-        suptitle = "Relative chameleon power spectrum"
+    # if suptitle == 'auto':
+    #     suptitle = "Relative chameleon power spectrum"
 
     fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
@@ -260,7 +260,7 @@ def plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir='auto', suptitle='auto', sa
     # fig.suptitle(suptitle, y=0.99, size=suptitle_size)
     plt.xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
     plt.ylabel(r"${P_\chi(k)}/{P_{FP}(k)}$", fontsize=label_size)
-    figtext = a_sim_info.info_tr().replace("FP: ", "")
+    #figtext = a_sim_info.info_tr().replace("FP: ", "")
     legend_manipulation(ax, figtext="", loc='upper left', bbox_to_anchor=(0.0,1.0))
     plt.subplots_adjust(**subplt_adj_sym)
     close_fig(out_dir + out_file, fig, save=save, show=show)
@@ -421,7 +421,7 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="sigma_R", save=True, 
         elif a_eff_type == "Pk":
             #extract variables
             cosmo = stack_info.sim.cosmo
-            eff = Map(stack_info.data["eff_time"])
+            eff = struct.Map(stack_info.data["eff_time"])
             a = eff.a
             a_eff = eff.a_eff
             a_err = eff.perr[:,0]
@@ -516,7 +516,8 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
     close_fig(out_dir + out_file, fig, save=save, show=show)
 
 
-def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='', save=True, show=False):
+def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='', save=True, show=False,
+                                    vmin=-1, vmax=1):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if pk_type == "dens":
@@ -554,8 +555,6 @@ def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto',
     a = np.array([a[0]-da/2] + [1 / (1 + z) + da/2 for z in zs])
     k = data_array[0][0]
     supp = data_array[:, 1, :] # extract Pk, shape = (zs, k)
-    vmin = -1
-    vmax = 1
     if pk_type != 'chi':
         linthresh = 0.2
         linscale = 1.0
@@ -687,7 +686,7 @@ def plot_par_last_slice(files, files_t, zs, a_sim_info, out_dir='auto', save=Tru
     num_track = len(np.loadtxt(files_t[0]))
     data = np.loadtxt(files_t[-1])
     x_t, y_t = data[:, 0], data[:, 1]
-    num_steps = len(x_t) / num_track
+    num_steps = len(x_t) // num_track
     x_t = [x_t[i:i + num_steps] for i in xrange(0, len(x_t), num_steps)]
     y_t = [y_t[i:i + num_steps] for i in xrange(0, len(y_t), num_steps)]
 
@@ -786,7 +785,7 @@ def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=Fals
     close_fig(out_dir + 'dens_z%.2f.png' % z, fig, save=save, show=show)
 
 def plot_dens_two_slices(files, zs, a_sim_info, out_dir='auto', save=True, show=False):
-    half = len(files) / 2
+    half = len(files) // 2
     rho, z = np.loadtxt(files[half])[:, 2], zs[half]
     plot_dens_one_slice(rho, z, a_sim_info,
                         out_dir=out_dir, save=save, show=show)
@@ -842,7 +841,7 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     out_file = 'chi_evol.png'
-    suptitle = "Evolution of Chameleon"
+    # suptitle = "Evolution of Chameleon"
     fig = plt.figure(figsize=fig_size)
     cosmo = a_sim_info.sim.cosmo
     if chi_opt is None:
@@ -935,8 +934,7 @@ def plot_all_single_supp(res, out_dir='/home/vrastil/Documents/GIT/Adhesion-Appr
     subfiles = res.get_subfiles(Nm=Nm, Np=Np, L=L, nu=nu, rs=rs, app=app)
     for a_sim_info in subfiles:
         res.load_k_supp(a_sim_info)
-        plot_supp_lms(a_sim_info.supp[0], a_sim_info.a, a_sim_info,
-                      k_lms=a_sim_info.supp[1], show=True, save=True)
+        plot_supp_lms(a_sim_info.supp, a_sim_info.a, a_sim_info, show=True)
 
 
 from matplotlib.patches import Ellipse
