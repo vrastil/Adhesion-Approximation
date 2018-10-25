@@ -1,0 +1,6 @@
+[submodule "jobs"]
+	path = jobs
+	url = git@github.com:vrastil/FastSim-Jobs.git
+[submodule "install"]
+	path = install
+	url = git@github.com:vrastil/FastSim-Container.git
