@@ -257,32 +257,38 @@ public:
     {
         const Out_Opt& out_opt = APP.sim.out_opt;
 
-        /* Printing positions */
-        if (out_opt.print_par_pos) print_position(APP);
+        #pragma omp parallel
+        {
+        #pragma omp single
+        {
+            /* Printing positions */
+            if (out_opt.print_par_pos) print_position(APP);
 
-        /* Get discrete density from particles */
-        if (out_opt.get_rho) get_rho_from_par(APP.particles, APP.power_aux[0], APP.sim);
-        
-        /* Printing density */
-        if (out_opt.print_dens) print_density(APP);
+            /* Get discrete density from particles */
+            if (out_opt.get_rho) get_rho_from_par(APP.particles, APP.power_aux[0], APP.sim);
+            
+            /* Printing density */
+            if (out_opt.print_dens) print_density(APP);
 
-        /* Compute power spectrum and bin it */
-        if (out_opt.get_pwr) get_binned_power_spec(APP);
+            /* Compute power spectrum and bin it */
+            if (out_opt.get_pwr) get_binned_power_spec(APP);
 
-        /* Printing power spectrum */
-        if (out_opt.print_pwr) print_power_spec(APP);
+            /* Printing power spectrum */
+            if (out_opt.print_pwr) print_power_spec(APP);
 
-        /* Extrapolate power spectrum beyond range of simulation box */
-        if (out_opt.get_pk_extrap){
-            const Extrap_Pk<FTYPE_t, 2> P_k(APP.pwr_spec_binned, APP.sim);
-            /* Print extrapolated power spectrum */
-            if (out_opt.print_extrap_pwr) print_extrap_pwr(APP, P_k);
-            /* Printing correlation function */
-            if (out_opt.print_corr) print_corr(APP, P_k);
-        }
+            /* Extrapolate power spectrum beyond range of simulation box */
+            if (out_opt.get_pk_extrap){
+                const Extrap_Pk<FTYPE_t, 2> P_k(APP.pwr_spec_binned, APP.sim);
+                /* Print extrapolated power spectrum */
+                if (out_opt.print_extrap_pwr) print_extrap_pwr(APP, P_k);
+                /* Printing correlation function */
+                if (out_opt.print_corr) print_corr(APP, P_k);
+            }
 
-        /* Velocity power spectrum */
-        if (out_opt.print_vel_pwr && get_vel_from_par(APP.particles, APP.power_aux, APP.sim)) print_vel_pwr(APP);
+            /* Velocity power spectrum */
+            if (out_opt.print_vel_pwr && get_vel_from_par(APP.particles, APP.power_aux, APP.sim)) print_vel_pwr(APP);
+        } // end of #pragma omp single
+        } // end of #pragma omp parallel
     }
 
     // CREATE WORKING DIRECTORY STRUCTURE
@@ -356,15 +362,27 @@ private:
 
     void print_position(const App_Var<T>& APP) const
     {/* Printing positions */
-        print_par_pos_cut_small(APP.particles, APP.sim, out_dir_app, z_suffix());
-        track.print_track_par(APP.sim, out_dir_app, z_suffix());
+        #pragma omp task
+        {
+            print_par_pos_cut_small(APP.particles, APP.sim, out_dir_app, z_suffix());
+        }
+        #pragma omp task
+        {
+            track.print_track_par(APP.sim, out_dir_app, z_suffix());
+        }
     }
 
     void print_density(App_Var<T>& APP) const
     {/* Printing density */
-        gen_dens_binned(APP.power_aux[0], APP.dens_binned, APP.sim);    
-        print_rho_map(APP.power_aux[0], APP.sim, out_dir_app, z_suffix());
-        print_dens_bin(APP.dens_binned, out_dir_app, z_suffix());
+        gen_dens_binned(APP.power_aux[0], APP.dens_binned, APP.sim);
+        #pragma omp task
+        {
+            print_rho_map(APP.power_aux[0], APP.sim, out_dir_app, z_suffix());
+        }
+        #pragma omp task
+        {
+            print_dens_bin(APP.dens_binned, out_dir_app, z_suffix());
+        }
     }
 
     void get_binned_power_spec(App_Var<T>& APP) const
@@ -376,6 +394,7 @@ private:
 
     void print_power_spec(App_Var<T>& APP)
     {/* Printing power spectrum */
+        #pragma omp task
         print_pow_spec(APP.pwr_spec_binned, out_dir_app, "_par" + z_suffix());
         if (!is_init_pwr_spec_0){
             APP.pwr_spec_binned_0 = APP.pwr_spec_binned;
@@ -383,8 +402,11 @@ private:
             is_init_pwr_spec_0 = true;
         }
         FTYPE_t D_now = growth_factor(a, APP.sim.cosmo);
+        #pragma omp task
         print_pow_spec_diff(APP.pwr_spec_binned, APP.pwr_spec_binned_0, D_now / D_init, out_dir_app, "_par" + z_suffix());
+        #pragma omp task
         print_pow_spec_diff(APP.pwr_spec_binned, pwr_spec_input, D_now, out_dir_app, "_input" + z_suffix());
+        #pragma omp task
         print_pow_spec_diff(APP.pwr_spec_binned, APP.pwr_spec_binned_0, pwr_spec_input, D_now, D_init,
                             out_dir_app, "_hybrid" + z_suffix());
     }
