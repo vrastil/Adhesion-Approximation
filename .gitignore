@@ -5,6 +5,8 @@ report/
 doc/html
 doc/latex
 doc/main.html
+lib/
+bin/
 
 # program, object files, libraries, depedency files, scripts
 fastsim
@@ -19,6 +21,11 @@ tests/test
 *.pbs
 *.ipynb
 *.pyc
+
+# ccl
+include/ccl*
+include/fftlog.h
+share
 
 # swig files, created symlinks
 swig/*.cpp

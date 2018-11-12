@@ -25,12 +25,12 @@ endif
 
 # gsl and ccl libraries
 CXXLIB +=-lgsl -lgslcblas
-CXXLIB +=-lccl
+CXXLIB +=-lccl -L./lib
 
 # supress boost warning
 CXXFLAGS +=-Wno-deprecated-declarations
 
-COMPILE.cc = $(CXX) $(CXXFLAGS) -c -I./include# -D_GLIBCXX_USE_CXX11_ABI=0
+COMPILE.cc = $(CXX) $(CXXFLAGS) -c -I./include -I./src/3party/JSON# -D_GLIBCXX_USE_CXX11_ABI=0
 COMPILE.fin = $(CXX) $(CXXFLAGS) $(CXXLIB_PATH)
 
 # get list of object files for each cpp file in src/, src/**/
@@ -49,14 +49,14 @@ PCH = include/stdafx.h
 PCH_O = $(PCH).gch
 ARCH = native
 
-fastsim: CXXFLAGS +=-Ofast -march=$(ARCH) -mtune=$(ARCH) -D PRECISION=$(PRECISION)
-fastsim: CXXLIB += $(CXXLIBP)
-fastsim: $(OBJ_FILES)
+bin/fastsim: CXXFLAGS +=-Ofast -march=$(ARCH) -mtune=$(ARCH) -D PRECISION=$(PRECISION)
+bin/fastsim: CXXLIB += $(CXXLIBP)
+bin/fastsim: $(OBJ_FILES)
 	+$(COMPILE.fin) -o $@ $^ $(CXXLIB)
 	
-debug: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -Wfloat-conversion -D PRECISION=$(PRECISION)
-debug: CXXLIB += $(CXXLIBP)
-debug: $(OBJ_FILES)
+bin/debug: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -Wfloat-conversion -D PRECISION=$(PRECISION)
+bin/debug: CXXLIB += $(CXXLIBP)
+bin/debug: $(OBJ_FILES)
 	+$(COMPILE.fin) -o $@ $^ $(CXXLIB)
 
 # SWIG wrapper build always in double precision, single precision not working now with scipy optimization
@@ -75,6 +75,13 @@ $(LIB): $(OBJ_FILES)
 
 doc:
 	cd doc/ && doxygen Doxyfile && ln -sf html/index.html main.html
+
+CCL_config:
+	mkdir -p src/3party/CCL/build
+	cd src/3party/CCL/build && cmake -DCMAKE_INSTALL_PREFIX=../../../../ ..
+
+CCL:
+	cd src/3party/CCL/build && $(MAKE) && $(MAKE) install
 
 check: test
 	./tests/test
@@ -108,16 +115,23 @@ $(PCH_O): $(PCH)
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
 # copy binaries into /usr/local
-install: fastsim
-	cp fastsim /usr/local/bin
+install: bin/fastsim
+	cp -r bin/* /usr/local/bin/
+	cp -r include/ccl* /usr/local/include
+	cp -r include/fftlog.h /usr/local/include
+	cp -r lib/* /usr/local/lib/
+	cp -r share/* /usr/local/share/
 # keep libraries
 clean:
 	find . -type f \( -name *~ -o -name *.o -o -name *.d -o -name *.gch \) -exec rm -f {} \;
 	rm -f swig/*.cpp fastsim debug tests/test
 
 cleanall: clean
-		rm -f swig/*.py swig/*.pyc swig/*.so lib/*
+		rm -rf swig/*.py swig/*.pyc swig/*.so lib/*
 		rm -rf doc/html doc/latex doc/main.html
+
+cleanccl:
+	rm -rf src/3party/CCL/build
 
 -include $(OBJ_FILES:.o=.d)
 -include $(TEST_OBJ_FILES:.o=.d)
