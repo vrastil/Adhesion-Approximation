@@ -1,0 +1,23 @@
+path_classifiers:
+  test:
+    - "tests/*"
+  docs:
+    - README.md
+    - LICENSE.txt
+
+extraction:
+  cpp:
+    prepare:    # Customizable step used by all languages.
+      packages:
+        - g++-6
+    after_prepare:    # Customizable step used by all languages.
+      - mkdir -p $LGTM_WORKSPACE/latest-gcc-symlinks
+      - ln -s /usr/bin/g++-6 $LGTM_WORKSPACE/latest-gcc-symlinks/g++
+      - ln -s /usr/bin/gcc-6 $LGTM_WORKSPACE/latest-gcc-symlinks/gcc
+      - export PATH=$LGTM_WORKSPACE/latest-gcc-symlinks:$PATH
+    before_index:    # Customizable step used by all languages.
+      - export BOOST_DIR=$LGTM_SRC/boost
+
+    index:    # Customizable step used by all languages.
+      build_command:
+        - make -j2 -s 
