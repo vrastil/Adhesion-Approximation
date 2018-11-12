@@ -259,7 +259,7 @@ double ln_growth_factor(double log_a, void* parameters)
 }
 
 template<typename T>
-int get_nearest(const T val, const std::vector<T>& vec)
+size_t get_nearest(const T val, const std::vector<T>& vec)
 {   // assume data in 'vec' are ordered, vec[0] < vec[1] < ...
     return lower_bound(vec.begin(), vec.end(), val) - vec.begin();
 }

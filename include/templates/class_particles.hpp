@@ -37,7 +37,7 @@ public:
      * @param i axis
      * @return T& position
      */
-	T &operator[](int i){ return position[i]; }
+	T &operator[](unsigned int i){ return position[i]; }
 	const T& operator[](int i) const{ return position[i]; }
 };
 

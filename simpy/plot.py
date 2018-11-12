@@ -20,7 +20,8 @@ from . import struct
 matplotlib.rcParams['legend.numpoints'] = 1
 label_size = 20
 suptitle_size = 25
-fig_size = (9, 7)
+# fig_size = (15, 11)
+fig_size = (14, 9)
 subplt_adj_sym = {'left' : 0.15, 'right' : 0.95, 'bottom' : 0.15, 'top' : 0.95}
 
 matplotlib.rcParams.update({'font.size': 15})
@@ -139,12 +140,13 @@ def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False,
     ax.plot(k, P_0, '-')
     ax.plot(k, P_i, '-')
     
-    fig.suptitle(suptitle, y=0.99, size=suptitle_size)
+    # fig.suptitle(suptitle, y=0.99, size=suptitle_size)
     ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
     ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=label_size)
 
     # LEGEND manipulation
-    legend_manipulation(ax, a_sim_info.info_tr())
+    # legend_manipulation(ax, a_sim_info.info_tr())
+    legend_manipulation(ax, "")
 
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show)
@@ -154,7 +156,7 @@ def plot_pwr_spec_comparison(data, zs, labels, cosmo,
     """" Plot power spectrum -- points and extrapolated values,
     show 'true' linear Pk at the initial and final redshift """
     if out_dir == 'auto':
-        out_dir = "/home/vrastil/Documents/GIT/Adhesion-Approximation/report/plots/"
+        out_dir = '/home/vrastil/Documents/GIT/FastSim/report/plots/'
     out_file = 'pwr_spec.png'
     #suptitle = "Power spectrum"
 
@@ -217,12 +219,13 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, err=False, out_dir='aut
                              facecolor='darkgrey', alpha=0.5)
 
     add_nyquist_info(ax, a_sim_info)
-    fig.suptitle(suptitle, y=0.99, size=suptitle_size)
+    #fig.suptitle(suptitle, y=0.99, size=suptitle_size)
     ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
     ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=label_size)
 
     # LEGEND manipulation
-    legend_manipulation(ax, a_sim_info.info_tr())
+    # legend_manipulation(ax, a_sim_info.info_tr())
+    legend_manipulation(ax, "")
 
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show)
@@ -305,12 +308,13 @@ def plot_slope(data, zs, a_sim_info, Pk_list_extrap,
     slope = get_slope(k, P_0_nl)
     ax.plot(k, slope, '-', label=r"$\Lambda$CDM (nl)")
 
-    fig.suptitle(suptitle, y=0.99, size=suptitle_size)
+    #fig.suptitle(suptitle, y=0.99, size=suptitle_size)
     ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
     ax.set_ylabel(r"d$\ln P(k)/$d$\ln k$]", fontsize=label_size)
 
     # LEGEND manipulation
-    legend_manipulation(ax, a_sim_info.info_tr())
+    # legend_manipulation(ax, a_sim_info.info_tr())
+    legend_manipulation(ax, "")
 
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show)
@@ -509,10 +513,11 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax.yaxis.grid(True)
 
-    fig.suptitle(suptitle, y=0.99, size=suptitle_size)
+    #fig.suptitle(suptitle, y=0.99, size=suptitle_size)
     plt.xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
     plt.ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$", fontsize=25)
-    legend_manipulation(ax, a_sim_info.info_tr())
+    # legend_manipulation(ax, a_sim_info.info_tr())
+    legend_manipulation(ax, "")
     close_fig(out_dir + out_file, fig, save=save, show=show)
 
 
@@ -918,13 +923,14 @@ def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle=
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax.yaxis.grid(True)
         
-    fig.suptitle(suptitle, y=0.99, size=suptitle_size)
+    #fig.suptitle(suptitle, y=0.99, size=suptitle_size)
     plt.xlabel(r"$a(t)$", fontsize=label_size)
     plt.ylabel(
         r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$", fontsize=25)
     
     # legend
-    legend_manipulation(figtext=a_sim_info.info_tr())
+    # legend_manipulation(figtext=a_sim_info.info_tr())
+    legend_manipulation(figtext="")
 
     close_fig(out_dir + out_file, fig, save=save, show=show)
 

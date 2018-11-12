@@ -825,7 +825,7 @@ def my_shape(data):
 def compare_chi_fp(in_dir="/home/vrastil/Documents/GIT/Adhesion-Approximation/output/",
                    out_dir="/home/vrastil/Documents/GIT/Adhesion-Approximation/report/plots/",
                    use_group=None):
-    groups = get_fp_chi_groups(in_dir)    
+    groups = get_fp_chi_groups(in_dir)
     if use_group is not None:
         groups = [groups[use_group]]
     data_all = [get_data_fp_chi_ratio(group) for group in groups]

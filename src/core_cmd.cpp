@@ -40,7 +40,7 @@ void validate(boost::any& v, const std::vector<std::string>& values, Dvector*, i
 void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
     std::string config_file;
     Dvector print_z;
-    int trans_func_cmd, matter_pwr_cmd, baryons_pwr_cmd, mass_func_cmd;
+    unsigned int trans_func_cmd, matter_pwr_cmd, baryons_pwr_cmd, mass_func_cmd;
     // options ONLY on command line
     po::options_description generic("Generic options");
     generic.add_options()
@@ -96,10 +96,10 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
         ("Omega_b,B", po::value<FTYPE_t>(&sim.cosmo.Omega_b)->default_value(0.05, "0.05"), "density of baryons relative to the critical density")
         ("Omega_m,C", po::value<FTYPE_t>(&sim.cosmo.Omega_m)->default_value(0.25, "0.25"), "density of CDM relative to the critical density")
         ("Hubble,H", po::value<FTYPE_t>(&sim.cosmo.H0)->default_value(67, "67"), "Hubble constant in units of km/s/Mpc")
-        ("transfer_function", po::value<int>(&trans_func_cmd)->default_value(3), "transfer function type")
-        ("matter_power_spectrum", po::value<int>(&matter_pwr_cmd)->default_value(1), "matter power spectrum type")
-        ("baryons_power_spectrum", po::value<int>(&baryons_pwr_cmd)->default_value(0), "baryons power spectrum type")
-        ("mass_function", po::value<int>(&mass_func_cmd)->default_value(2), "mass function type")
+        ("transfer_function", po::value<unsigned int>(&trans_func_cmd)->default_value(3), "transfer function type")
+        ("matter_power_spectrum", po::value<unsigned int>(&matter_pwr_cmd)->default_value(1), "matter power spectrum type")
+        ("baryons_power_spectrum", po::value<unsigned int>(&baryons_pwr_cmd)->default_value(0), "baryons power spectrum type")
+        ("mass_function", po::value<unsigned int>(&mass_func_cmd)->default_value(2), "mass function type")
         ("n_s,n", po::value<FTYPE_t>(&sim.cosmo.ns)->default_value(1.), "spectral index of the scale-free power spectrum")
         ("sigma8,s", po::value<FTYPE_t>(&sim.cosmo.sigma8)->default_value(1.), "normalization of the power spectrum at R = 8 Mpc/h")
         ("smoothing_k,k", po::value<FTYPE_t>(&sim.cosmo.k2_G)->default_value(0.),

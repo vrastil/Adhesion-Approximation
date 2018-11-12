@@ -26,8 +26,8 @@ public:
     std::array<std::vector<T>, N> data;
 
     // ELEMENT ACCESS
-    std::vector<T>& operator[](int i){ return data[i]; }
-    const std::vector<T>& operator[](int i) const { return data[i]; }
+    std::vector<T>& operator[](size_t i){ return data[i]; }
+    const std::vector<T>& operator[](size_t i) const { return data[i]; }
 
     // CAPACITY
     size_t dim() const noexcept{ return data.size(); }

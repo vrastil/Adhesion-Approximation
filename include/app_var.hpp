@@ -60,7 +60,7 @@ protected:
     // OTHER FIELDS
     Data_Vec<FTYPE_t, 2> corr_func_binned, pwr_spec_binned, pwr_spec_binned_0, vel_pwr_spec_binned_0;
 	FFTW_PLAN_TYPE p_F, p_B, p_F_pwr, p_B_pwr;
-	std::vector<int> dens_binned;
+	std::vector<size_t> dens_binned;
 	
 	// METHODS
     FTYPE_t a();

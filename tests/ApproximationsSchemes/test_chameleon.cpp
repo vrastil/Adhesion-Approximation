@@ -35,19 +35,19 @@ void init_overdensity(Sim_Param& sim, Mesh& rho, MultiGrid<3, CHI_PREC_t>& rho_g
     const size_t N = sim.test_opt.N_grid;
     const FTYPE_t R = sim.test_opt.R_sphere;
     const FTYPE_t rho_0 = sim.test_opt.rho_sphere;
-    const int N_tot = rho.length;
+    const size_t N_tot = rho.length;
 
     FTYPE_t mean_rho;
     FTYPE_t R2_;
     const FTYPE_t R2 = R*R;
-    int ix0 = N/2, iy0 = N/2, iz0 = N/2;
+    size_t ix0 = N/2, iy0 = N/2, iz0 = N/2;
     
     #pragma omp parallel for private(R2_)
-    for (int ix = 0; ix < N; ++ix)
+    for (size_t ix = 0; ix < N; ++ix)
     {
-        for (int iy = 0; iy < N; ++iy)
+        for (size_t iy = 0; iy < N; ++iy)
         {
-            for (int iz = 0; iz < N; ++iz)
+            for (size_t iz = 0; iz < N; ++iz)
             {
                 R2_ = pow2(ix - ix0) + pow2(iy - iy0) + pow2(iz - iz0);
                 rho(ix, iy, iz) = R2_ <= R2 ? rho_0 : 0;
@@ -93,12 +93,12 @@ void print_mesh(const std::string& file_name, const Mesh& pot, const FTYPE_t mod
     auto print_r_chi = [&File, ix0, iy0, iz0,&pot, mod]
                        (int i, int j, int k)
                         {
-                            Vec_3D<int> pos(i, j, k); //< to call periodic position on Mesh
+                            Vec_3D<size_t> pos(i, j, k); //< to call periodic position on Mesh
                             FTYPE_t r = sqrt(pow2(i - ix0) + pow2(j - iy0) + pow2(k - iz0));
                             File << r << "\t" << pot(pos) + mod  << "\n";
                         };
 
-    for (int i = 0; i < N; ++i)
+    for (size_t i = 0; i < N; ++i)
     {
         print_r_chi(i, i, i);
         print_r_chi(i, i, i + 1);

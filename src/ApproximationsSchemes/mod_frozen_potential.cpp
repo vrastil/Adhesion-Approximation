@@ -22,14 +22,14 @@ class LinkedList
 {
 public:
 	// CONSTRUCTORS & DESTRUCTOR
-	LinkedList(size_t par_num, int m, FTYPE_t hc):
+	LinkedList(size_t par_num, size_t m, FTYPE_t hc):
 	    par_num(par_num), Hc(hc), LL(par_num), HOC(m, m, m) {}
 	
 	// VARIABLES
 	size_t par_num;
 	FTYPE_t Hc;
-	std::vector<int> LL;
-	Mesh_base<int> HOC;
+	std::vector<size_t> LL;
+	Mesh_base<size_t> HOC;
 	
 	// METHODS
 	void get_linked_list(const std::vector<Particle_v<FTYPE_t>>& particles)
@@ -60,7 +60,7 @@ void force_short(const Sim_Param &sim, const FTYPE_t D, const LinkedList& linked
 				 const Vec_3D<FTYPE_t>& position, Vec_3D<FTYPE_t>& force, Interp_obj& fs_interp)
 {	// Calculate short range force in position, force is added
     #define FORCE_SHORT_NO_INTER
-	int p;
+	size_t p;
 	Vec_3D<FTYPE_t> dr_vec;
     FTYPE_t dr2;
     FTYPE_t dr; // <-- #ifdef FORCE_SHORT_NO_INTER
@@ -129,7 +129,7 @@ class App_Var_FP_mod::FP_ppImpl
 public:
     FP_ppImpl(const Sim_Param &sim): linked_list(sim.box_opt.par_num, sim.app_opt.M, sim.app_opt.Hc)
     {
-        memory_alloc = sizeof(int)*(linked_list.HOC.length+linked_list.par_num);
+        memory_alloc = sizeof(size_t)*(linked_list.HOC.length+linked_list.par_num);
 
         // precompute short range force
         size_t res = size_t(sim.app_opt.rs/0.05)+1; // force resolution 5% of mesh cell

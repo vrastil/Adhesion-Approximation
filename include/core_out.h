@@ -60,4 +60,4 @@ template <class T>
 void print_par_pos_cut_small(const std::vector<T>& particles, const Sim_Param &sim, std::string out_dir, std::string suffix);
 void print_rho_map(const Mesh& rho, const Sim_Param &sim, std::string out_dir, std::string suffix);
 void print_projected_rho(const Mesh& delta, const Sim_Param &sim, std::string out_dir, std::string suffix);
-void print_dens_bin(const std::vector<int> &dens_binned, std::string out_dir, std::string suffix);
+void print_dens_bin(const std::vector<size_t> &dens_binned, std::string out_dir, std::string suffix);

@@ -41,7 +41,7 @@ void convolution_y1(Mesh& potential, const std::vector<FTYPE_t>& gaussian, const
 	// multi-thread index is y3
     // compute f1 (x1, y2, y3)
 
-    const int N = potential.N;
+    const unsigned int N = potential.N;
     std::vector<FTYPE_t> exp_aux;
     
 	#pragma omp parallel for private(exp_aux)
@@ -63,7 +63,7 @@ void convolution_y1(Mesh& potential, const std::vector<FTYPE_t>& gaussian, const
 void convolution_y2(Mesh& potential, const std::vector<FTYPE_t>& gaussian){
     // compute f2 (x1, x2, y3)
 
-    const int N = potential.N;
+    const unsigned int N = potential.N;
 	std::vector<FTYPE_t> sum_aux;
 	std::vector<FTYPE_t> exp_aux;
 
@@ -92,7 +92,7 @@ void convolution_y2(Mesh& potential, const std::vector<FTYPE_t>& gaussian){
 void convolution_y3(Mesh& potential, const std::vector<FTYPE_t>& gaussian){
     // compute f3 (x1, x2, x3) == expotential(x, b)
 
-    const int N = potential.N;
+    const unsigned int N = potential.N;
 	std::vector<FTYPE_t> sum_aux;
     std::vector<FTYPE_t> exp_aux;
 

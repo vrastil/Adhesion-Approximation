@@ -28,8 +28,8 @@ void gen_displ_k_S2(std::vector<Mesh>& vel_field, const Mesh& pot_k, const FTYPE
 
 template <class T>
 void get_rho_from_par(const std::vector<T>& particles, Mesh& rho, const Sim_Param &sim);
-int get_vel_from_par(const std::vector<Particle_v<FTYPE_t>>& particles, std::vector<Mesh>& vel_field, const Sim_Param &sim);
-int get_vel_from_par(const std::vector<Particle_x<FTYPE_t>>& particles, std::vector<Mesh>& vel_field, const Sim_Param &sim);
+bool get_vel_from_par(const std::vector<Particle_v<FTYPE_t>>& particles, std::vector<Mesh>& vel_field, const Sim_Param &sim);
+bool get_vel_from_par(const std::vector<Particle_x<FTYPE_t>>& particles, std::vector<Mesh>& vel_field, const Sim_Param &sim);
 
 void pwr_spec_k(const Mesh &rho_k, Mesh& power_aux);
 void pwr_spec_k_init(const Mesh &rho_k, Mesh& power_aux);
@@ -38,4 +38,4 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_Vec<F
 void gen_pow_spec_binned_init(const Sim_Param &sim, const Mesh &power_aux, const size_t half_length, Data_Vec<FTYPE_t, 2>& pwr_spec_binned);
 template<class P, typename T, size_t N> // P = everything callable P_k(k), T = float-type, N = number
 void gen_pow_spec_binned_from_extrap(const Sim_Param &sim, const P &P_k, Data_Vec<T, N>& pwr_spec_binned);
-void gen_dens_binned(const Mesh& rho, std::vector<int> &dens_binned, const Sim_Param &sim);
+void gen_dens_binned(const Mesh& rho, std::vector<size_t> &dens_binned, const Sim_Param &sim);

@@ -19,7 +19,7 @@ const char *humanSize(uint64_t bytes){
 	char const *suffix[] = {"B", "KB", "MB", "GB", "TB"};
 	char length = sizeof(suffix) / sizeof(suffix[0]);
 
-	int i = 0;
+	size_t i = 0;
 	double dblBytes = bytes;
 
 	if (bytes > 1024) {
@@ -83,7 +83,7 @@ public:
         std::cout << "Writing positons of " << par_ids.size() << " tracked particles into file " << file_name << "\n";
         File << "# This file contains positions of particles in units [Mpc/h].\n"
                 "# x [Mpc/h]\tz [Mpc/h]\n";
-        for (int i=0; i < par_ids.size(); i++){
+        for (size_t i=0; i < par_ids.size(); i++){
             for (const auto& par_pos_step : par_pos){
                 x = par_pos_step[i].position[0];
                 y = par_pos_step[i].position[1];
@@ -99,16 +99,16 @@ private:
     {
         size_t num_track_par = sqr_num_track_par*sqr_num_track_par;
         par_ids.reserve(num_track_par);
-        int x, y, z;
+        size_t x, y, z;
         FTYPE_t s;
         y = par_num_per_dim / 2; // middle of the cube
         s = par_num_per_dim / FTYPE_t(4*(sqr_num_track_par+1)); // quarter of the cube
-        for (int i=1; i<=sqr_num_track_par;i++)
+        for (size_t i=1; i<=sqr_num_track_par;i++)
         {
-            z = (int)(s*i);
-            for (int j=1; j<=sqr_num_track_par;j++)
+            z = (size_t)(s*i);
+            for (size_t j=1; j<=sqr_num_track_par;j++)
             {
-                x = (int)(s*j);
+                x = (size_t)(s*j);
                 par_ids.push_back(x*par_num_per_dim*par_num_per_dim+y*par_num_per_dim+z);
             }
         }
@@ -331,7 +331,7 @@ public:
 
 private:
     // PRIVATE PRINTING
-    int print_every, step;
+    unsigned int print_every, step;
     Tracking track;
     Interp_obj pwr_spec_input;
 

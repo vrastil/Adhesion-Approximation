@@ -67,21 +67,21 @@ static FTYPE_t max(const Mesh& data){
     return max(data.data);
 }
 
-static void set_unpert_pos_one_par(Vec_3D<int>& unpert_pos, const size_t par_index, const size_t par_per_dim, const size_t Ng)
+static void set_unpert_pos_one_par(Vec_3D<size_t>& unpert_pos, const size_t par_index, const size_t par_per_dim, const size_t Ng)
 {
 	unpert_pos[0] = (par_index / (par_per_dim * par_per_dim)) * Ng;
 	unpert_pos[1] = ((par_index / par_per_dim) % par_per_dim) * Ng;
 	unpert_pos[2] = (par_index % par_per_dim) * Ng;
 }
 
-static void set_velocity_one_par(const Vec_3D<int>& unpert_pos, Vec_3D<FTYPE_t>& displ_field, const std::vector<Mesh> &vel_field)
+static void set_velocity_one_par(const Vec_3D<size_t>& unpert_pos, Vec_3D<FTYPE_t>& displ_field, const std::vector<Mesh> &vel_field)
 {
 	for (size_t i = 0; i < 3; i++) displ_field[i] = vel_field[i](unpert_pos);
 }
 
 void set_unpert_pos(const Sim_Param &sim, std::vector<Particle_x<FTYPE_t>>& particles)
 {
-	Vec_3D<int> unpert_pos;
+	Vec_3D<size_t> unpert_pos;
     const size_t par_per_dim = sim.box_opt.par_num_1d;
     const size_t Ng = sim.box_opt.Ng;
     const size_t Np = sim.box_opt.par_num;
@@ -96,7 +96,7 @@ void set_unpert_pos(const Sim_Param &sim, std::vector<Particle_x<FTYPE_t>>& part
 
 void set_unpert_pos_w_vel(const Sim_Param &sim, std::vector<Particle_v<FTYPE_t>>& particles, const std::vector<Mesh> &vel_field)
 {
-	Vec_3D<int> unpert_pos;
+	Vec_3D<size_t> unpert_pos;
 	Vec_3D<FTYPE_t> velocity;
 	const size_t par_per_dim = sim.box_opt.par_num_1d;
     const size_t Ng = sim.box_opt.Ng;
@@ -114,7 +114,7 @@ void set_unpert_pos_w_vel(const Sim_Param &sim, std::vector<Particle_v<FTYPE_t>>
 void set_pert_pos(const Sim_Param &sim, const FTYPE_t db, std::vector<Particle_x<FTYPE_t>>& particles, const std::vector< Mesh> &vel_field)
 {
     printf("\nSetting initial positions of particles...\n");
-	Vec_3D<int> unpert_pos;
+	Vec_3D<size_t> unpert_pos;
 	Vec_3D<FTYPE_t> displ_field;
 	Vec_3D<FTYPE_t> pert_pos;
 	
@@ -137,7 +137,7 @@ void set_pert_pos(const Sim_Param &sim, const FTYPE_t db, std::vector<Particle_x
 void set_pert_pos(const Sim_Param &sim, const FTYPE_t a, std::vector<Particle_v<FTYPE_t>>& particles, const std::vector< Mesh> &vel_field)
 {
     printf("\nSetting initial positions and velocitis of particles...\n");
-	Vec_3D<int> unpert_pos;
+	Vec_3D<size_t> unpert_pos;
 	Vec_3D<FTYPE_t> velocity;
 	Vec_3D<FTYPE_t> pert_pos;
 	
@@ -273,7 +273,7 @@ void get_rho_from_par(const std::vector<T>& particles, Mesh& rho, const Sim_Para
     }
 }
 
-int get_vel_from_par(const std::vector<Particle_v<FTYPE_t>>& particles, std::vector<Mesh>& vel_field, const Sim_Param &sim)
+bool get_vel_from_par(const std::vector<Particle_v<FTYPE_t>>& particles, std::vector<Mesh>& vel_field, const Sim_Param &sim)
 {
     printf("Computing the velocity field from particle positions...\n");
     const FTYPE_t mesh_mod = (FTYPE_t)sim.box_opt.mesh_num_pwr/sim.box_opt.mesh_num;
@@ -288,13 +288,13 @@ int get_vel_from_par(const std::vector<Particle_v<FTYPE_t>>& particles, std::vec
     {
         assign_to(vel_field, particles[i].position*mesh_mod, particles[i].velocity*(m*mesh_mod));
     }
-    return 1;
+    return true;
 }
 
-int get_vel_from_par(const std::vector<Particle_x<FTYPE_t>>& particles, std::vector<Mesh>& vel_field, const Sim_Param &sim)
+bool get_vel_from_par(const std::vector<Particle_x<FTYPE_t>>& particles, std::vector<Mesh>& vel_field, const Sim_Param &sim)
 {
     printf("WARNING! Trying to compute velocity divergence with particle positions only! Skipping...\n");
-    return 0;
+    return false;
 }
 
 void pwr_spec_k(const Mesh &rho_k, Mesh& power_aux)
@@ -316,7 +316,7 @@ void pwr_spec_k(const Mesh &rho_k, Mesh& power_aux)
 	{
 		w_k = 1.;
 		get_k_vec(NM, i, k_vec);
-		for (int j = 0; j < 3; j++) if (k_vec[j] != 0) w_k *= pow(sin(k_vec[j]*PI/NM)/(k_vec[j]*PI/NM), ORDER + 1);
+		for (unsigned int j = 0; j < 3; j++) if (k_vec[j] != 0) w_k *= pow(sin(k_vec[j]*PI/NM)/(k_vec[j]*PI/NM), ORDER + 1);
         power_aux[2*i] = (rho_k[2*i]*rho_k[2*i] + rho_k[2*i+1]*rho_k[2*i+1])/(w_k*w_k);
 		power_aux[2*i+1] = k_vec.norm();
 	}
@@ -362,7 +362,7 @@ void vel_pwr_spec_k(const std::vector<Mesh> &vel_field, Mesh& power_aux)
         w_k = 1.;
         vel_div_re = vel_div_im = 0;
 		get_k_vec(NM, i, k_vec);
-        for (int j = 0; j < 3; j++){
+        for (unsigned int j = 0; j < 3; j++){
             k = k_vec[j]*2*PI / NM;
             if (k != 0) w_k *= pow(sin(k/2)/(k/2), ORDER + 1);
             vel_div_re += vel_field[j][2*i]*k; // do not care about Re <-> Im in 2*PI*i/N, norm only
@@ -394,14 +394,14 @@ void gen_cqty_binned(const FTYPE_t x_min, const FTYPE_t x_max, const size_t bins
     std::vector<size_t> tmp(req_size, 0); // for counts in bins
 
     FTYPE_t x;
-    int bin;
+    size_t bin;
     
     /* compute sum x, Q(x), Q^2(x) in bins */
     #pragma omp parallel for private(x, bin)
     for (size_t i = 0; i < half_length; i++){
         x = qty_mesh[2*i+1];
         if ((x <x_max) && (x>=x_min)){
-            bin = (int)((log10(x) - log10(x_min)) * bins_per_decade);
+            bin = (size_t)((log10(x) - log10(x_min)) * bins_per_decade);
             #pragma omp atomic
             qty_binned[0][bin] += x;
             #pragma omp atomic
@@ -509,7 +509,7 @@ static FTYPE_t CIC_opt(Vec_3D<FTYPE_t> k_vec, const FTYPE_t a)
 #define N_MAX 1
 #ifndef N_MAX
     FTYPE_t s2 = pow2(S2_shape(k_vec.norm2(), a));
-    for(int j=0; j<3; j++)
+    for(unsigned int j=0; j<3; j++)
     {
         if (k_vec[j] != 0) s2 /= pow2(sin(k_vec[j] / 2) / (k_vec[j] / 2)); //W (k) for CIC (order 1)
     }
@@ -520,7 +520,7 @@ static FTYPE_t CIC_opt(Vec_3D<FTYPE_t> k_vec, const FTYPE_t a)
 	
 	G_n = 0;
 	U2 = 1;
-	for (int j = 0; j < 3; j++) U2 *= (1+2*pow2(cos(k_vec[j]/2)))/3; // inf sum of U_n^2 for CIC
+	for (unsigned int j = 0; j < 3; j++) U2 *= (1+2*pow2(cos(k_vec[j]/2)))/3; // inf sum of U_n^2 for CIC
 	for (int n1 = -N_MAX; n1 < N_MAX + 1; n1++)
 	{
 		k_n[0] = k_vec[0] + 2 * PI*n1;
@@ -532,7 +532,7 @@ static FTYPE_t CIC_opt(Vec_3D<FTYPE_t> k_vec, const FTYPE_t a)
 				k_n[2] = k_vec[2] + 2 * PI*n3;
 				U_n = 1.;
 				k2n = 0;
-				for(int j=0; j<3; j++)
+				for(unsigned int j=0; j<3; j++)
 				{
 					if (k_n[j] != 0) U_n *= sin(k_n[j] / 2) / (k_n[j] / 2);
 					k2n += pow2(k_n[j]);
@@ -540,7 +540,7 @@ static FTYPE_t CIC_opt(Vec_3D<FTYPE_t> k_vec, const FTYPE_t a)
                 U_n = pow2(U_n); // W(k) for CIC (order 1)
 				if (k2n != 0)
 				{
-					for(int j=0; j<3; j++)
+					for(unsigned int j=0; j<3; j++)
 					{										
 						G_n += k_vec[j]* // i.D(k)
 						k_n[j]/k2n*pow2(S2_shape(k2n, a))* // R*(k_n) /i
@@ -600,7 +600,7 @@ void gen_displ_k(std::vector<Mesh>& vel_field, const Mesh& pot_k) {gen_displ_k_S
 
 void gen_displ_k_cic(std::vector<Mesh>& vel_field, const Mesh& pot_k) {gen_displ_k_S2(vel_field, pot_k, 0.);}
 
-void gen_dens_binned(const Mesh& rho, std::vector<int> &dens_binned, const Sim_Param &sim)
+void gen_dens_binned(const Mesh& rho, std::vector<size_t> &dens_binned, const Sim_Param &sim)
 {
 	printf("Computing binned density field...\n");
 	size_t bin;
@@ -630,7 +630,7 @@ void gen_dens_binned(const Mesh& rho, std::vector<int> &dens_binned, const Sim_P
 					}
 				}
 				rho_avg /= pow((FTYPE_t)Ng_pwr, 3);
-                bin = (int)((rho_avg+1)/0.1);
+                bin = (size_t)((rho_avg+1)/0.1);
                 if (bin >= dens_binned.size()) bin = dens_binned.size() - 1;
                 // if (bin >= dens_binned.capacity()) dens_binned.resize(bin+1);
                 #pragma omp atomic

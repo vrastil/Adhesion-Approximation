@@ -54,7 +54,7 @@ std::string std_out_dir(const std::string& pre_subdir, const Sim_Param &sim)
     /// directory name = YYMMDD_HHMMSS_m_p_M_b
     const std::string out_dir = sim.out_opt.out_dir + pre_subdir + currentDateTime() + "_" + std::to_string(sim.box_opt.mesh_num) +"m_" +
                       std::to_string(sim.box_opt.Ng) + "p_" + std::to_string(sim.box_opt.mesh_num_pwr) +"M_" + 
-                      std::to_string((int)sim.box_opt.box_size) + "b";
+                      std::to_string((size_t)sim.box_opt.box_size) + "b";
 
     /// check if directory exists
     if (!fs::exists(fs::path(out_dir.c_str()))) return out_dir + "/";
@@ -358,7 +358,7 @@ void print_projected_rho(const Mesh& delta, const Sim_Param &sim, std::string ou
 	}
 }
 
-void print_dens_bin(const std::vector<int> &dens_binned, std::string out_dir, std::string suffix){
+void print_dens_bin(const std::vector<size_t> &dens_binned, std::string out_dir, std::string suffix){
     out_dir += "rho_bin/";
     std::string file_name = out_dir + "rho_bin" + suffix + ".dat";
     Ofstream File(file_name);

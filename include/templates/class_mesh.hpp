@@ -12,8 +12,8 @@
 #include "class_vec_3d.hpp"
 
 // from "core_mesh.hpp"
-template<typename T> void get_per(Vec_3D<T> &position, int per);
-template<typename T> void get_per(Vec_3D<T> &position, int perx, int pery, int perz);
+template<typename T> void get_per(Vec_3D<T> &position, size_t per);
+template<typename T> void get_per(Vec_3D<T> &position, size_t perx, size_t pery, size_t perz);
 
 /**
  * @class:	Mesh_base
@@ -42,25 +42,25 @@ public:
     }
 	
 	// OPERATORS
-	T &operator[](int i){ return data[i]; }
-	const T &operator[](int i) const{ return data[i]; }
+	T &operator[](size_t i){ return data[i]; }
+	const T &operator[](size_t i) const{ return data[i]; }
 	
-	T& operator()(int i, int j, int k){ return data[i*N2*N3+j*N3+k]; }
-	const T& operator()(int i, int j, int k) const{ return data[i*N2*N3+j*N3+k]; }
+	T& operator()(size_t i, size_t j, size_t k){ return data[i*N2*N3+j*N3+k]; }
+	const T& operator()(size_t i, size_t j, size_t k) const{ return data[i*N2*N3+j*N3+k]; }
 	
-	T& operator()(int i, int j){ return data[i*N3+j]; }
-	const T& operator()(int i, int j) const{ return data[i*N3+j]; }
+	T& operator()(size_t i, size_t j){ return data[i*N3+j]; }
+	const T& operator()(size_t i, size_t j) const{ return data[i*N3+j]; }
 
     template<typename U> T& operator()(Vec_3D<U> pos)
     {
         get_per(pos, N1, N2, N3);
-        return data[int(pos[0])*N2*N3+int(pos[1])*N3+int(pos[2])]; 
+        return data[size_t(pos[0])*N2*N3+size_t(pos[1])*N3+size_t(pos[2])]; 
     }
 
 	template<typename U> const T& operator()(Vec_3D<U> pos) const
     {
         get_per(pos, N1, N2, N3);
-        return data[int(pos[0])*N2*N3+int(pos[1])*N3+int(pos[2])]; 
+        return data[size_t(pos[0])*N2*N3+size_t(pos[1])*N3+size_t(pos[2])]; 
     }
 	
 	Mesh_base& operator+=(const T& rhs)
@@ -134,12 +134,12 @@ public:
     template<typename U> FTYPE_t& operator()(Vec_3D<U> pos)
     {
         get_per(pos, N);
-        return data[int(pos[0])*N2*N3+int(pos[1])*N3+int(pos[2])]; 
+        return data[size_t(pos[0])*N2*N3+size_t(pos[1])*N3+size_t(pos[2])]; 
     }
 
 	template<typename U> const FTYPE_t& operator()(Vec_3D<U> pos) const
     {
         get_per(pos, N);
-        return data[int(pos[0])*N2*N3+int(pos[1])*N3+int(pos[2])]; 
+        return data[size_t(pos[0])*N2*N3+size_t(pos[1])*N3+size_t(pos[2])]; 
     }
 };

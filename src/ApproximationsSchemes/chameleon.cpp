@@ -180,7 +180,7 @@ public:
     std::vector<std::map<size_t, T>> fix_vals; ///< <index, value>
 
 
-    ChiSolver(size_t N, int Nmin, const Sim_Param& sim, bool verbose = true) :
+    ChiSolver(size_t N, unsigned int Nmin, const Sim_Param& sim, bool verbose = true) :
         MultiGridSolver<3, T>(N, Nmin, verbose), n(sim.chi_opt.n), beta(sim.chi_opt.beta), chi_0(2*beta*MPL*sim.chi_opt.phi),
         phi_prefactor( // prefactor for Poisson equation for gravitational potential, [] = (h/Mpc)^2
             // 4*pi*G*rho_m,0 + computing units [Mpc/h]
