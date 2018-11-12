@@ -8,7 +8,6 @@
 
 #pragma once
 #include "stdafx.h"
-#include <ccl_defs.h>
 #include <ccl_config.h>
 #include <ccl_core.h>
 #include <map>

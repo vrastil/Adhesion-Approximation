@@ -9,7 +9,6 @@
 #include "core_out.h"
 #include "core_mesh.h"
 #include "core_power.h"
-#include <ccl_defs.h>
 #include <ccl_error.h>
 #include <json.hpp>
 #include <iomanip>
