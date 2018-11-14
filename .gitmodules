@@ -9,4 +9,4 @@
 	url = https://git.overleaf.com/12405738mdksbwtpwknc
 [submodule "src/3party/CCL"]
 	path = src/3party/CCL
-	url = git@github.com:LSSTDESC/CCL.git
+	url = https://github.com/LSSTDESC/CCL.git

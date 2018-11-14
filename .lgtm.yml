@@ -10,23 +10,23 @@ extraction:
     prepare:
       packages: numpy
   cpp:
-    prepare:    # Customizable step used by all languages.
+    prepare:
       packages:
         - g++-6 python
         - git cmake swig
-        - ibgsl-dev libfftw3-dev pkg-config
+        - libgsl-dev libfftw3-dev pkg-config
         - libboost-dev libboost-filesystem-dev libboost-program-options-dev libboost-system-dev
-    after_prepare:    # Customizable step used by all languages.
+    after_prepare:
       - mkdir -p $LGTM_WORKSPACE/bin
       - mkdir -p $LGTM_WORKSPACE/include
       - mkdir -p $LGTM_WORKSPACE/lib
       - ln -s /usr/bin/g++-6 $LGTM_WORKSPACE/bin/g++
       - ln -s /usr/bin/gcc-6 $LGTM_WORKSPACE/bin/gcc
       - export PATH=$LGTM_WORKSPACE/latest-gcc-symlinks:$PATH
-    configure:    # Customizable step used by all languages.
+    configure:
       - make CCL_config
       - make -j2 CCL
 
-    index:    # Customizable step used by all languages.
+    index:
       build_command:
         - make -j2 -s 
