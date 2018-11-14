@@ -6,17 +6,26 @@ path_classifiers:
     - LICENSE.txt
 
 extraction:
+  python:
+    prepare:
+      packages: numpy
   cpp:
     prepare:    # Customizable step used by all languages.
       packages:
-        - g++-6
+        - g++-6 python
+        - git cmake swig
+        - ibgsl-dev libfftw3-dev pkg-config
+        - libboost-dev libboost-filesystem-dev libboost-program-options-dev libboost-system-dev
     after_prepare:    # Customizable step used by all languages.
-      - mkdir -p $LGTM_WORKSPACE/latest-gcc-symlinks
-      - ln -s /usr/bin/g++-6 $LGTM_WORKSPACE/latest-gcc-symlinks/g++
-      - ln -s /usr/bin/gcc-6 $LGTM_WORKSPACE/latest-gcc-symlinks/gcc
+      - mkdir -p $LGTM_WORKSPACE/bin
+      - mkdir -p $LGTM_WORKSPACE/include
+      - mkdir -p $LGTM_WORKSPACE/lib
+      - ln -s /usr/bin/g++-6 $LGTM_WORKSPACE/bin/g++
+      - ln -s /usr/bin/gcc-6 $LGTM_WORKSPACE/bin/gcc
       - export PATH=$LGTM_WORKSPACE/latest-gcc-symlinks:$PATH
-    before_index:    # Customizable step used by all languages.
-      - export BOOST_DIR=$LGTM_SRC/boost
+    configure:    # Customizable step used by all languages.
+      - make CCL_config
+      - make -j2 CCL
 
     index:    # Customizable step used by all languages.
       build_command:
