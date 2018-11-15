@@ -1,6 +1,6 @@
 #include <catch.hpp>
 #include "test.hpp"
-#include "templates/class_mesh.hpp"
+#include "class_mesh.hpp"
 
 TEST_CASE( "UNIT TEST: mesh class {Mesh_base<T>}", "[core]" )
 {

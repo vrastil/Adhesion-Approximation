@@ -5,7 +5,7 @@
  * @author Michal Vrastil
  * @date 2018-07-11
  */
-#include "ApproximationsSchemes/mod_frozen_potential.hpp"
+#include "mod_frozen_potential.hpp"
 #include "core_app.h"
 #include "core_mesh.h"
 #include "integration.hpp"

@@ -1,6 +1,6 @@
 #include <catch.hpp>
 #include "../test.hpp"
-#include "ApproximationsSchemes/mod_frozen_potential.cpp"
+#include "mod_frozen_potential.cpp"
 
 // void force_test(Sim_Param& sim)
 // {

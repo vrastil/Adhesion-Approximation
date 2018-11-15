@@ -5,7 +5,7 @@
  * @author Michal Vrastil
  * @date 2018-07-11
  */
-#include "ApproximationsSchemes/zeldovich.hpp"
+#include "zeldovich.hpp"
 #include "core_app.h"
 #include "core_mesh.h"
 #include "params.hpp"

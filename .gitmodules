@@ -1,12 +1,16 @@
 [submodule "jobs"]
 	path = jobs
-	url = git@github.com:vrastil/FastSim-Jobs.git
+	url = https://github.com/vrastil/FastSim-Jobs.git
 [submodule "install"]
 	path = install
-	url = git@github.com:vrastil/FastSim-Container.git
-[submodule "doc/MNRAS"]
-	path = doc/MNRAS
-	url = https://git.overleaf.com/12405738mdksbwtpwknc
+	url = https://github.com/vrastil/FastSim-Container.git
 [submodule "src/3party/CCL"]
 	path = src/3party/CCL
-	url = https://github.com/LSSTDESC/CCL.git
+	url = https://github.com/vrastil/CCL.git
+	branch = FastSim
+[submodule "src/3party/MultiGridSolver"]
+	path = src/3party/MultiGridSolver
+	url = https://github.com/vrastil/MultiGridSolver.git
+[submodule "src/3party/findFFTW"]
+	path = src/3party/findFFTW
+	url = https://github.com/egpbos/findFFTW.git

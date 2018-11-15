@@ -6,7 +6,7 @@
  * @date 2018-07-11
  */
 
-#include "ApproximationsSchemes/frozen_potential.hpp"
+#include "frozen_potential.hpp"
 #include "core_app.h"
 #include "core_mesh.h"
 #include "integration.hpp"
