@@ -7,14 +7,14 @@
  * @note:   chameleon field is in units of 'chi_a = 2*beta*Mpl*Phi_s*a^3/1-n)
  */
 
-#include "ApproximationsSchemes/chameleon.hpp"
+#include "chameleon.hpp"
 #include "core_app.h"
 #include "core_power.h"
 #include "core_mesh.h"
 #include "core_out.h"
 #include "integration.hpp"
 #include "params.hpp"
-#include "MultiGridSolver/multigrid_solver.h"
+#include "multigrid_solver.h"
 
 #include <algorithm>
 

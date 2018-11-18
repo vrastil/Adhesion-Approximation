@@ -1,6 +1,6 @@
 #include <catch.hpp>
 #include "../test.hpp"
-#include "ApproximationsSchemes/chameleon.cpp"
+#include "chameleon.cpp"
 
 namespace{
 

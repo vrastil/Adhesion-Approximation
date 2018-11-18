@@ -6,7 +6,7 @@
  * @date 2018-07-11
  */
 
-#include "ApproximationsSchemes/adhesion.hpp"
+#include "adhesion.hpp"
 #include "core_app.h"
 #include "core_mesh.h"
 #include "integration.hpp"

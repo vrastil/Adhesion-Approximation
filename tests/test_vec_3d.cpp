@@ -1,6 +1,6 @@
 // #include <catch.hpp>
 // #include "test.hpp"
-// #include "templates/class_vec_3d.hpp"
+// #include "class_vec_3d.hpp"
 
 // TEST_CASE( "UNIT TEST: vector class {Vec_3D<T>}", "[core]" )
 // {

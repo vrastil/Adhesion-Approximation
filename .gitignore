@@ -12,6 +12,7 @@ bin/
 fastsim
 debug
 tests/test
+build/
 *.o
 *.d
 *.a

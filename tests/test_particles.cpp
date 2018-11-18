@@ -1,6 +1,6 @@
 #include <catch.hpp>
 #include "test.hpp"
-#include "templates/class_particles.hpp"
+#include "class_particles.hpp"
 #include "precision.hpp"
     
 TEST_CASE( "UNIT TEST: particle class {Particle_x}", "[core]" )

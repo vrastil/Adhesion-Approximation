@@ -1,7 +1,7 @@
 // C++ code to wrap
 %{
 #include "precision.hpp"
-#include "templates/class_data_vec.hpp"
+#include "class_data_vec.hpp"
 #include "params.hpp"
 %}
 

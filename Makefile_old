@@ -1,0 +1,97 @@
+
+
+
+LIB = lib/fastsim.a
+PCH = include/stdafx.h
+PCH_O = $(PCH).gch
+ARCH = native
+
+bin/fastsim: CXXFLAGS +=-Ofast -march=$(ARCH) -mtune=$(ARCH) -D PRECISION=$(PRECISION)
+bin/fastsim: CXXLIB += $(CXXLIBP)
+bin/fastsim: $(OBJ_FILES)
+	+$(COMPILE.fin) -o $@ $^ $(CXXLIB)
+	
+bin/debug: CXXFLAGS +=-Og -g -Wall -Wunused-parameter -Wfloat-conversion -D PRECISION=$(PRECISION)
+bin/debug: CXXLIB += $(CXXLIBP)
+bin/debug: $(OBJ_FILES)
+	+$(COMPILE.fin) -o $@ $^ $(CXXLIB)
+
+# SWIG wrapper build always in double precision, single precision not working now with scipy optimization
+swig: CXXFLAGS +=-Ofast -march=$(ARCH) -mtune=$(ARCH) -D LESSINFO -D PRECISION=2
+swig: CXXLIB += -lfftw3 -lfftw3_omp
+swig: $(LIB) swig/*.i
+	swig -python -c++ -DPRECISION=2 -I/usr/local/include/ -I./include -o swig/swig_wrap.cpp swig/all.i
+	$(COMPILE.cc) -c -I/usr/include/python2.7 -o swig/swig_wrap.o swig/swig_wrap.cpp
+	+$(COMPILE.fin) -fuse-linker-plugin -shared -o swig/_fastsim.so swig/swig_wrap.o $(LIB) $(CXXLIB)
+	ln -sf ${CURDIR}/swig/_fastsim.so simpy/
+	ln -sf ${CURDIR}/swig/_fastsim.so lib/
+	ln -sf ${CURDIR}/swig/fastsim.py simpy/
+
+$(LIB): $(OBJ_FILES)
+	gcc-ar rcs $@ $^
+
+doc:
+	cd doc/ && doxygen Doxyfile && ln -sf html/index.html main.html
+
+CCL_config:
+	mkdir -p src/3party/CCL/build
+	cd src/3party/CCL/build && cmake -DCMAKE_INSTALL_PREFIX=../../../../ ..
+
+CCL:
+	cd src/3party/CCL/build && $(MAKE) && $(MAKE) install
+
+check: test
+	./tests/test
+
+test: CXXFLAGS +=-Og -g -D PRECISION=$(PRECISION)
+test: test_aux
+
+testchi: CXXFLAGS +=-Ofast -march=$(ARCH) -mtune=$(ARCH) -D PRECISION=$(PRECISION)
+testchi: test_aux
+
+test_aux: CXXLIB += $(CXXLIBP)
+test_aux: COMPILE.cc += -I./src
+test_aux: tests/test
+
+tests/test: $(TEST_OBJ_FILES)
+	+$(COMPILE.fin) -o tests/test $^ $(CXXLIB)
+
+# generic rule for building object files
+%.o: %.cpp $(PCH_O)
+	$(COMPILE.cc) -o $@ $<
+
+# specific rule for building test object files which DO have its own source file
+tests/%.o: tests/%.cpp $(PCH_O)
+	$(COMPILE.cc) -o $@ $<
+
+# specific rule for building test object files which do NOT have its own source file
+tests/%.o: src/%.cpp $(PCH_O)
+	$(COMPILE.cc) -o $@ $<
+
+$(PCH_O): $(PCH)
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+# copy binaries into /usr/local
+install: bin/fastsim
+	cp -r bin/* /usr/local/bin/
+	cp -r include/ccl* /usr/local/include
+	cp -r include/fftlog.h /usr/local/include
+	cp -r lib/* /usr/local/lib/
+	cp -r share/* /usr/local/share/
+# keep libraries
+clean:
+	find . -type f \( -name *~ -o -name *.o -o -name *.d -o -name *.gch \) -exec rm -f {} \;
+	rm -f swig/*.cpp fastsim debug tests/test
+
+cleanall: clean
+		rm -rf swig/*.py swig/*.pyc swig/*.so lib/*
+		rm -rf doc/html doc/latex doc/main.html
+
+cleanccl:
+	rm -rf src/3party/CCL/build
+
+-include $(OBJ_FILES:.o=.d)
+-include $(TEST_OBJ_FILES:.o=.d)
+-include $(PCH_O:.gch=.d)
+
+.PHONY: swig check clean test doc install
