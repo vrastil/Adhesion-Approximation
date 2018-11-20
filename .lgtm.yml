@@ -24,8 +24,10 @@ extraction:
       - ln -s /usr/bin/gcc-6 $LGTM_WORKSPACE/bin/gcc
       - export PATH=$LGTM_WORKSPACE/latest-gcc-symlinks:$PATH
     configure:
-      - mkdir $LGTM_SRC/build && cd $LGTM_SRC/build
-      - cmake ..
+      command:
+        - mkdir build && cd build
+        - cmake ..
+        - make ccl
 
     index:
       build_command:
