@@ -70,7 +70,7 @@ int main(int argc, char* argv[]){
         CPU_time = (double)(clock() - START) / CLOCKS_PER_SEC;
         REAL_time = finish.tv_sec - start.tv_sec + (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
 
-        size_t CPU_int, CPU_dec, REAL_int, REAL_dec;
+        int CPU_int, CPU_dec, REAL_int, REAL_dec;
 
         CPU_int = floor(log10(CPU_time)) + 1;
         CPU_dec = 3 - CPU_int;
@@ -81,7 +81,7 @@ int main(int argc, char* argv[]){
         REAL_dec = 3 - REAL_int;
         if (REAL_int < 0) REAL_int = 0;
         if (REAL_dec < 0) REAL_dec = 0;
-
+        
         printf("\nProgram ran for %.*fs and used %.*fs of CPU time.\n\n", \
             REAL_dec, REAL_time, CPU_dec, CPU_time);
 

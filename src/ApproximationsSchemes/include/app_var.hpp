@@ -42,7 +42,7 @@ class App_Var
 public:
 	// CONSTRUCTORS & DESTRUCTOR
     App_Var(const Sim_Param &sim, const std::string& app_short, const std::string& app_long);
-	~App_Var();
+	virtual ~App_Var();
 
     // RUN THE SIMULATION
     void run_simulation();
