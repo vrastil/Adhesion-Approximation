@@ -22,6 +22,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
     -flto=jobserver -fPIC"
 )
 
+# solve lto errors
+SET(CMAKE_AR  "gcc-ar")
+SET(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> qcs <TARGET> <LINK_FLAGS> <OBJECTS>")
+SET(CMAKE_CXX_ARCHIVE_FINISH true)
+
 # set FFTW precision (single / double / long double)
 if(${PRECISION} MATCHES 1)
     set(FFTW_LIB "-lfftw3f -lfftw3f_omp")

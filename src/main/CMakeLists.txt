@@ -26,3 +26,8 @@ target_link_libraries(${EXECUTABLE}
         Approximations
         ${FFTW_LIB}
 )
+
+# install Fast-Sim into binaries
+install(TARGETS FastSim
+        RUNTIME DESTINATION bin
+)
