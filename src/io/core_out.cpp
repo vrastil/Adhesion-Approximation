@@ -39,10 +39,10 @@ Ifstream::~Ifstream()
 // Get current date/time, format is YYYY-MM-DD.HH:mm:ss
 std::string currentDateTime()
 {
-	time_t     now = time(0);
+	const time_t     now = time(0);
 	struct tm  tstruct;
 	char       buf[80];
-	tstruct = *gmtime(&now);
+	gmtime_r(&now, &tstruct);
 	strftime(buf, sizeof(buf), "%y%m%d_%H%M%S", &tstruct);
 	
 	std::string returnval(buf);

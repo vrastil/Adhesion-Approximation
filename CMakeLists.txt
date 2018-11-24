@@ -2,6 +2,9 @@
 cmake_minimum_required(VERSION 3.2)
 project (FastSim VERSION 0.1)
 
+# c++ standard
+set(CMAKE_CXX_STANDARD 11)
+
 # add custom FindFFTW
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/src/3party/findFFTW")
 
@@ -15,8 +18,8 @@ SET(PRECISION 2 CACHE STRING "Precision of the simulation")
 
 # set compile flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
-    -std=c++11 -pipe -MMD \
-    -fopenmp -flto=jobserver -fPIC"
+    -pipe -MMD -fopenmp \
+    -flto=jobserver -fPIC"
 )
 
 # set FFTW precision (single / double / long double)
