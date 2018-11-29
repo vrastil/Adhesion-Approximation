@@ -25,6 +25,7 @@ add_executable(${EXECUTABLE} ${SOURCE_FILES})
 target_link_libraries(${EXECUTABLE}
         Approximations
         ${FFTW_LIB}
+        -fuse-linker-plugin
 )
 
 # install Fast-Sim into binaries

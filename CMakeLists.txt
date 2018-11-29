@@ -12,6 +12,8 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/
 find_package(GSL 2.1)
 find_package(Boost 1.66)
 find_package(FFTW 3.1)
+find_package(SWIG 3.0)
+find_package(PythonLibs)
 
 # precision of the simulation
 SET(PRECISION 2 CACHE STRING "Precision of the simulation")
@@ -45,3 +47,4 @@ add_subdirectory (src/core/)
 add_subdirectory (src/data/)
 add_subdirectory (src/io/)
 add_subdirectory (src/main/)
+add_subdirectory (swig/)

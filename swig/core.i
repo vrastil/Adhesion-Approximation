@@ -11,7 +11,7 @@
 // Parse original header file
 %ignore Cosmo_Param::operator void*;
 %include "precision.hpp"
-%include "templates/class_data_vec.hpp"
+%include "class_data_vec.hpp"
 %include "params.hpp"
 
 // Instantiate templates
