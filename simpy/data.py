@@ -20,6 +20,8 @@ from .fastsim import Extrap_Pk_Nl_2, Extrap_Pk_Nl_3
 from . import struct
 from . import power as pwr
 
+from plot import report_dir
+
 def print_exception(file=sys.stdout):
     """ print catched exception with colors """
     tbtext = traceback.format_exc()
@@ -180,8 +182,19 @@ def get_plot_sigma(files, zs, a_sim_info, load=False):
     plot.plot_corr_func(a_sim_info.data["sigma_R"], zs, a_sim_info, is_sigma=True)
 
 def find_nearest_idx(array, value, axis=None):
-    array = np.asarray(array)
-    idx = (np.abs(array - value)).argmin(axis=axis)
+    # special case for redshifts
+    if value == 'init':
+        idx = array.index(value)
+    else:
+        array_ = list(array) # copy
+        idx_init = len(array_)
+        if 'init' in array:
+            idx_init = array.index('init')
+            array_ = array_[:idx_init] + array_[idx_init+1:]
+        array_ = np.asarray(array_)
+        idx = (np.abs(array_ - value)).argmin(axis=axis)
+        if idx >= idx_init:
+            idx += 1
     return idx
 
 def get_plot_supp(files, zs, a_sim_info, pk_type='dens'):
@@ -244,15 +257,9 @@ def load_check_plot(a_sim_info, key, patterns, # type: struct.SimInfo, str, str,
 
 def cut_zs_files(zs, files, z=None):
     if z is not None:
-        if z == 'init':
-            zs = zs[:1]
-            files = files[:1]
-        else:
-            zs = zs[1:]
-            files = files[1:]
-            idx = find_nearest_idx(zs, z)
-            zs = [zs[idx]]
-            files = [files[idx]]
+        idx = find_nearest_idx(zs, z)
+        zs = [zs[idx]]
+        files = [files[idx]]
     return zs, files
 
 def get_initialized_StackInfo(a_file, z=None, get_corr=False, get_sigma=False, get_data=False):
@@ -738,7 +745,7 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
 # ********************************
 
 def plot_chi_wave_pot(a_file="/home/vrastil/Documents/GIT/FastSim/jobs/output/CHI_run/STACK_512m_512p_1024M_2000b_1e-06Y/stack_info.json",
-                      outdir = "/home/vrastil/Documents/GIT/FastSim/report/plots/"):
+                      outdir=report_dir):
     a_sim_info = struct.SimInfo(a_file)
     zs = np.linspace(0,5)
     beta = a_sim_info.chi_opt["beta"]
@@ -823,7 +830,7 @@ def my_shape(data):
         return len(data)
         
 def compare_chi_fp(in_dir="/home/vrastil/Documents/GIT/Adhesion-Approximation/output/",
-                   out_dir="/home/vrastil/Documents/GIT/Adhesion-Approximation/report/plots/",
+                   out_dir=report_dir,
                    use_group=None):
     groups = get_fp_chi_groups(in_dir)
     if use_group is not None:
@@ -869,7 +876,7 @@ def load_get_corr(a_file, z=None):
     
 def corr_func_ZA_FP(ZA_file="/home/vrastil/Documents/GIT/Adhesion-Approximation/output/FP_run/STACK_512m_512p_1024M_2000b/stack_info.json",
                     FP_file="/home/vrastil/Documents/GIT/Adhesion-Approximation/output/ZA_run/STACK_512m_512p_1024M_2000b/stack_info.json",
-                    outdir = "/home/vrastil/Documents/GIT/Adhesion-Approximation/report/plots/",
+                    outdir=report_dir,
                     z=1.):
     # load struct.SimInfo and get correlation data
     ZA_ST, z_ZA = load_get_corr(ZA_file, z=z)
@@ -924,12 +931,12 @@ def get_pk_broad_k(data_list, sim_infos):
     
     return np.array(data_list_new), extrap_pk
 
-def get_check_pk_broad(stack_infos):
+def get_check_pk_broad(stack_infos, idx):
     data_list = []
     zs = []
     for a_sim_info in stack_infos:    
-        data_list += a_sim_info.data["pk_data_par"]
-        zs += a_sim_info.data["zs"]
+        data_list.append(a_sim_info.data["pk_data_par"][idx])
+        zs.append(a_sim_info.data["zs"][idx])
 
     # check of consistency
     if len(set(zs)) != 1:
@@ -943,7 +950,7 @@ def get_check_pk_broad(stack_infos):
     data_list_new, extrap_pk = get_pk_broad_k(data_list, stack_infos)
     return data_list_new, extrap_pk
 
-def get_plot_mlt_pk_broad(stack_infos):
+def get_plot_mlt_pk_broad(stack_infos, z=0):
     # sort according to app
     app_all = set([x.app for x in stack_infos])
     groups = {app : [] for app in app_all}
@@ -951,13 +958,18 @@ def get_plot_mlt_pk_broad(stack_infos):
         app = a_sim_info.app
         groups[app].append(a_sim_info)
 
+    # get all data
     zs, Pk_list_extrap, data_all = [], [], []
     for app in app_all:
+        # get idx of nearest redshift in zs
+        zs_ = groups[app][0].data["zs"]
+        idx = find_nearest_idx(zs_, z)
+
         infos = groups[app]
-        data_list_new, extrap_pk = get_check_pk_broad(infos)
+        data_list_new, extrap_pk = get_check_pk_broad(infos, idx)
         groups[app + "_data"] = data_list_new
         groups[app + "_pk"] = extrap_pk
-        zs.append(groups[app][0].data["zs"][0])
+        zs.append(groups[app][0].data["zs"][idx])
         Pk_list_extrap.append(extrap_pk["Pk_par"])
         data_all.append(data_list_new)
     

@@ -23,8 +23,8 @@ suptitle_size = 25
 # fig_size = (15, 11)
 fig_size = (14, 9)
 subplt_adj_sym = {'left' : 0.15, 'right' : 0.95, 'bottom' : 0.15, 'top' : 0.95}
-
 matplotlib.rcParams.update({'font.size': 15})
+report_dir = "/home/vrastil/Documents/GIT/FastSim/report/plots/"
 
 def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True, get_a=False, only_last=False):
     """ Generator: iterate through data in list 'iterables'
@@ -160,9 +160,9 @@ def plot_pwr_spec_comparison(data, zs, labels, cosmo,
     """" Plot power spectrum -- points and extrapolated values,
     show 'true' linear Pk at the initial and final redshift """
     if out_dir == 'auto':
-        out_dir = '/home/vrastil/Documents/GIT/FastSim/report/plots/'
+        out_dir = report_dir
     out_file = 'pwr_spec.png'
-    #suptitle = "Power spectrum"
+    suptitle = "Power spectrum"
 
     fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
@@ -412,7 +412,7 @@ def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, sho
 
 def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="sigma_R", save=True, show=False):
     if out_dir == 'auto':
-        out_dir = '/home/vrastil/Documents/GIT/Adhesion-Approximation/report/plots/D_eff.png'
+        out_dir = report_dir
 
     # figure
     fig = plt.figure(figsize=fig_size)
@@ -450,7 +450,7 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="sigma_R", save=True, 
     ax.yaxis.grid(True)
     
     # save & show (in jupyter)
-    close_fig(out_dir, fig, save=save, show=show)
+    close_fig(out_dir + 'D_eff.png', fig, save=save, show=show)
 
 
 def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='par', save=True, show=False):
@@ -846,7 +846,7 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     out_file = 'chi_evol.png'
-    # suptitle = "Evolution of Chameleon"
+    suptitle = "Evolution of Chameleon"
     fig = plt.figure(figsize=fig_size)
     cosmo = a_sim_info.sim.cosmo
     if chi_opt is None:
