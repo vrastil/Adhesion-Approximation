@@ -1,2 +1,3 @@
-queries:
-    - exclude: src/3party
+path_classifiers:
+  library:
+    - src/3party
