@@ -59,8 +59,8 @@ def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True, get_a=Fals
             yield [lab] + values
 
 def fig_suptitle(fig, suptitle="", y=0.99, size=suptitle_size):
-    # fig.suptitle(suptitle, y=0.99, size=suptitle_size)
-    pass
+    fig.suptitle(suptitle, y=0.99, size=suptitle_size)
+    #pass
 
 def close_fig(filename, fig, save=True, show=False, dpi=100):
     """save and/or show figure, close figure"""
@@ -367,6 +367,46 @@ def plot_corr_func_universal(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, y
     # save & show (in jupyter)
     close_fig(file_name, fig, save=save, show=show)
 
+def plot_corr_func_ratio(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabel,
+                         figtext, out_dir, file_name, save, show, extra_data):
+    # names
+    z_out = lab if lab == 'init' else 'z' + lab[4:]
+    ylabel = r'$' + ylabel + r"(r)$"
+    file_name = out_dir + '%s_%s.png' % (file_name, z_out)
+    
+    # check same lengths, validity of xi_n;
+    if np.array_equal(r, r_nl):
+        xi_an = xi_nl
+        suptitle += r" $\Lambda$CDM (nl)"
+    elif np.array_equal(r, r_lin):
+        xi_an = xi_lin
+        suptitle += r" $\Lambda$CDM (lin)"
+    else:
+        raise ValueError("Invalid values of radiues.")
+    
+    # figure
+    fig = plt.figure(figsize=fig_size)
+    ax = plt.gca()
+    ax.yaxis.grid(True)
+    ax.set_ylim(-0.5,0.5)
+
+    # plot ratio
+    plt.plot(r, xi/xi_an - 1, 'o', ms=3, label=lab)
+
+    # plot other data (if available)
+    if extra_data is not None:
+        for data in extra_data:
+            plt.plot(data['r'], data['xi']/xi_an - 1, 'o', ms=3, label=data['lab'])
+
+    # adjust figure, labels
+    fig_suptitle(fig, suptitle)
+    plt.xlabel(r"$r [$Mpc$/h]$", fontsize=label_size)
+    plt.ylabel(ylabel, fontsize=label_size)
+    legend_manipulation(figtext="", loc='best')
+    plt.subplots_adjust(**subplt_adj_sym)
+
+    # save & show (in jupyter)
+    close_fig(file_name, fig, save=save, show=show)
 
 def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_data_nl=None, out_dir='auto', save=True, show=False, is_sigma=False, only_r2=True, extra_data=None):
     if out_dir == 'auto':
@@ -402,6 +442,11 @@ def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_d
     plot_corr_func_universal(
         r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabel, figtext,
         out_dir, file_name, save, show, True, extra_data)
+
+    # third plot, xi(r)/xi_lin/nl
+    plot_corr_func_ratio(
+        r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabel, figtext,
+        out_dir, file_name, save, show, extra_data)
 
 # correlation function stacked data, linear and emu corr. func in files
 def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, show=False, is_sigma=False, only_r2=True, extra_data=None):

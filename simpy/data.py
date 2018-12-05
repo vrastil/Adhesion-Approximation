@@ -874,25 +874,28 @@ def load_get_corr(a_file, z=None):
     # return struct.SimInfo with all loaded data and redshifts
     return a_sim_info, zs
     
-def corr_func_ZA_FP(ZA_file="/home/vrastil/Documents/GIT/Adhesion-Approximation/output/FP_run/STACK_512m_512p_1024M_2000b/stack_info.json",
-                    FP_file="/home/vrastil/Documents/GIT/Adhesion-Approximation/output/ZA_run/STACK_512m_512p_1024M_2000b/stack_info.json",
-                    outdir=report_dir,
-                    z=1.):
-    # load struct.SimInfo and get correlation data
-    ZA_ST, z_ZA = load_get_corr(ZA_file, z=z)
-    FP_ST, z_FP = load_get_corr(FP_file, z=z_ZA)
-    
-    # check redshifts
-    if z_ZA != z_FP:
-        raise IndexError("ZA and FP do not have the same redshift-slice.")
-    
-    # plot all (one for 'z=None') correlation plots
-    r, xi = FP_ST.data["corr_func"]["par"][0]
-    extra_data = [
-        {'r' : r, 'xi' : xi, 'lab' : FP_ST.app, 'mlt' : 1}
-    ]
+def corr_func_comp(files, outdir=report_dir, z=1.):
 
-    plot.plot_corr_func(ZA_ST.data["corr_func"], z_ZA, ZA_ST, out_dir=outdir, save=True, show=True, extra_data=extra_data)
+    extra_data = []
+    zs = None
+
+    for a_file in files:
+        # load struct.SimInfo and get correlation data
+        sim_info, zs_ = load_get_corr(a_file, z=z)
+
+        # plot all (one for 'z=None') correlation plots
+        r, xi = sim_info.data["corr_func"]["par"][0]
+
+        # save needed values
+        extra_data.append({'r' : r, 'xi' : xi, 'lab' : sim_info.app, 'mlt' : 1})
+    
+        # check redshifts
+        if zs is None:
+            zs = zs_
+        elif zs != zs_:
+            raise IndexError("Files do not have the same redshift-slices.")
+
+    plot.plot_corr_func(sim_info.data["corr_func"], zs, sim_info, out_dir=outdir, save=True, show=True, extra_data=extra_data[:-1])
     
 
 def get_pk_broad_k(data_list, sim_infos):
