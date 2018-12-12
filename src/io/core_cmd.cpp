@@ -130,6 +130,7 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
         ("chi_beta", po::value<FTYPE_t>(&sim.chi_opt.beta)->default_value(1/sqrt(6), "(1/6)^1/2"), "coupling constant")
         ("chi_n", po::value<FTYPE_t>(&sim.chi_opt.n)->default_value(0.5, "1/2"), "chameleon power-law potential exponent,\n0 < n < 1")
         ("chi_phi", po::value<FTYPE_t>(&sim.chi_opt.phi)->default_value(1E-6, "1E-6"), "screening potential")
+        ("comp_chi_lin", po::value<bool>(&sim.chi_opt.linear)->default_value(false), "use only linear prediction in k-space")
         ;  
     mod_grav.add(config_cham);
     

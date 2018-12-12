@@ -98,25 +98,25 @@ void from_json(const json& j, Cosmo_Param& cosmo)
     try{
         tmp = j.at("transfer_function_method").get<std::string>();
         cosmo.config.transfer_function_method = transfer_function_method.at(tmp);
-    }catch(const std::out_of_range& oor){
+    }catch(const json::out_of_range& oor){
         cosmo.config.transfer_function_method = ccl_boltzmann_class;
     }
     try{
         tmp = j.at("matter_power_spectrum_method").get<std::string>();
         cosmo.config.matter_power_spectrum_method = matter_power_spectrum_method.at(tmp);
-    }catch(const std::out_of_range& oor){
+    }catch(const json::out_of_range& oor){
         cosmo.config.matter_power_spectrum_method = ccl_halofit;
     }
     try{
         tmp = j.at("mass_function_method").get<std::string>();
         cosmo.config.mass_function_method = mass_function_method.at(tmp);
-    }catch(const std::out_of_range& oor){
+    }catch(const json::out_of_range& oor){
         cosmo.config.mass_function_method = ccl_tinker10;
     }
     try{
         tmp = j.at("baryons_power_spectrum_method").get<std::string>();
         cosmo.config.baryons_power_spectrum_method = baryons_power_spectrum_method.at(tmp);
-    }catch(const std::out_of_range& oor){
+    }catch(const json::out_of_range& oor){
         cosmo.config.baryons_power_spectrum_method = ccl_nobaryons;
     }
     cosmo.init();
@@ -211,7 +211,8 @@ void to_json(json& j, const Chi_Opt& chi_opt)
     j = json{
         {"beta", chi_opt.beta},
         {"n", chi_opt.n},
-        {"phi", chi_opt.phi}
+        {"phi", chi_opt.phi},
+        {"linear", chi_opt.linear}
     };
 }
 
@@ -220,6 +221,14 @@ void from_json(const json& j, Chi_Opt& chi_opt)
     chi_opt.beta = j.at("beta").get<FTYPE_t>();
     chi_opt.n = j.at("n").get<FTYPE_t>();
     chi_opt.phi = j.at("phi").get<FTYPE_t>();
+    try
+    {
+        chi_opt.linear = j.at("linear").get<bool>();
+    }
+    catch(const json::out_of_range& oor)
+    {
+        chi_opt.linear = false;
+    }
 }
 
 void to_json(json& j, const Test_Opt& test_opt)
@@ -374,7 +383,7 @@ Sim_Param::Sim_Param(std::string file_name)
         json j;
         i >> j;
         try{ run_opt = j.at("run_opt"); } // sim_param.json has run_opt
-        catch(const std::out_of_range& oor){ // stack_info.json does not have run_opt
+        catch(const json::out_of_range& oor){ // stack_info.json does not have run_opt
             run_opt.nt = 0; // max
             run_opt.seed = 0; // random
             run_opt.init();
@@ -387,9 +396,9 @@ Sim_Param::Sim_Param(std::string file_name)
 
         integ_opt = j.at("integ_opt");
         try{ out_opt = j.at("out_opt"); } // new format of json files
-        catch(const std::out_of_range& oor){ // old format does not store Out_Opt
+        catch(const json::out_of_range& oor){ // old format does not store Out_Opt
             try {out_opt.out_dir = j.at("out_dir"); } // stack_info.json doesn`t store out_dir
-            catch(const std::out_of_range& oor){out_opt.out_dir = "~/home/FASTSIM/output/"; } // do not need it, set to some default
+            catch(const json::out_of_range& oor){out_opt.out_dir = "~/home/FASTSIM/output/"; } // do not need it, set to some default
             out_opt.bins_per_decade = 20;
             out_opt.points_per_10_Mpc = 10;
         }
@@ -401,10 +410,10 @@ Sim_Param::Sim_Param(std::string file_name)
         try{
             chi_opt = j.at("chi_opt");
             comp_app.chi = true;
-        } catch(const std::out_of_range& oor){ comp_app.chi = false; }
+        } catch(const json::out_of_range& oor){ comp_app.chi = false; }
         
     }
-    catch(const std::out_of_range& oor){
+    catch(const json::out_of_range& oor){
         std::string err = std::string(oor.what()) + " in file '" + file_name + "'";
         throw std::out_of_range(err);
     }

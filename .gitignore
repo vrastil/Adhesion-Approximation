@@ -1,37 +1,22 @@
+# build directory, test directory, pyc files
+build/
+tests/test
+*.pyc
 
 # output directory, internal documents
 output/
 report/
+pynotebooks/
+.ipynb_checkpoints/
 doc/html
 doc/latex
 doc/main.html
-lib/
-bin/
-
-# program, object files, libraries, depedency files, scripts
-fastsim
-debug
-tests/test
-build/
-*.o
-*.d
-*.a
-*.so
-*.gch
-*.sh
-*.pbs
-*.ipynb
-*.pyc
-
-# ccl
-include/ccl*
-include/fftlog.h
-share
 
 # swig files, created symlinks
 swig/*.cpp
 swig/*.py
 simpy/fastsim.py
+simpy/*.so
 
 # other files
 *.gcda
@@ -40,7 +25,3 @@ simpy/fastsim.py
 
 # Visual Studio Code
 .vscode/
-
-# metacentrum files for jobs
-logs/
-qsub*

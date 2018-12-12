@@ -724,15 +724,24 @@ public:
         get_rho_from_par(particles, chi_force[0], sim);
         transform_Mesh_to_MultiGrid(chi_force[0], drho);
 
-        /// - set guess from linear theory and correct unphysical values
+        /// linear guess and solver
         std::cout << "Setting linear guess for chameleon field...\n";
-        sol.set_linear(chi_force[0], p_F, p_B);
-        sol.set_screened();
+        if (sim.chi_opt.linear)
+        {
+            /// - set guess from linear theory
+            sol.set_linear_sol_at_level(chi_force[0], p_F, p_B, 0);
+        }
+        else
+        {
+            /// - set guess from linear theory and correct unphysical values
+            sol.set_linear(chi_force[0], p_F, p_B);
+            sol.set_screened();
 
-        /// - get multigrid_solver runnig
-        std::cout << "Solving equations of motion for chameleon field...\n";
-        solve_multigrid(); ///< solve using multigrid teqniques
-        solve_finest(); ///< solve only on the finest mesh using NGS sweeps
+            /// - get multigrid_solver runnig
+            std::cout << "Solving equations of motion for chameleon field...\n";
+            solve_multigrid(); ///< solve using multigrid teqniques
+            solve_finest(); ///< solve only on the finest mesh using NGS sweeps
+        }
     }
 
     void gen_pow_spec_binned(const Sim_Param &sim, Data_Vec<FTYPE_t,2>& pwr_spec_binned, const FFTW_PLAN_TYPE& p_F)
@@ -764,14 +773,7 @@ public:
         const FTYPE_t f1 = 3/(2*a)*(1 + OLa);
         const FTYPE_t f2 = 3/(2*a)*(1 - OLa)*D/a;
         /// - chameleon force factor + units
-        const FTYPE_t f3 = a/D*sol.chi_force_units(a)/pow2(x_0);
-
-        // force.fill(0.);
-        // assign_from(force_field, particles[0].position, force);
-        // std::cout << "\n=======> Gr = " << force.norm() << "\tGr_x = " << force[0];
-        // force.fill(0.);
-        // assign_from(chi_force, particles[0].position, force, f3);
-        // std::cout << "\tChi = " << force.norm() << "\tChi_x = " << force[0] << "\n";        
+        const FTYPE_t f3 = a/D*sol.chi_force_units(a)/pow2(x_0);      
         
         #pragma omp parallel for private(force)
         for (size_t i = 0; i < Np; i++)
@@ -833,7 +835,6 @@ void App_Var_Chi::upd_pos()
     {
         m_impl->solve(a_half(), particles, sim, p_F, p_B);
         m_impl->get_chi_force(p_F, p_B);
-        //kick_step_w_momentum(sim.cosmo, a_half(), da(), particles, app_field);
         m_impl->kick_step_w_chi(sim.cosmo, a_half(), da(), particles, app_field);
     };
     stream_kick_stream(da(), particles, kick_step, sim.box_opt.mesh_num);
