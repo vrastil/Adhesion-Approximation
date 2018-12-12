@@ -3,23 +3,27 @@
 run analysis of runs
 """
 
+# system modules
 import os
 import sys
+from itertools import izip
+import fnmatch
+
+# colorful exception info
 import traceback
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import TerminalFormatter
-from itertools import izip
 
-import fnmatch
+# mathematical modules
 import numpy as np
 from scipy.optimize import curve_fit
 
+# simpy modules
 from . import plot
 from .fastsim import Extrap_Pk_Nl_2, Extrap_Pk_Nl_3
 from . import struct
 from . import power as pwr
-
 from plot import report_dir
 
 def print_exception(file=sys.stdout):
