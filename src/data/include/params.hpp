@@ -175,6 +175,7 @@ struct Other_par {
 struct Chi_Opt {
     /* cmd args */
     FTYPE_t beta, n, phi;
+    bool linear;
 };
 
 /**

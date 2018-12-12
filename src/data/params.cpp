@@ -211,7 +211,8 @@ void to_json(json& j, const Chi_Opt& chi_opt)
     j = json{
         {"beta", chi_opt.beta},
         {"n", chi_opt.n},
-        {"phi", chi_opt.phi}
+        {"phi", chi_opt.phi},
+        {"linear", chi_opt.linear}
     };
 }
 
@@ -220,6 +221,14 @@ void from_json(const json& j, Chi_Opt& chi_opt)
     chi_opt.beta = j.at("beta").get<FTYPE_t>();
     chi_opt.n = j.at("n").get<FTYPE_t>();
     chi_opt.phi = j.at("phi").get<FTYPE_t>();
+    try
+    {
+        chi_opt.linear = j.at("linear").get<bool>();
+    }
+    catch(const json::out_of_range& oor)
+    {
+        chi_opt.linear = false;
+    }
 }
 
 void to_json(json& j, const Test_Opt& test_opt)
