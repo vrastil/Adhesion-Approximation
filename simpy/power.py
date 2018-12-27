@@ -115,39 +115,37 @@ def hybrid_pow_spec(a, k, A, cosmo):
     """ return 'hybrid' power spectrum: (1-A)*P_lin(k, a) + A*P_nl """
     return (1-A)*lin_pow_spec(a, k, cosmo) + A*non_lin_pow_spec(a, k, cosmo)
 
+def gen_func(sim, fc_par, fce_lin, fc_nl, Pk=None, z=None, non_lin=False):
+    data = fs.Data_Vec_2()
+    if Pk: # compute function from given continuous power spectrum
+        fc_par(sim, Pk, data)
+    elif z is not None: # compute (non-)linear function
+        a = 1./(1.+z) if z != 'init' else 1.0
+        if non_lin:
+            fc_nl(sim, a, data)
+        else:
+            fce_lin(sim, a, data)
+    else:
+        raise KeyError("Function 'gen_func' called without arguments.")
+    return get_ndarray(data)
+
 def corr_func(sim, Pk=None, z=None, non_lin=False):
     """ return correlation function
     if given Pk -- C++ class Extrap_Pk or Extrap_Pk_Nl -- computes its corr. func.
     if given redshift, computes linear or non-linear (emulator) correlation function  """
-    corr = fs.Data_Vec_2()
-    if Pk: # compute correlation function from given continuous power spectrum
-        fs.gen_corr_func_binned_gsl_qawf(sim, Pk, corr)
-    elif z is not None: # compute (non-)linear correlation function
-        a = 1./(1.+z) if z != 'init' else 1.0
-        if non_lin:
-            fs.gen_corr_func_binned_gsl_qawf_nl(sim, a, corr)
-        else:
-            fs.gen_corr_func_binned_gsl_qawf_lin(sim, a, corr)
-    else:
-        raise KeyError("Function 'corr_func' called without arguments.")
-    return get_ndarray(corr)
+    fc_par = fs.gen_corr_func_binned_gsl_qawf
+    fce_lin = fs.gen_corr_func_binned_gsl_qawf_lin
+    fc_nl = fs.gen_corr_func_binned_gsl_qawf_nl
+    return gen_func(sim, fc_par, fce_lin, fc_nl, Pk=Pk, z=z, non_lin=non_lin)
 
 def sigma_R(sim, Pk=None, z=None, non_lin=False):
     """ return amplitude of density fluctuations
     if given Pk -- C++ class Extrap_Pk or Extrap_Pk_Nl -- computes its sigma_R.
     if given redshift, computes linear or non-linear (emulator) amplitude of density fluctuations  """
-    sigma = fs.Data_Vec_2()
-    if Pk: # compute amplitude of density fluctuations from given continuous power spectrum
-        fs.gen_sigma_binned_gsl_qawf(sim, Pk, sigma)
-    elif z is not None: # compute (non-)linear amplitude of density fluctuations
-        a = 1./(1.+z) if z != 'init' else 1.0
-        if non_lin:
-            fs.gen_sigma_func_binned_gsl_qawf_lin(sim, a, sigma)
-        else:
-            fs.gen_sigma_func_binned_gsl_qawf_nl(sim, a, sigma)
-    else:
-        raise KeyError("Function 'sigma_R' called without arguments.")
-    return get_ndarray(sigma)
+    fc_par = fs.gen_sigma_binned_gsl_qawf
+    fce_lin = fs.gen_sigma_func_binned_gsl_qawf_lin
+    fc_nl = fs.gen_sigma_func_binned_gsl_qawf_nl
+    return gen_func(sim, fc_par, fce_lin, fc_nl, Pk=Pk, z=z, non_lin=non_lin)
 
 def growth_factor(a, cosmo):
     """ return growth factor D at scale factor a, accepts ndarray """

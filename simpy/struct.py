@@ -332,7 +332,7 @@ class Results(object):
                 try:
                     filename=results_dir + plot + ".png"
                     display(Image(filename=filename))
-                except:
+                except IOError:
                     pass
     
     # def load_k_supp(self, a_sim_info):
