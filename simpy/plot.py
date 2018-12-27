@@ -24,7 +24,7 @@ suptitle_size = 25
 fig_size = (14, 9)
 subplt_adj_sym = {'left' : 0.15, 'right' : 0.95, 'bottom' : 0.15, 'top' : 0.95}
 matplotlib.rcParams.update({'font.size': 15})
-report_dir = "/home/vrastil/Documents/GIT/FastSim/report/plots/"
+report_dir = "/home/michal/Documents/GIT/FastSim/report/plots/"
 
 def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True, get_a=False, only_last=False):
     """ Generator: iterate through data in list 'iterables'
@@ -454,6 +454,42 @@ def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, sho
                                                       corr_data_all['lin'], corr_data_all['nl']]):
         plot_corr_func_single(
             corr_par, lab, a_sim_info, corr_lin, corr_nl, out_dir, save, show, is_sigma, only_r2, extra_data)
+
+def plot_corr_peak(zs, a_sim_info, out_dir='auto', save=True, show=False):
+    # output
+    if out_dir == 'auto':
+        out_dir = a_sim_info.res_dir
+    out_file = "corr_peak.png"
+
+    # get rid of init zs
+    cut = slice(1, None, None) if zs[0] == 'init' else slice(None, None, None)
+    a = 1/(1.+np.array(zs[cut]))
+
+    # figure
+    fig = plt.figure(figsize=fig_size)
+    ax = plt.gca()
+
+    # peak location
+    loc = np.array(a_sim_info.data["corr_func"]["par_peak"][0][cut])
+    loc_lin = np.array(a_sim_info.data["corr_func"]["lin_peak"][0][cut])
+    loc_nl = np.array(a_sim_info.data["corr_func"]["nl_peak"][0][cut])
+    ax.plot(a, loc / loc_nl, label='location')
+    ax.plot(a, loc / loc_lin, label='location (linear')
+
+
+    # peak amplitude
+    amp = np.array(a_sim_info.data["corr_func"]["par_peak"][1][cut])
+    amp_lin = np.array(a_sim_info.data["corr_func"]["lin_peak"][1][cut])
+    amp_nl = np.array(a_sim_info.data["corr_func"]["nl_peak"][1][cut])
+    ax.plot(a, amp / amp_nl, label='amplitude')
+    ax.plot(a, amp / amp_lin, label='amplitude (linear')
+
+    # LEGEND manipulation
+    legend_manipulation(ax, "", loc='best')
+    plt.subplots_adjust(**subplt_adj_sym)
+
+    # close & save figure
+    close_fig(out_dir + out_file, fig, save=save, show=show)
 
 def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="sigma_R", save=True, show=False):
     if out_dir == 'auto':
@@ -979,7 +1015,7 @@ def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle=
     close_fig(out_dir + out_file, fig, save=save, show=show)
 
 
-def plot_all_single_supp(res, out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/supp_comparison/',
+def plot_all_single_supp(res, out_dir='/home/michal/Documents/GIT/Adhesion-Approximation/output/supp_comparison/',
                          Nm=0, Np=0, L=0, nu=0, rs=0, app=''):
     subfiles = res.get_subfiles(Nm=Nm, Np=Np, L=L, nu=nu, rs=rs, app=app)
     for a_sim_info in subfiles:

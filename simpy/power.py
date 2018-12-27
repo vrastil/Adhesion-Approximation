@@ -148,7 +148,7 @@ def sigma_R(sim, Pk=None, z=None, non_lin=False):
     fc_nl = fs.gen_sigma_func_binned_gsl_qawf_nl
     return gen_func(sim, fc_par, fce_lin, fc_nl, Pk=Pk, z=z, non_lin=non_lin)
 
-def get_bao_peak(corr, cutof=25):
+def get_bao_peak(corr, cutof=80):
     r, xi = corr
     
     # get id of local maxima

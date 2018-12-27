@@ -15,7 +15,7 @@ from .fastsim import Sim_Param
 
 RESULTS_ALL = {
     "ani" : ["par_ani", "dens_ani"],
-    "corr" : ["corr_func", "sigma_R"],
+    "corr" : ["corr_func", "bao", "sigma_R"],
     "dens" : ["dens_hist", "dens_slice"],
     "chi" : ["pwr_spec_chi", "chi_pwr_diff", "chi_pwr_spec_supp", "chi_pwr_spec_supp_map"],
     "par" : ["par_slice"],
@@ -342,7 +342,7 @@ class Results(object):
     #             a_sim_info.supp = load_k_supp(files)
     #             a_sim_info.a = [1./(z+1) for z in zs]
 
-    # def plot_supp_compare(self, out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/supp_comparison/',
+    # def plot_supp_compare(self, out_dir='/home/michal/Documents/GIT/Adhesion-Approximation/output/supp_comparison/',
     #                       Nm=0, Np=0, L=0, nu=0, rs=0, app='', scale=['small', 'medium', 'large'], show_k_lms=False, res=None):
     #     subfiles = self.get_subfiles(Nm=Nm, Np=Np, L=L, nu=nu, rs=rs, app=app)
 
