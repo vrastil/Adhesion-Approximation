@@ -6,8 +6,6 @@ tests/test
 # output directory, internal documents
 output/
 report/
-pynotebooks/
-.ipynb_checkpoints/
 doc/html
 doc/latex
 doc/main.html
