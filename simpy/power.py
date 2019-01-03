@@ -11,6 +11,7 @@
 
 import numpy as np
 from scipy.optimize import brentq
+from scipy.signal import argrelextrema
 from . import fastsim as fs
 
 def get_a_from_A(cosmo, A):
@@ -146,6 +147,18 @@ def sigma_R(sim, Pk=None, z=None, non_lin=False):
     fce_lin = fs.gen_sigma_func_binned_gsl_qawf_lin
     fc_nl = fs.gen_sigma_func_binned_gsl_qawf_nl
     return gen_func(sim, fc_par, fce_lin, fc_nl, Pk=Pk, z=z, non_lin=non_lin)
+
+def get_bao_peak(corr, cutof=80):
+    r, xi = corr
+    
+    # get id of local maxima
+    idx = argrelextrema(xi, np.greater)
+    
+    # get first maximum after 25 Mpc/h (default cutof)
+    peak_id = [x for x in idx[0] if r[x] > cutof][0]
+    
+    # return peak location and amplitude
+    return r[peak_id], xi[peak_id]
 
 def growth_factor(a, cosmo):
     """ return growth factor D at scale factor a, accepts ndarray """

@@ -3,23 +3,27 @@
 run analysis of runs
 """
 
+# system modules
 import os
 import sys
+from itertools import izip
+import fnmatch
+
+# colorful exception info
 import traceback
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import TerminalFormatter
-from itertools import izip
 
-import fnmatch
+# mathematical modules
 import numpy as np
 from scipy.optimize import curve_fit
 
+# simpy modules
 from . import plot
 from .fastsim import Extrap_Pk_Nl_2, Extrap_Pk_Nl_3
 from . import struct
 from . import power as pwr
-
 from plot import report_dir
 
 def print_exception(file=sys.stdout):
@@ -173,6 +177,22 @@ def get_corr_func(files, zs, a_sim_info, load=False):
 def get_plot_corr(files, zs, a_sim_info, load=False, **kwargs):
     get_corr_func(files, zs, a_sim_info, load=load)
     plot.plot_corr_func(a_sim_info.data["corr_func"], zs, a_sim_info, **kwargs)
+
+def get_corr_peak(a_sim_info, cutof=80):
+    # for each type of measured correlation function
+    for key in ('par', 'lin', 'nl'):
+        # for each redshift
+        a_sim_info.data["corr_func"][key + '_peak'] = [[], []]
+        for corr in a_sim_info.data["corr_func"][key]:
+            loc, amp = pwr.get_bao_peak(corr, cutof=cutof)
+            a_sim_info.data["corr_func"][key + '_peak'][0].append(loc)
+            a_sim_info.data["corr_func"][key + '_peak'][1].append(amp)
+
+def get_plot_corr_peak(files, zs, a_sim_info, load=False, **kwargs):
+    get_corr_func(files, zs, a_sim_info, load=load)
+    cutof = kwargs.get("cutof", 25)
+    get_corr_peak(a_sim_info, cutof=cutof)
+    plot.plot_corr_peak(zs, a_sim_info, **kwargs)
     
 def get_sigma_R(files, zs, a_sim_info, load=False):
     get_key_func(files, zs, a_sim_info, "sigma_R", load=load)
@@ -319,8 +339,9 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         ("vel_pwr_spec_supp", '*.dat', get_plot_supp, {'subdir' : 'vel_pwr_diff/', 'pk_type' : 'vel'}),
         ("chi_pwr_spec_supp", '*chi*.dat*', get_plot_supp, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
         ("chi_pwr_spec_supp_map", '*chi*.dat*', get_plot_supp_map, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
-        # Correlation function, amplitude of density fluctuations
+        # Correlation function, BAO peak, amplitude of density fluctuations
         ("corr_func", '*par*.dat *init*.dat', get_plot_corr, {'subdir' : 'pwr_spec/'}),
+        ("bao", '*par*.dat', get_plot_corr_peak, {'subdir' : 'pwr_spec/'}),
         ("sigma_R", '*par*.dat *init*.dat', get_plot_sigma, {'subdir' : 'pwr_spec/'}),
         # Density distribution
         ("dens_hist", '*.dat', load_plot_dens_histo, {'subdir' : 'rho_bin/'}),
@@ -342,7 +363,7 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         except Exception:
             print_exception()
 
-def analyze_all(out_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/',
+def analyze_all(out_dir='/home/michal/Documents/GIT/Adhesion-Approximation/output/',
                 rerun=None, skip=None, only=None):
     files = get_files_in_traverse_dir(out_dir, 'sim_param.json')
     sim_infos = []
@@ -662,6 +683,7 @@ def stack_group(rerun=None, skip=None, **kwargs):
             {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
         # Correlation function, amplitude of density fluctuations
         ("corr_func", '*par*.dat *init*.dat', get_plot_corr, {'subdir' : 'pwr_spec/'}),
+        ("bao", '*par*.dat', get_plot_corr_peak, {'subdir' : 'pwr_spec/'}),
         ("sigma_R", '*par*.dat *init*.dat', get_plot_sigma, {'subdir' : 'pwr_spec/'}),
         # Power spectrum suppression
         ("pwr_spec_supp", '*par*', get_plot_supp, {'subdir' : 'pwr_diff/'}),
@@ -714,7 +736,7 @@ def print_runs_info(sep_files, num_all_runs, num_all_sep_runs, num_sep_runs):
                 break
             print "\t" + a_sim_info.dir
 
-def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/', rerun=None, skip=None, **kwargs):
+def stack_all(in_dir='/home/michal/Documents/GIT/Adhesion-Approximation/output/', rerun=None, skip=None, **kwargs):
     # get & count all runs
     sep_files = get_runs_siminfo(in_dir)
     num_all_runs, num_all_sep_runs, num_sep_runs = count_runs(sep_files)
@@ -744,7 +766,7 @@ def stack_all(in_dir='/home/vrastil/Documents/GIT/Adhesion-Approximation/output/
 # RUN ANALYSIS -- CHI COMPARISON *
 # ********************************
 
-def plot_chi_wave_pot(a_file="/home/vrastil/Documents/GIT/FastSim/jobs/output/CHI_run/STACK_512m_512p_1024M_2000b_1e-06Y/stack_info.json",
+def plot_chi_wave_pot(a_file="/home/michal/Documents/GIT/FastSim/jobs/output/CHI_run/STACK_512m_512p_1024M_2000b_1e-06Y/stack_info.json",
                       outdir=report_dir):
     a_sim_info = struct.SimInfo(a_file)
     zs = np.linspace(0,5)
@@ -829,7 +851,7 @@ def my_shape(data):
     except ValueError:
         return len(data)
         
-def compare_chi_fp(in_dir="/home/vrastil/Documents/GIT/Adhesion-Approximation/output/",
+def compare_chi_fp(in_dir="/home/michal/Documents/GIT/Adhesion-Approximation/output/",
                    out_dir=report_dir,
                    use_group=None):
     groups = get_fp_chi_groups(in_dir)
