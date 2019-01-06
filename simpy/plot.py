@@ -491,6 +491,21 @@ def plot_corr_peak(zs, a_sim_info, out_dir='auto', save=True, show=False):
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show)
 
+def plot_eff_time_ax(a_sim_info, ax, a_eff_type="sigma_R"):
+    # extract variables
+    a = a_sim_info.data["eff_time"][a_eff_type]['a']
+    D_eff_ratio = a_sim_info.data["eff_time"][a_eff_type]['D_eff_ratio']
+    a_err = a_sim_info.data["eff_time"][a_eff_type]['a_err']
+
+    # plot
+    if a_eff_type == "sigma_R":
+        label = a_sim_info.app +  '$: L = %i$ Mpc/h' % a_sim_info.box_opt["box_size"]
+        ax.plot(a, D_eff_ratio, label=label)
+    elif a_eff_type == "Pk":
+        ax.errorbar(a, D_eff_ratio, yerr=a_err, label=a_sim_info.info_tr())
+        ax.set_ylim(ymin=0.8)
+
+
 def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="sigma_R", save=True, show=False):
     if out_dir == 'auto':
         out_dir = report_dir
@@ -500,28 +515,7 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="sigma_R", save=True, 
     ax = plt.gca()
     
     for stack_info in stack_infos:
-        if a_eff_type == "sigma_R":
-            D_eff_ratio = stack_info.data["sigma_R"]["D_eff_ratio"]
-            # D_eff_std = stack_info.data["sigma_R"]["D_eff_std"]
-            a = [1./(1+z) for z in stack_info.data["sigma_R"]["zs"] if z != 'init']
-            label = stack_info.app +  '$: L = %i$ Mpc/h' % stack_info.box_opt["box_size"]
-            ax.plot(a, D_eff_ratio, label=label)
-            # ax.errorbar(a, D_eff_ratio, yerr=D_eff_std, label=stack_info.info_tr())
-        elif a_eff_type == "Pk":
-            #extract variables
-            cosmo = stack_info.sim.cosmo
-            eff = struct.Map(stack_info.data["eff_time"])
-            a = eff.a
-            a_eff = eff.a_eff
-            a_err = eff.perr[:,0]
-
-            # derived variables
-            D = power.growth_factor(a, cosmo)
-            D_eff = power.growth_factor(a_eff, cosmo)
-            
-            #plot -- effective growth
-            ax.errorbar(a, D_eff / D, yerr=a_err, label=stack_info.info_tr())
-            ax.set_ylim(ymin=0.8)
+        plot_eff_time_ax(stack_info, ax, a_eff_type)
     
     ax.set_ylabel(r'$D_{eff}/D_{GR}$', fontsize=label_size)
     ax.set_xlabel(r'$a$', fontsize=label_size)
@@ -531,7 +525,7 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="sigma_R", save=True, 
     ax.yaxis.grid(True)
     
     # save & show (in jupyter)
-    close_fig(out_dir + 'D_eff.png', fig, save=save, show=show)
+    close_fig(out_dir + 'D_eff_' + a_eff_type + '_.png', fig, save=save, show=show)
 
 
 def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='par', save=True, show=False):

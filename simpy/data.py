@@ -254,6 +254,22 @@ def load_plot_dens_histo(files, zs, a_sim_info):
                  for a_file in files]
     plot.plot_dens_histo(data_list, zs, a_sim_info)
 
+def load_plot_a_eff(files, zs, a_sim_info, **kwargs):
+    # create structure in data
+    create_a_eff_struct(a_sim_info)
+    
+    # effective time from power spectrum
+    get_extrap_pk(a_sim_info, files, zs)
+    get_a_eff_from_Pk(a_sim_info)
+    
+    # effective time from density fluctuations
+    get_sigma_R(files, zs, a_sim_info)
+    get_a_eff_from_dens_fluct(a_sim_info)
+    
+    # plot
+    plot.plot_eff_time([a_sim_info], a_eff_type="sigma_R", **kwargs)
+    plot.plot_eff_time([a_sim_info], a_eff_type="Pk", **kwargs)
+
 def load_check_plot(a_sim_info, key, patterns, # type: struct.SimInfo, str, str,
                     rerun, skip, plot_func,    # type: List[str], List[str], Callable[List[str], List[str], kwargs],
                     info_str='', subdir=None,  # type: str, str
@@ -350,7 +366,9 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         ("par_ani", 'par*.dat track*.dat', split_plot_par_evol, {'subdir' : 'par_cut/'}),
         # Density -- two slices, evolution
         ("dens_slice", '*.dat', plot.plot_dens_two_slices, {'subdir' : 'rho_map/'}),
-        ("dens_ani", '*.dat', plot.plot_dens_evol, {'subdir' : 'rho_map/'})
+        ("dens_ani", '*.dat', plot.plot_dens_evol, {'subdir' : 'rho_map/'}),
+        # Effective time
+        ("eff_time", '*.dat', load_plot_a_eff, {'subdir' : 'pwr_spec/'})
     ]
 
     # perform all steps, skip step if Exception occurs
@@ -552,11 +570,16 @@ def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par):
     # return all info in dict
     return {"Pk_par" : Pk_par, "popt" : popt, "pcov" : pcov, 'perr' : perr, 'pcor' : pcor}
 
+def create_a_eff_struct(a_sim_info):
+    if "eff_time" not in a_sim_info.data:
+        a_sim_info.data["eff_time"] = {"Pk" : {}, "sigma_R" : {}}
+
 def get_a_eff_from_dens_fluct(a_sim_info):
     """ fit data [r, sigma] to """
     # check zs
     zs = a_sim_info.data["sigma_R"]["zs"]
     idx = 1 if zs[0] == 'init' else 0
+    a = [1./(1+z) for z in zs if z != 'init']
 
     # sigma_R_0
     data_par_0 = np.array(a_sim_info.data["sigma_R"]["par"])[idx,1]
@@ -571,22 +594,37 @@ def get_a_eff_from_dens_fluct(a_sim_info):
     D_eff_ratio = np.mean(data_D_eff, axis=1)
     D_eff_std = np.std(data_D_eff, axis=1)
 
-    # save data
-    a_sim_info.data["sigma_R"]["D_eff_ratio"] = D_eff_ratio
-    a_sim_info.data["sigma_R"]["D_eff_std"] = D_eff_std
+    # create structure in data
+    create_a_eff_struct(a_sim_info)
+
+    # store
+    a_sim_info.data["eff_time"]["sigma_R"] = {
+        'a' : a,
+        'a_err' : D_eff_std,
+        'D_eff_ratio' : D_eff_ratio
+    }
+
 
 def get_a_eff_from_Pk(stack_info):
     # go through all extrapolated Pk
-    a, popt, pcov, perr = map(np.array, zip(*[ # extract back, store as np.array
-        (1/(Pk['z'] + 1), Pk['popt'], Pk['pcov'], Pk['perr']) # a, popt, pcov, perr
+    a, popt, perr = map(np.array, zip(*[ # extract back, store as np.array
+        (1/(Pk['z'] + 1), Pk['popt'], Pk['perr']) # a, popt, perr
         for Pk in stack_info.data["extrap_pk"] if Pk["z"] != 'init']))
     
     # derived variables
     a_eff = popt[:,0]
-    A = popt[:,1]
-    
+    D = pwr.growth_factor(a, stack_info.sim.cosmo)
+    D_eff = pwr.growth_factor(a_eff, stack_info.sim.cosmo)
+
+    # create structure in data
+    create_a_eff_struct(stack_info)
+
     # store
-    stack_info.data["eff_time"] = {'a' : a, 'popt' : popt, 'pcov' : pcov, 'a_eff' : a_eff, 'A' : A, 'perr' : perr}
+    stack_info.data["eff_time"]["Pk"] = {
+        'a' : a,
+        'a_err' : perr[:,0],
+        'D_eff_ratio' : D_eff / D
+    }
 
 # **************************
 # LOAD & SAVE STACKED DATA *
@@ -689,7 +727,9 @@ def stack_group(rerun=None, skip=None, **kwargs):
         ("pwr_spec_supp", '*par*', get_plot_supp, {'subdir' : 'pwr_diff/'}),
         ("pwr_spec_supp_map", '*par*', get_plot_supp_map, {'subdir' : 'pwr_diff/'}),
         ("chi_pwr_spec_supp", '*chi*.dat*', get_plot_supp, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
-        ("chi_pwr_spec_supp_map", '*chi*.dat*', get_plot_supp_map, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'})
+        ("chi_pwr_spec_supp_map", '*chi*.dat*', get_plot_supp_map, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
+        # Effective time
+        ("eff_time", '*.dat', load_plot_a_eff, {'subdir' : 'pwr_spec/'})
     ]
 
     # perform all steps, skip step if Exception occurs
