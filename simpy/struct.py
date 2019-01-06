@@ -21,6 +21,7 @@ RESULTS_ALL = {
     "par" : ["par_slice"],
     "pwr" : ["pwr_spec", "pwr_diff", "pwr_diff_i", "pwr_diff_h", "pwr_spec_supp", "pwr_spec_supp_map", "pwr_slope"],
     "vel" : ["vel_pwr_spec", "vel_pwr_diff", "vel_pwr_spec_supp"],
+    "eff_time" : ["Pk", "sigma_R"],
     "files" : ["corr_files", "sigma_files", "pwr_spec_files", "pwr_diff_files",
                "pwr_diff_files_i", "pwr_diff_files_h", "pwr_spec_chi_files"]
     }
@@ -128,6 +129,10 @@ class SimInfo(object):
         if self.app == 'FP_pp': info += r', $r_s = %.1f$' % self.app_opt["cut_radius"]
         return info
 
+    def check_new_keys(self, key):
+        if key not in self.results and key != 'files':
+            self.results[key] = False
+
     def load_file(self, a_file):
         # type: (str) -> None
         """ load information in 'a_file', create results directory """
@@ -141,8 +146,7 @@ class SimInfo(object):
             self.results = {}
         
         for key in sum(RESULTS_ALL.values(), []):
-            if key not in self.results and key != 'files':
-                self.results[key] = False
+            self.check_new_keys(key)
 
         self.file = a_file
         self.dir = a_file.replace(a_file.split("/")[-1], '')
@@ -151,6 +155,9 @@ class SimInfo(object):
 
     def rerun(self, rerun, key, skip, zs):
         """ steps to rerun or skip """
+        # new analysis key?
+        self.check_new_keys(key)
+
         # missing data
         if zs is None:
             print "[Skipped]  (missing data)"
