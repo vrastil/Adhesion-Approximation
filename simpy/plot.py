@@ -3,7 +3,7 @@
 """
 import math
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('Agg', warn=False)
 from matplotlib import animation
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -15,7 +15,6 @@ from itertools import izip
 from scipy.misc import derivative
 
 from . import power
-from . import struct
 
 matplotlib.rcParams['legend.numpoints'] = 1
 label_size = 20
@@ -59,8 +58,8 @@ def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True, get_a=Fals
             yield [lab] + values
 
 def fig_suptitle(fig, suptitle="", y=0.99, size=suptitle_size):
-    fig.suptitle(suptitle, y=0.99, size=suptitle_size)
-    #pass
+    #fig.suptitle(suptitle, y=0.99, size=suptitle_size)
+    pass
 
 def close_fig(filename, fig, save=True, show=False, dpi=100):
     """save and/or show figure, close figure"""
@@ -368,7 +367,7 @@ def plot_corr_func_universal(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, y
     close_fig(file_name, fig, save=save, show=show)
 
 def plot_corr_func_ratio(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabel,
-                         figtext, out_dir, file_name, save, show, extra_data):
+                         figtext, out_dir, file_name, save, show, extra_data, peak_loc=None):
     # names
     z_out = lab if lab == 'init' else 'z' + lab[4:]
     ylabel = r'$' + ylabel + r"(r)$"
@@ -398,6 +397,10 @@ def plot_corr_func_ratio(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabe
         for data in extra_data:
             plt.plot(data['r'], data['xi']/xi_an - 1, 'o', ms=3, label=data['lab'])
 
+    # plot BAO peak location (if available)
+    if peak_loc is not None:
+        ax.axvline(x=peak_loc, ls='--', color='k')
+
     # adjust figure, labels
     fig_suptitle(fig, suptitle)
     plt.xlabel(r"$r [$Mpc$/h]$", fontsize=label_size)
@@ -408,7 +411,8 @@ def plot_corr_func_ratio(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabe
     # save & show (in jupyter)
     close_fig(file_name, fig, save=save, show=show)
 
-def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_data_nl=None, out_dir='auto', save=True, show=False, is_sigma=False, only_r2=True, extra_data=None):
+def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_data_nl=None, out_dir='auto',
+                          save=True, show=False, is_sigma=False, only_r2=True, extra_data=None, peak_loc=None):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if is_sigma:
@@ -446,19 +450,52 @@ def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_d
     # third plot, xi(r)/xi_lin/nl
     plot_corr_func_ratio(
         r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabel, figtext,
-        out_dir, file_name, save, show, extra_data)
+        out_dir, file_name, save, show, extra_data, peak_loc)
 
 # correlation function stacked data, linear and emu corr. func in files
-def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, show=False, is_sigma=False, only_r2=True, extra_data=None):
+def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, show=False, is_sigma=False, only_r2=True, extra_data=None, peak_loc=None):
     for lab, corr_par, corr_lin, corr_nl in iter_data(zs, [corr_data_all['par'],
                                                       corr_data_all['lin'], corr_data_all['nl']]):
         plot_corr_func_single(
-            corr_par, lab, a_sim_info, corr_lin, corr_nl, out_dir, save, show, is_sigma, only_r2, extra_data)
+            corr_par, lab, a_sim_info,
+            corr_data_lin=corr_lin, corr_data_nl=corr_nl, out_dir=out_dir,
+            save=save, show=show, is_sigma=is_sigma, only_r2=only_r2,
+            extra_data=extra_data, peak_loc=peak_loc)
 
-def plot_corr_peak(zs, a_sim_info, out_dir='auto', save=True, show=False):
+def plot_peak_loc(a, a_sim_info, ax, cut, only_nl=True):
+    """ plot peak location to the given axis """
+    # location of the BAO peak, label
+    loc = np.array(a_sim_info.data["corr_func"]["par_peak"][0][cut])
+    label = a_sim_info.app
+
+    # comparison to the non-linear prediction
+    loc_nl = np.array(a_sim_info.data["corr_func"]["nl_peak"][0][cut])
+    ax.plot(a, loc / loc_nl, label=label + ' (loc)')
+
+    # comparison to the inear prediction
+    if not only_nl:
+        loc_lin = np.array(a_sim_info.data["corr_func"]["lin_peak"][0][cut])
+        ax.plot(a, loc / loc_lin, label=label + ' (loc, lin)')
+
+def plot_peak_amp(a, a_sim_info, ax, cut, only_nl=True):
+    """ plot peak amplitude to the given axis """
+    # amplitude of the BAO peak
+    amp = np.array(a_sim_info.data["corr_func"]["par_peak"][1][cut])
+    label = a_sim_info.app
+
+    # comparison to the non-linear prediction
+    amp_nl = np.array(a_sim_info.data["corr_func"]["nl_peak"][1][cut])
+    ax.plot(a, amp / amp_nl, label=label + ' (amp)')
+
+    # comparison to the inear prediction
+    if not only_nl:
+        amp_lin = np.array(a_sim_info.data["corr_func"]["lin_peak"][1][cut])
+        ax.plot(a, amp / amp_lin, label=label + ' (amp, lin)')
+
+def plot_corr_peak(zs, sim_infos, out_dir='auto', save=True, show=False):
     # output
     if out_dir == 'auto':
-        out_dir = a_sim_info.res_dir
+        out_dir = report_dir
     out_file = "corr_peak.png"
 
     # get rid of init zs
@@ -469,23 +506,19 @@ def plot_corr_peak(zs, a_sim_info, out_dir='auto', save=True, show=False):
     fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
 
-    # peak location
-    loc = np.array(a_sim_info.data["corr_func"]["par_peak"][0][cut])
-    loc_lin = np.array(a_sim_info.data["corr_func"]["lin_peak"][0][cut])
-    loc_nl = np.array(a_sim_info.data["corr_func"]["nl_peak"][0][cut])
-    ax.plot(a, loc / loc_nl, label='location')
-    ax.plot(a, loc / loc_lin, label='location (linear')
+    for a_sim_info in sim_infos:
+        # peak location
+        plot_peak_loc(a, a_sim_info, ax, cut)
 
+        # peak amplitude
+        plot_peak_amp(a, a_sim_info, ax, cut)    
 
-    # peak amplitude
-    amp = np.array(a_sim_info.data["corr_func"]["par_peak"][1][cut])
-    amp_lin = np.array(a_sim_info.data["corr_func"]["lin_peak"][1][cut])
-    amp_nl = np.array(a_sim_info.data["corr_func"]["nl_peak"][1][cut])
-    ax.plot(a, amp / amp_nl, label='amplitude')
-    ax.plot(a, amp / amp_lin, label='amplitude (linear')
+    # labels
+    plt.xlabel(r"$a$", fontsize=label_size)
+    fig_suptitle(fig, "Relative BAO peak location and amplitude")
 
     # LEGEND manipulation
-    legend_manipulation(ax, "", loc='best')
+    legend_manipulation(ax, "", loc='lower left', bbox_to_anchor=(0.0, 0.0))
     plt.subplots_adjust(**subplt_adj_sym)
 
     # close & save figure

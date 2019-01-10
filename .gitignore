@@ -1,11 +1,9 @@
-# build directory, test directory, pyc files
+# build directory, test output, internal documents
 build/
-tests/test
-*.pyc
-
-# output directory, internal documents
 output/
 report/
+
+# documentation output
 doc/html
 doc/latex
 doc/main.html
@@ -16,10 +14,14 @@ swig/*.py
 simpy/fastsim.py
 simpy/*.so
 
+# jupyter checkpoints
+pynotebooks/.ipynb_checkpoints
+
 # other files
 *.gcda
 *.dot
 *.out
+*.pyc
 
 # Visual Studio Code
 .vscode/

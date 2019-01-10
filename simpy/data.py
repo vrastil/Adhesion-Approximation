@@ -936,19 +936,22 @@ def load_get_corr(a_file, z=None):
     # return struct.SimInfo with all loaded data and redshifts
     return a_sim_info, zs
     
-def corr_func_comp(files, outdir=report_dir, z=1.):
+def corr_func_comp(files=None, sim_infos=None, outdir=report_dir, z=1., bao_peak=True):
 
     extra_data = []
     zs = None
 
-    for a_file in files:
-        # load struct.SimInfo and get correlation data
-        sim_info, zs_ = load_get_corr(a_file, z=z)
+    # load struct.SimInfo and get correlation data
+    if sim_infos is None:
+        sim_infos = [load_get_corr(a_file, z=z)[0] for a_file in files]
 
-        # plot all (one for 'z=None') correlation plots
-        r, xi = sim_info.data["corr_func"]["par"][0]
+    # get data, check redshift
+    for sim_info in sim_infos:
+        
+        zs_ = sim_info.data["zs"]
 
         # save needed values
+        r, xi = sim_info.data["corr_func"]["par"][0]
         extra_data.append({'r' : r, 'xi' : xi, 'lab' : sim_info.app, 'mlt' : 1})
     
         # check redshifts
@@ -957,7 +960,14 @@ def corr_func_comp(files, outdir=report_dir, z=1.):
         elif zs != zs_:
             raise IndexError("Files do not have the same redshift-slices.")
 
-    plot.plot_corr_func(sim_info.data["corr_func"], zs, sim_info, out_dir=outdir, save=True, show=True, extra_data=extra_data[:-1])
+    # plot non-linear BAO peak
+    if bao_peak:
+        get_corr_peak(sim_info)
+        peak_loc = sim_info.data["corr_func"]["nl_peak"][0][0] # does not depend on z
+    else:
+        peak_loc = None
+
+    plot.plot_corr_func(sim_info.data["corr_func"], zs, sim_info, out_dir=outdir, save=True, show=True, extra_data=extra_data[:-1], peak_loc=peak_loc)
     
 
 def get_pk_broad_k(data_list, sim_infos):
