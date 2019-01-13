@@ -7,6 +7,8 @@
  - Results : collects results, compare approximation, show plots
 """
 
+from __future__ import print_function
+
 import json
 import os
 import subprocess
@@ -87,7 +89,7 @@ class SimInfo(object):
 
         # rewrite values in json info if new cosmo param passed
         for key, value in kwargs.iteritems():
-            print "Using new value for parameter '%s' = '%s'" % (key, value)
+            print("Using new value for parameter '%s' = '%s'" % (key, value))
             self.cosmo[key] = value
         # other data attributes
         self.data = {}
@@ -160,7 +162,7 @@ class SimInfo(object):
 
         # missing data
         if zs is None:
-            print "[Skipped]  (missing data)"
+            print("[Skipped]  (missing data)")
             return False
         # manually selected steps to rerun
         # check before skip-step in case of skip == 'all'
@@ -168,14 +170,14 @@ class SimInfo(object):
             return True
         # manually selected steps to skip
         elif _is_key_val(key, skip):
-            print "[Skipped]"
+            print("[Skipped]")
             return False
         # step not done yet and not skipped
         elif not self.results[key]:
             return True
         # step already done
         else:
-            print "[Done]"
+            print("[Done]")
             return False
 
     def done(self, key):
@@ -187,7 +189,7 @@ class SimInfo(object):
         data["results"][key] = True
         with open(self.file, 'w') as outfile:
             json.dump(data, outfile, indent=2)
-        print "[Done]"
+        print("[Done]")
 
 class StackInfo(SimInfo):
     def __getitem__(self, key):
@@ -237,7 +239,7 @@ class StackInfo(SimInfo):
                 data = json.loads(data_file.read())
                 self.results = data["results"]
                 if len(self.seeds) != len(data["seeds"]):
-                    print "\tFound stack info but number of files does not seem right. Disregarding any saved data."
+                    print("\tFound stack info but number of files does not seem right. Disregarding any saved data.")
                     self.results = {}
         else:  # save new StackInfo
             self.results = {}     
@@ -322,7 +324,7 @@ class Results(object):
 
     def info(self, Nm=0, Np=0, L=0, nu=0, rs=0, phi=0, app=''):
         for a_sim_info in self.get_subfiles(Nm=Nm, Np=Np, L=L, nu=nu, rs=rs, phi=phi, app=app):
-            print a_sim_info.info_tr()
+            print(a_sim_info.info_tr())
 
     def show_folder(self, a_sim_info):
         subprocess.Popen(["xdg-open", a_sim_info.dir + 'results/'])

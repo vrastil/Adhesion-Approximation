@@ -1,6 +1,9 @@
 """
 'plot.py' modules serves for plotting results
 """
+
+from __future__ import print_function
+
 import math
 import matplotlib
 matplotlib.use('Agg', warn=False)
@@ -11,7 +14,10 @@ import matplotlib.cm as cm
 from matplotlib.colors import SymLogNorm
 from matplotlib.ticker import FormatStrFormatter
 import numpy as np
-from itertools import izip
+try:
+    from itertools import izip # python 2
+except ImportError:
+    izip = zip # python 3
 from scipy.misc import derivative
 
 from . import power
@@ -46,7 +52,7 @@ def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True, get_a=Fals
             elif a > a_end:
                 raise StopIteration()
             a_ = a
-            lab = 'z = ' + str(z)
+            lab = 'z = %.1f' % z
         elif skip_init or only_last:
             continue
         else:
@@ -61,8 +67,12 @@ def fig_suptitle(fig, suptitle="", y=0.99, size=suptitle_size):
     #fig.suptitle(suptitle, y=0.99, size=suptitle_size)
     pass
 
-def close_fig(filename, fig, save=True, show=False, dpi=100):
+def close_fig(filename, fig, save=True, show=False, dpi=100, use_z_eff=False):
     """save and/or show figure, close figure"""
+    if use_z_eff:
+        filename += 'z_eff.png'
+    else:
+        filename += '.png'
     if save:
         fig.savefig(filename, dpi=dpi)
     if show:
@@ -100,16 +110,16 @@ def get_a_init_from_zs(zs):
             return 1/(1.+z)
 
 def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False,
-                  out_dir='auto', pk_type='dens', save=True, show=False):
+                  out_dir='auto', pk_type='dens', save=True, show=False, use_z_eff=False):
     """" Plot power spectrum -- points and extrapolated values,
     show 'true' linear Pk at the initial and final redshift """
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if pk_type == "dens":
-        out_file = 'pwr_spec.png'
+        out_file = 'pwr_spec'
         suptitle = "Power spectrum"
     elif pk_type == "vel":
-        out_file = 'vel_pwr_spec.png'
+        out_file = 'vel_pwr_spec'
         suptitle = r"Power spectrum $(\nabla\cdot u)$"
     fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
@@ -152,15 +162,15 @@ def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False,
     legend_manipulation(ax, "")
 
     # close & save figure
-    close_fig(out_dir + out_file, fig, save=save, show=show)
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 def plot_pwr_spec_comparison(data, zs, labels, cosmo,
-                  out_dir='auto', save=True, show=False):
+                  out_dir='auto', save=True, show=False, use_z_eff=False):
     """" Plot power spectrum -- points and extrapolated values,
     show 'true' linear Pk at the initial and final redshift """
     if out_dir == 'auto':
         out_dir = report_dir
-    out_file = 'pwr_spec.png'
+    out_file = 'pwr_spec'
     suptitle = "Power spectrum"
 
     fig = plt.figure(figsize=fig_size)
@@ -194,14 +204,14 @@ def plot_pwr_spec_comparison(data, zs, labels, cosmo,
     plt.subplots_adjust(**subplt_adj_sym)
 
     # close & save figure
-    close_fig(out_dir + out_file, fig, save=save, show=show)
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 
-def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, err=False, out_dir='auto', save=True, show=False):
+def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, err=False, out_dir='auto', save=True, show=False, use_z_eff=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     suptitle = "Chameleon power spectrum"
-    out_file = "pwr_spec_chi.png"
+    out_file = "pwr_spec_chi"
 
     fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
@@ -231,16 +241,16 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, err=False, out_dir='aut
     legend_manipulation(ax, "")
 
     # close & save figure
-    close_fig(out_dir + out_file, fig, save=save, show=show)
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 
 def plot_chi_fp_map(data, zs, a_sim_info):
     pass
 
-def plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir='auto', suptitle='auto', save=True, show=False):
+def plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir='auto', suptitle='auto', save=True, show=False, use_z_eff=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
-    out_file = 'chi_pwr_diff_fp.png'
+    out_file = 'chi_pwr_diff_fp'
     # if suptitle == 'auto':
     #     suptitle = "Relative chameleon power spectrum"
 
@@ -269,7 +279,7 @@ def plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir='auto', suptitle='auto', sa
     #figtext = a_sim_info.info_tr().replace("FP: ", "")
     legend_manipulation(ax, figtext="", loc='upper left', bbox_to_anchor=(0.0,1.0))
     plt.subplots_adjust(**subplt_adj_sym)
-    close_fig(out_dir + out_file, fig, save=save, show=show)
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 def get_slope(k, P_k, dx=0.01,order=5):
     logk = np.log(k)
@@ -278,11 +288,11 @@ def get_slope(k, P_k, dx=0.01,order=5):
 
 
 def plot_slope(data, zs, a_sim_info, Pk_list_extrap,
-                  out_dir='auto', save=True, show=False):
+                  out_dir='auto', save=True, show=False, use_z_eff=False):
     """" Plot slope of power spectrum -- points and extrapolated values """
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
-    out_file = 'pwr_slope.png'
+    out_file = 'pwr_slope'
     suptitle = "Power spectrum slope"
     fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
@@ -320,11 +330,11 @@ def plot_slope(data, zs, a_sim_info, Pk_list_extrap,
     legend_manipulation(ax, "")
 
     # close & save figure
-    close_fig(out_dir + out_file, fig, save=save, show=show)
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
     
 
 def plot_corr_func_universal(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabel,
-                             figtext, out_dir, file_name, save, show, r2, extra_data=None):
+                             figtext, out_dir, file_name, save, show, r2, extra_data=None, use_z_eff=False):
     
     z_out = lab if lab == 'init' else 'z' + lab[4:]
     fig = plt.figure(figsize=fig_size)
@@ -338,14 +348,14 @@ def plot_corr_func_universal(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, y
         if xi_lin is not None: mlt_lin = r_lin*r_lin
         if xi_nl is not None: mlt_nl = r_nl*r_nl
         ylabel = r"$r^2" + ylabel + r"(r)$"
-        file_name = out_dir + '%s_r2_%s.png' % (file_name, z_out)
+        file_name = out_dir + '%s_r2_%s' % (file_name, z_out)
         plt.xscale("linear")
         plt.yscale("linear")
         for data in extra_data:
             data["mlt"] = data["r"]*data["r"]
     else:
         ylabel = r'$' + ylabel + r"(r)$"
-        file_name = out_dir + '%s_%s.png' % (file_name, z_out)
+        file_name = out_dir + '%s_%s' % (file_name, z_out)
         plt.xscale("log")
         plt.yscale("log")
 
@@ -364,14 +374,14 @@ def plot_corr_func_universal(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, y
     plt.subplots_adjust(**subplt_adj_sym)
 
     # save & show (in jupyter)
-    close_fig(file_name, fig, save=save, show=show)
+    close_fig(file_name, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 def plot_corr_func_ratio(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabel,
-                         figtext, out_dir, file_name, save, show, extra_data, peak_loc=None):
+                         figtext, out_dir, file_name, save, show, extra_data, peak_loc=None, use_z_eff=False):
     # names
     z_out = lab if lab == 'init' else 'z' + lab[4:]
     ylabel = r'$' + ylabel + r"(r)$"
-    file_name = out_dir + '%s_%s.png' % (file_name, z_out)
+    file_name = out_dir + '%s_%s' % (file_name, z_out)
     
     # check same lengths, validity of xi_n;
     if np.array_equal(r, r_nl):
@@ -409,10 +419,10 @@ def plot_corr_func_ratio(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabe
     plt.subplots_adjust(**subplt_adj_sym)
 
     # save & show (in jupyter)
-    close_fig(file_name, fig, save=save, show=show)
+    close_fig(file_name, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_data_nl=None, out_dir='auto',
-                          save=True, show=False, is_sigma=False, only_r2=True, extra_data=None, peak_loc=None):
+                          save=True, show=False, use_z_eff=False, is_sigma=False, only_r2=True, extra_data=None, peak_loc=None):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if is_sigma:
@@ -440,20 +450,20 @@ def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_d
     # first plot, xi(r)
     if not only_r2: plot_corr_func_universal(
         r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabel, figtext,
-        out_dir, file_name, save, show, False, extra_data)
+        out_dir, file_name, save, show, False, extra_data, use_z_eff)
 
     # second plot, r*r*xi(r)
     plot_corr_func_universal(
         r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabel, figtext,
-        out_dir, file_name, save, show, True, extra_data)
+        out_dir, file_name, save, show, True, extra_data, use_z_eff)
 
     # third plot, xi(r)/xi_lin/nl
     plot_corr_func_ratio(
         r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabel, figtext,
-        out_dir, file_name, save, show, extra_data, peak_loc)
+        out_dir, file_name, save, show, extra_data, peak_loc, use_z_eff)
 
 # correlation function stacked data, linear and emu corr. func in files
-def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, show=False, is_sigma=False, only_r2=True, extra_data=None, peak_loc=None):
+def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, show=False, use_z_eff=False, is_sigma=False, only_r2=True, extra_data=None, peak_loc=None):
     for lab, corr_par, corr_lin, corr_nl in iter_data(zs, [corr_data_all['par'],
                                                       corr_data_all['lin'], corr_data_all['nl']]):
         plot_corr_func_single(
@@ -492,11 +502,11 @@ def plot_peak_amp(a, a_sim_info, ax, cut, only_nl=True):
         amp_lin = np.array(a_sim_info.data["corr_func"]["lin_peak"][1][cut])
         ax.plot(a, amp / amp_lin, label=label + ' (amp, lin)')
 
-def plot_corr_peak(zs, sim_infos, out_dir='auto', save=True, show=False):
+def plot_corr_peak(zs, sim_infos, out_dir='auto', save=True, show=False, use_z_eff=False):
     # output
     if out_dir == 'auto':
         out_dir = report_dir
-    out_file = "corr_peak.png"
+    out_file = "corr_peak"
 
     # get rid of init zs
     cut = slice(1, None, None) if zs[0] == 'init' else slice(None, None, None)
@@ -522,7 +532,7 @@ def plot_corr_peak(zs, sim_infos, out_dir='auto', save=True, show=False):
     plt.subplots_adjust(**subplt_adj_sym)
 
     # close & save figure
-    close_fig(out_dir + out_file, fig, save=save, show=show)
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 def plot_eff_time_ax(a_sim_info, ax, a_eff_type="sigma_R"):
     # extract variables
@@ -539,7 +549,7 @@ def plot_eff_time_ax(a_sim_info, ax, a_eff_type="sigma_R"):
         ax.set_ylim(ymin=0.8)
 
 
-def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="sigma_R", save=True, show=False):
+def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="sigma_R", save=True, show=False, use_z_eff=False):
     if out_dir == 'auto':
         out_dir = report_dir
 
@@ -558,10 +568,10 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="sigma_R", save=True, 
     ax.yaxis.grid(True)
     
     # save & show (in jupyter)
-    close_fig(out_dir + 'D_eff_' + a_eff_type + '_.png', fig, save=save, show=show)
+    close_fig(out_dir + 'D_eff_' + a_eff_type + '_', fig, save=save, show=show, use_z_eff=use_z_eff)
 
 
-def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='par', save=True, show=False):
+def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='par', save=True, show=False, use_z_eff=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if pk_type == "dens":
@@ -583,7 +593,7 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
         power.chi_trans_to_init(data_list)
         ext_title = 'init'
             
-    out_file += '_%s.png' % ext_title
+    out_file += '_%s' % ext_title
     suptitle += ' (ref: %s)' % ext_title
 
     fig = plt.figure(figsize=fig_size)
@@ -630,10 +640,10 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
     plt.ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$", fontsize=25)
     # legend_manipulation(ax, a_sim_info.info_tr())
     legend_manipulation(ax, "")
-    close_fig(out_dir + out_file, fig, save=save, show=show)
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 
-def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='', save=True, show=False,
+def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='', save=True, show=False, use_z_eff=False,
                                     vmin=-1, vmax=1):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
@@ -654,7 +664,7 @@ def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto',
         power.chi_trans_to_init(data_array)
         ext_title = 'init'
 
-    out_file += '_%s_map.png' % ext_title
+    out_file += '_%s_map' % ext_title
     suptitle += ' (ref: %s)' % ext_title
 
     fig = plt.figure(figsize=(8, 8))
@@ -708,9 +718,9 @@ def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto',
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
     plt.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9)
 
-    close_fig(out_dir + out_file, fig, save=save, show=show)
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
-def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, scale='', show_k_lms=False, res=None):
+def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, use_z_eff=False, scale='', show_k_lms=False, res=None):
     fig = plt.figure(figsize=fig_size)
     cmap = plt.get_cmap('gist_ncar')
     colors = [cmap(i) for i in np.linspace(0, 1, len(sim_infos) + 1)]
@@ -729,7 +739,7 @@ def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, scale='', 
             if res is not None:
                 supp -= np.array(res.supp[0][2])
         else:
-            print "WARNING! Unknown scale ='%s'. Skipping." % scale
+            print("WARNING! Unknown scale ='%s'. Skipping." % scale)
             return None
         plt.plot(a, supp, '-o', ms=3,
                  color=colors[i], label=a_sim_info.info_supp())
@@ -754,10 +764,10 @@ def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, scale='', 
         ylabel += r', residual from $\nu=%.1f$' % res.nu
     plt.ylabel(ylabel, fontsize=25)
     legend_manipulation()
-    close_fig(out_dir + 'supp.png', fig, save=save, show=show)
+    close_fig(out_dir + 'supp', fig, save=save, show=show, use_z_eff=use_z_eff)
 
 
-def plot_dens_histo(data_list, zs, a_sim_info, out_dir='auto', fix_N=1, fix_rho=0.0, save=True, show=False):
+def plot_dens_histo(data_list, zs, a_sim_info, out_dir='auto', fix_N=1, fix_rho=0.0, save=True, show=False, use_z_eff=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     num_sub_x = 3
@@ -784,10 +794,10 @@ def plot_dens_histo(data_list, zs, a_sim_info, out_dir='auto', fix_N=1, fix_rho=
 
     plt.figtext(0.5, 0.95, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    close_fig(out_dir + 'dens_histo.png', fig, save=save, show=show)
+    close_fig(out_dir + 'dens_histo', fig, save=save, show=show, use_z_eff=use_z_eff)
 
 
-def plot_par_last_slice(files, files_t, zs, a_sim_info, out_dir='auto', save=True, show=False):
+def plot_par_last_slice(files, files_t, zs, a_sim_info, out_dir='auto', save=True, show=False, use_z_eff=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     fig = plt.figure(figsize=(10, 10))
@@ -817,7 +827,7 @@ def plot_par_last_slice(files, files_t, zs, a_sim_info, out_dir='auto', save=Tru
     ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=label_size)
     ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=label_size)
     fig_suptitle(fig, "Slice through simulation box (particles), z = %.2f" % zs[-1])
-    close_fig(out_dir + 'par_evol_last.png', fig, save=save, show=show)
+    close_fig(out_dir + 'par_evol_last', fig, save=save, show=show, use_z_eff=use_z_eff)
 
 
 def plot_par_evol(files, files_t, zs, a_sim_info, out_dir='auto', save=True):
@@ -875,7 +885,7 @@ def plot_par_evol(files, files_t, zs, a_sim_info, out_dir='auto', save=True):
     fig.clf()
     plt.close(fig)
 
-def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=False):
+def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=False, use_z_eff=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     fig = plt.figure(figsize=(10, 10))
@@ -896,16 +906,16 @@ def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=Fals
     fig_suptitle(fig, "Slice through simulation box (overdensity), z = %.2f" % z)
     cbar = fig.colorbar(im, cax=cbar_ax, ticks=[-1, 0, 1, 10, 100])
     cbar.ax.set_yticklabels(['-1', '0', '1', '10', '> 100'])
-    close_fig(out_dir + 'dens_z%.2f.png' % z, fig, save=save, show=show)
+    close_fig(out_dir + 'dens_z%.2f' % z, fig, save=save, show=show, use_z_eff=use_z_eff)
 
-def plot_dens_two_slices(files, zs, a_sim_info, out_dir='auto', save=True, show=False):
+def plot_dens_two_slices(files, zs, a_sim_info, out_dir='auto', save=True, show=False, use_z_eff=False):
     half = len(files) // 2
     rho, z = np.loadtxt(files[half])[:, 2], zs[half]
     plot_dens_one_slice(rho, z, a_sim_info,
-                        out_dir=out_dir, save=save, show=show)
+                        out_dir=out_dir, save=save, show=show, use_z_eff=use_z_eff)
     rho, z = np.loadtxt(files[-1])[:, 2], zs[-1]
     plot_dens_one_slice(rho, z, a_sim_info,
-                        out_dir=out_dir, save=save, show=show)
+                        out_dir=out_dir, save=save, show=show, use_z_eff=use_z_eff)
 
 
 def plot_dens_evol(files, zs, a_sim_info, out_dir='auto', save=True):
@@ -949,11 +959,11 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir='auto', save=True):
     plt.close(fig)
 
 
-def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=False):
+def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=False, use_z_eff=False):
     """" Plot evolution of chameleon background values -- Compton wavelength and screening potential """
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
-    out_file = 'chi_evol.png'
+    out_file = 'chi_evol'
     suptitle = "Evolution of Chameleon"
     fig = plt.figure(figsize=fig_size)
     cosmo = a_sim_info.sim.cosmo
@@ -995,20 +1005,20 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
     plt.subplots_adjust(hspace=0, **subplt_adj_sym)
 
     # close & save figure
-    close_fig(out_dir + out_file, fig, save=save, show=show)
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 
-def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle='', save=True, show=False):
+def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle='', save=True, show=False, use_z_eff=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if pk_type == "dens":
-        out_file = 'supp.png'
+        out_file = 'supp'
         suptitle = "Power spectrum suppression"
     elif pk_type == "vel":
-        out_file = 'supp_vel.png'
+        out_file = 'supp_vel'
         suptitle = r"Power spectrum suppression $(\nabla\cdot u)$"
     elif pk_type == 'chi':
-        out_file = 'supp_chi.png'
+        out_file = 'supp_chi'
         suptitle = "Chameleon power spectrum suppression"
 
     fig = plt.figure(figsize=fig_size)
@@ -1039,7 +1049,7 @@ def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle=
     # legend_manipulation(figtext=a_sim_info.info_tr())
     legend_manipulation(figtext="")
 
-    close_fig(out_dir + out_file, fig, save=save, show=show)
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 
 def plot_all_single_supp(res, out_dir='/home/michal/Documents/GIT/Adhesion-Approximation/output/supp_comparison/',

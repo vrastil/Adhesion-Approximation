@@ -3,10 +3,15 @@
 run analysis of runs
 """
 
+from __future__ import print_function
+
 # system modules
 import os
 import sys
-from itertools import izip
+try:
+    from itertools import izip # python 2
+except ImportError:
+    izip = zip # python 3
 import fnmatch
 
 # colorful exception info
@@ -32,10 +37,10 @@ def print_exception(file=sys.stdout):
     lexer = get_lexer_by_name("pytb", stripall=True)
     formatter = TerminalFormatter()
 
-    print "\n"
-    print "=" * 110
+    print("\n")
+    print("=" * 110)
     file.write(highlight(tbtext, lexer, formatter))
-    print "=" * 110            
+    print("=" * 110)
 
 # *******************
 # FIND, SORT, SLICE *
@@ -73,7 +78,7 @@ def sort_get_z(files, a_sim_info, skip_init=False):
         elif a_sim_info.app + '_init' in a_file and not skip_init:
             zs.append('init')
         else:
-            print "WARNING! Skipping file '%s', unknown format." % a_file
+            print("WARNING! Skipping file '%s', unknown format." % a_file)
     return sort_lists(zs, files)
 
 def sort_get_fl_get_z(a_sim_info, subdir, patterns='*.dat', skip_init=False):
@@ -141,6 +146,13 @@ def get_extrap_pk(a_sim_info, files, zs):
         a_sim_info.data["pk_list"] = [x["Pk_par"] for x in a_sim_info.data["extrap_pk"]]
         a_sim_info.data["zs"] = [x["z"] for x in a_sim_info.data["extrap_pk"]]
 
+def use_z_eff(a_sim_info, files, zs, **kwargs):
+    use_z_eff = kwargs.get('use_z_eff', None)
+    if use_z_eff is None or not get_a_eff(a_sim_info, files, zs, use_z_eff=use_z_eff):
+        return zs
+    else:
+        return a_sim_info.data["eff_time"][use_z_eff] ["z_eff"]
+        
 def load_plot_pwr(files, zs, a_sim_info, **kwargs):
     data_list = [np.transpose(np.loadtxt(x)) for x in files]
     get_extrap_pk(a_sim_info, files, zs)
@@ -192,14 +204,14 @@ def get_plot_corr_peak(files, zs, a_sim_info, load=False, **kwargs):
     get_corr_func(files, zs, a_sim_info, load=load)
     cutof = kwargs.get("cutof", 25)
     get_corr_peak(a_sim_info, cutof=cutof)
-    plot.plot_corr_peak(zs, a_sim_info, **kwargs)
+    plot.plot_corr_peak(zs, [a_sim_info], **kwargs)
     
 def get_sigma_R(files, zs, a_sim_info, load=False):
     get_key_func(files, zs, a_sim_info, "sigma_R", load=load)
 
-def get_plot_sigma(files, zs, a_sim_info, load=False):
+def get_plot_sigma(files, zs, a_sim_info, load=False, **kwargs):
     get_sigma_R(files, zs, a_sim_info, load=load)
-    plot.plot_corr_func(a_sim_info.data["sigma_R"], zs, a_sim_info, is_sigma=True)
+    plot.plot_corr_func(a_sim_info.data["sigma_R"], zs, a_sim_info, is_sigma=True, **kwargs)
 
 def find_nearest_idx(array, value, axis=None):
     # special case for redshifts
@@ -217,15 +229,15 @@ def find_nearest_idx(array, value, axis=None):
             idx += 1
     return idx
 
-def get_plot_supp(files, zs, a_sim_info, pk_type='dens'):
+def get_plot_supp(files, zs, a_sim_info, pk_type='dens', **kwargs):
     a = [1./(z+1.) for z in zs]
     supp = load_k_supp(files, a_sim_info.k_nyquist["particle"], a_sim_info=a_sim_info, a=a, pk_type=pk_type)
-    plot.plot_supp_lms(supp, a, a_sim_info, pk_type=pk_type)
+    plot.plot_supp_lms(supp, a, a_sim_info, pk_type=pk_type, **kwargs)
 
-def get_plot_supp_map(files, zs, a_sim_info, pk_type='dens'):
+def get_plot_supp_map(files, zs, a_sim_info, pk_type='dens', **kwargs):
     data_array = [np.transpose(np.loadtxt(a_file)) for a_file in files]
     data_array = check_data_consistency_diff(data_array)
-    plot.plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, ext_title="par", pk_type=pk_type)
+    plot.plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, ext_title="par", pk_type=pk_type, **kwargs)
 
 def load_plot_pwr_spec_diff(files, zs, a_sim_info, **kwargs):
     data_list = [np.transpose(np.loadtxt(a_file))
@@ -283,11 +295,12 @@ def load_check_plot(a_sim_info, key, patterns, # type: struct.SimInfo, str, str,
     4) plot -- need to pass Callable function with arguments: files, zs, a_sim_info, kwargs
     5) write info about done step into a_sim_info
     """
-    print 'step: %-25s' % (key + ' ' + info_str),
+    print('step: %-25s' % (key + ' ' + info_str), end='')
     sys.stdout.flush()
     subdir = key + '/' if subdir is None else subdir
     zs, files = try_get_zs_files(a_sim_info, subdir, patterns)
     if a_sim_info.rerun(rerun, key, skip, zs):
+        zs = use_z_eff(a_sim_info, files, zs, **kwargs)
         plot_func(files, zs, a_sim_info, **kwargs)
         a_sim_info.done(key)
 
@@ -381,7 +394,7 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         except Exception:
             print_exception()
 
-def analyze_all(out_dir='/home/michal/Documents/GIT/Adhesion-Approximation/output/',
+def analyze_all(out_dir='/home/michal/Documents/GIT/FastSim/output/',
                 rerun=None, skip=None, only=None):
     files = get_files_in_traverse_dir(out_dir, 'sim_param.json')
     sim_infos = []
@@ -394,13 +407,13 @@ def analyze_all(out_dir='/home/michal/Documents/GIT/Adhesion-Approximation/outpu
     info = ''
     for a_sim_info in sim_infos:
         info = 'Analyzing run %s' % a_sim_info.info_tr()
-        print '*'*len(info), '\n', info, '\n', '*'*len(info)
+        print('*'*len(info), '\n', info, '\n', '*'*len(info))
         try:
             analyze_run(a_sim_info, rerun=rerun, skip=skip)
         except KeyboardInterrupt:
-            print 'Exiting...'
+            print('Exiting...')
             return
-    print '*'*len(info), '\n','All runs analyzed!'
+    print('*'*len(info), '\n','All runs analyzed!')
 
 # ******************************
 # LOAD DATA FROM MULTIPLE RUNS *
@@ -475,7 +488,7 @@ def check_data_consistency_diff(data_list):
     try:
         data_array = np.array(data_list)
     except ValueError:
-        print '\t\tData in data_list have different shapes. Trying to cut...'
+        print('\t\tData in data_list have different shapes. Trying to cut...')
         # convert to list so elements can be deleted
         data_list = [np.array(data).tolist() for data in data_list]
         del_num = 0
@@ -507,7 +520,7 @@ def check_data_consistency_diff(data_list):
             else:
                 break
         if del_num:
-            print "\t\tDeleted %i excess values." % (del_num)
+            print("\t\tDeleted %i excess values." % (del_num))
         data_array = np.array(data_list)
     return data_array
 
@@ -594,12 +607,17 @@ def get_a_eff_from_dens_fluct(a_sim_info):
     D_eff_ratio = np.mean(data_D_eff, axis=1)
     D_eff_std = np.std(data_D_eff, axis=1)
 
+    # effective redshift
+    D_eff = D_eff_ratio * pwr.growth_factor(a, a_sim_info.sim.cosmo)
+    a_eff = pwr.get_a_from_growth(D_eff, a_sim_info.sim.cosmo)
+
     # create structure in data
     create_a_eff_struct(a_sim_info)
 
     # store
     a_sim_info.data["eff_time"]["sigma_R"] = {
         'a' : a,
+        'z_eff' : 1./a_eff - 1,
         'a_err' : D_eff_std,
         'D_eff_ratio' : D_eff_ratio
     }
@@ -622,9 +640,22 @@ def get_a_eff_from_Pk(stack_info):
     # store
     stack_info.data["eff_time"]["Pk"] = {
         'a' : a,
+        'z_eff' : 1./a_eff - 1,
         'a_err' : perr[:,0],
         'D_eff_ratio' : D_eff / D
     }
+
+def get_a_eff(a_sim_info, files, zs, use_z_eff='Pk'):
+    if use_z_eff == 'Pk' or use_z_eff == 'all':
+        get_extrap_pk(a_sim_info, files, zs)
+        get_a_eff_from_Pk(a_sim_info)
+        return True
+    elif use_z_eff == 'sigma_R' or use_z_eff == 'all':
+        get_sigma_R(files, zs, a_sim_info)
+        get_a_eff_from_dens_fluct(a_sim_info)
+        return True
+    else:
+        return False
 
 # **************************
 # LOAD & SAVE STACKED DATA *
@@ -657,8 +688,8 @@ def load_stack_save(stack_info, key, patterns,  # type: struct.StackInfo, str, s
        - fname = fname + "_%s_%s" % (app, z_str)
     4) write info about done step into stack_info
     """
-    print 'step: %-25s' % (key + ' ' + info_str),
-    sys.stdout.flush()
+    print('step: %-25s' % (key + ' ' + info_str),
+    sys.stdout.flush())
 
     # check only rerun / key / skip -- no files loading
     if stack_info.rerun(rerun, key, skip, True):
@@ -766,17 +797,17 @@ def count_runs(sep_files):
     return num_all_runs, num_all_sep_runs, num_sep_runs
 
 def print_runs_info(sep_files, num_all_runs, num_all_sep_runs, num_sep_runs):
-    print "There are in total %i different runs, from which %i share the same parameters, constituting %i group(s) eligible for stacking:" % (
-        num_all_runs, num_all_sep_runs, num_sep_runs)
+    print("There are in total %i different runs, from which %i share the same parameters, constituting %i group(s) eligible for stacking:" % (
+        num_all_runs, num_all_sep_runs, num_sep_runs))
     for sep_sim_infos in sep_files:
-        print "\n" + sep_sim_infos[0].info_tr()
+        print("\n" + sep_sim_infos[0].info_tr())
         for i, a_sim_info in enumerate(sep_sim_infos):
             if i == 10:
-                print "\t...and %i more runs" % (len(sep_sim_infos) - 10)
+                print("\t...and %i more runs" % (len(sep_sim_infos) - 10))
                 break
-            print "\t" + a_sim_info.dir
+            print("\t" + a_sim_info.dir)
 
-def stack_all(in_dir='/home/michal/Documents/GIT/Adhesion-Approximation/output/', rerun=None, skip=None, **kwargs):
+def stack_all(in_dir='/home/michal/Documents/GIT/FastSim/output/', rerun=None, skip=None, **kwargs):
     # get & count all runs
     sep_files = get_runs_siminfo(in_dir)
     num_all_runs, num_all_sep_runs, num_sep_runs = count_runs(sep_files)
@@ -794,13 +825,13 @@ def stack_all(in_dir='/home/michal/Documents/GIT/Adhesion-Approximation/output/'
     # analysis
     for sep_sim_infos in sep_files:
         info = "Stacking group %s" % sep_sim_infos[0].info_tr()
-        print '*'*len(info), '\n', info, '\n', '*'*len(info)
+        print('*'*len(info), '\n', info, '\n', '*'*len(info))
         try:
             stack_group(group_sim_infos=sep_sim_infos, rerun=rerun, skip=skip, **kwargs)
         except KeyboardInterrupt:
-            print 'Exiting...'
+            print('Exiting...')
             return
-    print '*'*len(info), '\n', 'All groups analyzed!'
+    print('*'*len(info), '\n', 'All groups analyzed!')
 
 # ********************************
 # RUN ANALYSIS -- CHI COMPARISON *
@@ -891,7 +922,7 @@ def my_shape(data):
     except ValueError:
         return len(data)
         
-def compare_chi_fp(in_dir="/home/michal/Documents/GIT/Adhesion-Approximation/output/",
+def compare_chi_fp(in_dir="/home/michal/Documents/GIT/FastSim/output/",
                    out_dir=report_dir,
                    use_group=None):
     groups = get_fp_chi_groups(in_dir)

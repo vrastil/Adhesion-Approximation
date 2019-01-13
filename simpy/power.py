@@ -183,3 +183,16 @@ def growth_change(a, cosmo):
         return np.array([fs.growth_change(a_, cosmo) for a_ in a])
     else:
         return fs.growth_change(np.asscalar(a), cosmo)
+
+def get_a_from_growth(D, cosmo):
+    """ get scale factor at which growth factor is D """
+    D = np.array(D)
+    if D.shape:
+        a_eff = []
+        for D_ in D:
+            f = lambda a : D_ - growth_factor(a, cosmo)
+            a_eff.append(brentq(f, 0, 1))
+        return np.array(a_eff)
+    else:
+        f = lambda a : D - growth_factor(a, cosmo)
+        return brentq(f, 0, 1)
