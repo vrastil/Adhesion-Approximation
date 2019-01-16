@@ -177,7 +177,7 @@ class SimInfo(object):
             return True
         # step already done
         else:
-            print("[Done]")
+            print("[Skipped]  (already done)")
             return False
 
     def done(self, key):

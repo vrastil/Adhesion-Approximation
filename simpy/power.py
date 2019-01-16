@@ -11,6 +11,7 @@
 
 import numpy as np
 from scipy.optimize import brentq
+from scipy.optimize import minimize_scalar
 from scipy.signal import argrelextrema
 from . import fastsim as fs
 
@@ -75,6 +76,37 @@ def chi_psi_a(a, chi_opt):
     n = chi_opt["n"]
     phi *= pow(a, (5.-2*n)/(1.-n))
     return phi
+
+def phi_G_prefactor(cosmo, c_kms=299792.458):
+    mu_ = 3./2*cosmo.Omega_m * pow(cosmo.H0 * cosmo.h / c_kms, 2)
+    return 1/mu_
+
+def phi_G_k(a, k, cosmo, c_kms=299792.458):
+    Pk = lin_pow_spec(a, k, cosmo)
+    Pk_til = Pk*pow(k/(2*np.pi), 3)
+    drho = np.sqrt(Pk_til)
+    mu = phi_G_prefactor(cosmo, c_kms=c_kms)
+    phi = drho/(mu*a*k*k)
+    return phi
+
+def chi_psi_k_a_single(a, cosmo, chi_opt, k_min=1e-5, k_max=1e3, rel_tol=1e-1):
+    """ return scale at which hravitational potential is equal to screening potential """
+    psi_scr_a = chi_psi_a(a, chi_opt)
+    f = lambda k : np.abs(psi_scr_a - phi_G_k(a, k, cosmo))
+    k_scr = minimize_scalar(f, bracket=(k_min, k_max), bounds=(k_min, np.inf), tol=1e-12).x
+
+    if f(k_scr)/psi_scr_a < rel_tol:
+        return k_scr
+    else:
+        return 0
+
+def chi_psi_k_a(a, cosmo, chi_opt, k_min=1e-5, k_max=1e3, rel_tol=1e-1):
+    a = np.array(a)
+    fce = lambda a_ : chi_psi_k_a_single(a_, cosmo, chi_opt, k_min=k_min, k_max=k_max, rel_tol=rel_tol)
+    if a.shape:
+        return np.array([fce(a_)  for a_ in a])
+    else:
+        return fce(np.asscalar(a))
 
 def chi_mass_sq(a, cosmo, chi_opt, MPL=1, c_kms=299792.458):
     """ return mass squared of chameleon field sitting at chi_bulk(a, 0) """
@@ -148,17 +180,24 @@ def sigma_R(sim, Pk=None, z=None, non_lin=False):
     fc_nl = fs.gen_sigma_func_binned_gsl_qawf_nl
     return gen_func(sim, fc_par, fce_lin, fc_nl, Pk=Pk, z=z, non_lin=non_lin)
 
-def get_bao_peak(corr, cutof=80):
+def get_bao_peak(corr, cutof=80, recursion=0, max_recursion=10):
     r, xi = corr
     
     # get id of local maxima
-    idx = argrelextrema(xi, np.greater)
+    idx = argrelextrema(r*r*xi, np.greater)
     
-    # get first maximum after 25 Mpc/h (default cutof)
-    peak_id = [x for x in idx[0] if r[x] > cutof][0]
-    
-    # return peak location and amplitude
-    return r[peak_id], xi[peak_id]
+    # get first maximum after cutof = 80 Mpc/h (default cutof)
+    peak_id = [x for x in idx[0] if r[x] > cutof]
+    if peak_id:
+        # return peak location and amplitude
+        return r[peak_id[0]], xi[peak_id[0]]    
+    else:
+        # failed to find local maximum
+        if recursion > max_recursion:
+            return 0, 0
+        # try again with lower cutof
+        else:
+            return get_bao_peak(corr, cutof=cutof/1.2, recursion=recursion+1)
 
 def growth_factor(a, cosmo):
     """ return growth factor D at scale factor a, accepts ndarray """

@@ -370,7 +370,7 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         ("chi_pwr_spec_supp_map", '*chi*.dat*', get_plot_supp_map, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
         # Correlation function, BAO peak, amplitude of density fluctuations
         ("corr_func", '*par*.dat *init*.dat', get_plot_corr, {'subdir' : 'pwr_spec/'}),
-        ("bao", '*par*.dat', get_plot_corr_peak, {'subdir' : 'pwr_spec/'}),
+        ("bao", '*par*.dat *init*.dat', get_plot_corr_peak, {'subdir' : 'pwr_spec/'}),
         ("sigma_R", '*par*.dat *init*.dat', get_plot_sigma, {'subdir' : 'pwr_spec/'}),
         # Density distribution
         ("dens_hist", '*.dat', load_plot_dens_histo, {'subdir' : 'rho_bin/'}),
