@@ -266,17 +266,21 @@ def load_plot_dens_histo(files, zs, a_sim_info):
                  for a_file in files]
     plot.plot_dens_histo(data_list, zs, a_sim_info)
 
-def load_plot_a_eff(files, zs, a_sim_info, **kwargs):
+def load_a_eff(a_sim_info, files=None, zs=None):
     # create structure in data
     create_a_eff_struct(a_sim_info)
-    
-    # effective time from power spectrum
-    get_extrap_pk(a_sim_info, files, zs)
-    get_a_eff_from_Pk(a_sim_info)
-    
-    # effective time from density fluctuations
-    get_sigma_R(files, zs, a_sim_info)
-    get_a_eff_from_dens_fluct(a_sim_info)
+
+    # load files
+    if files is None or zs is None:
+        zs, files = try_get_zs_files(a_sim_info, subdir='pwr_spec/', patterns='*.dat')
+
+    # effective time from power spectrum and density fluctuations
+    get_a_eff(a_sim_info, files, zs, use_z_eff='all')
+
+
+def load_plot_a_eff(files, zs, a_sim_info, **kwargs):
+    # load a_eff
+    load_a_eff(a_sim_info, files=files, zs=zs)
     
     # plot
     plot.plot_eff_time([a_sim_info], a_eff_type="sigma_R", **kwargs)
@@ -311,18 +315,17 @@ def cut_zs_files(zs, files, z=None):
         files = [files[idx]]
     return zs, files
 
-def get_initialized_StackInfo(a_file, z=None, get_corr=False, get_sigma=False, get_data=False):
-    # get struct.StackInfo
-    a_sim_info = struct.StackInfo(stack_info_file=a_file)
-
-    # get files for extrapolated power spectrum
-    zs, files = try_get_zs_files(a_sim_info, subdir='pwr_spec/', patterns='*par*.dat')
+def init_data(a_sim_info, z=None, get_pk=False, get_corr=False, get_sigma=False):
+    # get files for data
+    zs, files = try_get_zs_files(a_sim_info, subdir='pwr_spec/', patterns='*par*.dat *init*.dat')
 
     # if z is specified, find nearest-value file
     zs, files = cut_zs_files(zs, files, z)
 
-    # get data
-    get_extrap_pk(a_sim_info, files, zs)
+    # get extrapolated power spectrum
+    if get_pk:
+        get_extrap_pk(a_sim_info, files, zs)
+        a_sim_info.data["pk_data_par"] = [np.transpose(np.loadtxt(x)) for x in files]
 
     # get correlation function
     if get_corr:
@@ -332,9 +335,12 @@ def get_initialized_StackInfo(a_file, z=None, get_corr=False, get_sigma=False, g
     if get_sigma:
         get_sigma_R(files, zs, a_sim_info)
 
-    # get data about power spectrum
-    if get_data:
-        a_sim_info.data["pk_data_par"] = [np.transpose(np.loadtxt(x)) for x in files]
+def get_initialized_StackInfo(a_file, z=None, get_pk=False, get_corr=False, get_sigma=False):
+    # get struct.StackInfo
+    a_sim_info = struct.StackInfo(stack_info_file=a_file)
+
+    # get data
+    init_data(a_sim_info, z=z, get_pk=True, get_corr=get_corr, get_sigma=get_sigma)
 
     # return initialized object
     return a_sim_info
@@ -585,7 +591,7 @@ def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par):
 
 def create_a_eff_struct(a_sim_info):
     if "eff_time" not in a_sim_info.data:
-        a_sim_info.data["eff_time"] = {"Pk" : {}, "sigma_R" : {}}
+        a_sim_info.data["eff_time"] = {"Pk" : {}, "Pk_nl" : {}, "sigma_R" : {}}
 
 def get_a_eff_from_dens_fluct(a_sim_info):
     """ fit data [r, sigma] to """
@@ -625,6 +631,30 @@ def get_a_eff_from_dens_fluct(a_sim_info):
 
 def get_a_eff_from_Pk(stack_info):
     # go through all extrapolated Pk
+    a, A = map(np.array, zip(*[ # extract back, store as np.array
+        (1/(Pk['z'] + 1), Pk['Pk_par'].A_low) # a, Extrap_Pk_Nl
+        for Pk in stack_info.data["extrap_pk"] if Pk["z"] != 'init']))
+    
+    # get a_eff from amlitude of non-linear power spectrum
+    a_eff = pwr.get_a_from_A(stack_info.sim.cosmo, A)
+    
+    # derived variables
+    D = pwr.growth_factor(a, stack_info.sim.cosmo)
+    D_eff = pwr.growth_factor(a_eff, stack_info.sim.cosmo)
+
+    # create structure in data
+    create_a_eff_struct(stack_info)
+
+    # store
+    stack_info.data["eff_time"]["Pk"] = {
+        'a' : a,
+        'z_eff' : 1./a_eff - 1,
+        'a_err' : 0,
+        'D_eff_ratio' : D_eff / D
+    }
+
+def get_a_eff_from_Pk_nl(stack_info):
+    # go through all extrapolated Pk
     a, popt, perr = map(np.array, zip(*[ # extract back, store as np.array
         (1/(Pk['z'] + 1), Pk['popt'], Pk['perr']) # a, popt, perr
         for Pk in stack_info.data["extrap_pk"] if Pk["z"] != 'init']))
@@ -638,7 +668,7 @@ def get_a_eff_from_Pk(stack_info):
     create_a_eff_struct(stack_info)
 
     # store
-    stack_info.data["eff_time"]["Pk"] = {
+    stack_info.data["eff_time"]["Pk_nl"] = {
         'a' : a,
         'z_eff' : 1./a_eff - 1,
         'a_err' : perr[:,0],
@@ -646,16 +676,27 @@ def get_a_eff_from_Pk(stack_info):
     }
 
 def get_a_eff(a_sim_info, files, zs, use_z_eff='Pk'):
+    success = False
+
+    # effective time from power spectrum
     if use_z_eff == 'Pk' or use_z_eff == 'all':
         get_extrap_pk(a_sim_info, files, zs)
         get_a_eff_from_Pk(a_sim_info)
-        return True
-    elif use_z_eff == 'sigma_R' or use_z_eff == 'all':
+        success = True
+
+    # effective time from non-linear power spectrum
+    if use_z_eff == 'Pk_nl' or use_z_eff == 'all':
+        get_extrap_pk(a_sim_info, files, zs)
+        get_a_eff_from_Pk_nl(a_sim_info)
+        success = True
+    
+    # effective time from density fluctuations
+    if use_z_eff == 'sigma_R' or use_z_eff == 'all':
         get_sigma_R(files, zs, a_sim_info)
         get_a_eff_from_dens_fluct(a_sim_info)
-        return True
-    else:
-        return False
+        success = True
+
+    return success
 
 # **************************
 # LOAD & SAVE STACKED DATA *
@@ -688,9 +729,8 @@ def load_stack_save(stack_info, key, patterns,  # type: struct.StackInfo, str, s
        - fname = fname + "_%s_%s" % (app, z_str)
     4) write info about done step into stack_info
     """
-    print('step: %-25s' % (key + ' ' + info_str),
-    sys.stdout.flush())
-
+    print('step: %-25s' % (key + ' ' + info_str), end='')
+    sys.stdout.flush()
     # check only rerun / key / skip -- no files loading
     if stack_info.rerun(rerun, key, skip, True):
         subdir = key.replace('_files', '/') if subdir is None else subdir
@@ -708,7 +748,7 @@ def load_stack_save(stack_info, key, patterns,  # type: struct.StackInfo, str, s
 # RUN ANALYSIS -- STACKING OF RUNS *
 # **********************************
 
-def stack_group(rerun=None, skip=None, **kwargs):
+def stack_group(rerun=None, skip=None, return_stack=False, **kwargs):
     # load & save all info about stack
     stack_info = struct.StackInfo(**kwargs)
 
@@ -750,9 +790,9 @@ def stack_group(rerun=None, skip=None, **kwargs):
             {'subdir' : 'pwr_diff/', 'info_str' : '(input)', 'ext_title' : 'input'}),
         ("chi_pwr_diff", '*chi*.dat*', load_plot_pwr_spec_diff,
             {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
-        # Correlation function, amplitude of density fluctuations
+        # Correlation function, BAO peak, amplitude of density fluctuations
         ("corr_func", '*par*.dat *init*.dat', get_plot_corr, {'subdir' : 'pwr_spec/'}),
-        ("bao", '*par*.dat', get_plot_corr_peak, {'subdir' : 'pwr_spec/'}),
+        ("bao", '*par*.dat *init*.dat', get_plot_corr_peak, {'subdir' : 'pwr_spec/'}),
         ("sigma_R", '*par*.dat *init*.dat', get_plot_sigma, {'subdir' : 'pwr_spec/'}),
         # Power spectrum suppression
         ("pwr_spec_supp", '*par*', get_plot_supp, {'subdir' : 'pwr_diff/'}),
@@ -772,6 +812,8 @@ def stack_group(rerun=None, skip=None, **kwargs):
             raise
         except Exception:
             print_exception()
+
+    return stack_info if return_stack else None
 
 def get_runs_siminfo(in_dir):
     # get all runs
@@ -807,7 +849,7 @@ def print_runs_info(sep_files, num_all_runs, num_all_sep_runs, num_sep_runs):
                 break
             print("\t" + a_sim_info.dir)
 
-def stack_all(in_dir='/home/michal/Documents/GIT/FastSim/output/', rerun=None, skip=None, **kwargs):
+def stack_all(in_dir='/home/michal/Documents/GIT/FastSim/output/', rerun=None, skip=None, return_stack=False, **kwargs):
     # get & count all runs
     sep_files = get_runs_siminfo(in_dir)
     num_all_runs, num_all_sep_runs, num_sep_runs = count_runs(sep_files)
@@ -823,29 +865,41 @@ def stack_all(in_dir='/home/michal/Documents/GIT/FastSim/output/', rerun=None, s
     print_runs_info(sep_files, num_all_runs, num_all_sep_runs, num_sep_runs)
 
     # analysis
+    stack_infos = []
     for sep_sim_infos in sep_files:
         info = "Stacking group %s" % sep_sim_infos[0].info_tr()
         print('*'*len(info), '\n', info, '\n', '*'*len(info))
         try:
-            stack_group(group_sim_infos=sep_sim_infos, rerun=rerun, skip=skip, **kwargs)
+            stack_infos.append(stack_group(group_sim_infos=sep_sim_infos, rerun=rerun, skip=skip, return_stack=return_stack, **kwargs))
         except KeyboardInterrupt:
             print('Exiting...')
-            return
+            if return_stack:
+                return stack_infos
     print('*'*len(info), '\n', 'All groups analyzed!')
+    return stack_infos if return_stack else None
 
 # ********************************
 # RUN ANALYSIS -- CHI COMPARISON *
 # ********************************
 
 def plot_chi_wave_pot(a_file="/home/michal/Documents/GIT/FastSim/jobs/output/CHI_run/STACK_512m_512p_1024M_2000b_1e-06Y/stack_info.json",
-                      outdir=report_dir):
+                      outdir=report_dir, n=None, phi=None, zs=None, save=True, show=True):
     a_sim_info = struct.SimInfo(a_file)
-    zs = np.linspace(0,5)
+
+    # parameters of the plot (if not given)
+    if zs is None:
+        zs = np.linspace(0,5)
     beta = a_sim_info.chi_opt["beta"]
-    n = [0.1,0.5,0.7]
-    phi = [10**(-5)]
+    if n is None:
+        n = [0.1,0.5,0.7]
+    if phi is None:
+        phi = [10**(-5)]
+
+    # all chameleon parameters to go through
     chi_opt = [{'beta' : beta, 'n' : n_, 'phi' : phi_} for phi_ in phi for n_ in n]
-    plot.plot_chi_evol(zs, a_sim_info, chi_opt=chi_opt, out_dir=outdir, show=True)
+
+    # plot
+    plot.plot_chi_evol(zs, a_sim_info, chi_opt=chi_opt, out_dir=outdir, save=save, show=show)
 
 
 def get_data_fp_chi_ratio(group):
@@ -1007,11 +1061,11 @@ def get_pk_broad_k(data_list, sim_infos):
     # sort from lowest k
     data_list, sim_infos = zip(*sorted(zip(data_list, sim_infos), key=lambda x : x[0][0][0]))
 
-    # go through sorted list from, do not go higher values than k_nyqist / 2
+    # go through sorted list, do not go higher values than k_nyqist / 2
     k_last = 0
     for data, a_sim_info in zip(data_list, sim_infos):
         k, Pk, Pk_std = data
-        k_max = a_sim_info.k_nyquist["particle"] / 10
+        k_max = a_sim_info.k_nyquist["particle"] / 3
         idx = (k >= k_last) & (k < k_max)
         data_list_new[0] += k[idx].tolist()
         data_list_new[1] += Pk[idx].tolist()
@@ -1056,11 +1110,15 @@ def get_check_pk_broad(stack_infos, idx):
     data_list_new, extrap_pk = get_pk_broad_k(data_list, stack_infos)
     return data_list_new, extrap_pk
 
-def get_plot_mlt_pk_broad(stack_infos, z=0):
+def get_plot_mlt_pk_broad(stack_infos, out_dir='auto', z=0):
     # sort according to app
     app_all = set([x.app for x in stack_infos])
     groups = {app : [] for app in app_all}
     for a_sim_info in stack_infos:
+        # initialize extrapolated data if not done already
+        init_data(a_sim_info, get_pk=True)
+
+        # sort
         app = a_sim_info.app
         groups[app].append(a_sim_info)
 
@@ -1080,4 +1138,4 @@ def get_plot_mlt_pk_broad(stack_infos, z=0):
         data_all.append(data_list_new)
     
     # plot
-    plot.plot_pwr_spec_comparison(data_all, zs, app_all, stack_infos[0].sim.cosmo, save=True, show=True)
+    plot.plot_pwr_spec_comparison(data_all, zs, app_all, stack_infos[0].sim.cosmo, out_dir=out_dir, save=True, show=True)

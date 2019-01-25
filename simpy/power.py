@@ -18,8 +18,16 @@ from . import fastsim as fs
 def get_a_from_A(cosmo, A):
     """ return scale factor a at which amplitude of linear power spectrum is A (normalize as A=1 at a=1) """
     # 'f = 0' <=> A = D^2 (linear power grows as D^2)
-    f = lambda a : A - fs.growth_factor(a, cosmo)**2
-    return brentq(f, 0, 1)
+    A = np.array(A)
+    if A.shape:
+        a_eff = []
+        for A_ in A:
+            f = lambda a : A_ - fs.growth_factor(a, cosmo)**2
+            a_eff.append(brentq(f, 0, 1))     
+        return np.array(a_eff)
+    else:
+        f = lambda a : A - fs.growth_factor(a, cosmo)**2
+        return brentq(f, 0, 1)
 
 def get_ndarray(Data_Vec):
     """ copy C++ class Data_Vec<FTYPE_t, N> into numpy array """

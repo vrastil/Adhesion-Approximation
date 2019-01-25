@@ -11,6 +11,7 @@ from __future__ import print_function
 
 import json
 import os
+import fnmatch
 import subprocess
 from IPython.display import Image, display
 from .fastsim import Sim_Param
@@ -114,7 +115,9 @@ class SimInfo(object):
         info += '$L = %i$ Mpc/h\n' % self.box_opt["box_size"]
         if self.app == 'AA': info += r'$\nu = %.1f$ (Mpc/h)$^2$' % self.app_opt["viscosity"]
         if self.app == 'FP_pp': info += r'$r_s = %.1f$' % self.app_opt["cut_radius"]
-        if self.app == 'CHI': info += r'$\phi_s = %.1e$' % self.chi_opt["phi"]
+        if self.app == 'CHI':
+            info += r'$\phi_s = %.1e$' % self.chi_opt["phi"]
+            info += '  (lin)' if self.chi_opt["linear"] else '  (nl) '
         return info
 
     def info_tr(self):
@@ -218,11 +221,16 @@ class StackInfo(SimInfo):
 
     def load_group_sim_infos(self, group_sim_infos, **kwargs):
         self.group_sim_infos = group_sim_infos 
+
+        # directory name
         self.dir = self.dir.replace(self.dir.split("/")[-2] + "/", "")
         self.dir += "STACK_%im_%ip_%iM_%ib" % (
             self.box_opt["mesh_num"], self.box_opt["par_num"],
             self.box_opt["mesh_num_pwr"], self.box_opt["box_size"])
-        if self.app == "CHI": self.dir += "_%.0eY" % self.chi_opt["phi"]
+        if self.app == "CHI":
+            self.dir += "_%.1fn_%.0eY" % (self.chi_opt["n"], self.chi_opt["phi"])
+            if self.chi_opt["linear"]:
+                self.dir += "_lin"
         self.dir += "/"
         self.file = self.dir + 'stack_info.json'
         self.res_dir = self.dir + 'results/'
@@ -233,12 +241,13 @@ class StackInfo(SimInfo):
         create_dir(self.res_dir)
 
         self.seeds = [SI.run_opt["seed"] for SI in self]
+        self.num_run = len(self.seeds)
 
         if os.path.isfile(self.file):  # there is already save StackInfo
             with open(self.file) as data_file:
                 data = json.loads(data_file.read())
                 self.results = data["results"]
-                if len(self.seeds) != len(data["seeds"]):
+                if self.num_run != data["num_run"]:
                     print("\tFound stack info but number of files does not seem right. Disregarding any saved data.")
                     self.results = {}
         else:  # save new StackInfo
@@ -303,7 +312,7 @@ class Results(object):
             self.sim_infos.append(StackInfo(stack_info_file=a_file))
         self.sort()
 
-    def get_subfiles(self, Nm=0, NM=0, Np=0, L=0, nu=0, rs=0, phi=0, app=''):
+    def get_subfiles(self, Nm=0, NM=0, Np=0, L=0, nu=0, rs=0, phi=0, n=0, chi_lin=0, app='', app_not=''):
         subfiles = []
         for a_sim_info in self.sim_infos:
             check = bool (
@@ -313,10 +322,13 @@ class Results(object):
                     (L == 0 or a_sim_info.box_opt["box_size"]  == L) and
                     (nu == 0 or a_sim_info.app_opt["viscosity"] == nu) and
                     (rs == 0 or a_sim_info.app_opt["cut_radius"] == rs) and
-                    (app == '' or a_sim_info.app == app)
+                    (app == '' or a_sim_info.app == app) and
+                    (app_not == '' or a_sim_info.app != app_not)
                 )
             if a_sim_info.chi_opt:
                 check = check and (phi == 0 or a_sim_info.chi_opt["phi"] == phi)
+                check = check and (n == 0 or a_sim_info.chi_opt["n"] == n)
+                check = check and (chi_lin == 0 or a_sim_info.chi_opt["linear"] == chi_lin)
             if check:
                 subfiles.append(a_sim_info)
 
@@ -324,7 +336,10 @@ class Results(object):
 
     def info(self, Nm=0, Np=0, L=0, nu=0, rs=0, phi=0, app=''):
         for a_sim_info in self.get_subfiles(Nm=Nm, Np=Np, L=L, nu=nu, rs=rs, phi=phi, app=app):
-            print(a_sim_info.info_tr())
+            info = a_sim_info.info_tr().replace('$', '')
+            if hasattr(a_sim_info, 'num_run'):
+                info += "\tnum runs = %i" % a_sim_info.num_run
+            print(info)
 
     def show_folder(self, a_sim_info):
         subprocess.Popen(["xdg-open", a_sim_info.dir + 'results/'])

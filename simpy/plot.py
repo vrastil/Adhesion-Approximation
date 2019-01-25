@@ -29,7 +29,7 @@ suptitle_size = 25
 fig_size = (14, 9)
 subplt_adj_sym = {'left' : 0.15, 'right' : 0.95, 'bottom' : 0.15, 'top' : 0.95}
 matplotlib.rcParams.update({'font.size': 15})
-report_dir = "/home/michal/Documents/GIT/FastSim/report/plots/"
+report_dir = "/home/michal/Documents/GIT/FastSim/report/clanek/"
 
 def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True, get_a=False, only_last=False):
     """ Generator: iterate through data in list 'iterables'
@@ -70,7 +70,7 @@ def fig_suptitle(fig, suptitle="", y=0.99, size=suptitle_size):
 def close_fig(filename, fig, save=True, show=False, dpi=100, use_z_eff=False):
     """save and/or show figure, close figure"""
     if use_z_eff:
-        filename += 'z_eff.png'
+        filename += '_z_eff.png'
     else:
         filename += '.png'
     if save:
@@ -534,22 +534,29 @@ def plot_corr_peak(zs, sim_infos, out_dir='auto', save=True, show=False, use_z_e
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
-def plot_eff_time_ax(a_sim_info, ax, a_eff_type="sigma_R"):
+def plot_eff_time_ax(a_sim_info, ax, a_eff_type="Pk"):
     # extract variables
     a = a_sim_info.data["eff_time"][a_eff_type]['a']
     D_eff_ratio = a_sim_info.data["eff_time"][a_eff_type]['D_eff_ratio']
     a_err = a_sim_info.data["eff_time"][a_eff_type]['a_err']
+    label = a_sim_info.app # +  '$: L = %i$ Mpc/h' % a_sim_info.box_opt["box_size"]
 
     # plot
-    if a_eff_type == "sigma_R":
-        label = a_sim_info.app +  '$: L = %i$ Mpc/h' % a_sim_info.box_opt["box_size"]
+    if a_eff_type == "sigma_R" or a_eff_type == "Pk":
         ax.plot(a, D_eff_ratio, label=label)
-    elif a_eff_type == "Pk":
-        ax.errorbar(a, D_eff_ratio, yerr=a_err, label=a_sim_info.info_tr())
-        ax.set_ylim(ymin=0.8)
+    elif a_eff_type == "Pk_nl":
+        ax.errorbar(a, D_eff_ratio, yerr=a_err, label=label)
+        #ax.set_ylim(ymin=0.8)
 
 
-def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="sigma_R", save=True, show=False, use_z_eff=False):
+def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=False, use_z_eff=False):
+    # plot everything
+    if a_eff_type == 'all':
+        plot_eff_time(stack_infos, out_dir=out_dir, a_eff_type="sigma_R", save=save, show=show, use_z_eff=use_z_eff)
+        plot_eff_time(stack_infos, out_dir=out_dir, a_eff_type="Pk", save=save, show=show, use_z_eff=use_z_eff)
+        plot_eff_time(stack_infos, out_dir=out_dir, a_eff_type="Pk_nl", save=save, show=show, use_z_eff=use_z_eff)
+        return
+
     if out_dir == 'auto':
         out_dir = report_dir
 
@@ -568,21 +575,48 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="sigma_R", save=True, 
     ax.yaxis.grid(True)
     
     # save & show (in jupyter)
-    close_fig(out_dir + 'D_eff_' + a_eff_type + '_', fig, save=save, show=show, use_z_eff=use_z_eff)
+    close_fig(out_dir + 'D_eff_' + a_eff_type, fig, save=save, show=show, use_z_eff=use_z_eff)
 
+def plot_eff_growth_rate_ax(a_sim_info, ax, a_eff_type="Pk"):
+    # extract variables
+    a = a_sim_info.data["eff_time"][a_eff_type]['a']
+    D_eff_ratio = a_sim_info.data["eff_time"][a_eff_type]['D_eff_ratio']
+    f = np.gradient(np.log(D_eff_ratio), np.log(a))
+    label = a_sim_info.app # +  '$: L = %i$ Mpc/h' % a_sim_info.box_opt["box_size"]
 
-def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='par', save=True, show=False, use_z_eff=False):
+    # plot
+    ax.plot(a, f, label=label)
+
+def plot_eff_growth_rate(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=False, use_z_eff=False):
+    # plot everything
+    if a_eff_type == 'all':
+        plot_eff_growth_rate(stack_infos, out_dir=out_dir, a_eff_type="sigma_R", save=save, show=show, use_z_eff=use_z_eff)
+        plot_eff_growth_rate(stack_infos, out_dir=out_dir, a_eff_type="Pk", save=save, show=show, use_z_eff=use_z_eff)
+        plot_eff_growth_rate(stack_infos, out_dir=out_dir, a_eff_type="Pk_nl", save=save, show=show, use_z_eff=use_z_eff)
+        return
+
     if out_dir == 'auto':
-        out_dir = a_sim_info.res_dir
-    if pk_type == "dens":
-        out_file = 'pwr_spec_diff'
-        suptitle = "Power spectrum difference"
-    elif pk_type == "vel":
-        out_file = 'vel_pwr_spec_diff'
-        suptitle = r"Power spectrum difference $(\nabla\cdot u)$"
-    elif pk_type == 'chi':
-        out_file = 'pwr_spec_diff_chi'
-        suptitle = "Chameleon power spectrum difference"
+        out_dir = report_dir
+
+    # figure
+    fig = plt.figure(figsize=fig_size)
+    ax = plt.gca()
+    
+    for stack_info in stack_infos:
+        plot_eff_growth_rate_ax(stack_info, ax, a_eff_type)
+    
+    ax.set_ylabel(r'$f-f_{GR}$', fontsize=label_size)
+    ax.set_xlabel(r'$a$', fontsize=label_size)
+    ax.legend()
+    plt.subplots_adjust(**subplt_adj_sym)
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax.yaxis.grid(True)
+    
+    # save & show (in jupyter)
+    close_fig(out_dir + 'f_eff_' + a_eff_type, fig, save=save, show=show, use_z_eff=use_z_eff)
+
+def plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=True, pk_type='dens', max_nyquist=False):
+    if pk_type == 'chi':
         # transform chameleon power spectrum to suppression
         for z, data in izip(zs, data_list):
             a, k, Pk = 1/(1.+z), data[0], data[1]
@@ -591,28 +625,32 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
                 data[2] = power.chi_trans_to_supp(a, k, data[2], a_sim_info.sim.cosmo, a_sim_info.chi_opt)
         # transform supp (ref: lin) to supp (ref: init)
         power.chi_trans_to_init(data_list)
-        ext_title = 'init'
-            
-    out_file += '_%s' % ext_title
-    suptitle += ' (ref: %s)' % ext_title
 
-    fig = plt.figure(figsize=fig_size)
-    ax = plt.gca()
-    plt.xscale('log')
+    ax.set_xscale('log')
 
     ymin = ymax = 0
+
     # SMALL / MEDIUM / LARGE SCALE VALUES
     # half of nyquist wavelength, 7 subintervals
     k = data_list[-1][0]
     idx = (np.abs(k - 0.5 * a_sim_info.k_nyquist["particle"])).argmin() / 7
     cmap = cm.get_cmap('gnuplot')
-    ax.axvspan(k[0 * idx], k[1 * idx], alpha=0.2, color=cmap(0.1))
-    ax.axvspan(k[3 * idx], k[4 * idx], alpha=0.3, color=cmap(0.5))
-    ax.axvspan(k[6 * idx], k[7 * idx], alpha=0.4, color=cmap(0.9))
+    if show_scales:
+        ax.axvspan(k[0 * idx], k[1 * idx], alpha=0.2, color=cmap(0.1))
+        ax.axvspan(k[3 * idx], k[4 * idx], alpha=0.3, color=cmap(0.5))
+        ax.axvspan(k[6 * idx], k[7 * idx], alpha=0.4, color=cmap(0.9))
 
     for lab, data, a in iter_data(zs, [data_list], get_a=True):
         k, P_k = data[0], data[1]
         P_k_std = data[2] if len(data) == 3 else None
+
+        if max_nyquist:
+            k = k[0:7*idx]
+            P_k = P_k[0:7*idx]
+            P_k_std = P_k_std[0:7*idx] if P_k_std is not None else None
+        else:
+            add_nyquist_info(ax, a_sim_info)
+
         if P_k_std is None:
             plt.plot(k, P_k, 'o', ms=3, label=lab)
             ymax = max(ymax, np.max(P_k[0:7 * idx]))
@@ -621,8 +659,6 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
             plt.errorbar(k, P_k, fmt='o', yerr=P_k_std, ms=3, label=lab)
             ymax = max(ymax, np.max(P_k[0:7 * idx] + P_k_std[0:7 * idx]))
             ymin = min(ymin, np.min(P_k[0:7 * idx] - P_k_std[0:7 * idx]))
-            
-    add_nyquist_info(ax, a_sim_info)
 
     if pk_type != 'chi' and ymax > 1:
         ymax = 1
@@ -635,9 +671,75 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', pk_t
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax.yaxis.grid(True)
 
+def plot_pwr_spec_diff_from_data_mlt(data_lists, zs, sim_infos, out_dir='auto', show_scales=False, pk_type='dens',
+                                 ext_title='init', save=True, show=False, use_z_eff=False):
+
+    if out_dir == 'auto':
+        out_dir = report_dir
+    if pk_type == "dens":
+        out_file = 'pwr_spec_diff'
+        suptitle = "Power spectrum difference"
+    elif pk_type == "vel":
+        out_file = 'vel_pwr_spec_diff'
+        suptitle = r"Power spectrum difference $(\nabla\cdot u)$"
+    elif pk_type == 'chi':
+        out_file = 'pwr_spec_diff_chi'
+        suptitle = "Chameleon power spectrum difference"
+        ext_title = 'init'
+            
+    out_file += '_%s' % ext_title
+    suptitle += ' (ref: %s)' % ext_title
+
+    # size
+    x_fig_size, y_fig_size = fig_size
+    x_fig_size *= 2
+    y_fig_size *= 2
+    fig = plt.figure(figsize=(x_fig_size, y_fig_size))
+
+    gs = gridspec.GridSpec(2, 2)
+    for gs_cur, data_list, a_sim_info in izip(gs, data_lists, sim_infos):
+        ax = plt.subplot(gs_cur)
+        plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=show_scales, pk_type=pk_type)
+    
+
     fig_suptitle(fig, suptitle)
-    plt.xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
-    plt.ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$", fontsize=25)
+
+    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
+    ax.set_ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$", fontsize=25)
+
+    # legend_manipulation(ax, a_sim_info.info_tr())
+    legend_manipulation(ax, "")
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
+
+def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', show_scales=True, pk_type='dens',
+                                 ext_title='par', save=True, show=False, use_z_eff=False, add_app=False, max_nyquist=False):
+    if out_dir == 'auto':
+        out_dir = a_sim_info.res_dir
+    if pk_type == "dens":
+        out_file = 'pwr_spec_diff'
+        suptitle = "Power spectrum difference"
+    elif pk_type == "vel":
+        out_file = 'vel_pwr_spec_diff'
+        suptitle = r"Power spectrum difference $(\nabla\cdot u)$"
+    elif pk_type == 'chi':
+        out_file = 'pwr_spec_diff_chi'
+        suptitle = "Chameleon power spectrum difference"
+        ext_title = 'init'
+            
+    out_file += '_%s' % ext_title
+    suptitle += ' (ref: %s)' % ext_title
+
+    if add_app:
+        out_file += '_%s' % a_sim_info.app
+
+    fig = plt.figure(figsize=fig_size)
+    ax = plt.gca()
+    plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=show_scales, pk_type=pk_type, max_nyquist=max_nyquist)
+    
+
+    fig_suptitle(fig, suptitle)
+    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
+    ax.set_ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$", fontsize=25)
     # legend_manipulation(ax, a_sim_info.info_tr())
     legend_manipulation(ax, "")
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
@@ -965,38 +1067,51 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
         out_dir = a_sim_info.res_dir
     out_file = 'chi_evol'
     suptitle = "Evolution of Chameleon"
-    fig = plt.figure(figsize=fig_size)
+
+    # adjust size for 4 subplots
+    x_fig_size, y_fig_size = fig_size
+    y_fig_size *= 4./3.
+
+    fig = plt.figure(figsize=(x_fig_size, y_fig_size))
     cosmo = a_sim_info.sim.cosmo
     if chi_opt is None:
         chi_opt = [a_sim_info.chi_opt]
         
-    ax1 = plt.subplot(311)
-    ax2 = plt.subplot(313, sharex=ax1)
-    ax3 = plt.subplot(312, sharex=ax1)
+    ax1 = plt.subplot(411)
+    ax2 = plt.subplot(412, sharex=ax1)
+    ax3 = plt.subplot(413, sharex=ax1)
+    ax4 = plt.subplot(414, sharex=ax1)
     
     ax1.set_yscale('log')
     ax2.set_yscale('log')
     ax3.set_yscale('log')
+    ax4.set_yscale('log')
     
     zs = [z for z in zs if z != 'init']
     a = [1./(z+1) for z in zs]
     
     for chi in chi_opt:
+        # chameleon parameters
         wavelengths = [power.chi_compton_wavelength(a_, cosmo, chi) for a_ in a]
         psi_a = [power.chi_psi_a(a_, chi) for a_ in a]
         chi_a = [power.chi_bulk_a(a_, chi, CHI_A_UNITS=False) for a_ in a]
+        k_scr = power.chi_psi_k_a(a, cosmo, chi)
+
+        # plots
         ax1.plot(zs, wavelengths, '-', label=r"$\Phi_{scr} = 10^{%i}$, $n=%.1f$" % (np.log10(chi["phi"]), chi["n"]))
-        ax2.plot(zs, psi_a, '-')
-        ax3.plot(zs, chi_a, '-')
+        ax2.plot(zs, chi_a, '-')
+        ax3.plot(zs, psi_a, '-')
+        ax4.plot(zs, k_scr, '-')
     
     fig_suptitle(fig, suptitle)
     plt.setp(ax1.get_xticklabels(), visible=False)
     plt.setp(ax3.get_xticklabels(), visible=False)
     
-    ax1.set_ylabel(r"$\lambda_C [$Mpc$/h]$", fontsize=label_size)
-    ax2.set_ylabel(r"$\phi_{scr}$", fontsize=label_size)
-    ax3.set_ylabel(r"$\chi/M_{pl}$", fontsize=label_size)
-    ax2.set_xlabel(r"z", fontsize=label_size)
+    ax1.set_ylabel(r"$\lambda_C\, [$Mpc$/h]$", fontsize=label_size)
+    ax2.set_ylabel(r"$\chi/M_{pl}$", fontsize=label_size)
+    ax3.set_ylabel(r"$\phi_{scr}$", fontsize=label_size)
+    ax4.set_ylabel(r"$k_{scr}\, [h/$Mpc$]$", fontsize=label_size)
+    ax4.set_xlabel(r"z", fontsize=label_size)
     
     # legend
     legend_manipulation(ax=ax1, loc='upper right')
@@ -1008,7 +1123,8 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 
-def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle='', save=True, show=False, use_z_eff=False):
+def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle='', save=True, show=False,
+                  add_app=False, scale_in_leg=True, use_z_eff=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if pk_type == "dens":
@@ -1026,9 +1142,14 @@ def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle=
     cmap = cm.get_cmap('gnuplot')
 
     for i, scale in enumerate(['Large', 'Medium', 'Small']):
+        if scale_in_leg:
+            label = '%s-scale:\n' r'$\langle%.2f,%.2f\rangle$' % (scale, supp[i][2][0], supp[i][2][0])
+        else:
+            label = None
+            print('%s-scale: %.4f,%.4f' % (scale, supp[i][2][0], supp[i][2][0]))
         ax.errorbar(a, supp[i][0], fmt='-o', yerr=supp[i][1], ms=3,
                     color=cmap(0.1+i*0.4), lw=4-i*1.5,
-                    label='%s-scale:\n' r'$\langle%.2f,%.2f\rangle$' % (scale, supp[i][2][0], supp[i][2][0]))
+                    label=label)
 
     ymin, ymax = ax.get_ylim()
     if pk_type != 'chi' and ymax > 1:
@@ -1046,9 +1167,12 @@ def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle=
         r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$", fontsize=25)
     
     # legend
-    # legend_manipulation(figtext=a_sim_info.info_tr())
-    legend_manipulation(figtext="")
+    if scale_in_leg:
+        # legend_manipulation(figtext=a_sim_info.info_tr())
+        legend_manipulation(figtext="")
 
+    if add_app:
+        out_file += '_%s' % a_sim_info.app
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 
