@@ -234,15 +234,23 @@ def get_plot_supp(files, zs, a_sim_info, pk_type='dens', **kwargs):
     supp = load_k_supp(files, a_sim_info.k_nyquist["particle"], a_sim_info=a_sim_info, a=a, pk_type=pk_type)
     plot.plot_supp_lms(supp, a, a_sim_info, pk_type=pk_type, **kwargs)
 
+def get_supp_map(a_sim_info, key='input', files=None):
+    if 'pk_supp_%s' % key not in a_sim_info.data:
+        if files is None:
+            zs, files = try_get_zs_files(a_sim_info, 'pwr_diff/', '*%s*' % key)
+        data_array = [np.transpose(np.loadtxt(a_file)) for a_file in files]
+        a_sim_info.data['pk_supp_%s' % key] = {
+            'zs' : zs,
+            'supp' : check_data_consistency_diff(data_array)
+        }
+
 def get_plot_supp_map(files, zs, a_sim_info, pk_type='dens', **kwargs):
-    data_array = [np.transpose(np.loadtxt(a_file)) for a_file in files]
-    data_array = check_data_consistency_diff(data_array)
+    data_array = check_data_consistency_diff([np.transpose(np.loadtxt(a_file)) for a_file in files])
     plot.plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, ext_title="par", pk_type=pk_type, **kwargs)
 
 def load_plot_pwr_spec_diff(files, zs, a_sim_info, **kwargs):
-    data_list = [np.transpose(np.loadtxt(a_file))
-                 for a_file in files]
-    plot.plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, **kwargs)
+    data_array = check_data_consistency_diff([np.transpose(np.loadtxt(a_file)) for a_file in files])
+    plot.plot_pwr_spec_diff_from_data(data_array, zs, a_sim_info, **kwargs)
 
 def split_particle_files(files, zs):
     files_t = [x for x in files if 'track' in x.split('/')[-1]]
@@ -304,7 +312,6 @@ def load_check_plot(a_sim_info, key, patterns, # type: struct.SimInfo, str, str,
     subdir = key + '/' if subdir is None else subdir
     zs, files = try_get_zs_files(a_sim_info, subdir, patterns)
     if a_sim_info.rerun(rerun, key, skip, zs):
-        zs = use_z_eff(a_sim_info, files, zs, **kwargs)
         plot_func(files, zs, a_sim_info, **kwargs)
         a_sim_info.done(key)
 
@@ -369,8 +376,8 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         ("chi_pwr_diff", '*chi*.dat*', load_plot_pwr_spec_diff,
             {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
         # Power spectrum suppression (includes maps) -- particle, velocity, chameleon,
-        ("pwr_spec_supp", '*par*', get_plot_supp, {'subdir' : 'pwr_diff/'}),
-        ("pwr_spec_supp_map", '*par*', get_plot_supp_map, {'subdir' : 'pwr_diff/'}),
+        ("pwr_spec_supp", '*input*', get_plot_supp, {'subdir' : 'pwr_diff/'}),
+        ("pwr_spec_supp_map", '*input*', get_plot_supp_map, {'subdir' : 'pwr_diff/'}),
         ("vel_pwr_spec_supp", '*.dat', get_plot_supp, {'subdir' : 'vel_pwr_diff/', 'pk_type' : 'vel'}),
         ("chi_pwr_spec_supp", '*chi*.dat*', get_plot_supp, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
         ("chi_pwr_spec_supp_map", '*chi*.dat*', get_plot_supp_map, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
@@ -795,8 +802,8 @@ def stack_group(rerun=None, skip=None, return_stack=False, **kwargs):
         ("bao", '*par*.dat *init*.dat', get_plot_corr_peak, {'subdir' : 'pwr_spec/'}),
         ("sigma_R", '*par*.dat *init*.dat', get_plot_sigma, {'subdir' : 'pwr_spec/'}),
         # Power spectrum suppression
-        ("pwr_spec_supp", '*par*', get_plot_supp, {'subdir' : 'pwr_diff/'}),
-        ("pwr_spec_supp_map", '*par*', get_plot_supp_map, {'subdir' : 'pwr_diff/'}),
+        ("pwr_spec_supp", '*input*', get_plot_supp, {'subdir' : 'pwr_diff/'}),
+        ("pwr_spec_supp_map", '*input*', get_plot_supp_map, {'subdir' : 'pwr_diff/'}),
         ("chi_pwr_spec_supp", '*chi*.dat*', get_plot_supp, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
         ("chi_pwr_spec_supp_map", '*chi*.dat*', get_plot_supp_map, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
         # Effective time
@@ -1055,8 +1062,8 @@ def corr_func_comp(files=None, sim_infos=None, outdir=report_dir, z=1., bao_peak
     plot.plot_corr_func(sim_info.data["corr_func"], zs, sim_info, out_dir=outdir, save=True, show=True, extra_data=extra_data[:-1], peak_loc=peak_loc)
     
 
-def get_pk_broad_k(data_list, sim_infos):
-    data_list_new = [[] for i in range(3)]
+def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True):
+    data_list_new = [[] for _ in range(3)]
     
     # sort from lowest k
     data_list, sim_infos = zip(*sorted(zip(data_list, sim_infos), key=lambda x : x[0][0][0]))
@@ -1065,7 +1072,7 @@ def get_pk_broad_k(data_list, sim_infos):
     k_last = 0
     for data, a_sim_info in zip(data_list, sim_infos):
         k, Pk, Pk_std = data
-        k_max = a_sim_info.k_nyquist["particle"] / 3
+        k_max = a_sim_info.k_nyquist["particle"] / 2
         idx = (k >= k_last) & (k < k_max)
         data_list_new[0] += k[idx].tolist()
         data_list_new[1] += Pk[idx].tolist()
@@ -1081,7 +1088,7 @@ def get_pk_broad_k(data_list, sim_infos):
         
     # get new extrapolated Pk, use last a_sim_info for k_nyquist and simulation param.
     sim = a_sim_info.sim
-    extrap_pk = get_hybrid_pow_spec_amp(sim, data_list_new, k_nq)
+    extrap_pk = get_hybrid_pow_spec_amp(sim, data_list_new, k_nq) if get_extrap_pk else None
     
     # plot data only to half nyquist frequency (previusly needed for extra_pk)
     idx = (data_list_new[0] <= k_nq/2)
@@ -1091,12 +1098,19 @@ def get_pk_broad_k(data_list, sim_infos):
     
     return np.array(data_list_new), extrap_pk
 
-def get_check_pk_broad(stack_infos, idx):
+def get_check_pk_broad(stack_infos, idx, data_key="pk", get_extrap_pk=True):
     data_list = []
     zs = []
-    for a_sim_info in stack_infos:    
-        data_list.append(a_sim_info.data["pk_data_par"][idx])
-        zs.append(a_sim_info.data["zs"][idx])
+    for a_sim_info in stack_infos:
+        if data_key == 'pk':
+            data = a_sim_info.data["pk_data_par"][idx]
+            z = a_sim_info.data["zs"][idx]
+        elif data_key == 'supp':
+            data = a_sim_info.data["pk_supp_input"]["supp"][idx]
+            z = a_sim_info.data["pk_supp_input"]["zs"][idx]
+
+        data_list.append(data)
+        zs.append(z)
 
     # check of consistency
     if len(set(zs)) != 1:
@@ -1107,10 +1121,19 @@ def get_check_pk_broad(stack_infos, idx):
         raise IndexError("Different simulations.")
 
     # get data
-    data_list_new, extrap_pk = get_pk_broad_k(data_list, stack_infos)
+    data_list_new, extrap_pk = get_pk_broad_k(data_list, stack_infos, get_extrap_pk=get_extrap_pk)
     return data_list_new, extrap_pk
 
-def get_plot_mlt_pk_broad(stack_infos, out_dir='auto', z=0):
+def get_check_pk_diff_broad(stack_infos):
+    data_lists = []
+    zs = stack_infos[0].data["pk_supp_input"]["zs"]
+
+    for idx in range(len(zs)):
+        data_list_new, _ = get_check_pk_broad(stack_infos, idx, data_key='supp', get_extrap_pk=False)
+        data_lists.append(data_list_new)
+    return np.array(data_lists), zs
+
+def mlt_pl_broad_sort(stack_infos):
     # sort according to app
     app_all = set([x.app for x in stack_infos])
     groups = {app : [] for app in app_all}
@@ -1122,20 +1145,36 @@ def get_plot_mlt_pk_broad(stack_infos, out_dir='auto', z=0):
         app = a_sim_info.app
         groups[app].append(a_sim_info)
 
+    return groups
+
+def get_plot_mlt_pk_broad(stack_infos, out_dir='auto', z=0):
+    # sort according to app
+    groups = mlt_pl_broad_sort(stack_infos)
+
     # get all data
     zs, Pk_list_extrap, data_all = [], [], []
-    for app in app_all:
+    for group in groups.values():
         # get idx of nearest redshift in zs
-        zs_ = groups[app][0].data["zs"]
+        zs_ = group[0].data["zs"]
         idx = find_nearest_idx(zs_, z)
-
-        infos = groups[app]
-        data_list_new, extrap_pk = get_check_pk_broad(infos, idx)
-        groups[app + "_data"] = data_list_new
-        groups[app + "_pk"] = extrap_pk
-        zs.append(groups[app][0].data["zs"][idx])
+        data_list_new, extrap_pk = get_check_pk_broad(group, idx)
+        zs.append(zs_[idx])
         Pk_list_extrap.append(extrap_pk["Pk_par"])
         data_all.append(data_list_new)
     
     # plot
-    plot.plot_pwr_spec_comparison(data_all, zs, app_all, stack_infos[0].sim.cosmo, out_dir=out_dir, save=True, show=True)
+    plot.plot_pwr_spec_comparison(data_all, zs, groups.keys(), stack_infos[0].sim.cosmo, out_dir=out_dir, save=True, show=True)
+
+def get_plot_mlt_pk_diff_broad(stack_infos, out_dir='auto'):
+    # sort according to app
+    groups = mlt_pl_broad_sort(stack_infos)
+
+    # get all data
+    for group in groups.values():
+        for a_sim_info in group:
+            get_supp_map(a_sim_info)
+        data_array, zs = get_check_pk_diff_broad(group)
+        
+        # plot
+        plot.plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, save=False, show=True)
+        plot.plot_pwr_spec_diff_from_data(data_array, zs, a_sim_info, save=False, show=True)

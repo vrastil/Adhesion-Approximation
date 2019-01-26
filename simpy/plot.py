@@ -644,13 +644,6 @@ def plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=T
         k, P_k = data[0], data[1]
         P_k_std = data[2] if len(data) == 3 else None
 
-        if max_nyquist:
-            k = k[0:7*idx]
-            P_k = P_k[0:7*idx]
-            P_k_std = P_k_std[0:7*idx] if P_k_std is not None else None
-        else:
-            add_nyquist_info(ax, a_sim_info)
-
         if P_k_std is None:
             plt.plot(k, P_k, 'o', ms=3, label=lab)
             ymax = max(ymax, np.max(P_k[0:7 * idx]))
@@ -659,6 +652,13 @@ def plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=T
             plt.errorbar(k, P_k, fmt='o', yerr=P_k_std, ms=3, label=lab)
             ymax = max(ymax, np.max(P_k[0:7 * idx] + P_k_std[0:7 * idx]))
             ymin = min(ymin, np.min(P_k[0:7 * idx] - P_k_std[0:7 * idx]))
+
+    if max_nyquist:
+        k = k[0:7*idx]
+        P_k = P_k[0:7*idx]
+        P_k_std = P_k_std[0:7*idx] if P_k_std is not None else None
+    else:
+        add_nyquist_info(ax, a_sim_info)
 
     if pk_type != 'chi' and ymax > 1:
         ymax = 1
