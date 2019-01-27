@@ -397,14 +397,21 @@ def plot_corr_func_ratio(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabe
     fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
     ax.yaxis.grid(True)
-    ax.set_ylim(-0.5,0.5)
+    ymin = -0.5
+    ymax = 0.5
+    ax.set_ylim(ymin,ymax)
+    # ax.set_yscale('symlog', linthreshy=1e-3, linscaley=6)
 
     # plot ratio
+    if use_z_eff:
+        sim = use_z_eff['sim']
+        xi_an = power.corr_func(sim, z=use_z_eff['z'])[1]
     plt.plot(r, xi/xi_an - 1, 'o', ms=3, label=lab)
 
     # plot other data (if available)
     if extra_data is not None:
         for data in extra_data:
+            xi_an = power.corr_func(sim, z=data['z_eff'])[1]
             plt.plot(data['r'], data['xi']/xi_an - 1, 'o', ms=3, label=data['lab'])
 
     # plot BAO peak location (if available)
@@ -463,14 +470,15 @@ def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_d
         out_dir, file_name, save, show, extra_data, peak_loc, use_z_eff)
 
 # correlation function stacked data, linear and emu corr. func in files
-def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, show=False, use_z_eff=False, is_sigma=False, only_r2=True, extra_data=None, peak_loc=None):
+def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, show=False, use_z_eff=False,
+                   is_sigma=False, only_r2=True, extra_data=None, peak_loc=None):
     for lab, corr_par, corr_lin, corr_nl in iter_data(zs, [corr_data_all['par'],
                                                       corr_data_all['lin'], corr_data_all['nl']]):
         plot_corr_func_single(
             corr_par, lab, a_sim_info,
             corr_data_lin=corr_lin, corr_data_nl=corr_nl, out_dir=out_dir,
             save=save, show=show, is_sigma=is_sigma, only_r2=only_r2,
-            extra_data=extra_data, peak_loc=peak_loc)
+            extra_data=extra_data, peak_loc=peak_loc, use_z_eff=use_z_eff)
 
 def plot_peak_loc(a, a_sim_info, ax, cut, only_nl=True):
     """ plot peak location to the given axis """
@@ -615,7 +623,7 @@ def plot_eff_growth_rate(stack_infos, out_dir='auto', a_eff_type="Pk", save=True
     # save & show (in jupyter)
     close_fig(out_dir + 'f_eff_' + a_eff_type, fig, save=save, show=show, use_z_eff=use_z_eff)
 
-def plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=True, pk_type='dens', max_nyquist=False):
+def plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=True, pk_type='dens', show_nyquist=True, max_nyquist=False):
     if pk_type == 'chi':
         # transform chameleon power spectrum to suppression
         for z, data in izip(zs, data_list):
@@ -657,7 +665,7 @@ def plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=T
         k = k[0:7*idx]
         P_k = P_k[0:7*idx]
         P_k_std = P_k_std[0:7*idx] if P_k_std is not None else None
-    else:
+    elif show_nyquist:
         add_nyquist_info(ax, a_sim_info)
 
     if pk_type != 'chi' and ymax > 1:
@@ -712,7 +720,7 @@ def plot_pwr_spec_diff_from_data_mlt(data_lists, zs, sim_infos, out_dir='auto', 
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', show_scales=True, pk_type='dens',
-                                 ext_title='par', save=True, show=False, use_z_eff=False, add_app=False, max_nyquist=False):
+                                 ext_title='par', save=True, show=False, use_z_eff=False, add_app=False, show_nyquist=True, max_nyquist=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if pk_type == "dens":
@@ -734,7 +742,8 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', show
 
     fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
-    plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=show_scales, pk_type=pk_type, max_nyquist=max_nyquist)
+    plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=show_scales, pk_type=pk_type,
+                                    show_nyquist=show_nyquist, max_nyquist=max_nyquist)
     
 
     fig_suptitle(fig, suptitle)
@@ -745,8 +754,9 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', show
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 
-def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto', pk_type='dens', ext_title='', save=True, show=False, use_z_eff=False,
-                                    vmin=-1, vmax=1):
+def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto', add_app=False, pk_type='dens',
+                                     ext_title='', save=True, show=False, shading='flat',
+                                     show_nyquist=True, use_z_eff=False, vmin=-1, vmax=1):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if pk_type == "dens":
@@ -766,8 +776,15 @@ def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto',
         power.chi_trans_to_init(data_array)
         ext_title = 'init'
 
-    out_file += '_%s_map' % ext_title
+    if ext_title == '':
+        out_file += '_map'
+    else:
+        out_file += '_%s_map' % ext_title
+
     suptitle += ' (ref: %s)' % ext_title
+
+    if add_app:
+        out_file += '_%s' % a_sim_info.app
 
     fig = plt.figure(figsize=(8, 8))
     gs = gridspec.GridSpec(1, 15, wspace=0.5)
@@ -776,12 +793,15 @@ def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto',
 
     ax.set_xscale('log')
     a = [1 / (1 + z) for z in zs]
+
     # hack around pcolormesh plotting edges
-    if len(a) == 1:
-        da = 2*a[0]
-    else:
-        da = (a[-1] - a[0]) / (len(a) - 1)
-    a = np.array([a[0]-da/2] + [1 / (1 + z) + da/2 for z in zs])
+    if shading == 'flat':
+        if len(a) == 1:
+            da = 2*a[0]
+        else:
+            da = (a[-1] - a[0]) / (len(a) - 1)
+        a = np.array([a[0]-da/2] + [1 / (1 + z) + da/2 for z in zs])
+    
     k = data_array[0][0]
     supp = data_array[:, 1, :] # extract Pk, shape = (zs, k)
     if pk_type != 'chi':
@@ -798,12 +818,12 @@ def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto',
     labels = [str(x) for x in ticks]
     labels[-1] = '> %i' % ticks[-1]
 
-    im = ax.pcolormesh(k, a, supp, cmap='seismic', norm=SymLogNorm(linthresh=linthresh, linscale=linscale,
-                                   vmin=vmin, vmax=vmax))
+    im = ax.pcolormesh(k, a, supp, cmap='seismic', shading=shading,
+        norm=SymLogNorm(linthresh=linthresh, linscale=linscale, vmin=vmin, vmax=vmax))
     cbar = fig.colorbar(im, cax=cbar_ax, ticks=ticks)
     cbar.ax.set_yticklabels(labels)
 
-    if a_sim_info.k_nyquist is not None:
+    if show_nyquist and a_sim_info.k_nyquist is not None:
         ls = [':', '-.', '--']
         ls *= (len(a_sim_info.k_nyquist) - 1) / 3 + 1
         ls = iter(ls)

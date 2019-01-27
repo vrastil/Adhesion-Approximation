@@ -75,13 +75,14 @@ def create_dir(out_dir):
 
 class SimInfo(object):
     """ basic class storing all information about one particular simulation run """
-    def __init__(self, a_file, **kwargs):
+    def __init__(self, a_file, verbose=True, **kwargs):
         # type: (str, dict) -> None
         """ load information in 'a_file', replace parameters in 'self.cosmo'
         by any additional parameters in 'kwargs' (optional) """
         # attributes to load from json file: string & dictionaries
         self.app = ""
         self.app_opt, self.box_opt, self.cosmo, self.integ_opt, self.k_nyquist, self.out_opt, self.results, self.run_opt, self.chi_opt = ({} for i in range(9))
+        self.verbose = verbose
 
         if a_file.endswith('.json'):
             self.load_file(a_file)
@@ -90,7 +91,7 @@ class SimInfo(object):
 
         # rewrite values in json info if new cosmo param passed
         for key, value in kwargs.iteritems():
-            print("Using new value for parameter '%s' = '%s'" % (key, value))
+            if self.verbose: print("Using new value for parameter '%s' = '%s'" % (key, value))
             self.cosmo[key] = value
         # other data attributes
         self.data = {}
@@ -165,7 +166,7 @@ class SimInfo(object):
 
         # missing data
         if zs is None:
-            print("[Skipped]  (missing data)")
+            if self.verbose: print("[Skipped]  (missing data)")
             return False
         # manually selected steps to rerun
         # check before skip-step in case of skip == 'all'
@@ -173,14 +174,14 @@ class SimInfo(object):
             return True
         # manually selected steps to skip
         elif _is_key_val(key, skip):
-            print("[Skipped]")
+            if self.verbose: print("[Skipped]")
             return False
         # step not done yet and not skipped
         elif not self.results[key]:
             return True
         # step already done
         else:
-            print("[Skipped]  (already done)")
+            if self.verbose: print("[Skipped]  (already done)")
             return False
 
     def done(self, key):
@@ -192,7 +193,7 @@ class SimInfo(object):
         data["results"][key] = True
         with open(self.file, 'w') as outfile:
             json.dump(data, outfile, indent=2)
-        print("[Done]")
+        if self.verbose: print("[Done]")
 
 class StackInfo(SimInfo):
     def __getitem__(self, key):

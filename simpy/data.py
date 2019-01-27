@@ -146,12 +146,36 @@ def get_extrap_pk(a_sim_info, files, zs):
         a_sim_info.data["pk_list"] = [x["Pk_par"] for x in a_sim_info.data["extrap_pk"]]
         a_sim_info.data["zs"] = [x["z"] for x in a_sim_info.data["extrap_pk"]]
 
-def use_z_eff(a_sim_info, files, zs, **kwargs):
+def get_z_eff(a_sim_info, files=None, zs=None, **kwargs):
     use_z_eff = kwargs.get('use_z_eff', None)
     if use_z_eff is None or not get_a_eff(a_sim_info, files, zs, use_z_eff=use_z_eff):
         return zs
     else:
         return a_sim_info.data["eff_time"][use_z_eff] ["z_eff"]
+
+def transform_supp_data_to_z_eff(a_sim_info, use_z_eff='Pk'):
+    # get all data
+    key = 'pk_supp_input'
+    get_supp_map(a_sim_info, key='input')
+    data_array = a_sim_info.data[key]['supp']
+    zs = a_sim_info.data[key]['zs']
+    zs_eff = get_z_eff(a_sim_info, use_z_eff=use_z_eff)
+    data_array_new = []
+    cosmo = a_sim_info.sim.cosmo
+
+    # transform all data to effective redshift
+    for z, z_eff, data in izip(zs, zs_eff, data_array):
+        a, a_eff, k, Pk, Pk_std = 1/(1.+z), 1/(1.+z_eff), data[0], data[1], data[2]
+        ratio = pwr.growth_factor(a, cosmo) / pwr.growth_factor(a_eff, cosmo)
+        Pk = ((Pk + 1) * ratio**2) - 1
+        data_array_new.append([k, Pk, Pk_std])
+
+    # correction from initial power spectrum
+    data_array_new = np.array(data_array_new)
+    Pk_init = data_array_new[0, 1]
+    data_array_new[:, 1] -= Pk_init
+
+    return zs_eff, data_array_new
         
 def load_plot_pwr(files, zs, a_sim_info, **kwargs):
     data_list = [np.transpose(np.loadtxt(x)) for x in files]
@@ -307,7 +331,7 @@ def load_check_plot(a_sim_info, key, patterns, # type: struct.SimInfo, str, str,
     4) plot -- need to pass Callable function with arguments: files, zs, a_sim_info, kwargs
     5) write info about done step into a_sim_info
     """
-    print('step: %-25s' % (key + ' ' + info_str), end='')
+    if a_sim_info.verbose: print('step: %-25s' % (key + ' ' + info_str), end='')
     sys.stdout.flush()
     subdir = key + '/' if subdir is None else subdir
     zs, files = try_get_zs_files(a_sim_info, subdir, patterns)
@@ -351,6 +375,13 @@ def get_initialized_StackInfo(a_file, z=None, get_pk=False, get_corr=False, get_
 
     # return initialized object
     return a_sim_info
+
+def reinit_data(sim_infos, get_pk=True, get_corr=True, get_sigma=False):
+    for si in sim_infos:
+        if get_pk: si.data.pop("extrap_pk", None)
+        if get_corr: si.data.pop("corr_func", None)
+        if get_sigma: si.data.pop("sigma_R", None)
+        init_data(si, get_pk=get_pk, get_corr=get_corr, get_sigma=get_sigma)
 
 # ****************************
 # RUN ANALYSIS -- SINGLE RUN *
@@ -736,7 +767,7 @@ def load_stack_save(stack_info, key, patterns,  # type: struct.StackInfo, str, s
        - fname = fname + "_%s_%s" % (app, z_str)
     4) write info about done step into stack_info
     """
-    print('step: %-25s' % (key + ' ' + info_str), end='')
+    if stack_info.verbose: print('step: %-25s' % (key + ' ' + info_str), end='')
     sys.stdout.flush()
     # check only rerun / key / skip -- no files loading
     if stack_info.rerun(rerun, key, skip, True):
@@ -755,9 +786,9 @@ def load_stack_save(stack_info, key, patterns,  # type: struct.StackInfo, str, s
 # RUN ANALYSIS -- STACKING OF RUNS *
 # **********************************
 
-def stack_group(rerun=None, skip=None, return_stack=False, **kwargs):
+def stack_group(rerun=None, skip=None, verbose=True, return_stack=False, **kwargs):
     # load & save all info about stack
-    stack_info = struct.StackInfo(**kwargs)
+    stack_info = struct.StackInfo(verbose=verbose, **kwargs)
 
     # load, stack & save all files
     all_files_steps = [
@@ -856,7 +887,7 @@ def print_runs_info(sep_files, num_all_runs, num_all_sep_runs, num_sep_runs):
                 break
             print("\t" + a_sim_info.dir)
 
-def stack_all(in_dir='/home/michal/Documents/GIT/FastSim/output/', rerun=None, skip=None, return_stack=False, **kwargs):
+def stack_all(in_dir='/home/michal/Documents/GIT/FastSim/output/', rerun=None, skip=None, verbose=True, return_stack=False, **kwargs):
     # get & count all runs
     sep_files = get_runs_siminfo(in_dir)
     num_all_runs, num_all_sep_runs, num_sep_runs = count_runs(sep_files)
@@ -869,20 +900,27 @@ def stack_all(in_dir='/home/michal/Documents/GIT/FastSim/output/', rerun=None, s
         sep_sim_infos.sort(key=lambda x: x.dir)
 
     # print info about separated files
-    print_runs_info(sep_files, num_all_runs, num_all_sep_runs, num_sep_runs)
+    if verbose: print_runs_info(sep_files, num_all_runs, num_all_sep_runs, num_sep_runs)
 
     # analysis
     stack_infos = []
-    for sep_sim_infos in sep_files:
-        info = "Stacking group %s" % sep_sim_infos[0].info_tr()
-        print('*'*len(info), '\n', info, '\n', '*'*len(info))
+    for i, sep_sim_infos in enumerate(sep_files):
+        if verbose:
+            info = "Stacking group %s" % sep_sim_infos[0].info_tr()
+            print('*'*len(info), '\n', info, '\n', '*'*len(info))
+        else:
+            print("\rStacking group %i/%i" % (i + 1, len(sep_files)), end="")
+            sys.stdout.flush()
         try:
-            stack_infos.append(stack_group(group_sim_infos=sep_sim_infos, rerun=rerun, skip=skip, return_stack=return_stack, **kwargs))
+            stack_infos.append(stack_group(group_sim_infos=sep_sim_infos, rerun=rerun, skip=skip, return_stack=return_stack, verbose=verbose, **kwargs))
         except KeyboardInterrupt:
             print('Exiting...')
             if return_stack:
                 return stack_infos
-    print('*'*len(info), '\n', 'All groups analyzed!')
+    if verbose:
+        print('*'*len(info), '\n', 'All groups analyzed!')
+    else:
+        print('\n')
     return stack_infos if return_stack else None
 
 # ********************************
@@ -1040,39 +1078,52 @@ def corr_func_comp(files=None, sim_infos=None, outdir=report_dir, z=1., bao_peak
     # get data, check redshift
     for sim_info in sim_infos:
         
-        zs_ = sim_info.data["zs"]
+        #init_data(sim_info, z=z, get_corr=True)
+        zs_ = sim_info.data["corr_func"]["zs"]
+        idx = find_nearest_idx(zs_, z)
 
         # save needed values
-        r, xi = sim_info.data["corr_func"]["par"][0]
-        extra_data.append({'r' : r, 'xi' : xi, 'lab' : sim_info.app, 'mlt' : 1})
+        r, xi = sim_info.data["corr_func"]["par"][idx]
+        idx_eff = idx - 1 if 'init' in zs_ else idx
+        z_eff = sim_info.data["eff_time"]["Pk"]["z_eff"][idx_eff]
+        extra_data.append({'r' : r, 'xi' : xi, 'lab' : sim_info.app, 'mlt' : 1, 'z_eff' : z_eff})
     
         # check redshifts
         if zs is None:
-            zs = zs_
-        elif zs != zs_:
+            zs = zs_[idx]
+        elif zs != zs_[idx]:
             raise IndexError("Files do not have the same redshift-slices.")
 
     # plot non-linear BAO peak
     if bao_peak:
         get_corr_peak(sim_info)
-        peak_loc = sim_info.data["corr_func"]["nl_peak"][0][0] # does not depend on z
+        peak_loc = sim_info.data["corr_func"]["nl_peak"][0][idx]
     else:
         peak_loc = None
 
-    plot.plot_corr_func(sim_info.data["corr_func"], zs, sim_info, out_dir=outdir, save=True, show=True, extra_data=extra_data[:-1], peak_loc=peak_loc)
+    data = {
+        'par' : [sim_info.data["corr_func"]["par"][idx]],
+        'lin': [sim_info.data["corr_func"]["lin"][idx]],
+        'nl' : [sim_info.data["corr_func"]["nl"][idx]]
+    }
+    use_z_eff = {
+        'z' : z_eff,
+        'sim' : sim_info.sim
+    }
+    plot.plot_corr_func(data, [zs], sim_info, out_dir=outdir, save=True, show=True, extra_data=extra_data[:-1], peak_loc=peak_loc, use_z_eff=use_z_eff)
     
 
-def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True):
+def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3):
     data_list_new = [[] for _ in range(3)]
     
     # sort from lowest k
     data_list, sim_infos = zip(*sorted(zip(data_list, sim_infos), key=lambda x : x[0][0][0]))
 
-    # go through sorted list, do not go higher values than k_nyqist / 2
+    # go through sorted list, do not go higher values than k_nyqist / cutoff_high
     k_last = 0
     for data, a_sim_info in zip(data_list, sim_infos):
         k, Pk, Pk_std = data
-        k_max = a_sim_info.k_nyquist["particle"] / 2
+        k_max = a_sim_info.k_nyquist["particle"] / cutoff_high
         idx = (k >= k_last) & (k < k_max)
         data_list_new[0] += k[idx].tolist()
         data_list_new[1] += Pk[idx].tolist()
@@ -1098,7 +1149,7 @@ def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True):
     
     return np.array(data_list_new), extrap_pk
 
-def get_check_pk_broad(stack_infos, idx, data_key="pk", get_extrap_pk=True):
+def get_check_pk_broad(stack_infos, idx, data_key="pk", get_extrap_pk=True, cutoff_high=4.3):
     data_list = []
     zs = []
     for a_sim_info in stack_infos:
@@ -1107,6 +1158,10 @@ def get_check_pk_broad(stack_infos, idx, data_key="pk", get_extrap_pk=True):
             z = a_sim_info.data["zs"][idx]
         elif data_key == 'supp':
             data = a_sim_info.data["pk_supp_input"]["supp"][idx]
+            z = a_sim_info.data["pk_supp_input"]["zs"][idx]
+        elif data_key == 'supp_z_eff':
+            _, data_list_tmp = transform_supp_data_to_z_eff(a_sim_info)
+            data = data_list_tmp[idx]
             z = a_sim_info.data["pk_supp_input"]["zs"][idx]
 
         data_list.append(data)
@@ -1121,15 +1176,15 @@ def get_check_pk_broad(stack_infos, idx, data_key="pk", get_extrap_pk=True):
         raise IndexError("Different simulations.")
 
     # get data
-    data_list_new, extrap_pk = get_pk_broad_k(data_list, stack_infos, get_extrap_pk=get_extrap_pk)
+    data_list_new, extrap_pk = get_pk_broad_k(data_list, stack_infos, get_extrap_pk=get_extrap_pk, cutoff_high=cutoff_high)
     return data_list_new, extrap_pk
 
-def get_check_pk_diff_broad(stack_infos):
+def get_check_pk_diff_broad(stack_infos, cutoff_high=8):
     data_lists = []
     zs = stack_infos[0].data["pk_supp_input"]["zs"]
 
     for idx in range(len(zs)):
-        data_list_new, _ = get_check_pk_broad(stack_infos, idx, data_key='supp', get_extrap_pk=False)
+        data_list_new, _ = get_check_pk_broad(stack_infos, idx, data_key='supp_z_eff', get_extrap_pk=False, cutoff_high=cutoff_high)
         data_lists.append(data_list_new)
     return np.array(data_lists), zs
 
@@ -1173,8 +1228,13 @@ def get_plot_mlt_pk_diff_broad(stack_infos, out_dir='auto'):
     for group in groups.values():
         for a_sim_info in group:
             get_supp_map(a_sim_info)
-        data_array, zs = get_check_pk_diff_broad(group)
+        data_array, zs = get_check_pk_diff_broad(group, cutoff_high=16)
         
         # plot
-        plot.plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, save=False, show=True)
-        plot.plot_pwr_spec_diff_from_data(data_array, zs, a_sim_info, save=False, show=True)
+        print(group[0].app)
+        plot.plot_pwr_spec_diff_map_from_data(
+            data_array, zs, a_sim_info, out_dir=out_dir, add_app=True, 
+            show_nyquist=False, save=True, show=True, shading='gouraud')
+        # plot.plot_pwr_spec_diff_from_data(
+        #     data_array, zs, a_sim_info, out_dir=out_dir, add_app=True, 
+        #     show_nyquist=False, show_scales=False, save=True, show=True)
