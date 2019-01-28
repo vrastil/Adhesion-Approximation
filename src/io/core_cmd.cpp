@@ -84,6 +84,7 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
     po::options_description config_app("Approximations");
     config_app.add_options()
         ("comp_ZA", po::value<bool>(&sim.comp_app.ZA)->default_value(false), "compute Zeldovich approximation")
+        ("comp_TZA", po::value<bool>(&sim.comp_app.TZA)->default_value(false), "compute Truncated Zeldovich approximation")
         ("comp_FF", po::value<bool>(&sim.comp_app.FF)->default_value(false), "compute Frozen-flow approximation")
         ("comp_FP", po::value<bool>(&sim.comp_app.FP)->default_value(false), "compute Frozen-potential approximation")
         ("comp_AA", po::value<bool>(&sim.comp_app.AA)->default_value(false), "compute Adhesion approximation")
@@ -185,4 +186,5 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
     sim.cosmo.config.matter_power_spectrum_method = static_cast<matter_power_spectrum_t>(matter_pwr_cmd);
     sim.cosmo.config.baryons_power_spectrum_method = static_cast<baryons_power_spectrum_t>(baryons_pwr_cmd);
     sim.cosmo.config.mass_function_method = static_cast<mass_function_t>(mass_func_cmd);
+    sim.comp_app.TZA &= bool(sim.cosmo.k2_G)
 }

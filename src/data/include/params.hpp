@@ -36,6 +36,9 @@ public:
     FTYPE_t Omega_c() const { return Omega_m - Omega_b; }
     FTYPE_t Omega_L() const { return 1 - Omega_m; }
 
+    // TRUNCATION OF INITIAL POWER SPECTRUM
+    bool truncated_pk = false;
+
     // PRECOMPUTED VALUES
     FTYPE_t D_norm;
 
@@ -94,7 +97,7 @@ struct Out_Opt {
  */
 struct Comp_App {
     /* cmd args */
-    bool ZA, FF, FP, AA, FP_pp; //< approximations
+    bool ZA, TZA, FF, FP, AA, FP_pp; //< approximations
     bool chi; //< modified gravities
 };
 

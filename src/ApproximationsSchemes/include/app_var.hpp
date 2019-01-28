@@ -46,6 +46,9 @@ public:
 
     // RUN THE SIMULATION
     void run_simulation();
+
+    // UPDATE INITIAL POWER SPECTRUM -- TRUNCATION
+    virtual void update_cosmo(Cosmo_Param& cosmo); ///< no truncation by default
 	
 protected:
     // VARIABLES

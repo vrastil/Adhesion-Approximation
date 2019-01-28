@@ -1,5 +1,5 @@
 /**
- * @brief frozen-potential approximation interface
+ * @brief Frozen-potential approximation interface
  * 
  * @file frozen_potential.hpp
  * @author Michal Vrastil
@@ -28,8 +28,8 @@ class Sim_Param;
  ******************/
 
 /**
- * @class:	App_Var_FF
- * @brief:	class containing variables and methods for Frozen-flow approximation
+ * @class:	App_Var_FP
+ * @brief:	class containing variables and methods for Frozen-potential approximation
  * @ingroup APP
  */
 class App_Var_FP: public App_Var<Particle_v<FTYPE_t>>
