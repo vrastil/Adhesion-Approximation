@@ -18,9 +18,10 @@
 #include "zeldovich.hpp"
 
 template<class T>
-static void init_and_run_app(const Sim_Param& sim)
+static void init_and_run_app(Sim_Param& sim)
 {
     T APP(sim);
+    APP.update_cosmo(sim.cosmo);
     APP.run_simulation();
 }
 
@@ -48,6 +49,9 @@ int main(int argc, char* argv[]){
         do{
             /* ZEL`DOVICH APPROXIMATION */
             if(sim.comp_app.ZA)	init_and_run_app<App_Var_ZA>(sim);
+
+            /* TRUNCATED ZEL`DOVICH APPROXIMATION */
+            if(sim.comp_app.TZA) init_and_run_app<App_Var_TZA>(sim);
             
             /* FROZEN-FLOW APPROXIMATION */
             if(sim.comp_app.FF)	init_and_run_app<App_Var_FF>(sim);

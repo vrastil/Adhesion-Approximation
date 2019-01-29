@@ -496,6 +496,12 @@ void App_Var<T>::run_simulation()
 }
 
 template <class T> 
+void App_Var<T>::update_cosmo(Cosmo_Param& cosmo)
+{
+    cosmo.truncated_pk = false;
+}
+
+template <class T>
 void App_Var<T>::pot_corr()
 {
     /* Computing displacement in k-space with CIC opt */
