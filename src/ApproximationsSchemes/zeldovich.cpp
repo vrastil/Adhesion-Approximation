@@ -13,7 +13,7 @@
 App_Var_ZA::App_Var_ZA(const Sim_Param &sim):
     App_Var_ZA(sim, "ZA", "Zel`dovich approximation") {}
 
-App_Var_ZA::App_Var_ZA(const Sim_Param &sim, const std::string& app_short, const std::string& app_long)
+App_Var_ZA::App_Var_ZA(const Sim_Param &sim, const std::string& app_short, const std::string& app_long):
     App_Var<Particle_v<FTYPE_t>>(sim, app_short, app_long) {}
 
 void App_Var_ZA::upd_pos()
@@ -29,7 +29,7 @@ void App_Var_ZA::pot_corr()
 App_Var_TZA::App_Var_TZA(const Sim_Param &sim):
     App_Var_ZA(sim, "TZA", "Truncated Zel`dovich approximation") {}
 
-void update_cosmo()
+void App_Var_TZA::update_cosmo(Cosmo_Param& cosmo)
 {
     cosmo.truncated_pk = true;
 }

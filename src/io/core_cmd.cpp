@@ -186,5 +186,5 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
     sim.cosmo.config.matter_power_spectrum_method = static_cast<matter_power_spectrum_t>(matter_pwr_cmd);
     sim.cosmo.config.baryons_power_spectrum_method = static_cast<baryons_power_spectrum_t>(baryons_pwr_cmd);
     sim.cosmo.config.mass_function_method = static_cast<mass_function_t>(mass_func_cmd);
-    sim.comp_app.TZA &= bool(sim.cosmo.k2_G)
+    sim.comp_app.TZA &= bool(sim.cosmo.k2_G);
 }

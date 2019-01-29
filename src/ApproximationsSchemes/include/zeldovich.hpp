@@ -57,5 +57,5 @@ public:
 	App_Var_TZA(const Sim_Param &sim);
 
     // truncation of initial power spectrum for TZA
-    void update_cosmo() override;
+    void update_cosmo(Cosmo_Param& cosmo) override;
 };

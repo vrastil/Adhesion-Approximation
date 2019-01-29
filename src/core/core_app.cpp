@@ -211,7 +211,7 @@ static void gen_gauss_white_noise(const Sim_Param &sim, Mesh& rho)
     printf("\t[min = %.12f, max = %.12f]\n", min(rho), max(rho));
 }
 
-static void truncation_fce(k, k2_G)
+static FTYPE_t truncation_fce(FTYPE_t k, FTYPE_t k2_G)
 {
     return exp(-k*k/k2_G);
 }
@@ -231,7 +231,7 @@ static void gen_rho_w_pow_k(const Sim_Param &sim, Mesh& rho)
     // truncation function
     #define TRUNCATION (truncation ? truncation_fce(k, k2_G) : 1)
 
-	#pragma omp parallel for private(k)
+	#pragma omp parallel for
 	for(size_t i=0; i < len; i++)
 	{
         FTYPE_t k = k0*sqrt(get_k_sq(N, i));

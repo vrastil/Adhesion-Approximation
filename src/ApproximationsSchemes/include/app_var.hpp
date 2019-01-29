@@ -17,6 +17,7 @@
  ************************/
 
 class Sim_Param;
+class Cosmo_Param;
 
 /**************//**
  * PUBLIC METHODS *
