@@ -12,78 +12,26 @@ try:
     from itertools import izip # python 2
 except ImportError:
     izip = zip # python 3
-import fnmatch
-
-# colorful exception info
-import traceback
-from pygments import highlight
-from pygments.lexers import get_lexer_by_name
-from pygments.formatters import TerminalFormatter
 
 # mathematical modules
 import numpy as np
 from scipy.optimize import curve_fit
 
 # simpy modules
+from . import utils as ut
 from . import plot
 from .fastsim import Extrap_Pk_Nl_2, Extrap_Pk_Nl_3
 from . import struct
 from . import power as pwr
 from plot import report_dir
 
-def print_exception(file=sys.stdout):
-    """ print catched exception with colors """
-    tbtext = traceback.format_exc()
-    lexer = get_lexer_by_name("pytb", stripall=True)
-    formatter = TerminalFormatter()
-
-    print("\n")
-    print("=" * 110)
-    file.write(highlight(tbtext, lexer, formatter))
-    print("=" * 110)
-
-# *******************
-# FIND, SORT, SLICE *
-# *******************
-
-def del_duplicate(seq):
-    # type: (Seq) -> List
-    """remove duplicate elements in sequence while preserving order, return list"""
-    seen = set()
-    seen_add = seen.add
-    return [x for x in seq if not (x in seen or seen_add(x))]
-
-def get_files_in_traverse_dir(a_dir, patterns):
-    # type: (str, str) -> List[str]
-    """ return list of all files in directory which matches 'patterns'
-    support Unix filename pattern matching ('*', '?', [seq], [!seq])
-    and multiple option in 'patterns' (space delimetered) """
-
-    return list(set([ # throw away duplicate files
-        os.path.join(root, name) # full file name
-        for root, _, files in os.walk(a_dir) # go through all subdirectores
-        for pattern in patterns.split() # if multiple patterns given
-        for name in fnmatch.filter(files, pattern) # pattern matching
-        ]))
-
-def sort_lists(*lists):
-    return zip(*sorted(zip(*lists), reverse=True))
-
-def sort_get_z(files, a_sim_info, skip_init=False):
-    # type: (List[str], struct.SimInfo) -> List[str], List[TypeVar(str, float)]
-    zs = []
-    for a_file in files:
-        if a_sim_info.app + '_z' in a_file:
-            zs.append(float(a_file[a_file.index(a_sim_info.app + '_z') + len(a_sim_info.app+'_z'):-4]))
-        elif a_sim_info.app + '_init' in a_file and not skip_init:
-            zs.append('init')
-        else:
-            print("WARNING! Skipping file '%s', unknown format." % a_file)
-    return sort_lists(zs, files)
+###################################
+# FIND, SORT, SLICE
+###################################
 
 def sort_get_fl_get_z(a_sim_info, subdir, patterns='*.dat', skip_init=False):
-    files = get_files_in_traverse_dir(a_sim_info.dir + subdir, patterns)
-    return sort_get_z(files, a_sim_info, skip_init=skip_init)
+    files = ut.get_files_in_traverse_dir(a_sim_info.dir + subdir, patterns)
+    return ut.sort_get_z(files, a_sim_info.app, skip_init=skip_init)
 
 def try_get_zs_files(a_sim_info, subdir, patterns, skip_init=False):
     try:
@@ -98,9 +46,9 @@ def sort_chi_files(files, zs):
     files, zs = zip(*[x for x in zip(files, zs) if 'chi' not in x[0]])
     return map(list, [files, zs, files_chi, zs_chi])
 
-# ***************************
-# LOAD DATA FROM SINGLE RUN *
-# ***************************
+###################################
+# LOAD DATA FROM SINGLE RUN 
+###################################
 
 def load_k_supp(files, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens'):
     """
@@ -126,9 +74,10 @@ def load_k_supp(files, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens'):
         supp[i][2] = [k[j*idx], k[(j+1)*idx]]
     return supp
 
-def get_single_hybrid_pow_spec_amp_w_z(sim, a_file, z, k_nyquist_par):
-    data = np.transpose(np.loadtxt(a_file))
-    x = get_hybrid_pow_spec_amp(sim, data, k_nyquist_par)
+def get_single_hybrid_pow_spec_amp_w_z(sim, a_file, z, k_nyquist_par, a=None, data=None):
+    if data is None:
+        data = np.transpose(np.loadtxt(a_file))
+    x = get_hybrid_pow_spec_amp(sim, data, k_nyquist_par, a=a)
     x["z"] = z
     return x
 
@@ -145,6 +94,38 @@ def get_extrap_pk(a_sim_info, files, zs):
         # extract 'Pk_par' and 'z' for convenience
         a_sim_info.data["pk_list"] = [x["Pk_par"] for x in a_sim_info.data["extrap_pk"]]
         a_sim_info.data["zs"] = [x["z"] for x in a_sim_info.data["extrap_pk"]]
+
+def get_pk_nl_amp(a_sim_info):
+    # initialize data
+    init_data(a_sim_info, get_pk=True)
+    load_a_eff(a_sim_info, use_z_eff='Pk')
+        
+    # needed variables
+    sim = a_sim_info.sim
+    k_nyquist_par = a_sim_info.k_nyquist["particle"]
+    as_eff = 1/(1+a_sim_info.data['eff_time']['Pk']['z_eff'])
+    zs = a_sim_info.data["zs"]
+    data_all = a_sim_info.data["pk_data_par"]
+
+    # correct for z = 'init'
+    if zs[0] == 'init':
+        zs = zs[1:]
+        data_all = data_all[1:]
+
+    # check lengths
+    if not (len(data_all) == len(zs) == len(as_eff)):
+        raise IndexError("Data have wrong lengths!")
+    
+    # get amplitude of non-linear power spectrum with redshift for a_eff
+    func = lambda a_eff, z, data : get_single_hybrid_pow_spec_amp_w_z(sim, None, z, k_nyquist_par, a=a_eff, data=data)
+    data_w_amp = list(map(func, as_eff, zs, data_all))        
+
+    # extract amplitude and redshift
+    a_sim_info.data["pk_nl_amp"] = {
+        'z' : [x['z'] for x in data_w_amp],
+        'A' : [x['popt'][0] for x in data_w_amp],
+        'A_err' : [x['perr'][0] for x in data_w_amp],
+    }
 
 def get_z_eff(a_sim_info, files=None, zs=None, **kwargs):
     use_z_eff = kwargs.get('use_z_eff', None)
@@ -279,7 +260,7 @@ def load_plot_pwr_spec_diff(files, zs, a_sim_info, **kwargs):
 def split_particle_files(files, zs):
     files_t = [x for x in files if 'track' in x.split('/')[-1]]
     files = [x for x in files if 'par_cut' in x.split('/')[-1]]
-    zs = del_duplicate(zs)
+    zs = ut.del_duplicate(zs)
     if len(files_t) != len(files):
         raise IndexError("Different number of 'particle' and 'track' files.")
     else:
@@ -298,7 +279,7 @@ def load_plot_dens_histo(files, zs, a_sim_info):
                  for a_file in files]
     plot.plot_dens_histo(data_list, zs, a_sim_info)
 
-def load_a_eff(a_sim_info, files=None, zs=None):
+def load_a_eff(a_sim_info, files=None, zs=None, use_z_eff='all'):
     # create structure in data
     create_a_eff_struct(a_sim_info)
 
@@ -307,7 +288,7 @@ def load_a_eff(a_sim_info, files=None, zs=None):
         zs, files = try_get_zs_files(a_sim_info, subdir='pwr_spec/', patterns='*.dat')
 
     # effective time from power spectrum and density fluctuations
-    get_a_eff(a_sim_info, files, zs, use_z_eff='all')
+    get_a_eff(a_sim_info, files, zs, use_z_eff=use_z_eff)
 
 
 def load_plot_a_eff(files, zs, a_sim_info, **kwargs):
@@ -436,11 +417,11 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         except KeyboardInterrupt:
             raise
         except Exception:
-            print_exception()
+            ut.print_exception()
 
 def analyze_all(out_dir='/home/michal/Documents/GIT/FastSim/output/',
                 rerun=None, skip=None, only=None):
-    files = get_files_in_traverse_dir(out_dir, 'sim_param.json')
+    files = ut.get_files_in_traverse_dir(out_dir, 'sim_param.json')
     sim_infos = []
     for a_file in files:
         sim_infos.append(struct.SimInfo(a_file))
@@ -450,14 +431,14 @@ def analyze_all(out_dir='/home/michal/Documents/GIT/FastSim/output/',
 
     info = ''
     for a_sim_info in sim_infos:
-        info = 'Analyzing run %s' % a_sim_info.info_tr()
-        print('*'*len(info), '\n', info, '\n', '*'*len(info))
+        ut.print_info('Analyzing run %s' % a_sim_info.info_tr())
+        
         try:
             analyze_run(a_sim_info, rerun=rerun, skip=skip)
         except KeyboardInterrupt:
             print('Exiting...')
             return
-    print('*'*len(info), '\n','All runs analyzed!')
+    ut.print_info_end()
 
 # ******************************
 # LOAD DATA FROM MULTIPLE RUNS *
@@ -601,28 +582,37 @@ def get_perr_pcor(pcov):
     pcor = np.dot(np.dot(inv, pcov), inv)
     return perr, pcor
 
-def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par):
+def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par, a=None):
     """ fit data [k, Pk, std] to hybrid power spectrum (1-A)*P_lin(k) + A*P_nl(k)
     return dictionary with C++ class Extrap_Pk_Nl, fit values and covariance """
     # extract data
     kk, Pk = np.array(data[0]), np.array(data[1])
     
-    # get proper slice of data -- last decade befor half of particle nyquist
+    # get proper slice of data -- last decade before half of particle nyquist
     idx = (np.abs(kk-0.5*k_nyquist_par)).argmin()
     idx = slice(idx - sim.out_opt.bins_per_decade, idx)
 
-    # define functions which will be used in fitting
-    pk_hyb_func = lambda k, a, A: pwr.hybrid_pow_spec(a, k, A, sim.cosmo)
+    # define functions which will be used in fitting (whether 'a' is free parameter or not)
     
-    # fit data, a = <0, 1>, A = <0, 1>
+    if a is None:
+        pk_hyb_func = lambda k, A, a: pwr.hybrid_pow_spec(a, k, A, sim.cosmo)
+        p0 = (0.05, 0.5)
+    else:
+        pk_hyb_func = lambda k, A: pwr.hybrid_pow_spec(a, k, A, sim.cosmo)
+        p0 = 0.05
+
+    # fit data, a = <0, 1>, A = <0, 1>        
+    bounds = (0, 1)
     sigma = data[2][idx] if len(data) > 2 else None
-    bounds = ([0, 0], [1, 1])
-    popt, pcov = curve_fit(pk_hyb_func, kk[idx], Pk[idx], bounds=bounds, sigma=sigma)
+    
+    popt, pcov = curve_fit(pk_hyb_func, kk[idx], Pk[idx], p0=p0, bounds=bounds, sigma=sigma)
     perr, pcor = get_perr_pcor(pcov)
 
     # get hybrid Extrap
     Pk_par = Extrap_Pk_Nl_2 if sigma is None else Extrap_Pk_Nl_3
-    Pk_par = Pk_par(pwr.get_Data_vec(data), sim, popt[1], popt[0])
+    A = popt[0]
+    a = popt[1] if a is None else a
+    Pk_par = Pk_par(pwr.get_Data_vec(data), sim, A, a)
 
     # return all info in dict
     return {"Pk_par" : Pk_par, "popt" : popt, "pcov" : pcov, 'perr' : perr, 'pcor' : pcor}
@@ -673,7 +663,7 @@ def get_a_eff_from_Pk(stack_info):
         (1/(Pk['z'] + 1), Pk['Pk_par'].A_low) # a, Extrap_Pk_Nl
         for Pk in stack_info.data["extrap_pk"] if Pk["z"] != 'init']))
     
-    # get a_eff from amlitude of non-linear power spectrum
+    # get a_eff from amlitude of linear power spectrum
     a_eff = pwr.get_a_from_A(stack_info.sim.cosmo, A)
     
     # derived variables
@@ -810,7 +800,7 @@ def stack_group(rerun=None, skip=None, verbose=True, return_stack=False, **kwarg
         except KeyboardInterrupt:
             raise
         except Exception:
-            print_exception()
+            ut.print_exception()
 
     # load and plot files
     all_steps = [
@@ -849,13 +839,13 @@ def stack_group(rerun=None, skip=None, verbose=True, return_stack=False, **kwarg
         except KeyboardInterrupt:
             raise
         except Exception:
-            print_exception()
+            ut.print_exception()
 
     return stack_info if return_stack else None
 
 def get_runs_siminfo(in_dir):
     # get all runs
-    files = get_files_in_traverse_dir(in_dir, 'sim_param.json')
+    files = ut.get_files_in_traverse_dir(in_dir, 'sim_param.json')
     sim_infos =  [struct.SimInfo(a_file) for a_file in files]
 
     # separate files according to run parameters
@@ -988,7 +978,7 @@ def load_chi_fp_files(group, subdir, patterns):
     zs_unique = set(zs_fp)
     for zs in group["CHI_zs"]:
         zs_unique &= set(zs)
-    zs_unique = list(sort_lists(zs_unique)[0])
+    zs_unique = list(ut.sort_lists(zs_unique)[0])
 
     # remove extra files from all list
     rm_extra_zs(zs_unique, zs_fp, group["FP_files"])
@@ -1066,19 +1056,19 @@ def load_get_corr(a_file, z=None):
     # return struct.SimInfo with all loaded data and redshifts
     return a_sim_info, zs
     
-def corr_func_comp(files=None, sim_infos=None, outdir=report_dir, z=1., bao_peak=True):
+def corr_func_comp_plot(files=None, sim_infos=None, outdir=report_dir, z=1., bao_peak=True):
 
     extra_data = []
     zs = None
 
     # load struct.SimInfo and get correlation data
     if sim_infos is None:
-        sim_infos = [load_get_corr(a_file, z=z)[0] for a_file in files]
+        sim_infos = [load_get_corr(a_file)[0] for a_file in files]
 
     # get data, check redshift
     for sim_info in sim_infos:
-        
-        #init_data(sim_info, z=z, get_corr=True)
+        init_data(sim_info, get_corr=True)
+
         zs_ = sim_info.data["corr_func"]["zs"]
         idx = find_nearest_idx(zs_, z)
 
@@ -1110,8 +1100,31 @@ def corr_func_comp(files=None, sim_infos=None, outdir=report_dir, z=1., bao_peak
         'z' : z_eff,
         'sim' : sim_info.sim
     }
+
+    # plot simple correlation function and ratio
     plot.plot_corr_func(data, [zs], sim_info, out_dir=outdir, save=True, show=True, extra_data=extra_data[:-1], peak_loc=peak_loc, use_z_eff=use_z_eff)
-    
+
+def corr_func_comp_plot_peak(files=None, sim_infos=None, outdir=report_dir, cutof=80):
+    # load struct.SimInfo and get correlation data
+    if sim_infos is None:
+        sim_infos = [load_get_corr(a_file)[0] for a_file in files]
+
+    # get data, check redshift
+    use_z_eff = []
+    for sim_info in sim_infos:
+        init_data(sim_info, get_corr=True)
+        get_corr_peak(sim_info, cutof=cutof)
+
+        use_z_eff.append({
+            'z' : sim_info.data["eff_time"]["Pk"]["z_eff"],
+            'sim' : sim_info.sim
+        })
+
+    zs = sim_info.data["corr_func"]["zs"]
+
+    # plot bao peak and location
+    plot.plot_corr_peak(zs, sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff)
+
 
 def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3):
     data_list_new = [[] for _ in range(3)]
@@ -1149,7 +1162,7 @@ def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3):
     
     return np.array(data_list_new), extrap_pk
 
-def get_check_pk_broad(stack_infos, idx, data_key="pk", get_extrap_pk=True, cutoff_high=4.3):
+def get_check_pk_broad(stack_infos, idx, data_key="pk", get_extrap_pk=True, cutoff_high=4.45):
     data_list = []
     zs = []
     for a_sim_info in stack_infos:
@@ -1220,7 +1233,7 @@ def get_plot_mlt_pk_broad(stack_infos, out_dir='auto', z=0):
     # plot
     plot.plot_pwr_spec_comparison(data_all, zs, groups.keys(), stack_infos[0].sim.cosmo, out_dir=out_dir, save=True, show=True)
 
-def get_plot_mlt_pk_diff_broad(stack_infos, out_dir='auto'):
+def get_plot_mlt_pk_diff_broad(stack_infos, plot_diff=True, out_dir='auto'):
     # sort according to app
     groups = mlt_pl_broad_sort(stack_infos)
 
@@ -1235,6 +1248,8 @@ def get_plot_mlt_pk_diff_broad(stack_infos, out_dir='auto'):
         plot.plot_pwr_spec_diff_map_from_data(
             data_array, zs, a_sim_info, out_dir=out_dir, add_app=True, 
             show_nyquist=False, save=True, show=True, shading='gouraud')
-        # plot.plot_pwr_spec_diff_from_data(
-        #     data_array, zs, a_sim_info, out_dir=out_dir, add_app=True, 
-        #     show_nyquist=False, show_scales=False, save=True, show=True)
+        
+        if plot_diff:
+            plot.plot_pwr_spec_diff_from_data(
+                data_array, zs, a_sim_info, out_dir=out_dir, add_app=True, 
+                show_nyquist=False, show_scales=False, save=True, show=True)
