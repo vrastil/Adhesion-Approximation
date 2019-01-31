@@ -103,12 +103,6 @@ def legend_manipulation(ax=None, figtext="", loc='upper left', bbox_to_anchor=(1
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
 
-def get_a_init_from_zs(zs):
-    """ from list of redshifts returns initial scale factor, i.e. value after 'init' """
-    for z in zs:
-        if z != 'init':
-            return 1/(1.+z)
-
 def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False,
                   out_dir='auto', pk_type='dens', save=True, show=False, use_z_eff=False):
     """" Plot power spectrum -- points and extrapolated values,
@@ -141,7 +135,7 @@ def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False,
 
     # plot non/linear power spectra
     a_0 = 1./(1.+zs[-1])
-    a_i = get_a_init_from_zs(zs)
+    a_i = power.get_a_init_from_zs(zs)
     P_i = power.lin_pow_spec(a_i, k, a_sim_info.sim.cosmo)
     P_0 = power.lin_pow_spec(a_0, k, a_sim_info.sim.cosmo)
     if pk_type == "dens":
@@ -381,7 +375,7 @@ def plot_corr_func_ratio(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabe
     # names
     z_out = lab if lab == 'init' else 'z' + lab[4:]
     ylabel = r'$' + ylabel + r"(r)$"
-    file_name = out_dir + '%s_%s' % (file_name, z_out)
+    file_name = out_dir + '%s_ratio_%s' % (file_name, z_out)
     
     # check same lengths, validity of xi_n;
     if np.array_equal(r, r_nl):
@@ -480,35 +474,31 @@ def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, sho
             save=save, show=show, is_sigma=is_sigma, only_r2=only_r2,
             extra_data=extra_data, peak_loc=peak_loc, use_z_eff=use_z_eff)
 
-def plot_peak_loc(a, a_sim_info, ax, cut, only_nl=True):
+def plot_peak_uni(a, a_sim_info, ax, cut, bao_type, idx, only_nl=True, use_z_eff=False):
+    # location / amplitude of the BAO peak, label
+    data = np.array(a_sim_info.data["corr_func"]["par_peak"][idx][cut])
+    label = a_sim_info.app
+
+    # comparison to the non-linear prediction
+    if use_z_eff:
+        corr = [power.corr_func(use_z_eff['sim'], z=z, non_lin=True) for z in use_z_eff['z']]
+        data_nl = [power.get_bao_peak(x)[idx] for x in corr]
+    else:
+        data_nl = np.array(a_sim_info.data["corr_func"]["nl_peak"][idx][cut])
+    ax.plot(a, data / data_nl, label=label + ' (%s)' % bao_type)
+
+    # comparison to the inear prediction
+    if not only_nl:
+        data_lin = np.array(a_sim_info.data["corr_func"]["lin_peak"][idx][cut])
+        ax.plot(a, data / data_lin, label=label + ' (%s, lin)' % bao_type)
+
+def plot_peak_loc(a, a_sim_info, ax, cut, only_nl=True, use_z_eff=False):
     """ plot peak location to the given axis """
-    # location of the BAO peak, label
-    loc = np.array(a_sim_info.data["corr_func"]["par_peak"][0][cut])
-    label = a_sim_info.app
+    plot_peak_uni(a, a_sim_info, ax, cut, "loc", 0, only_nl=only_nl, use_z_eff=use_z_eff)
 
-    # comparison to the non-linear prediction
-    loc_nl = np.array(a_sim_info.data["corr_func"]["nl_peak"][0][cut])
-    ax.plot(a, loc / loc_nl, label=label + ' (loc)')
-
-    # comparison to the inear prediction
-    if not only_nl:
-        loc_lin = np.array(a_sim_info.data["corr_func"]["lin_peak"][0][cut])
-        ax.plot(a, loc / loc_lin, label=label + ' (loc, lin)')
-
-def plot_peak_amp(a, a_sim_info, ax, cut, only_nl=True):
+def plot_peak_amp(a, a_sim_info, ax, cut, only_nl=True, use_z_eff=False):
     """ plot peak amplitude to the given axis """
-    # amplitude of the BAO peak
-    amp = np.array(a_sim_info.data["corr_func"]["par_peak"][1][cut])
-    label = a_sim_info.app
-
-    # comparison to the non-linear prediction
-    amp_nl = np.array(a_sim_info.data["corr_func"]["nl_peak"][1][cut])
-    ax.plot(a, amp / amp_nl, label=label + ' (amp)')
-
-    # comparison to the inear prediction
-    if not only_nl:
-        amp_lin = np.array(a_sim_info.data["corr_func"]["lin_peak"][1][cut])
-        ax.plot(a, amp / amp_lin, label=label + ' (amp, lin)')
+    plot_peak_uni(a, a_sim_info, ax, cut, "amp", 1, only_nl=only_nl, use_z_eff=use_z_eff)
 
 def plot_corr_peak(zs, sim_infos, out_dir='auto', save=True, show=False, use_z_eff=False):
     # output
@@ -524,12 +514,15 @@ def plot_corr_peak(zs, sim_infos, out_dir='auto', save=True, show=False, use_z_e
     fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
 
-    for a_sim_info in sim_infos:
+    for i, a_sim_info in enumerate(sim_infos):
+        # use effective redshift
+        z_eff = use_z_eff[i] if use_z_eff else False
+
         # peak location
-        plot_peak_loc(a, a_sim_info, ax, cut)
+        plot_peak_loc(a, a_sim_info, ax, cut, use_z_eff=z_eff)
 
         # peak amplitude
-        plot_peak_amp(a, a_sim_info, ax, cut)    
+        plot_peak_amp(a, a_sim_info, ax, cut, use_z_eff=z_eff)
 
     # labels
     plt.xlabel(r"$a$", fontsize=label_size)
@@ -584,6 +577,41 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=
     
     # save & show (in jupyter)
     close_fig(out_dir + 'D_eff_' + a_eff_type, fig, save=save, show=show, use_z_eff=use_z_eff)
+
+def plot_pwr_spec_nl_amp_ax(a_sim_info, ax, ymin=0, ymax=0.4):
+    # extract variables
+    a = power.get_a_fom_zs(a_sim_info.data["pk_nl_amp"]['z'])
+    A = a_sim_info.data["pk_nl_amp"]['A']
+    A_err = a_sim_info.data["pk_nl_amp"]['A_err']
+    label = a_sim_info.app +  '$: L = %i$ Mpc/h' % a_sim_info.box_opt["box_size"]
+
+    # plot
+    ax.errorbar(a, A, yerr=A_err, label=label)
+
+    # ymin = min(ymin, np.min(A))
+    # ymax = min(ymax, np.max(A))
+    ax.set_ylim(ymin=ymin*0.9, ymax=ymax*1.1)
+
+def plot_pwr_spec_nl_amp(stack_infos, out_dir='auto', save=True, show=False):
+    if out_dir == 'auto':
+        out_dir = report_dir
+
+    # figure
+    fig = plt.figure(figsize=fig_size)
+    ax = plt.gca()
+    
+    for stack_info in stack_infos:
+        plot_pwr_spec_nl_amp_ax(stack_info, ax)
+    
+    ax.set_ylabel(r'$A_{nl}$', fontsize=label_size)
+    ax.set_xlabel(r'$a$', fontsize=label_size)
+    ax.legend()
+    plt.subplots_adjust(**subplt_adj_sym)
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax.yaxis.grid(True)
+    
+    # save & show (in jupyter)
+    close_fig(out_dir + 'pwr_spec_nl_amp', fig, save=save, show=show)
 
 def plot_eff_growth_rate_ax(a_sim_info, ax, a_eff_type="Pk"):
     # extract variables

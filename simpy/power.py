@@ -15,6 +15,30 @@ from scipy.optimize import minimize_scalar
 from scipy.signal import argrelextrema
 from . import fastsim as fs
 
+def get_a_init_from_zs(zs):
+    """ from list of redshifts returns initial scale factor, i.e. value after 'init' """
+    for z in zs:
+        if z != 'init':
+            return 1/(1.+z)
+
+def get_a_fom_zs(zs):
+    try:
+        iter(zs)
+    except TypeError:
+        return 1./(1+z)
+    else:
+        a = [1./(z + 1) for z in zs if z != 'init']
+        return np.array(a)
+
+def get_z_from_a(a):
+    try:
+        iter(a)
+    except TypeError:
+        return 1./a - 1
+    else:
+        zs = [1./a_ - 1 for a_ in a]
+        return np.array(zs)
+
 def get_a_from_A(cosmo, A):
     """ return scale factor a at which amplitude of linear power spectrum is A (normalize as A=1 at a=1) """
     # 'f = 0' <=> A = D^2 (linear power grows as D^2)

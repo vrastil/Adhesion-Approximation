@@ -11,9 +11,8 @@ from __future__ import print_function
 
 import json
 import os
-import fnmatch
-import subprocess
 from IPython.display import Image, display
+from . import utils as ut
 from .fastsim import Sim_Param
 
 RESULTS_ALL = {
@@ -55,23 +54,6 @@ def _is_key_val(key, val):
     # None or unknown type
     else:
         return False
-
-def get_files_in_traverse_dir(a_dir, patterns):
-    # type: (str, str) -> List[str]
-    """ return list of all files in directory which matches 'patterns'
-    support Unix filename pattern matching ('*', '?', [seq], [!seq])
-    and multiple option in 'patterns' (space delimetered) """
-
-    return list(set([ # throw away duplicate files
-        os.path.join(root, name) # full file name
-        for root, _, files in os.walk(a_dir) # go through all subdirectores
-        for pattern in patterns.split() # if multiple patterns given
-        for name in fnmatch.filter(files, pattern) # pattern matching
-        ]))
-
-def create_dir(out_dir):
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
 
 class SimInfo(object):
     """ basic class storing all information about one particular simulation run """
@@ -157,7 +139,7 @@ class SimInfo(object):
         self.file = a_file
         self.dir = a_file.replace(a_file.split("/")[-1], '')
         self.res_dir = self.dir + 'results/'
-        create_dir(self.res_dir)
+        ut.create_dir(self.res_dir)
 
     def rerun(self, rerun, key, skip, zs):
         """ steps to rerun or skip """
@@ -166,7 +148,7 @@ class SimInfo(object):
 
         # missing data
         if zs is None:
-            if self.verbose: print("[Skipped]  (missing data)")
+            if self.verbose: ut.print_skipped_miss()
             return False
         # manually selected steps to rerun
         # check before skip-step in case of skip == 'all'
@@ -174,14 +156,14 @@ class SimInfo(object):
             return True
         # manually selected steps to skip
         elif _is_key_val(key, skip):
-            if self.verbose: print("[Skipped]")
+            if self.verbose: ut.print_skipped()
             return False
         # step not done yet and not skipped
         elif not self.results[key]:
             return True
         # step already done
         else:
-            if self.verbose: print("[Skipped]  (already done)")
+            if self.verbose: ut.print_skipped(done=True)
             return False
 
     def done(self, key):
@@ -193,7 +175,7 @@ class SimInfo(object):
         data["results"][key] = True
         with open(self.file, 'w') as outfile:
             json.dump(data, outfile, indent=2)
-        if self.verbose: print("[Done]")
+        if self.verbose: ut.print_done()
 
 class StackInfo(SimInfo):
     def __getitem__(self, key):
@@ -236,10 +218,10 @@ class StackInfo(SimInfo):
         self.file = self.dir + 'stack_info.json'
         self.res_dir = self.dir + 'results/'
 
-        create_dir(self.dir)
-        create_dir(self.dir + "pwr_spec/")
-        create_dir(self.dir + "pwr_diff/")
-        create_dir(self.res_dir)
+        ut.create_dir(self.dir)
+        ut.create_dir(self.dir + "pwr_spec/")
+        ut.create_dir(self.dir + "pwr_diff/")
+        ut.create_dir(self.res_dir)
 
         self.seeds = [SI.run_opt["seed"] for SI in self]
         self.num_run = len(self.seeds)
@@ -308,7 +290,7 @@ class Results(object):
 
     def load(self, out_dir):
         self.sim_infos = []
-        files = get_files_in_traverse_dir(out_dir, 'stack_info.json')
+        files = ut.get_files_in_traverse_dir(out_dir, 'stack_info.json')
         for a_file in files:
             self.sim_infos.append(StackInfo(stack_info_file=a_file))
         self.sort()
