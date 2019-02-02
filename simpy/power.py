@@ -47,11 +47,11 @@ def get_a_from_A(cosmo, A):
         a_eff = []
         for A_ in A:
             f = lambda a : A_ - fs.growth_factor(a, cosmo)**2
-            a_eff.append(brentq(f, 0, 1))     
+            a_eff.append(brentq(f, 0, 2))
         return np.array(a_eff)
     else:
         f = lambda a : A - fs.growth_factor(a, cosmo)**2
-        return brentq(f, 0, 1)
+        return brentq(f, 0, 2)
 
 def get_ndarray(Data_Vec):
     """ copy C++ class Data_Vec<FTYPE_t, N> into numpy array """
@@ -183,7 +183,11 @@ def hybrid_pow_spec(a, k, A, cosmo):
 def gen_func(sim, fc_par, fce_lin, fc_nl, Pk=None, z=None, non_lin=False):
     data = fs.Data_Vec_2()
     if Pk: # compute function from given continuous power spectrum
-        fc_par(sim, Pk, data)
+        try:
+            fc_par(sim, Pk, data)
+        # GSL integration error
+        except RuntimeError:
+            return None
     elif z is not None: # compute (non-)linear function
         a = 1./(1.+z) if z != 'init' else 1.0
         if non_lin:
@@ -262,8 +266,8 @@ def get_a_from_growth(D, cosmo):
         a_eff = []
         for D_ in D:
             f = lambda a : D_ - growth_factor(a, cosmo)
-            a_eff.append(brentq(f, 0, 1))
+            a_eff.append(brentq(f, 0, 2))
         return np.array(a_eff)
     else:
         f = lambda a : D - growth_factor(a, cosmo)
-        return brentq(f, 0, 1)
+        return brentq(f, 0, 2)

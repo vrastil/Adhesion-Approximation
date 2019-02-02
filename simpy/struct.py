@@ -100,6 +100,7 @@ class SimInfo(object):
         if self.app == 'FP_pp': info += r'$r_s = %.1f$' % self.app_opt["cut_radius"]
         if self.app == 'CHI':
             info += r'$\phi_s = %.1e$' % self.chi_opt["phi"]
+            info += '   $n = %.1f$' % self.chi_opt["n"]
             info += '  (lin)' if self.chi_opt["linear"] else '  (nl) '
         return info
 
@@ -317,8 +318,8 @@ class Results(object):
 
         return subfiles
 
-    def info(self, Nm=0, Np=0, L=0, nu=0, rs=0, phi=0, app=''):
-        for a_sim_info in self.get_subfiles(Nm=Nm, Np=Np, L=L, nu=nu, rs=rs, phi=phi, app=app):
+    def info(self, Nm=0, NM=0, Np=0, L=0, nu=0, rs=0, phi=0, app='', app_not=''):
+        for a_sim_info in self.get_subfiles(Nm=Nm, NM=NM, Np=Np, L=L, nu=nu, rs=rs, phi=phi, app=app, app_not=app_not):
             info = a_sim_info.info_tr().replace('$', '')
             if hasattr(a_sim_info, 'num_run'):
                 info += "\tnum runs = %i" % a_sim_info.num_run

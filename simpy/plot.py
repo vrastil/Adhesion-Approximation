@@ -89,7 +89,7 @@ def add_nyquist_info(ax, a_sim_info):
             val_lab[val] += ",\n" + " " * 8 + key
         else:
             val_lab[val] = r"$k_{Nq}$ (" + key
-    for val, lab in val_lab.iteritems():
+    for val, lab in val_lab.items():
         ax.axvline(val, ls=next(ls), c='k', label=lab + r")")
 
 def legend_manipulation(ax=None, figtext="", loc='upper left', bbox_to_anchor=(1.0, 1.0)):
@@ -474,7 +474,12 @@ def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, sho
             save=save, show=show, is_sigma=is_sigma, only_r2=only_r2,
             extra_data=extra_data, peak_loc=peak_loc, use_z_eff=use_z_eff)
 
-def plot_peak_uni(a, a_sim_info, ax, cut, bao_type, idx, only_nl=True, use_z_eff=False):
+def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False):
+    # load all available data (GSL integration could have failed)
+    zs = a_sim_info.data["corr_func"]["par_peak"][2]
+    cut = slice(1, None) if zs[0] == 'init' else slice(0, None)
+    a = [1./(1+z) for z in zs[cut]]
+
     # location / amplitude of the BAO peak, label
     data = np.array(a_sim_info.data["corr_func"]["par_peak"][idx][cut])
     label = a_sim_info.app
@@ -482,33 +487,33 @@ def plot_peak_uni(a, a_sim_info, ax, cut, bao_type, idx, only_nl=True, use_z_eff
     # comparison to the non-linear prediction
     if use_z_eff:
         corr = [power.corr_func(use_z_eff['sim'], z=z, non_lin=True) for z in use_z_eff['z']]
-        data_nl = [power.get_bao_peak(x)[idx] for x in corr]
+        data_nl = np.array([power.get_bao_peak(x)[idx] for x in corr])
     else:
-        data_nl = np.array(a_sim_info.data["corr_func"]["nl_peak"][idx][cut])
+        data_nl = []
+        for z in zs[cut]:
+            index = a_sim_info.data["corr_func"]["nl_peak"][2].index(z)
+            data_nl.append(a_sim_info.data["corr_func"]["nl_peak"][idx][index])
+        data_nl = np.array(data_nl)
+
+    # plot simulation peak
     ax.plot(a, data / data_nl, label=label + ' (%s)' % bao_type)
 
-    # comparison to the inear prediction
-    if not only_nl:
-        data_lin = np.array(a_sim_info.data["corr_func"]["lin_peak"][idx][cut])
-        ax.plot(a, data / data_lin, label=label + ' (%s, lin)' % bao_type)
-
-def plot_peak_loc(a, a_sim_info, ax, cut, only_nl=True, use_z_eff=False):
+def plot_peak_loc(a_sim_info, ax, use_z_eff=False):
     """ plot peak location to the given axis """
-    plot_peak_uni(a, a_sim_info, ax, cut, "loc", 0, only_nl=only_nl, use_z_eff=use_z_eff)
+    plot_peak_uni(a_sim_info, ax, "loc", 0, use_z_eff=use_z_eff)
 
-def plot_peak_amp(a, a_sim_info, ax, cut, only_nl=True, use_z_eff=False):
+def plot_peak_amp(a_sim_info, ax, use_z_eff=False):
     """ plot peak amplitude to the given axis """
-    plot_peak_uni(a, a_sim_info, ax, cut, "amp", 1, only_nl=only_nl, use_z_eff=use_z_eff)
+    plot_peak_uni(a_sim_info, ax, "amp", 1, use_z_eff=use_z_eff)
 
-def plot_corr_peak(zs, sim_infos, out_dir='auto', save=True, show=False, use_z_eff=False):
+def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=False):
     # output
     if out_dir == 'auto':
-        out_dir = report_dir
+        if len(sim_infos) == 1:
+            out_dir = sim_infos[0].res_dir
+        else:
+            out_dir = report_dir
     out_file = "corr_peak"
-
-    # get rid of init zs
-    cut = slice(1, None, None) if zs[0] == 'init' else slice(None, None, None)
-    a = 1/(1.+np.array(zs[cut]))
 
     # figure
     fig = plt.figure(figsize=fig_size)
@@ -519,10 +524,10 @@ def plot_corr_peak(zs, sim_infos, out_dir='auto', save=True, show=False, use_z_e
         z_eff = use_z_eff[i] if use_z_eff else False
 
         # peak location
-        plot_peak_loc(a, a_sim_info, ax, cut, use_z_eff=z_eff)
+        plot_peak_loc(a_sim_info, ax, use_z_eff=z_eff)
 
         # peak amplitude
-        plot_peak_amp(a, a_sim_info, ax, cut, use_z_eff=z_eff)
+        plot_peak_amp(a_sim_info, ax, use_z_eff=z_eff)
 
     # labels
     plt.xlabel(r"$a$", fontsize=label_size)
@@ -558,8 +563,12 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=
         plot_eff_time(stack_infos, out_dir=out_dir, a_eff_type="Pk_nl", save=save, show=show, use_z_eff=use_z_eff)
         return
 
+    # output
     if out_dir == 'auto':
-        out_dir = report_dir
+        if len(stack_infos) == 1:
+            out_dir = stack_infos[0].res_dir
+        else:
+            out_dir = report_dir
 
     # figure
     fig = plt.figure(figsize=fig_size)
@@ -593,8 +602,12 @@ def plot_pwr_spec_nl_amp_ax(a_sim_info, ax, ymin=0, ymax=0.4):
     ax.set_ylim(ymin=ymin*0.9, ymax=ymax*1.1)
 
 def plot_pwr_spec_nl_amp(stack_infos, out_dir='auto', save=True, show=False):
+    # output
     if out_dir == 'auto':
-        out_dir = report_dir
+        if len(stack_infos) == 1:
+            out_dir = stack_infos[0].res_dir
+        else:
+            out_dir = report_dir
 
     # figure
     fig = plt.figure(figsize=fig_size)
@@ -631,8 +644,12 @@ def plot_eff_growth_rate(stack_infos, out_dir='auto', a_eff_type="Pk", save=True
         plot_eff_growth_rate(stack_infos, out_dir=out_dir, a_eff_type="Pk_nl", save=save, show=show, use_z_eff=use_z_eff)
         return
 
+    # output
     if out_dir == 'auto':
-        out_dir = report_dir
+        if len(stack_infos) == 1:
+            out_dir = stack_infos[0].res_dir
+        else:
+            out_dir = report_dir
 
     # figure
     fig = plt.figure(figsize=fig_size)
@@ -709,9 +726,13 @@ def plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=T
 
 def plot_pwr_spec_diff_from_data_mlt(data_lists, zs, sim_infos, out_dir='auto', show_scales=False, pk_type='dens',
                                  ext_title='init', save=True, show=False, use_z_eff=False):
-
+    # output
     if out_dir == 'auto':
-        out_dir = report_dir
+        if len(sim_infos) == 1:
+            out_dir = sim_infos[0].res_dir
+        else:
+            out_dir = report_dir
+
     if pk_type == "dens":
         out_file = 'pwr_spec_diff'
         suptitle = "Power spectrum difference"

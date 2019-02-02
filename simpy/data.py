@@ -20,7 +20,7 @@ from scipy.optimize import curve_fit
 # simpy modules
 from . import utils as ut
 from . import plot
-from .fastsim import Extrap_Pk_Nl_2, Extrap_Pk_Nl_3
+from .fastsim import Extrap_Pk_2, Extrap_Pk_3, Extrap_Pk_Nl_2, Extrap_Pk_Nl_3
 from . import struct
 from . import power as pwr
 from plot import report_dir
@@ -50,6 +50,9 @@ def sort_chi_files(files, zs):
 # LOAD DATA FROM SINGLE RUN 
 ###################################
 
+def has_app_lin_pwr(app):
+    return True if app == 'TZA' or app == 'TZA' else False
+
 def load_k_supp(files, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens'):
     """
     Divide available k-values into 7 subinterval from
@@ -74,10 +77,10 @@ def load_k_supp(files, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens'):
         supp[i][2] = [k[j*idx], k[(j+1)*idx]]
     return supp
 
-def get_single_hybrid_pow_spec_amp_w_z(sim, a_file, z, k_nyquist_par, a=None, data=None):
+def get_single_hybrid_pow_spec_amp_w_z(sim, a_file, z, k_nyquist_par, a=None, data=None, fit_lin=False):
     if data is None:
         data = np.transpose(np.loadtxt(a_file))
-    x = get_hybrid_pow_spec_amp(sim, data, k_nyquist_par, a=a)
+    x = get_hybrid_pow_spec_amp(sim, data, k_nyquist_par, a=a, fit_lin=fit_lin)
     x["z"] = z
     return x
 
@@ -86,7 +89,8 @@ def get_extrap_pk(a_sim_info, files, zs):
         # needed variables
         sim = a_sim_info.sim
         k_nyquist_par = a_sim_info.k_nyquist["particle"]
-        func = lambda a_file, z : get_single_hybrid_pow_spec_amp_w_z(sim, a_file, z, k_nyquist_par)
+        fit_lin = has_app_lin_pwr(a_sim_info.app)
+        func = lambda a_file, z : get_single_hybrid_pow_spec_amp_w_z(sim, a_file, z, k_nyquist_par, fit_lin=fit_lin)
 
         # get hybrid power spectrum with redshift for each file
         a_sim_info.data["extrap_pk"] = list(map(func, files, zs))
@@ -117,7 +121,8 @@ def get_pk_nl_amp(a_sim_info):
         raise IndexError("Data have wrong lengths!")
     
     # get amplitude of non-linear power spectrum with redshift for a_eff
-    func = lambda a_eff, z, data : get_single_hybrid_pow_spec_amp_w_z(sim, None, z, k_nyquist_par, a=a_eff, data=data)
+    fit_lin = has_app_lin_pwr(a_sim_info.app)
+    func = lambda a_eff, z, data : get_single_hybrid_pow_spec_amp_w_z(sim, None, z, k_nyquist_par, a=a_eff, data=data, fit_lin=fit_lin)
     data_w_amp = list(map(func, as_eff, zs, data_all))        
 
     # extract amplitude and redshift
@@ -177,16 +182,28 @@ def get_key_func(files, zs, a_sim_info, key, load=False):
         key(sim, Pk=None, z=None, non_lin=False) """
 
     if key not in a_sim_info.data:
-        a_sim_info.data[key] = {}
+        a_sim_info.data[key] = {
+            'par' : [],
+            'lin' : [],
+            'nl' : [],
+            'zs' : []
+        }
         gen_func = getattr(pwr, key)
         if load:
             a_sim_info.data[key]["par"] = [np.transpose(np.loadtxt(a_file)) for a_file in files]
+            a_sim_info.data[key]["zs"] = zs
         else:
             get_extrap_pk(a_sim_info, files, zs)
-            a_sim_info.data[key]["par"] = [gen_func(a_sim_info.sim, Pk=Pk) for Pk in a_sim_info.data["pk_list"]]
-        a_sim_info.data[key]["lin"] = [gen_func(a_sim_info.sim, z=z) for z in zs]
-        a_sim_info.data[key]["nl"] = [gen_func(a_sim_info.sim, z=z, non_lin=True) for z in zs]
-        a_sim_info.data[key]["zs"] = zs
+            zs = a_sim_info.data["zs"]
+            for Pk, z in izip(a_sim_info.data["pk_list"], zs):
+                data = gen_func(a_sim_info.sim, Pk=Pk)
+                if data is not None:
+                    a_sim_info.data[key]["par"].append(data)
+                    a_sim_info.data[key]["zs"].append(z)
+
+        a_sim_info.data[key]["lin"] = [gen_func(a_sim_info.sim, z=z) for z in a_sim_info.data[key]["zs"]]
+        a_sim_info.data[key]["nl"] = [gen_func(a_sim_info.sim, z=z, non_lin=True) for z in a_sim_info.data[key]["zs"]]
+        
 
 def get_corr_func(files, zs, a_sim_info, load=False):
     get_key_func(files, zs, a_sim_info, "corr_func", load=load)
@@ -199,17 +216,20 @@ def get_corr_peak(a_sim_info, cutof=80):
     # for each type of measured correlation function
     for key in ('par', 'lin', 'nl'):
         # for each redshift
-        a_sim_info.data["corr_func"][key + '_peak'] = [[], []]
-        for corr in a_sim_info.data["corr_func"][key]:
-            loc, amp = pwr.get_bao_peak(corr, cutof=cutof)
-            a_sim_info.data["corr_func"][key + '_peak'][0].append(loc)
-            a_sim_info.data["corr_func"][key + '_peak'][1].append(amp)
+        a_sim_info.data["corr_func"][key + '_peak'] = [[], [], []]
+        for i, corr in enumerate(a_sim_info.data["corr_func"][key]):
+            if corr is not None:
+                loc, amp = pwr.get_bao_peak(corr, cutof=cutof)
+                z = a_sim_info.data["corr_func"]["zs"][i]
+                a_sim_info.data["corr_func"][key + '_peak'][0].append(loc)
+                a_sim_info.data["corr_func"][key + '_peak'][1].append(amp)
+                a_sim_info.data["corr_func"][key + '_peak'][2].append(z)
 
 def get_plot_corr_peak(files, zs, a_sim_info, load=False, **kwargs):
     get_corr_func(files, zs, a_sim_info, load=load)
     cutof = kwargs.get("cutof", 25)
     get_corr_peak(a_sim_info, cutof=cutof)
-    plot.plot_corr_peak(zs, [a_sim_info], **kwargs)
+    plot.plot_corr_peak([a_sim_info], **kwargs)
     
 def get_sigma_R(files, zs, a_sim_info, load=False):
     get_key_func(files, zs, a_sim_info, "sigma_R", load=load)
@@ -293,7 +313,8 @@ def load_a_eff(a_sim_info, files=None, zs=None, use_z_eff='all'):
 
 def load_plot_a_eff(files, zs, a_sim_info, **kwargs):
     # load a_eff
-    load_a_eff(a_sim_info, files=files, zs=zs)
+    load_a_eff(a_sim_info, files=files, zs=zs, use_z_eff="Pk")
+    load_a_eff(a_sim_info, files=files, zs=zs, use_z_eff="sigma_R")
     
     # plot
     plot.plot_eff_time([a_sim_info], a_eff_type="sigma_R", **kwargs)
@@ -582,9 +603,11 @@ def get_perr_pcor(pcov):
     pcor = np.dot(np.dot(inv, pcov), inv)
     return perr, pcor
 
-def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par, a=None):
+def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par, a=None, fit_lin=False):
     """ fit data [k, Pk, std] to hybrid power spectrum (1-A)*P_lin(k) + A*P_nl(k)
-    return dictionary with C++ class Extrap_Pk_Nl, fit values and covariance """
+    return dictionary with C++ class Extrap_Pk_Nl, fit values and covariance.
+    If 'fit_lin' is True, fit linear power spectrum and use C++ class Extrap_Pk instead.
+     """
     # extract data
     kk, Pk = np.array(data[0]), np.array(data[1])
     
@@ -592,27 +615,45 @@ def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par, a=None):
     idx = (np.abs(kk-0.5*k_nyquist_par)).argmin()
     idx = slice(idx - sim.out_opt.bins_per_decade, idx)
 
-    # define functions which will be used in fitting (whether 'a' is free parameter or not)
-    
-    if a is None:
-        pk_hyb_func = lambda k, A, a: pwr.hybrid_pow_spec(a, k, A, sim.cosmo)
-        p0 = (0.05, 0.5)
-    else:
-        pk_hyb_func = lambda k, A: pwr.hybrid_pow_spec(a, k, A, sim.cosmo)
-        p0 = 0.05
-
-    # fit data, a = <0, 1>, A = <0, 1>        
-    bounds = (0, 1)
+    # do we have errors?
     sigma = data[2][idx] if len(data) > 2 else None
-    
-    popt, pcov = curve_fit(pk_hyb_func, kk[idx], Pk[idx], p0=p0, bounds=bounds, sigma=sigma)
-    perr, pcor = get_perr_pcor(pcov)
 
-    # get hybrid Extrap
-    Pk_par = Extrap_Pk_Nl_2 if sigma is None else Extrap_Pk_Nl_3
-    A = popt[0]
-    a = popt[1] if a is None else a
-    Pk_par = Pk_par(pwr.get_Data_vec(data), sim, A, a)
+    # get data vector
+    data_vec = pwr.get_Data_vec(data)
+
+    # are fitting only linear power spectrum?
+    if fit_lin:
+        Pk_par = Extrap_Pk_2 if sigma is None else Extrap_Pk_3
+        Pk_par = Pk_par(data_vec, sim)
+        popt = pcov = perr = pcor = None
+
+        # check proper slope of power spectrum : n_s < -1.5
+        if Pk_par.n_s > -1.5:
+            P_0 = Pk_par(Pk_par.k_max)
+            Pk_par.n_s = -1
+            Pk_par.A_up *= P_0 / Pk_par(Pk_par.k_max)
+
+    # fit hybrid power spectrum
+    else:
+        # define functions which will be used in fitting (whether 'a' is free parameter or not)
+        if a is None:
+            pk_hyb_func = lambda k, A, a: pwr.hybrid_pow_spec(a, k, A, sim.cosmo)
+            p0 = (0.05, 0.5)
+        else:
+            pk_hyb_func = lambda k, A: pwr.hybrid_pow_spec(a, k, A, sim.cosmo)
+            p0 = 0.05
+
+        # fit data, a = <0, 1>, A = <0, 1>        
+        bounds = (0, 1)
+        
+        popt, pcov = curve_fit(pk_hyb_func, kk[idx], Pk[idx], p0=p0, bounds=bounds, sigma=sigma)
+        perr, pcor = get_perr_pcor(pcov)
+
+        # get hybrid Extrap
+        Pk_par = Extrap_Pk_Nl_2 if sigma is None else Extrap_Pk_Nl_3
+        A = popt[0]
+        a = popt[1] if a is None else a
+        Pk_par = Pk_par(data_vec, sim, A, a)
 
     # return all info in dict
     return {"Pk_par" : Pk_par, "popt" : popt, "pcov" : pcov, 'perr' : perr, 'pcor' : pcor}
@@ -893,11 +934,10 @@ def stack_all(in_dir='/home/michal/Documents/GIT/FastSim/output/', rerun=None, s
     if verbose: print_runs_info(sep_files, num_all_runs, num_all_sep_runs, num_sep_runs)
 
     # analysis
-    stack_infos = []
+    stack_infos = []    
     for i, sep_sim_infos in enumerate(sep_files):
         if verbose:
-            info = "Stacking group %s" % sep_sim_infos[0].info_tr()
-            print('*'*len(info), '\n', info, '\n', '*'*len(info))
+            ut.print_info('Analyzing run %s' % sep_sim_infos[0].info_tr())
         else:
             print("\rStacking group %i/%i" % (i + 1, len(sep_files)), end="")
             sys.stdout.flush()
@@ -908,7 +948,7 @@ def stack_all(in_dir='/home/michal/Documents/GIT/FastSim/output/', rerun=None, s
             if return_stack:
                 return stack_infos
     if verbose:
-        print('*'*len(info), '\n', 'All groups analyzed!')
+        ut.print_info_end()
     else:
         print('\n')
     return stack_infos if return_stack else None
@@ -1120,10 +1160,8 @@ def corr_func_comp_plot_peak(files=None, sim_infos=None, outdir=report_dir, cuto
             'sim' : sim_info.sim
         })
 
-    zs = sim_info.data["corr_func"]["zs"]
-
     # plot bao peak and location
-    plot.plot_corr_peak(zs, sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff)
+    plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff)
 
 
 def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3):
@@ -1152,7 +1190,8 @@ def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3):
         
     # get new extrapolated Pk, use last a_sim_info for k_nyquist and simulation param.
     sim = a_sim_info.sim
-    extrap_pk = get_hybrid_pow_spec_amp(sim, data_list_new, k_nq) if get_extrap_pk else None
+    fit_lin = has_app_lin_pwr(sim_infos[0].app)
+    extrap_pk = get_hybrid_pow_spec_amp(sim, data_list_new, k_nq, fit_lin=fit_lin) if get_extrap_pk else None
     
     # plot data only to half nyquist frequency (previusly needed for extra_pk)
     idx = (data_list_new[0] <= k_nq/2)
