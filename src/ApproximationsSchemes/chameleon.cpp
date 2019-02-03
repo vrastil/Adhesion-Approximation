@@ -444,21 +444,21 @@ public:
 
         /// - print some information
         auto print_success = [=](size_t m_conv_stop){
-            std::cout << "\n\tSUCCESS: res = " << _rms_res << ", err = " << err << ", num_err = " << m_conv_stop << " (istep = " << _istep_vcycle << ")\n";
+            BOOST_LOG_TRIVIAL(debug) << "\n\tSUCCESS: res = " << _rms_res << ", err = " << err << ", num_err = " << m_conv_stop << " (istep = " << _istep_vcycle << ")";
             };
         auto print_failure = [=](size_t m_conv_stop){
-            std::cout << "\tFAILURE: res = " << _rms_res << ", err = " << err << ", num_err = " << m_conv_stop << " (istep = " << _istep_vcycle << ")\n";
+            BOOST_LOG_TRIVIAL(debug) << "\tFAILURE: res = " << _rms_res << ", err = " << err << ", num_err = " << m_conv_stop << " (istep = " << _istep_vcycle << ")";
             };
 
         auto print_iterate = [=](size_t m_conv_stop){
-            std::cout << "\tITERATE: res = " << _rms_res << ", err = " << err << ", num_err = " << m_conv_stop << " (istep = " << _istep_vcycle << ")\n";
+            BOOST_LOG_TRIVIAL(debug) << "\tITERATE: res = " << _rms_res << ", err = " << err << ", num_err = " << m_conv_stop << " (istep = " << _istep_vcycle << ")";
             };
 
         /// - Print out some information
         if (_verbose){
-            std::cout << "    Checking for convergence at step = " << _istep_vcycle << "\n";
-            std::cout << "        Residual = " << _rms_res << "  Residual_old = " <<  _rms_res_old << "\n";
-            std::cout << "        Residual_i = " << _rms_res_i << "  Err = " << err << "\n";
+            BOOST_LOG_TRIVIAL(debug) << "    Checking for convergence at step = " << _istep_vcycle;
+            BOOST_LOG_TRIVIAL(debug) << "        Residual = " << _rms_res << "  Residual_old = " <<  _rms_res_old;
+            BOOST_LOG_TRIVIAL(debug) << "        Residual_i = " << _rms_res_i << "  Err = " << err;
         }
 
         /// - check individual conditions
@@ -554,7 +554,7 @@ public:
     {
         if (!chi_prefactor) throw std::out_of_range("invalid value of scale factor");
         if (!this->get_external_field_size()) throw std::out_of_range("overdensity not set"); 
-        std::cout << "Setting initial guess for chameleon field...\n";
+        BOOST_LOG_TRIVIAL(debug) << "Setting initial guess for chameleon field...";
 
         T* const f = this->get_y(); // initial guess
         T const* const rho = this->get_external_field(0, 0); // overdensity
@@ -656,7 +656,7 @@ public:
         }
 
         size_t num_high_density = fix_vals[level].size();
-        std::cout << "Identified and fixed " << num_high_density << "(" << std::setprecision(2) << num_high_density*100.0/N_tot <<  "%) points at level " << level << "\n";
+        BOOST_LOG_TRIVIAL(debug) << "Identified and fixed " << num_high_density << "(" << std::setprecision(2) << num_high_density*100.0/N_tot <<  "%) points at level " << level;
 
         set_screened(level + 1); ///< recursive call to fix all levels
     }
@@ -720,12 +720,12 @@ public:
         sol.set_def_convergence();
 
         /// - save (over)density from particles
-        std::cout << "Storing density distribution...\n";
+        BOOST_LOG_TRIVIAL(debug) << "Storing density distribution...";
         get_rho_from_par(particles, chi_force[0], sim);
         transform_Mesh_to_MultiGrid(chi_force[0], drho);
 
         /// linear guess and solver
-        std::cout << "Setting linear guess for chameleon field...\n";
+        BOOST_LOG_TRIVIAL(debug) << "Setting linear guess for chameleon field...";
         if (sim.chi_opt.linear)
         {
             /// - set guess from linear theory
@@ -738,7 +738,7 @@ public:
             sol.set_screened();
 
             /// - get multigrid_solver runnig
-            std::cout << "Solving equations of motion for chameleon field...\n";
+            BOOST_LOG_TRIVIAL(debug) << "Solving equations of motion for chameleon field...";
             solve_multigrid(); ///< solve using multigrid teqniques
             solve_finest(); ///< solve only on the finest mesh using NGS sweeps
         }

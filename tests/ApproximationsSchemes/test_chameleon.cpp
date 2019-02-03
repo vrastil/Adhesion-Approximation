@@ -253,7 +253,7 @@ TEST_CASE( "UNIT TEST: create and initialize ChiSolver, solve sphere", "[chamele
     print_mesh(out_dir + "grav_pot.dat", phi_pot, 0);
 
     // Solve the equation -- full V-cycles
-    std::cout << "Starting V-cycles with intermediate output...\n";
+    BOOST_LOG_TRIVIAL(info) << "Starting V-cycles with intermediate output...\n";
     
     int istep = 0;
     const size_t step_per_iter = sim.test_opt.step_per_iter;

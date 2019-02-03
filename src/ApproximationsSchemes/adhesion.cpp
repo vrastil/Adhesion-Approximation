@@ -20,7 +20,7 @@ const FTYPE_t log_acc = log(ACC);
 
 void gen_init_expot(const Mesh& potential, Mesh& expotential, FTYPE_t nu)
 {
-	printf("Storing initial expotenital in q-space...\n");
+	BOOST_LOG_TRIVIAL(debug) << "Storing initial expotenital in q-space...";
     // store exponent only
     // *expotential = potential; !!! <- do not use this in case potential and expotential are meshes of different size
     #pragma omp parallel for
@@ -120,7 +120,7 @@ void convolution_y3(Mesh& potential, const std::vector<FTYPE_t>& gaussian){
 void gen_expot(Mesh& potential,  const Mesh& expotential_0, FTYPE_t nu, FTYPE_t b)
 {
 	/* Computing convolution using direct sum */
-	printf("Computing expotential in q-space...\n");
+	BOOST_LOG_TRIVIAL(debug) << "Computing expotential in q-space...";
 	/*
 	f(x1, x2, x3) = \int dy^3 { g(y1, y2, y3) * h(x1 - y1) * h(x2 - y2) * h(x3 - y3)}
 	..
@@ -159,11 +159,11 @@ public:
 
     void aa_convolution(App_Var_AA& APP)
     {
-        printf("Computing potential...\n");	
+        BOOST_LOG_TRIVIAL(debug) << "Computing potential...";
         gen_expot(APP.app_field[0], expotential, APP.sim.app_opt.nu, APP.a_half());
         APP.app_field[0] *= -2*APP.sim.app_opt.nu;
                     
-        printf("Computing velocity field via FFT...\n");
+        BOOST_LOG_TRIVIAL(debug) << "Computing velocity field via FFT...";
         fftw_execute_dft_r2c(APP.p_F, APP.app_field[0]);
         gen_displ_k(APP.app_field, APP.app_field[0]);
         fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);

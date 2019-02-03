@@ -10,7 +10,15 @@ target_include_directories(${LIBRARY_NAME} INTERFACE "${CMAKE_CURRENT_SOURCE_DIR
 # set compile flags
 target_compile_definitions(${LIBRARY_NAME} INTERFACE PRECISION=${PRECISION})
 
-# main executable - FastSim
+# dependencies
+target_link_libraries(${LIBRARY_NAME}
+        INTERFACE boost_log
+)
+
+#############################
+# main executable - FastSim #
+#############################
+
 set(EXECUTABLE FastSim)
 
 # source files
@@ -25,6 +33,7 @@ add_executable(${EXECUTABLE} ${SOURCE_FILES})
 target_link_libraries(${EXECUTABLE}
         Approximations
         ${FFTW_LIB}
+        boost_timer
         -fuse-linker-plugin
 )
 

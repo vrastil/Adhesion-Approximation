@@ -82,7 +82,6 @@ struct Out_Opt {
     void init();
     /* cmd args */
     size_t print_every, bins_per_decade, points_per_10_Mpc;
-    std::vector<FTYPE_t> print_z; //< for which redshifts print output on top of print_every (optional)
     std::string out_dir; //< where to save output of the simulation
     bool print_par_pos, print_dens, print_pwr, print_extrap_pwr, print_corr, print_vel_pwr;
     /* derived param*/

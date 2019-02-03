@@ -6,6 +6,7 @@
  * @date 2018-07-11
  */
 
+#include <iomanip>
 #include <boost/filesystem.hpp>
 #include "core_out.h"
 #include "class_particles.hpp"
@@ -75,7 +76,7 @@ void create_dir(const std::string &out_dir)
 	const fs::path dir(out_dir.c_str());
 	if(fs::create_directories(dir))
     {
-        std::cout << "Directory created: "<< out_dir << "\n";
+        BOOST_LOG_TRIVIAL(debug) << "Directory created: "<< out_dir;
     }
 }
 
@@ -84,7 +85,7 @@ void remove_dir(const std::string &out_dir)
     const fs::path dir(out_dir.c_str());
     if (fs::remove_all(dir))
     {
-        std::cout << "Directory removed: "<< out_dir << "\n";
+        BOOST_LOG_TRIVIAL(debug) << "Directory removed: "<< out_dir;
     }
 }
 
@@ -101,7 +102,7 @@ void remove_all_files(const std::string &out_dir)
             ++i;
         }
     }
-    std::cout << "Removed " << i << " file(s) in directory: "<< out_dir << "\n";
+    BOOST_LOG_TRIVIAL(debug) << "Removed " << i << " file(s) in directory: "<< out_dir;
 }
 
 template <class T>
@@ -111,7 +112,7 @@ void print_par_pos_cut_small(const std::vector<T>& particles, const Sim_Param &s
    std::string file_name = out_dir + "par_cut" + suffix + ".dat";
    Ofstream File(file_name);
    
-   std::cout << "Writing small cut through the box of particles into file " << file_name << "\n";
+   BOOST_LOG_TRIVIAL(debug) << "Writing small cut through the box of particles into file " << file_name;
    File << "# This file contains positions of particles in units [Mpc/h].\n";
    FTYPE_t x, y, z, dx;
    const FTYPE_t x_0 = sim.x_0();
@@ -136,7 +137,7 @@ void print_pow_spec(const Data_Vec<FTYPE_t, 2> &pwr_spec_binned, std::string out
 	std::string file_name = out_dir + "pwr_spec" + suffix + ".dat";
 	Ofstream File(file_name);
 	
-	std::cout << "Writing power spectrum into file " << file_name << "\n";
+	BOOST_LOG_TRIVIAL(debug) << "Writing power spectrum into file " << file_name;
 	File << "# This file contains power spectrum P(k) in units [(Mpc/h)^3] depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\tP(k) [(Mpc/h)^3]\n";
 
@@ -156,7 +157,7 @@ void print_vel_pow_spec(const Data_Vec<FTYPE_t, 2> &pwr_spec_binned, std::string
 	std::string file_name = out_dir + "vel_pwr_spec" + suffix + ".dat";
 	Ofstream File(file_name);
 	
-	std::cout << "Writing velocity divergence power spectrum into file " << file_name << "\n";
+	BOOST_LOG_TRIVIAL(debug) << "Writing velocity divergence power spectrum into file " << file_name;
 	File << "# This file contains velocity divergence power spectrum P(k) in units [(Mpc/h)^3] depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\tP(k) [(Mpc/h)^3]\n";
 
@@ -176,7 +177,7 @@ void print_corr_func(const Data_Vec<FTYPE_t, 2> &pwr_spec_binned, std::string ou
 	std::string file_name = out_dir + "corr_func" + suffix + ".dat";
 	Ofstream File(file_name);
 	
-	std::cout << "Writing correlation function into file " << file_name << "\n";
+	BOOST_LOG_TRIVIAL(debug) << "Writing correlation function into file " << file_name;
 	File << "# This file contains correlation function depending on distance r in units [Mpc/h].\n"
 	        "# x [Mpc/h]\txsi(r)\n";
     
@@ -200,10 +201,10 @@ bool is_err(const std::vector<T>& vec1, const std::vector<T>& vec2, size_t bin)
     constexpr T prec_war = std::is_same<T, float>::value ? 1e-5f : 1e-12;
 
     if (err > prec_err){
-        std::cout << "ERROR! Different values of k in bin " << bin << "! Relative error = " << err << "\n";
+        BOOST_LOG_TRIVIAL(error) << "ERROR! Different values of k in bin " << bin << "! Relative error = " << err;
         return true;
     }
-    else if (err > prec_war) std::cout << "WARNING! Different values of k in bin " << bin << "! Relative error = " << err << "\n";
+    else if (err > prec_war) BOOST_LOG_TRIVIAL(warning) << "WARNING! Different values of k in bin " << bin << "! Relative error = " << err;
     return false;
 }
 
@@ -214,14 +215,14 @@ void print_pow_spec_diff(const Data_Vec<FTYPE_t, 2> &pwr_spec_binned, const Data
     std::string file_name = out_dir + "pwr_spec_diff" + suffix + ".dat";
     Ofstream File(file_name);
     
-	std::cout << "Writing power spectrum difference into file " << file_name << "\n";
+	BOOST_LOG_TRIVIAL(debug) << "Writing power spectrum difference into file " << file_name;
     File << "# This file contains relative difference between power spectrum P(k)\n"
             "# and lineary extrapolated power spectrum of initial position of particles\n"
             "# depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 
 	FTYPE_t P_k, P_lin;
-    std::cout.precision(10);
+    File << std::setprecision(10);
     const size_t size = pwr_spec_binned.size();
 	for (size_t j = 0; j < size; j++){
         if (is_err(pwr_spec_binned[0], pwr_spec_binned_0[0], j)) continue;
@@ -238,7 +239,7 @@ void print_pow_spec_diff(const Data_Vec<FTYPE_t, 2> &pwr_spec_binned, const Inte
     std::string file_name = out_dir + "pwr_spec_diff" + suffix + ".dat";
     Ofstream File(file_name);
     
-	std::cout << "Writing power spectrum difference into file " << file_name << "\n";
+	BOOST_LOG_TRIVIAL(debug) << "Writing power spectrum difference into file " << file_name;
     File << "# This file contains relative difference between power spectrum P(k)\n"
             "# and lineary extrapolated input power spectrum\n"
             "# depending on wavenumber k in units [h/Mpc].\n"
@@ -266,14 +267,14 @@ void print_pow_spec_diff(const Data_Vec<FTYPE_t, 2> &pwr_spec_binned, const Data
     std::string file_name = out_dir + "pwr_spec_diff" + suffix + ".dat";
     Ofstream File(file_name);
     
-	std::cout << "Writing power spectrum difference into file " << file_name << "\n";
+	BOOST_LOG_TRIVIAL(debug) << "Writing power spectrum difference into file " << file_name;
     File << "# This file contains relative difference between power spectrum P(k)\n"
             "# and lineary extrapolated 'hybrid' power spectrum\n"
             "# depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 
 	FTYPE_t k, P_k, P_input, P_par;
-    std::cout.precision(10);
+    File << std::setprecision(10);
     const size_t size = pwr_spec_binned.size();
 	for (size_t j = 0; j < size; j++){
         if (is_err(pwr_spec_binned[0], pwr_spec_binned_0[0], j)) continue;
@@ -297,13 +298,13 @@ void print_vel_pow_spec_diff(const Data_Vec<FTYPE_t, 2> &pwr_spec_binned, const 
     std::string file_name = out_dir + "vel_pwr_spec_diff" + suffix + ".dat";
     Ofstream File(file_name);
     
-	std::cout << "Writing power velocity divergence spectrum difference into file " << file_name << "\n";
+	BOOST_LOG_TRIVIAL(debug) << "Writing power velocity divergence spectrum difference into file " << file_name;
     File << "# This file contains relative difference between velocity divergence power spectrum P(k)\n"
             "# and lineary extrapolated velocity divergence power spectrum depending on wavenumber k in units [h/Mpc].\n"
 	        "# k [h/Mpc]\t(P(k, z)-P_lin(k, z))/P_lin(k, z)\n";
 	
 	FTYPE_t P_k, P_ZA;
-    std::cout.precision(10);
+    File << std::setprecision(10);
     const size_t size = pwr_spec_binned.size();
 	for (size_t j = 0; j < size; j++){
         if (is_err(pwr_spec_binned[0], pwr_spec_binned_0[0], j)) continue;
@@ -320,7 +321,7 @@ void print_rho_map(const Mesh& delta, const Sim_Param &sim, std::string out_dir,
     std::string file_name = out_dir + "rho_map" + suffix + ".dat";
     Ofstream File(file_name);
 
-	std::cout << "Writing density map into file " << file_name << "\n";
+	BOOST_LOG_TRIVIAL(debug) << "Writing density map into file " << file_name;
 	File << "# This file contains density map delta(x).\n";
     File << "# x [Mpc/h]\tz [Mpc/h]\tdelta\n";
     const size_t N = sim.box_opt.mesh_num_pwr;
@@ -339,7 +340,7 @@ void print_projected_rho(const Mesh& delta, const Sim_Param &sim, std::string ou
     std::string file_name = out_dir + "rho_map_projected" + suffix + ".dat";
     Ofstream File(file_name);
     
-	std::cout << "Writing density map into file " << file_name << "\n";
+	BOOST_LOG_TRIVIAL(debug) << "Writing density map into file " << file_name << "\n";
 	File << "# This file contains density map delta(x).\n"
 	        "# x [Mpc/h]\tz [Mpc/h]\tdelta\n";
     FTYPE_t rho, rho_tmp;
@@ -363,7 +364,7 @@ void print_dens_bin(const std::vector<size_t> &dens_binned, std::string out_dir,
     std::string file_name = out_dir + "rho_bin" + suffix + ".dat";
     Ofstream File(file_name);
     
-	std::cout << "Writing binned density into file " << file_name << "\n";
+	BOOST_LOG_TRIVIAL(debug) << "Writing binned density into file " << file_name;
 	File << "# This file contains binned density field.\n"
 	        "# dens\tbin_num\n";
     FTYPE_t dens;

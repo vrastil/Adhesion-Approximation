@@ -11,7 +11,7 @@ TEST_CASE( "UNIT TEST: growth functions {growth_factor, growth_rate, growth_chan
     try{
         Sim_Param sim(argc, argv);
         FTYPE_t D, D_to_a, f, Oma, OLa, dDda, factor;
-        printf("a\t\tD\t\tf\t\tdD/da\t\tD/a*f\t\tOm\t\tOm^0.6\t\tfactor\n");
+        BOOST_LOG_TRIVIAL(debug) << "a\t\tD\t\tf\t\tdD/da\t\tD/a*f\t\tOm\t\tOm^0.6\t\tfactor";
         for (FTYPE_t a =0; a <= 1.0; a += 0.1)
         {
             D = growth_factor(a, sim.cosmo);
@@ -21,10 +21,10 @@ TEST_CASE( "UNIT TEST: growth functions {growth_factor, growth_rate, growth_chan
             OLa = 1/(1+sim.cosmo.Omega_m/(pow(a, 3)*sim.cosmo.Omega_L()));
             Oma = 1 - OLa;
             factor = sim.cosmo.Omega_m/(sim.cosmo.Omega_m+2*pow(a, 3)*sim.cosmo.Omega_L())*D_to_a;
-            printf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", a, D, f, dDda, D_to_a*f, Oma, pow(Oma, 0.6), factor);
+            BOOST_LOG_TRIVIAL(debug) << a << "\t" << D << "\t" << f << "\t" << dDda << "\t" << D_to_a*f << "\t" << Oma << "\t" << pow(Oma, 0.6) << "\t" << factor;
         }
     }
     catch(const std::exception& e){
-		std::cout << "Error: " << e.what() << "\n";
+		BOOST_LOG_TRIVIAL(error) << "Error: " << e.what();
     }
 }

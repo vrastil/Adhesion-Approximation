@@ -423,26 +423,26 @@ void Sim_Param::print_info(std::string out, std::string app) const
 {
     if (out == "")
     {
-        printf("\n*********************\n");
-        printf("SIMULATION PARAMETERS\n");
-        printf("*********************\n");
-        printf("Ng:\t\t%u\n", box_opt.Ng);
-        printf("Num_par:\t%u^3\n", box_opt.par_num_1d);
-        printf("Num_mesh:\t%u^3\n", box_opt.mesh_num);
-        printf("Num_mesh_pwr:\t%u^3\n", box_opt.mesh_num_pwr);
-        printf("Box size:\t%.0f Mpc/h\n", box_opt.box_size);
-        printf("Redshift:\t%G--->%G\n", integ_opt.z_in, integ_opt.z_out);
-        printf("Pk:\t\t[sigma_8 = %G, As = %G, ns = %G, k_smooth = %G]\n", 
-            cosmo.sigma8, cosmo.A, cosmo.ns, sqrt(cosmo.k2_G));
-        std::cout <<"\t\t[transfer_function_method = " << find_value(transfer_function_method, cosmo.config.transfer_function_method) << "]\n";
-        std::cout <<"\t\t[matter_power_spectrum_method = " << find_value(matter_power_spectrum_method, cosmo.config.matter_power_spectrum_method) << "]\n";
-        std::cout <<"\t\t[mass_function_method = " << find_value(mass_function_method, cosmo.config.mass_function_method) << "]\n";
-        std::cout << "\t\t[baryons_power_spectrum_method = " << find_value(baryons_power_spectrum_method, cosmo.config.baryons_power_spectrum_method) << "]\n";
-        printf("AA:\t\t[nu = %G (Mpc/h)^2]\n", app_opt.nu_dim);
-        printf("LL:\t\t[rs = %G, a = %G, M = %u, Hc = %G]\n", app_opt.rs, app_opt.a, app_opt.M, app_opt.Hc);
-        if (comp_app.chi) printf("Chameleon:\t[beta = %.3f, n = %.2f, phi = %G\n", chi_opt.beta, chi_opt.n, chi_opt.phi);
-        printf("num_thread:\t%u\n", run_opt.nt);
-        printf( "Output:\t\t'%s'\n", out_opt.out_dir.c_str());
+        BOOST_LOG_TRIVIAL(info) << "\n"
+        "*********************\n"
+        "SIMULATION PARAMETERS\n"
+        "*********************\n"
+        "Ng:\t\t" << box_opt.Ng << "\n"
+        "Num_par:\t" << box_opt.par_num_1d << "^3\n"
+        "Num_mesh:\t" << box_opt.mesh_num << "^3\n"
+        "Num_mesh_pwr:\t" << box_opt.mesh_num_pwr << "^3\n"
+        "Box size:\t" << box_opt.box_size << " Mpc/h\n"
+        "Redshift:\t" << integ_opt.z_in << " ---> " << integ_opt.z_out << "\n"
+        "Pk:\t\t[sigma_8 = " << cosmo.sigma8 << ", As = " << cosmo.A << ", ns = " << cosmo.ns << ", k_smooth = " << sqrt(cosmo.k2_G) << "]\n" << 
+        "\t\t[transfer_function_method = " << find_value(transfer_function_method, cosmo.config.transfer_function_method) << "]\n" <<
+        "\t\t[matter_power_spectrum_method = " << find_value(matter_power_spectrum_method, cosmo.config.matter_power_spectrum_method) << "]\n" <<
+        "\t\t[mass_function_method = " << find_value(mass_function_method, cosmo.config.mass_function_method) << "]\n" <<
+        "\t\t[baryons_power_spectrum_method = " << find_value(baryons_power_spectrum_method, cosmo.config.baryons_power_spectrum_method) << "]\n" <<
+        "AA:\t\t[nu = " << app_opt.nu_dim << " (Mpc/h)^2]\n"  <<
+        "LL:\t\t[rs = " << app_opt.rs << ", a = " << app_opt.a << ", M = " << app_opt.M << ", Hc = " << app_opt.Hc << "]\n" <<
+        "CHI:\t\t[beta = " << chi_opt.beta << ", n = " << chi_opt.n << ", phi = " << chi_opt.phi << "\n" <<
+        "num_thread:\t << " << run_opt.nt << "\n" <<
+         "Output:\t\t'" << out_opt.out_dir << "'\n";
     }
     else
     {

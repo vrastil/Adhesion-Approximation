@@ -399,9 +399,7 @@ constexpr size_t GSL_N = 50; ///< max. number of bisections of integration inter
 
 void norm_pwr(Cosmo_Param& cosmo)
 {
-    #ifndef LESSINFO
-    std::cout << "Initializing CCL power spectrum...\n";
-    #endif
+    BOOST_LOG_TRIVIAL(debug) << "Initializing CCL power spectrum...";
     int status = 0;
     ccl_sigma8(cosmo.cosmo, &status);
     if (status) throw std::runtime_error(cosmo.cosmo->status_message);
@@ -528,16 +526,12 @@ Extrap_Pk<T, N>::Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim, con
 {
     this->init(data);//< initialize Interp_obj
     // LOWER RANGE -- fit linear power spectrum to data[m_l:n_l)
-    #ifndef LESSINFO
-    printf("Fitting amplitude of P(k) in lower range.\n");
-    #endif
+    BOOST_LOG_TRIVIAL(debug) << "Fitting amplitude of P(k) in lower range.";
     k_min = data[0][m_l]; // first k in data
     fit_lin(data, m_l, n_l, A_low);
 
     // UPPER RANGE -- fit Ak^ns to data[m_u,n_u)
-    #ifndef LESSINFO
-    printf("Fitting amplitude of P(k) in upper range.\n");
-    #endif
+    BOOST_LOG_TRIVIAL(debug) << "Fitting amplitude of P(k) in upper range.";
     k_max =  data[0][n_u-1]; // last k in data
     fit_power_law(data, m_u, n_u, A_up, n_s);
 }
@@ -584,9 +578,7 @@ void Extrap_Pk<T, N>::fit_lin(const Data_Vec<T, N>& data, const size_t m, const 
     else gsl_errno = gsl_fit_mul(A_vec.data(), 1, Pk_res.data(), 1, n-m, &A, &A_sigma2, &sumsq);
     if (gsl_errno) throw std::runtime_error("GSL integration error: " + std::string(gsl_strerror(gsl_errno)));
 
-    #ifndef LESSINFO
-    printf("\t[%sfit A = %.1e, err = %.2f%%]\n", N == 3 ? "weighted-" : "", A, 100*sqrt(A_sigma2)/A);
-    #endif
+    BOOST_LOG_TRIVIAL(debug) << "\t[" << (N == 3 ? "weighted-" : "") << "fit A = " << A << ", err = " << 100*sqrt(A_sigma2)/A << "%%]";
 }
 
 template <typename T, size_t N>
@@ -614,10 +606,8 @@ void Extrap_Pk<T, N>::fit_power_law(const Data_Vec<T, N>& data, const size_t m, 
     if (gsl_errno) throw std::runtime_error("GSL integration error: " + std::string(gsl_strerror(gsl_errno)));
 
     A = exp(A); // log A => A
-    #ifndef LESSINFO
-    printf("\t[%sfit A = %.1e, err = %.2f%%, n_s = %.3f, err = %.2f%%, corr = %.2f%%]\n",
-            N == 3 ? "weighted-" : "", A, 100*sqrt(cov00), n_s,  100*sqrt(cov11)/std::abs(n_s), 100*cov01/sqrt(cov00*cov11));
-    #endif
+    BOOST_LOG_TRIVIAL(debug) << "\t[" << (N == 3 ? "weighted-" : "") << "fit A = " << A << ", err = " << 100*sqrt(cov00) << "%%"
+                             << "n_s = " << n_s << ", err = " << 100*sqrt(cov11)/std::abs(n_s) << "%%, corr = " << 100*cov01/sqrt(cov00*cov11) << "%%]";
 }
 
 template <typename T, size_t N>
@@ -644,9 +634,7 @@ double Extrap_Pk_Nl<T, N>::operator()(double k) const {
 template<class P>
 void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<FTYPE_t, 2>& corr_func_binned)
 {
-    #ifndef LESSINFO
-    printf("Computing correlation function via GSL integration QAWF...\n");
-    #endif
+    BOOST_LOG_TRIVIAL(debug) << "Computing correlation function via GSL integration QAWF...";
     Integr_obj_qawf xi_r(&xi_integrand_W<P>, 0, GSL_EPSABS,  GSL_LIMIT, GSL_N);
     gen_corr_func_binned_gsl(sim, P_k, corr_func_binned, xi_r);
 }
@@ -666,9 +654,7 @@ void gen_corr_func_binned_gsl_qawf_nl(const Sim_Param &sim, FTYPE_t a, Data_Vec<
 template<class P>
 void gen_sigma_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<FTYPE_t, 2>& sigma_binned)
 {
-    #ifndef LESSINFO
-    printf("Computing mass fluctuations via GSL integration QAWF...\n");
-    #endif
+    BOOST_LOG_TRIVIAL(debug) << "Computing mass fluctuations via GSL integration QAWF...";
     Integr_obj_qagiu sigma_r(&sigma_integrand_G<P>, 0, GSL_EPSABS,  GSL_LIMIT, GSL_N);
     gen_sigma_func_binned_gsl(sim, P_k, sigma_binned, sigma_r);
 }

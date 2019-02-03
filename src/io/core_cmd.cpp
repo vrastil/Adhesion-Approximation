@@ -16,30 +16,12 @@
 
 namespace po = boost::program_options;
 
-/*****************************//**
- * PRIVATE FUNCTIONS DEFINITIONS *
- *********************************/
-namespace{
-
-struct Dvector { std::vector<FTYPE_t> v; };
-
-void validate(boost::any& v, const std::vector<std::string>& values, Dvector*, int) {
-  Dvector dvalues;
-  for(auto val : values){
-      std::cout << val;
-      dvalues.v.push_back(stod(val));
-  }
-  v = dvalues;
-}
-} ///< end of anonymous namespace (private definitions)
-
 /****************************//**
  * PUBLIC FUNCTIONS DEFINITIONS *
  ********************************/
 
 void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
     std::string config_file;
-    Dvector print_z;
     unsigned int trans_func_cmd, matter_pwr_cmd, baryons_pwr_cmd, mass_func_cmd;
     // options ONLY on command line
     po::options_description generic("Generic options");
@@ -69,7 +51,6 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
     config_output.add_options()
         ("print_every", po::value<size_t>(&sim.out_opt.print_every)->default_value(1, "1"), "save particle positions and power spectrum "
                                                                                         "every n-th step, set 0 for no printing")
-        ("print_z", po::value<Dvector>(&print_z)->multitoken(), "save output info at additional redshifts (optional")
         ("pwr_bins", po::value<size_t>(&sim.out_opt.bins_per_decade)->default_value(30), "number of bins per decade in power spectrum")
         ("corr_pt", po::value<size_t>(&sim.out_opt.points_per_10_Mpc)->default_value(10), "number of points per 10 Mpc in correlation function")
         ("out_dir,o", po::value<std::string>(&sim.out_opt.out_dir)->default_value("output/"), "output folder name")
@@ -163,25 +144,23 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
 
 
     if (vm.count("help")) {
-        std::cout << std::setprecision(3) << cmdline_options << "\n";
+        BOOST_LOG_TRIVIAL(info) << std::setprecision(3) << cmdline_options;
         throw std::string("help");
     }
     
     if (vm.count("config")) {
         std::ifstream ifs(config_file.c_str());
         if (ifs){
-        std::cout << "\nUsing configuration options defined in file " << config_file << " (given command line options have higher priority).\n";
+        BOOST_LOG_TRIVIAL(debug) << "Using configuration options defined in file " << config_file << " (given command line options have higher priority).";
             po::store(po::parse_config_file(ifs, config_test), vm);
             // po::store(po::parse_config_file(ifs, cmdline_options), vm);
             notify(vm);
         } else{
-            std::cout << "Cannot open config file '" << config_file << "'. Using default and command lines values.\n";
+            BOOST_LOG_TRIVIAL(error) << "Cannot open config file '" << config_file << "'. Using default and command lines values.";
         }
     }
 
     // !!!>>> THIS NEEDS TO BE AFTER ALL CALLS TO NOTIFY() <<<!!!
-
-    sim.out_opt.print_z = print_z.v;
     sim.cosmo.config.transfer_function_method = static_cast<transfer_function_t>(trans_func_cmd);
     sim.cosmo.config.matter_power_spectrum_method = static_cast<matter_power_spectrum_t>(matter_pwr_cmd);
     sim.cosmo.config.baryons_power_spectrum_method = static_cast<baryons_power_spectrum_t>(baryons_pwr_cmd);
