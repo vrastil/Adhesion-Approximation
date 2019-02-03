@@ -121,8 +121,8 @@ def get_pk_nl_amp(a_sim_info):
         raise IndexError("Data have wrong lengths!")
     
     # get amplitude of non-linear power spectrum with redshift for a_eff
-    fit_lin = has_app_lin_pwr(a_sim_info.app)
-    func = lambda a_eff, z, data : get_single_hybrid_pow_spec_amp_w_z(sim, None, z, k_nyquist_par, a=a_eff, data=data, fit_lin=fit_lin)
+    # fit_lin = has_app_lin_pwr(a_sim_info.app)
+    func = lambda a_eff, z, data : get_single_hybrid_pow_spec_amp_w_z(sim, None, z, k_nyquist_par, a=a_eff, data=data)
     data_w_amp = list(map(func, as_eff, zs, data_all))        
 
     # extract amplitude and redshift
@@ -694,7 +694,8 @@ def get_a_eff_from_dens_fluct(a_sim_info):
         'a' : a,
         'z_eff' : 1./a_eff - 1,
         'a_err' : D_eff_std,
-        'D_eff_ratio' : D_eff_ratio
+        'D_eff_ratio' : D_eff_ratio,
+        'D_eff' : D_eff
     }
 
 
@@ -719,7 +720,8 @@ def get_a_eff_from_Pk(stack_info):
         'a' : a,
         'z_eff' : 1./a_eff - 1,
         'a_err' : 0,
-        'D_eff_ratio' : D_eff / D
+        'D_eff_ratio' : D_eff / D,
+        'D_eff' : D_eff
     }
 
 def get_a_eff_from_Pk_nl(stack_info):
@@ -728,6 +730,11 @@ def get_a_eff_from_Pk_nl(stack_info):
         (1/(Pk['z'] + 1), Pk['popt'], Pk['perr']) # a, popt, perr
         for Pk in stack_info.data["extrap_pk"] if Pk["z"] != 'init']))
     
+
+    # ZA and TZA do not have non-linear fit
+    if None in popt:
+        return
+
     # derived variables
     a_eff = popt[:,0]
     D = pwr.growth_factor(a, stack_info.sim.cosmo)
@@ -977,12 +984,20 @@ def plot_chi_wave_pot(a_file="/home/michal/Documents/GIT/FastSim/jobs/output/CHI
     plot.plot_chi_evol(zs, a_sim_info, chi_opt=chi_opt, out_dir=outdir, save=save, show=show)
 
 
-def get_data_fp_chi_ratio(group):
-    data_all = []
-    
+def get_data_fp_chi_ratio(group, z=None):
+    data_all = []    
     data_fp = [np.transpose(np.loadtxt(a_file)) for a_file in group["FP_files"]]
+
+    if z is not None:
+        zs = group["FP_zs"]
+        idx = find_nearest_idx(zs, z, axis=None)
+        cut = slice(idx, idx+1)
+    else:
+        cut = slice(None)
+
+    data_fp = [np.transpose(np.loadtxt(a_file)) for a_file in group["FP_files"][cut]]
     for files in group["CHI_files"]:
-        data_chi = [np.transpose(np.loadtxt(a_file)) for a_file in files]
+        data_chi = [np.transpose(np.loadtxt(a_file)) for a_file in files[cut]]
         data = []
         for data_fp_s, data_chi_s in izip(data_fp, data_chi):
             shape = data_fp_s.shape
@@ -1026,9 +1041,9 @@ def load_chi_fp_files(group, subdir, patterns):
         rm_extra_zs(zs_unique, zs_list, other_list)
 
     group["FP_zs"] = zs_unique
-    group["CHI_zs"] = None
+    del group["CHI_zs"]
 
-def get_fp_chi_groups(in_dir):
+def get_fp_chi_groups(in_dir, n=0, phi=0):
     res = struct.Results(in_dir)
     groups = []
     for a_sim_info in res.get_subfiles(app='FP'):
@@ -1036,8 +1051,9 @@ def get_fp_chi_groups(in_dir):
         NM = a_sim_info.box_opt["mesh_num_pwr"]
         Np = a_sim_info.box_opt["par_num"]
         L = a_sim_info.box_opt["box_size"]
-        chi_infos = res.get_subfiles(Nm=Nm, NM=NM, Np=Np, L=L, app='CHI')
-        groups.append({ "FP" : a_sim_info, "CHI" : chi_infos})
+        chi_infos = res.get_subfiles(Nm=Nm, NM=NM, Np=Np, L=L, app='CHI', n=n, phi=phi)
+        if chi_infos:
+            groups.append({ "FP" : a_sim_info, "CHI" : chi_infos})
 
     for group in groups:
         load_chi_fp_files(group, 'pwr_spec', '*par*')
@@ -1057,22 +1073,55 @@ def compare_chi_fp(in_dir="/home/michal/Documents/GIT/FastSim/output/",
     groups = get_fp_chi_groups(in_dir)
     if use_group is not None:
         groups = [groups[use_group]]
-    data_all = [get_data_fp_chi_ratio(group) for group in groups]
-    #return data_all
-    
-    for group, data_g in izip(groups, data_all): # per group
+
+    for group in groups: # per group
+        # load data
+        data_g = np.array(get_data_fp_chi_ratio(group))
+        
         # struct.SimInfo, zs should be the same for all FP / CHI
         a_sim_info = group["FP"]
         zs = group["FP_zs"]
         phi_s = [si.chi_opt["phi"] for si in group["CHI"]]
         
+        # plot map -- NOT DONE
         plot.plot_chi_fp_map(data_g, zs, a_sim_info)
 
-        data_g_tr = map(list, zip(*data_g)) # transpoose
+        # transpoose first and second dimension
+        data_g = data_g.transpose([1,0,2,3])
         
-        for lab, data_z in plot.iter_data(zs, [data_g_tr]): # per redshift
+        for lab, data_z in plot.iter_data(zs, [data_g]): # per redshift
             suptitle = "Relative chameleon power spectrum, " + lab
+            ut.print_function(suptitle)
             plot.plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir=out_dir ,suptitle=suptitle, show=True, save=True)
+
+def compare_chi_res(in_dir, out_dir, n=0.5, phi=1e-5, z=0):
+    # load all data
+    groups = get_fp_chi_groups(in_dir, n=n, phi=phi)
+    data_all = [get_data_fp_chi_ratio(group, z=z) for group in groups]
+    
+    # check we have same chameleon parameters
+    phi = set([si.chi_opt["phi"] for si in group["CHI"] for group in groups])
+    n = set([si.chi_opt["n"] for si in group["CHI"] for group in groups])
+    if len(phi) != len(n) != 1:
+            raise IndexError("CHI files do not have the same chameleon parameters.")
+    phi = phi.pop()
+    n = n.pop()
+
+    # # check we loaded only one redshift, remove needless dimension
+    for i, data in enumerate(data_all):
+        data = data_all[i] = np.array(data)
+        if data.shape[1] != 1:
+            raise IndexError("Data for different redshifts when expecting only one!")
+        new_shape = data.shape[:1] + data.shape[2:]
+        data_all[i] = data.reshape(new_shape)
+
+    print('Phi = ', phi, "\tn = ", n)
+    sim_infos = [group["CHI"] for group in groups]
+
+    # sort from lowest to highest resolution
+    sim_infos, data_all = zip(*sorted(zip(sim_infos, data_all), key=lambda x : x[0][0].k_nyquist["potential"]))
+
+    plot.plot_chi_fp_res(data_all, sim_infos, out_dir=out_dir, show=True, save=True)
 
 # *********************************
 # RUN ANALYSIS -- CORR COMPARISON *

@@ -19,8 +19,10 @@ try:
 except ImportError:
     izip = zip # python 3
 from scipy.misc import derivative
+from scipy.interpolate import UnivariateSpline
 
 from . import power
+from . import utils as ut
 
 matplotlib.rcParams['legend.numpoints'] = 1
 label_size = 20
@@ -102,6 +104,15 @@ def legend_manipulation(ax=None, figtext="", loc='upper left', bbox_to_anchor=(1
         plt.figtext(0.5, 0.95, figtext,
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
+
+
+def adjust_extreme_values(ax, ymin, ymax):
+    ymin_cur, ymax_cur = ax.get_ylim()
+    if ymin_cur < ymin:
+        ymin_cur = ymin
+    if ymax_cur > ymax:
+        ymax_cur = ymax
+    ax.set_ylim(ymin_cur, ymax_cur)
 
 def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False,
                   out_dir='auto', pk_type='dens', save=True, show=False, use_z_eff=False):
@@ -274,6 +285,52 @@ def plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir='auto', suptitle='auto', sa
     legend_manipulation(ax, figtext="", loc='upper left', bbox_to_anchor=(0.0,1.0))
     plt.subplots_adjust(**subplt_adj_sym)
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
+
+
+def plot_chi_fp_res(data_all, sim_infos, out_dir='auto', suptitle='auto', save=True, show=False):
+    if out_dir == 'auto':
+        out_dir = report_dir
+    out_file = 'chi_resolution_eff'
+
+    fig = plt.figure(figsize=fig_size)
+    ax = plt.gca()
+    ax.set_xscale('log')
+    # ax.set_yscale('log')
+    ax.set_yscale('symlog', linthreshy=2, linscaley=2)
+    ymax = 1
+    ymin = 0.95
+
+    # go through all groups FP-CHI with the same resolution
+    for data_chi_gr, si_gr in izip(data_all, sim_infos):
+        # go through all chi data, i.e. linear and non-linear
+        for data_chi, si in izip(data_chi_gr, si_gr):
+            k = data_chi[0]
+            Pk = data_chi[1]
+            std = data_chi[2]
+            ymax = max(ymax, np.max(Pk))
+            label = r"$k_{nq} = %.1e$" % si.k_nyquist["potential"]
+            label += " (lin)" if si.chi_opt["linear"] else " (nl)"
+            # ax.errorbar(k, Pk, fmt='o', yerr=std, ms=3, label=label)
+            ax.plot(k, Pk, 'o-', ms=3, label=label)
+
+        # plot appropriate nyquist frequency
+        color = ax.get_lines()[-2].get_color()
+        ax.axvline(x=si.k_nyquist["potential"], ls='--', c=color)
+
+    #add_nyquist_info(ax, a_sim_info)
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax.yaxis.grid(True)
+
+    ymax *= 1.1
+    ax.set_ylim(ymin, ymax)
+
+    fig_suptitle(fig, suptitle)
+    plt.xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
+    plt.ylabel(r"${P_\chi(k)}/{P_{FP}(k)}$", fontsize=label_size)
+    #figtext = a_sim_info.info_tr().replace("FP: ", "")
+    legend_manipulation(ax, figtext="", loc='upper left', bbox_to_anchor=(0.0,1.0))
+    plt.subplots_adjust(**subplt_adj_sym)
+    close_fig(out_dir + out_file, fig, save=save, show=show)
 
 def get_slope(k, P_k, dx=0.01,order=5):
     logk = np.log(k)
@@ -541,18 +598,30 @@ def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=F
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 def plot_eff_time_ax(a_sim_info, ax, a_eff_type="Pk"):
+    # ZA and TZA do not have non-linear power spectra
+    if not a_sim_info.data["eff_time"][a_eff_type]:
+        return
+
     # extract variables
     a = a_sim_info.data["eff_time"][a_eff_type]['a']
+    D_eff = a_sim_info.data["eff_time"][a_eff_type]['D_eff']
     D_eff_ratio = a_sim_info.data["eff_time"][a_eff_type]['D_eff_ratio']
     a_err = a_sim_info.data["eff_time"][a_eff_type]['a_err']
     label = a_sim_info.app # +  '$: L = %i$ Mpc/h' % a_sim_info.box_opt["box_size"]
 
+
+    # spline
+    spl = UnivariateSpline(a, D_eff, s=1)
+    a_spl = np.linspace(a[0], a[-1], 100)
+    D_eff_spl = power.growth_factor(a_spl, a_sim_info.sim.cosmo)
+
     # plot
     if a_eff_type == "sigma_R" or a_eff_type == "Pk":
-        ax.plot(a, D_eff_ratio, label=label)
+        ax.plot(a, D_eff_ratio, 'o-', label=label)
     elif a_eff_type == "Pk_nl":
-        ax.errorbar(a, D_eff_ratio, yerr=a_err, label=label)
-        #ax.set_ylim(ymin=0.8)
+        ax.errorbar(a, D_eff_ratio, 'o-', yerr=a_err, label=label)
+    color = ax.get_lines()[-1].get_color()
+    ax.plot(a_spl, spl(a_spl)/D_eff_spl, '--', color=color)
 
 
 def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=False, use_z_eff=False):
@@ -560,7 +629,7 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=
     if a_eff_type == 'all':
         plot_eff_time(stack_infos, out_dir=out_dir, a_eff_type="sigma_R", save=save, show=show, use_z_eff=use_z_eff)
         plot_eff_time(stack_infos, out_dir=out_dir, a_eff_type="Pk", save=save, show=show, use_z_eff=use_z_eff)
-        plot_eff_time(stack_infos, out_dir=out_dir, a_eff_type="Pk_nl", save=save, show=show, use_z_eff=use_z_eff)
+        # plot_eff_time(stack_infos, out_dir=out_dir, a_eff_type="Pk_nl", save=save, show=show, use_z_eff=use_z_eff)
         return
 
     # output
@@ -574,6 +643,7 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=
     fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
     
+    ut.print_info("Effective time: '%s'" % a_eff_type)
     for stack_info in stack_infos:
         plot_eff_time_ax(stack_info, ax, a_eff_type)
     
@@ -583,6 +653,9 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=
     plt.subplots_adjust(**subplt_adj_sym)
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax.yaxis.grid(True)
+
+    # adjust extreme values
+    adjust_extreme_values(ax, 0.9, 1.1)
     
     # save & show (in jupyter)
     close_fig(out_dir + 'D_eff_' + a_eff_type, fig, save=save, show=show, use_z_eff=use_z_eff)
@@ -627,21 +700,41 @@ def plot_pwr_spec_nl_amp(stack_infos, out_dir='auto', save=True, show=False):
     close_fig(out_dir + 'pwr_spec_nl_amp', fig, save=save, show=show)
 
 def plot_eff_growth_rate_ax(a_sim_info, ax, a_eff_type="Pk"):
+    # ZA and TZA do not have non-linear power spectra
+    if not a_sim_info.data["eff_time"][a_eff_type]:
+        return
+
     # extract variables
-    a = a_sim_info.data["eff_time"][a_eff_type]['a']
-    D_eff_ratio = a_sim_info.data["eff_time"][a_eff_type]['D_eff_ratio']
-    f = np.gradient(np.log(D_eff_ratio), np.log(a))
-    label = a_sim_info.app # +  '$: L = %i$ Mpc/h' % a_sim_info.box_opt["box_size"]
+    a = np.array(a_sim_info.data["eff_time"][a_eff_type]['a'])
+    a_spl = np.linspace(a[0], a[-1], 100)
+    D_eff = a_sim_info.data["eff_time"][a_eff_type]['D_eff']
+    f = np.diff(np.log(D_eff)) /np.diff(np.log(a))
+    
+    # smooth before derivative
+    spl = UnivariateSpline(a, D_eff, s=1)
+
+    # diff in midpoints
+    a_spl = (a_spl[1:] + a_spl[:-1])/2.
+    a = (a[1:] + a[:-1])/2.
+
+    slope = get_slope(a_spl, spl, dx=0.05)
+
+    # linear prediction for growwth rate
+    f_lin = power.growth_rate(a, a_sim_info.sim.cosmo)
+    f_lin_spl = power.growth_rate(a_spl, a_sim_info.sim.cosmo)
 
     # plot
-    ax.plot(a, f, label=label)
+    label = a_sim_info.app # +  '$: L = %i$ Mpc/h' % a_sim_info.box_opt["box_size"]
+    ax.plot(a, f/f_lin, 'o-', ms=3, label=label)
+    color = ax.get_lines()[-1].get_color()
+    ax.plot(a_spl, slope/f_lin_spl, '--', color=color)
 
 def plot_eff_growth_rate(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=False, use_z_eff=False):
     # plot everything
     if a_eff_type == 'all':
         plot_eff_growth_rate(stack_infos, out_dir=out_dir, a_eff_type="sigma_R", save=save, show=show, use_z_eff=use_z_eff)
         plot_eff_growth_rate(stack_infos, out_dir=out_dir, a_eff_type="Pk", save=save, show=show, use_z_eff=use_z_eff)
-        plot_eff_growth_rate(stack_infos, out_dir=out_dir, a_eff_type="Pk_nl", save=save, show=show, use_z_eff=use_z_eff)
+        # plot_eff_growth_rate(stack_infos, out_dir=out_dir, a_eff_type="Pk_nl", save=save, show=show, use_z_eff=use_z_eff)
         return
 
     # output
@@ -655,15 +748,19 @@ def plot_eff_growth_rate(stack_infos, out_dir='auto', a_eff_type="Pk", save=True
     fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
     
+    ut.print_info("Growth rate: '%s'" % a_eff_type)
     for stack_info in stack_infos:
         plot_eff_growth_rate_ax(stack_info, ax, a_eff_type)
     
-    ax.set_ylabel(r'$f-f_{GR}$', fontsize=label_size)
+    ax.set_ylabel(r'$f/f_{GR}$', fontsize=label_size)
     ax.set_xlabel(r'$a$', fontsize=label_size)
     ax.legend()
     plt.subplots_adjust(**subplt_adj_sym)
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax.yaxis.grid(True)
+
+    # adjust extreme values
+    adjust_extreme_values(ax, 0.8, 1.1)
     
     # save & show (in jupyter)
     close_fig(out_dir + 'f_eff_' + a_eff_type, fig, save=save, show=show, use_z_eff=use_z_eff)
