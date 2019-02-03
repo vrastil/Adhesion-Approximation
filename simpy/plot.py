@@ -252,10 +252,11 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, err=False, out_dir='aut
 def plot_chi_fp_map(data, zs, a_sim_info):
     pass
 
-def plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir='auto', suptitle='auto', save=True, show=False, use_z_eff=False):
+def plot_chi_fp_z(data_z, a_sim_info, labels, out_dir='auto', suptitle='auto', save=True, show=False, use_z_eff=False, max_nyquist=True):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
-    out_file = 'chi_pwr_diff_fp'
+    bo = a_sim_info.box_opt
+    out_file = 'chi_pwr_diff_fp_%im_%ip_%iM_%ib' % (bo["mesh_num"], bo["Ng"], bo["mesh_num_pwr"], bo["box_size"])
     # if suptitle == 'auto':
     #     suptitle = "Relative chameleon power spectrum"
 
@@ -264,14 +265,23 @@ def plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir='auto', suptitle='auto', sa
     plt.xscale('log')
     ymax = 1
     ymin = 0.95
-    for data_chi, phi in izip(data_z, phi_s): # each chi
+    for data_chi, label in izip(data_z, labels): # each chi
         k = data_chi[0]
         Pk = data_chi[1]
         std = data_chi[2]
-        ymax = max(ymax, np.max(Pk))
-        ax.errorbar(k, Pk, fmt='o', yerr=std, ms=3, label=r"$\Phi_{scr}=%.1e$" % phi)
 
-    add_nyquist_info(ax, a_sim_info)
+        if max_nyquist:
+            idx = (np.abs(k - a_sim_info.k_nyquist["particle"])).argmin()
+            k = k[0:idx]
+            Pk = Pk[0:idx]
+            std = std[0:idx]
+
+        ymax = max(ymax, np.max(Pk))
+        # ax.errorbar(k, Pk, fmt='o', yerr=std, ms=3, label=label)
+        ax.plot(k, Pk, 'o-', ms=3, label=label)
+
+    if not max_nyquist:
+        add_nyquist_info(ax, a_sim_info)
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax.yaxis.grid(True)
 

@@ -1043,10 +1043,10 @@ def load_chi_fp_files(group, subdir, patterns):
     group["FP_zs"] = zs_unique
     del group["CHI_zs"]
 
-def get_fp_chi_groups(in_dir, n=0, phi=0):
+def get_fp_chi_groups(in_dir,Nm=0, NM=0, Np=0, L=0, n=0, phi=0):
     res = struct.Results(in_dir)
     groups = []
-    for a_sim_info in res.get_subfiles(app='FP'):
+    for a_sim_info in res.get_subfiles(app='FP', Nm=Nm, NM=NM, Np=Np, L=L):
         Nm = a_sim_info.box_opt["mesh_num"]
         NM = a_sim_info.box_opt["mesh_num_pwr"]
         Np = a_sim_info.box_opt["par_num"]
@@ -1067,32 +1067,42 @@ def my_shape(data):
     except ValueError:
         return len(data)
         
-def compare_chi_fp(in_dir="/home/michal/Documents/GIT/FastSim/output/",
-                   out_dir=report_dir,
-                   use_group=None):
-    groups = get_fp_chi_groups(in_dir)
+def compare_chi_fp(in_dir="/home/michal/Documents/GIT/FastSim/output/", out_dir=report_dir, use_group=None,
+                   z=None, Nm=0, NM=0, Np=0, L=0, n=0, phi=0):
+    groups = get_fp_chi_groups(in_dir, Nm=Nm, Np=Np, L=L, n=n, phi=phi)
     if use_group is not None:
         groups = [groups[use_group]]
 
     for group in groups: # per group
         # load data
-        data_g = np.array(get_data_fp_chi_ratio(group))
+        data_g = get_data_fp_chi_ratio(group, z=z)
         
         # struct.SimInfo, zs should be the same for all FP / CHI
         a_sim_info = group["FP"]
-        zs = group["FP_zs"]
-        phi_s = [si.chi_opt["phi"] for si in group["CHI"]]
-        
+        zs = group["FP_zs"] if z is None else [z]
+
         # plot map -- NOT DONE
         plot.plot_chi_fp_map(data_g, zs, a_sim_info)
 
         # transpoose first and second dimension
-        data_g = data_g.transpose([1,0,2,3])
+        data_g = map(list, zip(*data_g))
         
         for lab, data_z in plot.iter_data(zs, [data_g]): # per redshift
+            # sort from lowest screening potential and xhameleon exponent
+            sim_infos, data_z = zip(*sorted(sorted(zip(group["CHI"], data_z),
+                                key=lambda x : x[0].chi_opt['n']),
+                                key=lambda x : x[0].chi_opt['phi'])
+                            )
+
+            # get labels
+            labels = [r"$\Phi_{scr}=%.1e,\ n=%.1f$%s" % (
+                si.chi_opt["phi"], si.chi_opt["n"], " (lin)" if si.chi_opt["linear"] else " (nl)")
+                for si in sim_infos]
+
             suptitle = "Relative chameleon power spectrum, " + lab
-            ut.print_function(suptitle)
-            plot.plot_chi_fp_z(data_z, a_sim_info, phi_s, out_dir=out_dir ,suptitle=suptitle, show=True, save=True)
+            ut.print_info(suptitle)
+            
+            plot.plot_chi_fp_z(data_z, a_sim_info, labels, out_dir=out_dir ,suptitle=suptitle, show=True, save=True)
 
 def compare_chi_res(in_dir, out_dir, n=0.5, phi=1e-5, z=0):
     # load all data
