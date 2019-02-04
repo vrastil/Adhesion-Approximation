@@ -34,7 +34,7 @@ const char *humanSize(uint64_t bytes){
 
 void print_mem(uint64_t memory_alloc)
 {
-    printf("Allocated %s of memory.\n", humanSize(memory_alloc));
+    BOOST_LOG_TRIVIAL(debug) << "Allocated " << humanSize(memory_alloc) << " of memory.";
 }
 
 /**
@@ -80,9 +80,9 @@ public:
 
         FTYPE_t x,y,z;
         const FTYPE_t x_0 = sim.x_0();
-        std::cout << "Writing positons of " << par_ids.size() << " tracked particles into file " << file_name << "\n";
+        BOOST_LOG_TRIVIAL(debug) << "Writing positons of " << par_ids.size() << " tracked particles into file " << file_name;
         File << "# This file contains positions of particles in units [Mpc/h].\n"
-                "# x [Mpc/h]\tz [Mpc/h]\n";
+                "# x [Mpc/h]\tz [Mpc/h]";
         for (size_t i=0; i < par_ids.size(); i++){
             for (const auto& par_pos_step : par_pos){
                 x = par_pos_step[i].position[0];
@@ -222,7 +222,7 @@ public:
         gen_displ_k(APP.app_field, APP.power_aux[0]);
         
         /* Computing displacement in q-space */
-        printf("Computing displacement in q-space...\n");
+        BOOST_LOG_TRIVIAL(debug) << "Computing displacement in q-space...";
         fftw_execute_dft_c2r_triple(APP.p_B, APP.app_field);
 
         /* Set initial positions of particles (with or without velocities)  */
@@ -234,7 +234,7 @@ public:
 
     void print_end()
     {
-        std::cout << app_long << " ended successfully.\n";
+        BOOST_LOG_TRIVIAL(info) << app_long << " ended successfully.";
     }
 
     std::string z_suffix() const
@@ -288,6 +288,7 @@ public:
     // CREATE WORKING DIRECTORY STRUCTURE
     void create_work_dir(const Out_Opt& out_opt)
     {
+        create_dir(out_dir_app + "log/");
         if (print_every)
         {
             if (out_opt.print_corr) create_dir(out_dir_app + "corr_func/");
@@ -309,7 +310,6 @@ public:
                 create_dir(out_dir_app + "vel_pwr_spec/");
             }
         }
-        else create_dir(out_dir_app);
     }
 
     // INTEGRATION
@@ -320,7 +320,7 @@ public:
         print_init(APP); // WARNING: power_aux[0] is modified
         while(integrate())
         {
-            printf("\nStarting computing step with z = %.2f (a = %.3f)\n", z(), a);
+            BOOST_LOG_TRIVIAL(info) << "Starting computing step with z = " << z() << " (a = " << a << ")";
             APP.upd_pos();
             track.update_track_par(APP.particles);
             if (printing()) APP.print_output();
@@ -339,9 +339,7 @@ private:
     {
         std::string app_long_upper(app_long);
         std::transform(app_long_upper.begin(), app_long_upper.end(), app_long_upper.begin(), ::toupper);
-        std::cout << "\n" << std::string(app_long_upper.length(), '*') << "\n"
-            << app_long_upper
-            << "\n" << std::string(app_long_upper.length(), '*') << "\n";
+        BOOST_LOG_TRIVIAL(info) << "Starting: " << app_long_upper;
     }
 
     bool printing() const
@@ -508,7 +506,7 @@ void App_Var<T>::pot_corr()
     gen_displ_k_cic(app_field, power_aux[0]);
 
     /* Computing force in q-space */
-    printf("Computing force in q-space...\n");
+    BOOST_LOG_TRIVIAL(debug) << "Computing force in q-space...";
     fftw_execute_dft_c2r_triple(p_B, app_field);
 }
 

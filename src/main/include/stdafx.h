@@ -14,3 +14,6 @@
 #include <memory>
 #include <string>
 #include <vector>
+
+#define BOOST_LOG_DYN_LINK 1
+#include <boost/log/trivial.hpp>

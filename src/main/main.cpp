@@ -6,7 +6,6 @@
  * @date 2018-07-11
  */
 
-#include <ctime>
 #include "stdafx.h"
 
 #include "params.hpp"
@@ -17,14 +16,91 @@
 #include "mod_frozen_potential.hpp"
 #include "zeldovich.hpp"
 
-template<class T>
-static void init_and_run_app(Sim_Param& sim)
+#include <boost/log/core.hpp>
+#include <boost/log/utility/setup/common_attributes.hpp>
+#include <boost/log/utility/setup/console.hpp>
+#include <boost/log/utility/setup/file.hpp>
+#include <boost/timer/timer.hpp>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
+
+namespace logging = boost::log;
+namespace sinks = boost::log::sinks;
+namespace keywords = boost::log::keywords;
+
+typedef sinks::synchronous_sink< sinks::text_file_backend > sink_t;
+typedef sinks::synchronous_sink< sinks::text_ostream_backend > sink_os_t;
+
+namespace
 {
+void init_logging()
+{
+    // set logging core to log everything
+    logging::core::get()->set_filter
+    (
+        logging::trivial::severity >= logging::trivial::trace
+    );
+
+    // add atributes
+    boost::log::add_common_attributes();
+    boost::log::register_simple_formatter_factory< boost::log::trivial::severity_level, char >("Severity");
+
+    // register 'std:cout' as sink
+    boost::shared_ptr< sink_os_t > g_file_sink = logging::add_console_log(std::cout);
+    g_file_sink->set_filter(logging::trivial::severity >= logging::trivial::info);
+}
+
+class Logger
+{
+public:
+    Logger(const std::string& filename):
+        g_file_sink(logging::add_file_log(
+            keywords::file_name = filename,
+            keywords::time_based_rotation = sinks::file::rotation_at_time_interval(boost::posix_time::hours(1)),
+            keywords::format = "[%TimeStamp%] <%Severity%>: %Message%"
+        ))
+    {
+        g_file_sink->set_filter(logging::trivial::severity >= logging::trivial::debug);
+    }
+    ~Logger()
+    {
+        // close the log file
+        logging::core::get()->remove_sink(g_file_sink);
+        g_file_sink.reset();
+    }
+
+private:
+    boost::shared_ptr< sink_t > g_file_sink;
+};
+
+class Timer{
+public:
+   Timer() = default;
+   ~Timer(){
+       t.stop();
+       BOOST_LOG_TRIVIAL(info) << "Time elapsed:" << t.format();
+   }
+private:
+    boost::timer::cpu_timer t;
+};
+
+template<class T>
+void init_and_run_app(Sim_Param& sim)
+{
+    // timer for wall time, CPU time
+    Timer t;
+
+    // create approximation class and whether we have truncation in initial power spectrum
     T APP(sim);
     APP.update_cosmo(sim.cosmo);
+
+    // register log file
+    Logger l(APP.get_out_dir() + "log/log" + "_%N.log");
+    
+    // run the simulation
     APP.run_simulation();
 }
 
+}
 /**
  * @brief initialize program and run all simulations
  * 
@@ -33,12 +109,13 @@ static void init_and_run_app(Sim_Param& sim)
  * @return int exit status
  */
 int main(int argc, char* argv[]){
-	try{
-    	struct timespec start, finish;
-	    double CPU_time, REAL_time;
-	    const clock_t START = clock();
-	    clock_gettime(CLOCK_MONOTONIC, &start);
+    // initialize logging
+    init_logging();
 
+    // timer --automatically displays timing information
+    Timer t;
+
+	try{
         /* SIMULATION PARAMETERS
             - read and handle command line options / config file
             - compute power spectrum normalization
@@ -69,39 +146,20 @@ int main(int argc, char* argv[]){
             if(sim.comp_app.chi) init_and_run_app<App_Var_Chi>(sim);
 
         } while (sim.simulate());
-
-        clock_gettime(CLOCK_MONOTONIC, &finish);
-        CPU_time = (double)(clock() - START) / CLOCKS_PER_SEC;
-        REAL_time = finish.tv_sec - start.tv_sec + (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
-
-        int CPU_int, CPU_dec, REAL_int, REAL_dec;
-
-        CPU_int = floor(log10(CPU_time)) + 1;
-        CPU_dec = 3 - CPU_int;
-        if (CPU_int < 0) CPU_int = 0;
-        if (CPU_dec < 0) CPU_dec = 0;
-
-        REAL_int = floor(log10(REAL_time)) + 1;
-        REAL_dec = 3 - REAL_int;
-        if (REAL_int < 0) REAL_int = 0;
-        if (REAL_dec < 0) REAL_dec = 0;
-        
-        printf("\nProgram ran for %.*fs and used %.*fs of CPU time.\n\n", \
-            REAL_dec, REAL_time, CPU_dec, CPU_time);
-
+        BOOST_LOG_TRIVIAL(info) << "All simulations completed.";
         return 0;
 	}
     catch(const std::string& e){
         if (e == "help") return 0;
-        std::cerr << "Error: " << e << "\n";
+        BOOST_LOG_TRIVIAL(error) << "Error: " << e;
         return 1;
     }
 	catch(const std::exception& e){
-		std::cerr << "Error: " << e.what() << "\n";
+		BOOST_LOG_TRIVIAL(error) << "Error: " << e.what();
         return 1;
 	}
 	catch(...){
-		std::cerr << "Exception of unknown type!\n";
+		BOOST_LOG_TRIVIAL(error) << "Exception of unknown type!";
         return 2;
 	}
 }

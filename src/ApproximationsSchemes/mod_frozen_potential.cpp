@@ -101,10 +101,10 @@ void kick_step_w_pp(const Sim_Param &sim, const FTYPE_t a, const FTYPE_t da,  st
     const FTYPE_t f1 = 3/(2*a)*(Om+2*OL)/(Om+OL);
     const FTYPE_t f2 = 3/(2*a)*Om/(Om+OL)*D/a;
     
-    printf("Creating linked list...\n");
+    BOOST_LOG_TRIVIAL(debug) << "Creating linked list...";
 	linked_list.get_linked_list(particles);
 
-    std::cout << "Computing short and long range parts of the potential...\n";
+    BOOST_LOG_TRIVIAL(debug) << "Computing short and long range parts of the potential...";
     #pragma omp parallel for private(force)
     for (size_t i = 0; i < Np; i++)
 	{
@@ -169,7 +169,7 @@ void App_Var_FP_mod::pot_corr()
 	gen_displ_k_S2(app_field, power_aux[0], sim.app_opt.a);
     
     /* Computing force in q-space */
-    printf("Computing force in q-space...\n");
+    BOOST_LOG_TRIVIAL(debug) << "Computing force in q-space...";
     fftw_execute_dft_c2r_triple(p_B, app_field);
 }
 

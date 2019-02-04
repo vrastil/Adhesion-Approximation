@@ -113,7 +113,7 @@ void set_unpert_pos_w_vel(const Sim_Param &sim, std::vector<Particle_v<FTYPE_t>>
 
 void set_pert_pos(const Sim_Param &sim, const FTYPE_t db, std::vector<Particle_x<FTYPE_t>>& particles, const std::vector< Mesh> &vel_field)
 {
-    printf("\nSetting initial positions of particles...\n");
+    BOOST_LOG_TRIVIAL(debug) << "Setting initial positions of particles...";
 	Vec_3D<size_t> unpert_pos;
 	Vec_3D<FTYPE_t> displ_field;
 	Vec_3D<FTYPE_t> pert_pos;
@@ -136,7 +136,7 @@ void set_pert_pos(const Sim_Param &sim, const FTYPE_t db, std::vector<Particle_x
 
 void set_pert_pos(const Sim_Param &sim, const FTYPE_t a, std::vector<Particle_v<FTYPE_t>>& particles, const std::vector< Mesh> &vel_field)
 {
-    printf("\nSetting initial positions and velocitis of particles...\n");
+    BOOST_LOG_TRIVIAL(debug) << "Setting initial positions and velocitis of particles...";
 	Vec_3D<size_t> unpert_pos;
 	Vec_3D<FTYPE_t> velocity;
 	Vec_3D<FTYPE_t> pert_pos;
@@ -201,14 +201,14 @@ static void gen_gauss_white_noise(const Sim_Param &sim, Mesh& rho)
 	#ifdef CORR
 	t_mean = mean(rho);
 	FTYPE_t t_std_dev = std_dev(rho, t_mean);
-	printf("\t[mean = %.12f, stdDev = %.12f]\t-->", t_mean, t_std_dev);
+	BOOST_LOG_TRIVIAL(debug) << "\t[mean = " << t_mean << ", stdDev = " << t_std_dev << "]\t-->";
 	rho-=t_mean;
 	rho/=t_std_dev;
 	#endif
 	
 	t_mean = mean(rho);
-    printf("\t[mean = %.12f, stdDev = %.12f]\n", t_mean, std_dev(rho, t_mean));
-    printf("\t[min = %.12f, max = %.12f]\n", min(rho), max(rho));
+    BOOST_LOG_TRIVIAL(debug) << "\t[mean = " << t_mean << ", stdDev = " << std_dev(rho, t_mean) << "]\t<--";
+    BOOST_LOG_TRIVIAL(debug) << "\t[min = " << min(rho) << ", max = " << max(rho) << "]";
 }
 
 static FTYPE_t truncation_fce(FTYPE_t k, FTYPE_t k2_G)
@@ -252,18 +252,18 @@ static void gen_rho_w_pow_k(const Sim_Param &sim, Mesh& rho)
  */
 void gen_rho_dist_k(const Sim_Param &sim, Mesh& rho, const FFTW_PLAN_TYPE &p_F)
 {
-	printf("Generating gaussian white noise...\n");
+	BOOST_LOG_TRIVIAL(debug) << "Generating gaussian white noise...";
 	gen_gauss_white_noise(sim, rho);
     fftw_execute_dft_r2c(p_F, rho);
 
-	printf("Generating density distributions with given power spectrum...\n");
+	BOOST_LOG_TRIVIAL(debug) << "Generating density distributions with given power spectrum...";
 	gen_rho_w_pow_k(sim, rho);
 }
 
 template <class T>
 void get_rho_from_par(const std::vector<T>& particles, Mesh& rho, const Sim_Param &sim)
 {
-    printf("Computing the density field from particle positions...\n");
+    BOOST_LOG_TRIVIAL(debug) << "Computing the density field from particle positions...";
 
     const size_t Np = sim.box_opt.par_num;
     if (particles.size() != Np){
@@ -285,7 +285,7 @@ void get_rho_from_par(const std::vector<T>& particles, Mesh& rho, const Sim_Para
 
 bool get_vel_from_par(const std::vector<Particle_v<FTYPE_t>>& particles, std::vector<Mesh>& vel_field, const Sim_Param &sim)
 {
-    printf("Computing the velocity field from particle positions...\n");
+    BOOST_LOG_TRIVIAL(debug) << "Computing the velocity field from particle positions...";
     const FTYPE_t mesh_mod = (FTYPE_t)sim.box_opt.mesh_num_pwr/sim.box_opt.mesh_num;
     const FTYPE_t m = pow((FTYPE_t)sim.box_opt.Ng_pwr, 3);
     const size_t Np = sim.box_opt.par_num;
@@ -303,7 +303,7 @@ bool get_vel_from_par(const std::vector<Particle_v<FTYPE_t>>& particles, std::ve
 
 bool get_vel_from_par(const std::vector<Particle_x<FTYPE_t>>& particles, std::vector<Mesh>& vel_field, const Sim_Param &sim)
 {
-    printf("WARNING! Trying to compute velocity divergence with particle positions only! Skipping...\n");
+    BOOST_LOG_TRIVIAL(debug) << "WARNING! Trying to compute velocity divergence with particle positions only! Skipping...";
     return false;
 }
 
@@ -447,7 +447,7 @@ void gen_pow_spec_binned(const Sim_Param &sim, const Mesh &power_aux, Data_Vec<F
 {
     const FTYPE_t mod_pk = pow(sim.box_opt.box_size, 3); // P(k) -> dimensionFULL!
     const FTYPE_t mod_k = 2*PI/sim.box_opt.box_size;
-    printf("Computing binned power spectrum...\n");
+    BOOST_LOG_TRIVIAL(debug) << "Computing binned power spectrum...";
 	gen_cqty_binned(1, sim.box_opt.mesh_num_pwr,  sim.out_opt.bins_per_decade, power_aux, pwr_spec_binned, mod_pk, mod_k);
 }
 
@@ -456,7 +456,7 @@ void gen_pow_spec_binned_init(const Sim_Param &sim, const Mesh &power_aux, const
     /* same as above but now  power_aux is storing only data [0...mesh_num], NOT mesh_num_pwr */
     const FTYPE_t mod_pk = pow(sim.box_opt.box_size, 3); // P(k) -> dimensionFULL!
     const FTYPE_t mod_k = 2*PI/sim.box_opt.box_size;
-    printf("Computing binned initial power spectrum...\n");
+    BOOST_LOG_TRIVIAL(debug) << "Computing binned initial power spectrum...";
 	gen_cqty_binned(1, sim.box_opt.mesh_num,  sim.out_opt.bins_per_decade, power_aux, half_length, pwr_spec_binned, mod_pk, mod_k);
 }
 
@@ -484,7 +484,7 @@ void gen_pot_k(const Mesh& rho_k, Mesh& pot_k)
     pot_k can be Mesh of differen (bigger) size rho_k,
     !!!> ALL physical FACTORS ARE therefore TAKEN FROM rho_k <!!!
     */
-	printf("Computing potential in k-space...\n");
+	BOOST_LOG_TRIVIAL(debug) << "Computing potential in k-space...";
     FTYPE_t k2;
     const size_t N = rho_k.N; // for case when pot_k is different mesh than vel_field
     const FTYPE_t d2_k = pow2(2*PI/N); // factor from second derivative with respect to the mesh coordinates
@@ -562,7 +562,7 @@ static FTYPE_t CIC_opt(Vec_3D<FTYPE_t> k_vec, const FTYPE_t a)
 	}
 	if ((G_n != G_n) || (U2 != U2))
 	{
-		printf("Gn = %f\tU2 = %f, k = (%f, %f, %f) \n", G_n, U2, k_vec[0], k_vec[1], k_vec[2]);
+		BOOST_LOG_TRIVIAL(warning) << "Gn = " << G_n << "\tU2 = " << U2 << ", k = (" << k_vec[0] << ", " << k_vec[1] << ", " << k_vec[2] << ")";
 		return 1.;
 	}
     return G_n/U2;
@@ -574,9 +574,9 @@ void gen_displ_k_S2(std::vector<Mesh>& vel_field, const Mesh& pot_k, const FTYPE
     pot_k can be Mesh of differen (bigger) size than each vel_field,
     !!!> ALL physical FACTORS ARE therefore TAKEN FROM vel_field[0] <!!!
     */
-	if (a == -1) printf("Computing displacement in k-space...\n");
-	else if (a == 0) printf("Computing displacement in k-space with CIC opt...\n");
-	else printf("Computing force in k-space for S2 shaped particles with CIC opt...\n");
+	if (a == -1) BOOST_LOG_TRIVIAL(debug) << "Computing displacement in k-space...";
+	else if (a == 0) BOOST_LOG_TRIVIAL(debug) << "Computing displacement in k-space with CIC opt...";
+	else BOOST_LOG_TRIVIAL(debug) << "Computing force in k-space for S2 shaped particles with CIC opt...";
 
 	FTYPE_t opt;
     Vec_3D<int> k_vec;
@@ -612,7 +612,7 @@ void gen_displ_k_cic(std::vector<Mesh>& vel_field, const Mesh& pot_k) {gen_displ
 
 void gen_dens_binned(const Mesh& rho, std::vector<size_t> &dens_binned, const Sim_Param &sim)
 {
-	printf("Computing binned density field...\n");
+	BOOST_LOG_TRIVIAL(debug) << "Computing binned density field...";
 	size_t bin;
     FTYPE_t rho_avg;
     const size_t Ng_pwr = sim.box_opt.Ng_pwr;

@@ -50,6 +50,9 @@ public:
 
     // UPDATE INITIAL POWER SPECTRUM -- TRUNCATION
     virtual void update_cosmo(Cosmo_Param& cosmo); ///< no truncation by default
+
+    // get output directory
+    std::string get_out_dir() const;
 	
 protected:
     // VARIABLES
@@ -70,7 +73,6 @@ protected:
     FTYPE_t a();
 	FTYPE_t a_half();
     FTYPE_t da();
-    std::string get_out_dir() const;
     std::string get_z_suffix() const;
 
     // METHODS THAT NEED TO BE OVERRIDEN IN DERIVED CLASSES
