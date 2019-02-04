@@ -17,21 +17,60 @@
 #include "zeldovich.hpp"
 
 #include <boost/log/core.hpp>
+#include <boost/log/utility/setup/common_attributes.hpp>
+#include <boost/log/utility/setup/console.hpp>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/timer/timer.hpp>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
 
 namespace logging = boost::log;
 namespace sinks = boost::log::sinks;
+namespace keywords = boost::log::keywords;
+
+typedef sinks::synchronous_sink< sinks::text_file_backend > sink_t;
+typedef sinks::synchronous_sink< sinks::text_ostream_backend > sink_os_t;
 
 namespace
 {
 void init_logging()
 {
+    // set logging core to log everything
     logging::core::get()->set_filter
     (
-        logging::trivial::severity >= logging::trivial::info
+        logging::trivial::severity >= logging::trivial::trace
     );
+
+    // add atributes
+    boost::log::add_common_attributes();
+    boost::log::register_simple_formatter_factory< boost::log::trivial::severity_level, char >("Severity");
+
+    // register 'std:cout' as sink
+    boost::shared_ptr< sink_os_t > g_file_sink = logging::add_console_log(std::cout);
+    g_file_sink->set_filter(logging::trivial::severity >= logging::trivial::info);
 }
+
+class Logger
+{
+public:
+    Logger(const std::string& filename):
+        g_file_sink(logging::add_file_log(
+            keywords::file_name = filename,
+            keywords::time_based_rotation = sinks::file::rotation_at_time_interval(boost::posix_time::hours(1)),
+            keywords::format = "[%TimeStamp%] <%Severity%>: %Message%"
+        ))
+    {
+        g_file_sink->set_filter(logging::trivial::severity >= logging::trivial::debug);
+    }
+    ~Logger()
+    {
+        // close the log file
+        logging::core::get()->remove_sink(g_file_sink);
+        g_file_sink.reset();
+    }
+
+private:
+    boost::shared_ptr< sink_t > g_file_sink;
+};
 
 class Timer{
 public:
@@ -47,10 +86,18 @@ private:
 template<class T>
 void init_and_run_app(Sim_Param& sim)
 {
+    // timer for wall time, CPU time
     Timer t;
+
+    // create approximation class and whether we have truncation in initial power spectrum
     T APP(sim);
     APP.update_cosmo(sim.cosmo);
-    APP.run_simulation();   
+
+    // register log file
+    Logger l(APP.get_out_dir() + "log/log" + "_%N.log");
+    
+    // run the simulation
+    APP.run_simulation();
 }
 
 }

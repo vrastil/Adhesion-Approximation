@@ -33,7 +33,9 @@ add_executable(${EXECUTABLE} ${SOURCE_FILES})
 target_link_libraries(${EXECUTABLE}
         Approximations
         ${FFTW_LIB}
+        boost_log_setup
         boost_timer
+        boost_thread
         -fuse-linker-plugin
 )
 
