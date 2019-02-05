@@ -98,6 +98,8 @@ struct Comp_App {
     /* cmd args */
     bool ZA, TZA, FF, FP, AA, FP_pp; //< approximations
     bool chi; //< modified gravities
+    void reset();
+    bool is_ready();
 };
 
 
@@ -123,6 +125,8 @@ struct App_Opt {
  */
 struct Run_Opt {
     void init();
+    void reset();
+    bool is_ready();
     bool simulate();
     /* cmd args */
     size_t nt, mlt_runs;
@@ -209,4 +213,6 @@ public:
 	FTYPE_t x_0() const{return box_opt.box_size/box_opt.mesh_num;}
     FTYPE_t x_0_pwr() const{return box_opt.box_size/box_opt.mesh_num_pwr;}
     bool simulate() { return run_opt.simulate(); }
+    void reset();
+    bool is_ready();
 };

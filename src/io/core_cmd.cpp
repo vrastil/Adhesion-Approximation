@@ -13,6 +13,7 @@
 #include <fstream>
 #include "params.hpp"
 #include "core_cmd.h"
+#include "config.h"
 
 namespace po = boost::program_options;
 
@@ -22,13 +23,14 @@ namespace po = boost::program_options;
 
 void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
     std::string config_file;
+    bool no_run = false; // do not run approximations if '--help= or '--version' cmd option
     unsigned int trans_func_cmd, matter_pwr_cmd, baryons_pwr_cmd, mass_func_cmd;
     // options ONLY on command line
     po::options_description generic("Generic options");
     generic.add_options()
         ("help,h", "produce this help message")			
         ("config,c", po::value<std::string>(&config_file)->default_value("INPUT.cfg"), "configuration file name (optional)")
-    //	("version,v", "print current version of the program")
+    	("version,v", "print current version of the program")
         ;
         
     // options both on command line	and in configuration file
@@ -130,7 +132,7 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
         ;
 
 
-    po::options_description cmdline_options("\nCOSMOLOGICAL APPROXIMATION");//< store all normal parameters
+    po::options_description cmdline_options("\n" PROJECT);//< store all normal parameters
     cmdline_options.add(generic).add(config_mesh).add(config_power).add(config_integ);
     cmdline_options.add(config_output).add(config_app).add(config_run).add(config_other);
     cmdline_options.add(mod_grav);
@@ -141,11 +143,14 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
     po::store(po::parse_command_line(ac, av, config_test), vm);
     po::notify(vm);
 
-
-
     if (vm.count("help")) {
-        BOOST_LOG_TRIVIAL(info) << std::setprecision(3) << cmdline_options;
-        throw std::string("help");
+        std::cout << std::setprecision(3) << cmdline_options;
+        no_run = true;
+    }
+
+    if (vm.count("version")) {
+        std::cout << PROJECT " v" PROJECT_VERSION;
+        no_run = true;
     }
     
     if (vm.count("config")) {
@@ -156,9 +161,11 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
             // po::store(po::parse_config_file(ifs, cmdline_options), vm);
             notify(vm);
         } else{
-            BOOST_LOG_TRIVIAL(error) << "Cannot open config file '" << config_file << "'. Using default and command lines values.";
+            BOOST_LOG_TRIVIAL(warning) << "Cannot open config file '" << config_file << "'. Using default and command lines values.";
         }
     }
+
+    if (no_run) sim.reset();
 
     // !!!>>> THIS NEEDS TO BE AFTER ALL CALLS TO NOTIFY() <<<!!!
     sim.cosmo.config.transfer_function_method = static_cast<transfer_function_t>(trans_func_cmd);

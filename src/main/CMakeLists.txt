@@ -1,4 +1,4 @@
-# main interface library -- precison.hpp and stdafx.h
+# main interface library -- config.hpp, precison.hpp, stdafx.h
 set(LIBRARY_NAME main)
 
 # create interface
@@ -14,6 +14,9 @@ target_compile_definitions(${LIBRARY_NAME} INTERFACE PRECISION=${PRECISION})
 target_link_libraries(${LIBRARY_NAME}
         INTERFACE boost_log
 )
+
+# config file
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/config.h)
 
 #############################
 # main executable - FastSim #

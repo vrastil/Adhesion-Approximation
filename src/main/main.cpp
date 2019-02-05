@@ -108,7 +108,8 @@ void init_and_run_app(Sim_Param& sim)
     t.stop();
 }
 
-}
+} ///< end of anonymous namespace
+
 /**
  * @brief initialize program and run all simulations
  * 
@@ -123,14 +124,14 @@ int main(int argc, char* argv[]){
     // timer --automatically displays timing information
     Timer t;
 
-	try{
-        /* SIMULATION PARAMETERS
-            - read and handle command line options / config file
-            - compute power spectrum normalization
-        */
-        Sim_Param sim(argc, argv);
+    /* SIMULATION PARAMETERS
+        - read and handle command line options / config file
+        - compute power spectrum normalization
+    */
+    Sim_Param sim(argc, argv);
+    if sim.is_ready()
+    {
         sim.print_info();
-        
         do{
             /* ZEL`DOVICH APPROXIMATION */
             if(sim.comp_app.ZA)	init_and_run_app<App_Var_ZA>(sim);
@@ -155,19 +156,10 @@ int main(int argc, char* argv[]){
 
         } while (sim.simulate());
         BOOST_LOG_TRIVIAL(info) << "All simulations completed.";
-        return 0;
-	}
-    catch(const std::string& e){
-        if (e == "help") return 0;
-        BOOST_LOG_TRIVIAL(error) << "Error: " << e;
-        return 1;
     }
-	catch(const std::exception& e){
-		BOOST_LOG_TRIVIAL(error) << "Error: " << e.what();
-        return 1;
-	}
-	catch(...){
-		BOOST_LOG_TRIVIAL(error) << "Exception of unknown type!";
-        return 2;
-	}
+    else
+    {
+        t.stop();
+    }
+    return 0;
 }

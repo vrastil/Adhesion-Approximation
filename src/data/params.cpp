@@ -305,6 +305,16 @@ void Run_Opt::init()
     phase = true;
 }
 
+void Run_Opt::reset()
+{
+    mlt_runs = 0;
+}
+
+bool Run_Opt::is_ready()
+{
+    return (mlt_runs != 0);
+}
+
 bool Run_Opt::simulate()
 {
     if (!pair || !phase)
@@ -337,6 +347,16 @@ void Out_Opt::init()
     get_rho = get_pwr || print_dens;
 }
 
+void Comp_App::reset()
+{
+    ZA = TZA = FF = FP = AA = FP_pp = chi = false;
+}
+
+bool Comp_App::is_ready()
+{
+    return (ZA & TZA & FF & FP & AA & FP_pp & chi);
+}
+
 void App_Opt::init(const Box_Opt& box_opt)
 {
     a = rs / FTYPE_t(0.735);
@@ -367,13 +387,16 @@ void Other_par::init(const Box_Opt& box_opt)
 Sim_Param::Sim_Param(int ac, const char* const av[])
 {
 	handle_cmd_line(ac, av, *this);//< throw if anything happend
-    run_opt.init();
-    cosmo.init();
-    box_opt.init(cosmo);
-    integ_opt.init();
-    out_opt.init();
-    app_opt.init(box_opt);
-    other_par.init(box_opt);
+    if (this->is_ready())
+    {
+        run_opt.init();
+        cosmo.init();
+        box_opt.init(cosmo);
+        integ_opt.init();
+        out_opt.init();
+        app_opt.init(box_opt);
+        other_par.init(box_opt);
+    }
 }
 
 Sim_Param::Sim_Param(std::string file_name)
@@ -471,4 +494,18 @@ void Sim_Param::print_info(std::string out, std::string app) const
 void Sim_Param::print_info() const
 {
 	Sim_Param::print_info("", "");
+}
+
+void Sim_Param::reset()
+{
+    run_opt.reset();
+    comp_app.reset();
+}
+
+bool Sim_Param::is_ready()
+{
+    bool is_ready = true;
+    is_ready &= run_opt.is_ready();
+    is_ready &= comp_app.is_ready();
+    return is_ready;
 }
