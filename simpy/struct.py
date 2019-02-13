@@ -296,7 +296,7 @@ class Results(object):
             self.sim_infos.append(StackInfo(stack_info_file=a_file))
         self.sort()
 
-    def get_subfiles(self, Nm=0, NM=0, Np=0, L=0, nu=0, rs=0, phi=0, n=0, chi_lin=0, app='', app_not=''):
+    def get_subfiles(self, Nm=0, NM=0, Np=0, L=0, nu=0, rs=0, phi=0, n=0, chi_lin=None, app='', app_not=''):
         subfiles = []
         for a_sim_info in self.sim_infos:
             check = bool (
@@ -312,14 +312,14 @@ class Results(object):
             if a_sim_info.chi_opt:
                 check = check and (phi == 0 or a_sim_info.chi_opt["phi"] == phi)
                 check = check and (n == 0 or a_sim_info.chi_opt["n"] == n)
-                check = check and (chi_lin == 0 or a_sim_info.chi_opt["linear"] == chi_lin)
+                check = check and (chi_lin is None or a_sim_info.chi_opt["linear"] == chi_lin)
             if check:
                 subfiles.append(a_sim_info)
 
         return subfiles
 
-    def info(self, Nm=0, NM=0, Np=0, L=0, nu=0, rs=0, phi=0, app='', app_not=''):
-        for a_sim_info in self.get_subfiles(Nm=Nm, NM=NM, Np=Np, L=L, nu=nu, rs=rs, phi=phi, app=app, app_not=app_not):
+    def info(self, Nm=0, NM=0, Np=0, L=0, nu=0, rs=0, phi=0, n=0, chi_lin=None, app='', app_not=''):
+        for a_sim_info in self.get_subfiles(Nm=Nm, NM=NM, Np=Np, L=L, nu=nu, rs=rs, phi=phi, n=n, chi_lin=chi_lin, app=app, app_not=app_not):
             info = a_sim_info.info_tr().replace('$', '')
             if hasattr(a_sim_info, 'num_run'):
                 info += "\tnum runs = %i" % a_sim_info.num_run

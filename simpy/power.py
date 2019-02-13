@@ -10,9 +10,7 @@
 """
 
 import numpy as np
-from scipy.optimize import brentq
-from scipy.optimize import minimize_scalar
-from scipy.signal import argrelextrema
+from scipy.optimize import brentq, curve_fit, minimize_scalar
 from . import fastsim as fs
 
 def get_a_init_from_zs(zs):
@@ -25,7 +23,7 @@ def get_a_fom_zs(zs):
     try:
         iter(zs)
     except TypeError:
-        return 1./(1+z)
+        return 1./(1+zs)
     else:
         a = [1./(z + 1) for z in zs if z != 'init']
         return np.array(a)
@@ -56,7 +54,7 @@ def get_a_from_A(cosmo, A):
 def get_ndarray(Data_Vec):
     """ copy C++ class Data_Vec<FTYPE_t, N> into numpy array """
     dim = Data_Vec.dim()
-    data = [[x for x in Data_Vec[i]] for i in xrange(dim)]
+    data = [[x for x in Data_Vec[i]] for i in range(dim)]
     return np.array(data)
 
 def get_Data_vec(data):
@@ -69,8 +67,8 @@ def get_Data_vec(data):
         Data_Vec = fs.Data_Vec_3(size)
     else:
         raise IndexError("only Data_Vec<FTYPE_t, dim> of 'dim' 2 or 3 supported")
-    for j in xrange(dim):
-        for i in xrange(size):
+    for j in range(dim):
+        for i in range(size):
             Data_Vec[j][i] = data[j][i]
     return Data_Vec
 
@@ -146,6 +144,7 @@ def chi_mass_sq(a, cosmo, chi_opt, MPL=1, c_kms=299792.458):
                * cosmo.h / c_kms # units factor for 'c = 1' and [L] = Mpc / h
                ,2))
     # evolve rho_m,0 -> rho_m
+    a = np.array(a)
     prefactor /= pow(a, 3)
     return prefactor/chi_bulk_a_n(a, chi_opt, MPL=MPL, CHI_A_UNITS=False)
 
@@ -216,24 +215,86 @@ def sigma_R(sim, Pk=None, z=None, non_lin=False):
     fc_nl = fs.gen_sigma_func_binned_gsl_qawf_nl
     return gen_func(sim, fc_par, fce_lin, fc_nl, Pk=Pk, z=z, non_lin=non_lin)
 
-def get_bao_peak(corr, cutof=80, recursion=0, max_recursion=10):
-    r, xi = corr
+def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par, a=None, fit_lin=False):
+    """ fit data [k, Pk, std] to hybrid power spectrum (1-A)*P_lin(k) + A*P_nl(k)
+    return dictionary with C++ class Extrap_Pk_Nl, fit values and covariance.
+    If 'fit_lin' is True, fit linear power spectrum and use C++ class Extrap_Pk instead.
+     """
+    # extract data
+    kk, Pk = np.array(data[0]), np.array(data[1])
     
-    # get id of local maxima
-    idx = argrelextrema(r*r*xi, np.greater)
-    
-    # get first maximum after cutof = 80 Mpc/h (default cutof)
-    peak_id = [x for x in idx[0] if r[x] > cutof]
-    if peak_id:
-        # return peak location and amplitude
-        return r[peak_id[0]], xi[peak_id[0]]    
+    # get proper slice of data -- last decade before half of particle nyquist
+    idx = (np.abs(kk-0.5*k_nyquist_par)).argmin()
+    idx = slice(idx - sim.out_opt.bins_per_decade, idx)
+
+    # do we have errors?
+    sigma = data[2][idx] if len(data) > 2 else None
+
+    # get data vector
+    data_vec = get_Data_vec(data)
+
+    # are fitting only linear power spectrum?
+    if fit_lin:
+        Pk_par = fs.Extrap_Pk_2 if sigma is None else fs.Extrap_Pk_3
+        Pk_par = Pk_par(data_vec, sim)
+        popt = pcov = perr = pcor = None
+
+        # check proper slope of power spectrum : n_s < -1.5
+        if Pk_par.n_s > -1.5:
+            P_0 = Pk_par(Pk_par.k_max)
+            Pk_par.n_s = -1
+            Pk_par.A_up *= P_0 / Pk_par(Pk_par.k_max)
+
+    # fit hybrid power spectrum
     else:
-        # failed to find local maximum
-        if recursion > max_recursion:
-            return 0, 0
-        # try again with lower cutof
+        # define functions which will be used in fitting (whether 'a' is free parameter or not)
+        if a is None:
+            pk_hyb_func = lambda k, A, a: hybrid_pow_spec(a, k, A, sim.cosmo)
+            p0 = (0.05, 0.5)
         else:
-            return get_bao_peak(corr, cutof=cutof/1.2, recursion=recursion+1)
+            pk_hyb_func = lambda k, A: hybrid_pow_spec(a, k, A, sim.cosmo)
+            p0 = 0.05
+
+        # fit data, a = <0, 1>, A = <0, 1>        
+        bounds = (0, 1)
+        
+        popt, pcov = curve_fit(pk_hyb_func, kk[idx], Pk[idx], p0=p0, bounds=bounds, sigma=sigma)
+        perr, pcor = get_perr_pcor(pcov)
+
+        # get hybrid Extrap
+        Pk_par = fs.Extrap_Pk_Nl_2 if sigma is None else fs.Extrap_Pk_Nl_3
+        A = popt[0]
+        a = popt[1] if a is None else a
+        Pk_par = Pk_par(data_vec, sim, A, a)
+
+    # return all info in dict
+    return {"Pk_par" : Pk_par, "popt" : popt, "pcov" : pcov, 'perr' : perr, 'pcor' : pcor}
+
+def get_perr_pcor(pcov):
+    """convert covariance matrix into standard errors and correlation matrix"""
+    perr = np.sqrt(np.diag(pcov))
+    inv = np.diag([1/x if x else 0 for x in perr]) # cut out values with 0 variance
+    pcor = np.dot(np.dot(inv, pcov), inv)
+    return perr, pcor
+
+def gaussian(x, A, mu, sigma):
+    return A*np.exp(-(x-mu)**2/(2.*sigma**2))
+
+def get_bao_peak(corr, r_low=80, r_high=120):
+    # get data between r_low and r_high
+    r, xi = corr
+    idx = np.where(r > r_low)
+    x = r[idx]
+    y = xi[idx]
+    idx = np.where(x < r_high)
+    x = x[idx]
+    y = x*x*y[idx]
+    
+    # fit gaussian to the data
+    p0 = (y[0], 100, 10)
+    popt, pcov = curve_fit(gaussian, x, y, p0=p0)
+    perr, pcor = get_perr_pcor(pcov)
+    return {"popt" : popt, "pcov" : pcov, 'perr' : perr, 'pcor' : pcor}
 
 def growth_factor(a, cosmo):
     """ return growth factor D at scale factor a, accepts ndarray """

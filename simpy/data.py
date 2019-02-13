@@ -6,7 +6,6 @@ run analysis of runs
 from __future__ import print_function
 
 # system modules
-import os
 import sys
 try:
     from itertools import izip # python 2
@@ -15,12 +14,10 @@ except ImportError:
 
 # mathematical modules
 import numpy as np
-from scipy.optimize import curve_fit
 
 # simpy modules
 from . import utils as ut
 from . import plot
-from .fastsim import Extrap_Pk_2, Extrap_Pk_3, Extrap_Pk_Nl_2, Extrap_Pk_Nl_3
 from . import struct
 from . import power as pwr
 from plot import report_dir
@@ -63,7 +60,7 @@ def load_k_supp(files, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens'):
     
     For chameleon field divide P(k) values by linear prediction """
 
-    supp = [[[] for x in xrange(3)] for y in xrange(3)]
+    supp = [[[] for x in range(3)] for y in range(3)]
     for i, j in enumerate([0, 3, 6]):
         for ii, a_file in enumerate(files):
             data = np.transpose(np.loadtxt(a_file))
@@ -80,7 +77,7 @@ def load_k_supp(files, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens'):
 def get_single_hybrid_pow_spec_amp_w_z(sim, a_file, z, k_nyquist_par, a=None, data=None, fit_lin=False):
     if data is None:
         data = np.transpose(np.loadtxt(a_file))
-    x = get_hybrid_pow_spec_amp(sim, data, k_nyquist_par, a=a, fit_lin=fit_lin)
+    x = pwr.get_hybrid_pow_spec_amp(sim, data, k_nyquist_par, a=a, fit_lin=fit_lin)
     x["z"] = z
     return x
 
@@ -212,23 +209,23 @@ def get_plot_corr(files, zs, a_sim_info, load=False, **kwargs):
     get_corr_func(files, zs, a_sim_info, load=load)
     plot.plot_corr_func(a_sim_info.data["corr_func"], zs, a_sim_info, **kwargs)
 
-def get_corr_peak(a_sim_info, cutof=80):
+def get_corr_peak(a_sim_info):
     # for each type of measured correlation function
     for key in ('par', 'lin', 'nl'):
+        # init data
+        init_data(a_sim_info, get_corr=True)
+
         # for each redshift
-        a_sim_info.data["corr_func"][key + '_peak'] = [[], [], []]
+        a_sim_info.data["corr_func"][key + '_peak'] = []
         for i, corr in enumerate(a_sim_info.data["corr_func"][key]):
             if corr is not None:
-                loc, amp = pwr.get_bao_peak(corr, cutof=cutof)
-                z = a_sim_info.data["corr_func"]["zs"][i]
-                a_sim_info.data["corr_func"][key + '_peak'][0].append(loc)
-                a_sim_info.data["corr_func"][key + '_peak'][1].append(amp)
-                a_sim_info.data["corr_func"][key + '_peak'][2].append(z)
+                bao_peak = pwr.get_bao_peak(corr)
+                bao_peak["z"] = a_sim_info.data["corr_func"]["zs"][i]
+                a_sim_info.data["corr_func"][key + '_peak'].append(bao_peak)
 
 def get_plot_corr_peak(files, zs, a_sim_info, load=False, **kwargs):
     get_corr_func(files, zs, a_sim_info, load=load)
-    cutof = kwargs.get("cutof", 25)
-    get_corr_peak(a_sim_info, cutof=cutof)
+    get_corr_peak(a_sim_info)
     plot.plot_corr_peak([a_sim_info], **kwargs)
     
 def get_sigma_R(files, zs, a_sim_info, load=False):
@@ -596,68 +593,6 @@ def stack_files(stack_info, subdir, a_file):
 
     return zs, data_list
 
-def get_perr_pcor(pcov):
-    """convert covariance matrix into standard errors and correlation matrix"""
-    perr = np.sqrt(np.diag(pcov))
-    inv = np.diag([1/x if x else 0 for x in perr]) # cut out values with 0 variance
-    pcor = np.dot(np.dot(inv, pcov), inv)
-    return perr, pcor
-
-def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par, a=None, fit_lin=False):
-    """ fit data [k, Pk, std] to hybrid power spectrum (1-A)*P_lin(k) + A*P_nl(k)
-    return dictionary with C++ class Extrap_Pk_Nl, fit values and covariance.
-    If 'fit_lin' is True, fit linear power spectrum and use C++ class Extrap_Pk instead.
-     """
-    # extract data
-    kk, Pk = np.array(data[0]), np.array(data[1])
-    
-    # get proper slice of data -- last decade before half of particle nyquist
-    idx = (np.abs(kk-0.5*k_nyquist_par)).argmin()
-    idx = slice(idx - sim.out_opt.bins_per_decade, idx)
-
-    # do we have errors?
-    sigma = data[2][idx] if len(data) > 2 else None
-
-    # get data vector
-    data_vec = pwr.get_Data_vec(data)
-
-    # are fitting only linear power spectrum?
-    if fit_lin:
-        Pk_par = Extrap_Pk_2 if sigma is None else Extrap_Pk_3
-        Pk_par = Pk_par(data_vec, sim)
-        popt = pcov = perr = pcor = None
-
-        # check proper slope of power spectrum : n_s < -1.5
-        if Pk_par.n_s > -1.5:
-            P_0 = Pk_par(Pk_par.k_max)
-            Pk_par.n_s = -1
-            Pk_par.A_up *= P_0 / Pk_par(Pk_par.k_max)
-
-    # fit hybrid power spectrum
-    else:
-        # define functions which will be used in fitting (whether 'a' is free parameter or not)
-        if a is None:
-            pk_hyb_func = lambda k, A, a: pwr.hybrid_pow_spec(a, k, A, sim.cosmo)
-            p0 = (0.05, 0.5)
-        else:
-            pk_hyb_func = lambda k, A: pwr.hybrid_pow_spec(a, k, A, sim.cosmo)
-            p0 = 0.05
-
-        # fit data, a = <0, 1>, A = <0, 1>        
-        bounds = (0, 1)
-        
-        popt, pcov = curve_fit(pk_hyb_func, kk[idx], Pk[idx], p0=p0, bounds=bounds, sigma=sigma)
-        perr, pcor = get_perr_pcor(pcov)
-
-        # get hybrid Extrap
-        Pk_par = Extrap_Pk_Nl_2 if sigma is None else Extrap_Pk_Nl_3
-        A = popt[0]
-        a = popt[1] if a is None else a
-        Pk_par = Pk_par(data_vec, sim, A, a)
-
-    # return all info in dict
-    return {"Pk_par" : Pk_par, "popt" : popt, "pcov" : pcov, 'perr' : perr, 'pcor' : pcor}
-
 def create_a_eff_struct(a_sim_info):
     if "eff_time" not in a_sim_info.data:
         a_sim_info.data["eff_time"] = {"Pk" : {}, "Pk_nl" : {}, "sigma_R" : {}}
@@ -985,8 +920,7 @@ def plot_chi_wave_pot(a_file="/home/michal/Documents/GIT/FastSim/jobs/output/CHI
 
 
 def get_data_fp_chi_ratio(group, z=None):
-    data_all = []    
-    data_fp = [np.transpose(np.loadtxt(a_file)) for a_file in group["FP_files"]]
+    data_all = []
 
     if z is not None:
         zs = group["FP_zs"]
@@ -1067,6 +1001,8 @@ def my_shape(data):
     except ValueError:
         return len(data)
         
+
+
 def compare_chi_fp(in_dir="/home/michal/Documents/GIT/FastSim/output/", out_dir=report_dir, use_group=None,
                    z=None, Nm=0, NM=0, Np=0, L=0, n=0, phi=0):
     groups = get_fp_chi_groups(in_dir, Nm=Nm, Np=Np, L=L, n=n, phi=phi)
@@ -1081,9 +1017,6 @@ def compare_chi_fp(in_dir="/home/michal/Documents/GIT/FastSim/output/", out_dir=
         a_sim_info = group["FP"]
         zs = group["FP_zs"] if z is None else [z]
 
-        # plot map -- NOT DONE
-        plot.plot_chi_fp_map(data_g, zs, a_sim_info)
-
         # transpoose first and second dimension
         data_g = map(list, zip(*data_g))
         
@@ -1095,14 +1028,32 @@ def compare_chi_fp(in_dir="/home/michal/Documents/GIT/FastSim/output/", out_dir=
                             )
 
             # get labels
-            labels = [r"$\Phi_{scr}=%.1e,\ n=%.1f$%s" % (
-                si.chi_opt["phi"], si.chi_opt["n"], " (lin)" if si.chi_opt["linear"] else " (nl)")
-                for si in sim_infos]
-
+            labels = plot.get_chi_labels(sim_infos)
             suptitle = "Relative chameleon power spectrum, " + lab
             ut.print_info(suptitle)
             
             plot.plot_chi_fp_z(data_z, a_sim_info, labels, out_dir=out_dir ,suptitle=suptitle, show=True, save=True)
+
+def compare_chi_fp_map(chi_info, fp_info, in_dir="/home/michal/Documents/GIT/FastSim/output/", out_dir=report_dir):
+    # check we have same parameters
+    for key in ("mesh_num", "mesh_num_pwr", "par_num", "box_size"):
+        if chi_info.box_opt[key] != fp_info.box_opt[key]:
+            raise IndexError("CHI and FPA files do not have the same parameters.")
+
+    # load data
+    group = { "FP" : fp_info, "CHI" : [chi_info]}
+    load_chi_fp_files(group, 'pwr_spec', '*par*')
+    data = get_data_fp_chi_ratio(group)[0] # we have only one set of chi-parameters
+    zs = group["FP_zs"]
+
+    # get rid if 'init' redshift
+    if zs[0] == 'init':
+        zs = zs[1:]
+        data = np.array(data[1:])
+
+    # plot map
+    plot.plot_chi_fp_map(data, zs, chi_info, out_dir=out_dir, save=True, show=True)
+
 
 def compare_chi_res(in_dir, out_dir, n=0.5, phi=1e-5, z=0):
     # load all data
@@ -1110,8 +1061,11 @@ def compare_chi_res(in_dir, out_dir, n=0.5, phi=1e-5, z=0):
     data_all = [get_data_fp_chi_ratio(group, z=z) for group in groups]
     
     # check we have same chameleon parameters
-    phi = set([si.chi_opt["phi"] for si in group["CHI"] for group in groups])
-    n = set([si.chi_opt["n"] for si in group["CHI"] for group in groups])
+    phi, n = set(), set()
+    for group in groups:
+        for si in group["CHI"]:
+            phi.add(si.chi_opt["phi"])
+            n.add([si.chi_opt["n"])
     if len(phi) != len(n) != 1:
             raise IndexError("CHI files do not have the same chameleon parameters.")
     phi = phi.pop()
@@ -1166,7 +1120,9 @@ def corr_func_comp_plot(files=None, sim_infos=None, outdir=report_dir, z=1., bao
 
     # get data, check redshift
     for sim_info in sim_infos:
+        # init data
         init_data(sim_info, get_corr=True)
+        load_a_eff(sim_info, use_z_eff='Pk')
 
         zs_ = sim_info.data["corr_func"]["zs"]
         idx = find_nearest_idx(zs_, z)
@@ -1186,7 +1142,7 @@ def corr_func_comp_plot(files=None, sim_infos=None, outdir=report_dir, z=1., bao
     # plot non-linear BAO peak
     if bao_peak:
         get_corr_peak(sim_info)
-        peak_loc = sim_info.data["corr_func"]["nl_peak"][0][idx]
+        peak_loc = sim_info.data["corr_func"]["nl_peak"][idx]["popt"][1]
     else:
         peak_loc = None
 
@@ -1203,16 +1159,25 @@ def corr_func_comp_plot(files=None, sim_infos=None, outdir=report_dir, z=1., bao
     # plot simple correlation function and ratio
     plot.plot_corr_func(data, [zs], sim_info, out_dir=outdir, save=True, show=True, extra_data=extra_data[:-1], peak_loc=peak_loc, use_z_eff=use_z_eff)
 
-def corr_func_comp_plot_peak(files=None, sim_infos=None, outdir=report_dir, cutof=80):
+def corr_func_comp_plot_peak(files=None, sim_infos=None, outdir=report_dir, plot_loc_amp=True):
     # load struct.SimInfo and get correlation data
     if sim_infos is None:
         sim_infos = [load_get_corr(a_file)[0] for a_file in files]
+
+    # sort from lowest screening potential and chameleon exponent
+    non_chi_sim_infos = [x for x in sim_infos if x.app != 'CHI']
+    chi_sim_infos = [x for x in sim_infos if x.app == 'CHI']
+    chi_sim_infos = sorted(sorted(chi_sim_infos,
+                        key=lambda x : x.chi_opt['n']),
+                        key=lambda x : x.chi_opt['phi'])
+    sim_infos = non_chi_sim_infos + chi_sim_infos
 
     # get data, check redshift
     use_z_eff = []
     for sim_info in sim_infos:
         init_data(sim_info, get_corr=True)
-        get_corr_peak(sim_info, cutof=cutof)
+        get_a_eff_from_Pk(sim_info)
+        get_corr_peak(sim_info)
 
         use_z_eff.append({
             'z' : sim_info.data["eff_time"]["Pk"]["z_eff"],
@@ -1220,7 +1185,11 @@ def corr_func_comp_plot_peak(files=None, sim_infos=None, outdir=report_dir, cuto
         })
 
     # plot bao peak and location
-    plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff)
+    if plot_loc_amp:
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff)
+    else:
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=False)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_amp=False)
 
 
 def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3):
@@ -1250,7 +1219,7 @@ def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3):
     # get new extrapolated Pk, use last a_sim_info for k_nyquist and simulation param.
     sim = a_sim_info.sim
     fit_lin = has_app_lin_pwr(sim_infos[0].app)
-    extrap_pk = get_hybrid_pow_spec_amp(sim, data_list_new, k_nq, fit_lin=fit_lin) if get_extrap_pk else None
+    extrap_pk = pwr.get_hybrid_pow_spec_amp(sim, data_list_new, k_nq, fit_lin=fit_lin) if get_extrap_pk else None
     
     # plot data only to half nyquist frequency (previusly needed for extra_pk)
     idx = (data_list_new[0] <= k_nq/2)

@@ -69,14 +69,16 @@ def fig_suptitle(fig, suptitle="", y=0.99, size=suptitle_size):
     #fig.suptitle(suptitle, y=0.99, size=suptitle_size)
     pass
 
-def close_fig(filename, fig, save=True, show=False, dpi=100, use_z_eff=False):
+def close_fig(filename, fig, save=True, show=False, dpi=200, use_z_eff=False, format='all'):
     """save and/or show figure, close figure"""
     if use_z_eff:
-        filename += '_z_eff.png'
-    else:
-        filename += '.png'
+        filename += '_z_eff'
     if save:
-        fig.savefig(filename, dpi=dpi)
+        if format == 'all':
+            fig.savefig(filename + ".png", dpi=dpi, format="png")
+            fig.savefig(filename + ".eps", dpi=dpi, format="eps")
+        else:
+            fig.savefig(filename + ".%s" % format, dpi=dpi, format=format)
     if show:
         plt.show()
     fig.clf()
@@ -113,6 +115,13 @@ def adjust_extreme_values(ax, ymin, ymax):
     if ymax_cur > ymax:
         ymax_cur = ymax
     ax.set_ylim(ymin_cur, ymax_cur)
+
+def get_chi_label(si):
+    return r"$\Phi_{scr}=%.1e,\ n=%.1f$%s" % (
+                si.chi_opt["phi"], si.chi_opt["n"], " (lin)" if si.chi_opt["linear"] else " (nl)")
+
+def get_chi_labels(sim_infos):
+    return [get_chi_label(si) for si in sim_infos]
 
 def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False,
                   out_dir='auto', pk_type='dens', save=True, show=False, use_z_eff=False):
@@ -249,8 +258,75 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, err=False, out_dir='aut
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 
-def plot_chi_fp_map(data, zs, a_sim_info):
-    pass
+def plot_chi_fp_map(data_array, zs, chi_info, out_dir='auto', save=True, show=False, shading='flat',
+                    show_nyquist=True, vmin=1, vmax=2):
+    #
+    fig = plt.figure(figsize=(8, 8))
+    gs = gridspec.GridSpec(1, 15, wspace=0.5)
+    ax = plt.subplot(gs[0, : -1])
+    cbar_ax = plt.subplot(gs[0, -1])
+
+    ax.set_xscale('log')
+    a_z = [1 / (1 + z) for z in zs]
+    
+    # non-linear scale
+    # k_nl = power.chi_psi_k_a(a_z, chi_info.sim.cosmo, chi_info.chi_opt)
+    # chameleon mass
+    m_chi = np.sqrt(np.sqrt(power.chi_mass_sq(a_z, chi_info.sim.cosmo, chi_info.chi_opt)))
+
+    # hack around pcolormesh plotting edges
+    if shading == 'flat':
+        if len(a_z) == 1:
+            da = 2*a_z[0]
+        else:
+            da = (a_z[-1] - a_z[0]) / (len(a_z) - 1)
+        a = np.array([a_z[0]-da/2] + [1 / (1 + z) + da/2 for z in zs])
+    
+    k = data_array[0][0]
+    supp = data_array[:, 1, :] # extract Pk, shape = (zs, k)
+    linthresh = 1.3
+    linscale = 2.0
+
+    if vmin < 0:
+        ticks = [vmin, -linthresh, 0, linthresh, vmax]
+    else:
+        ticks = [vmin, linthresh, vmax]
+    labels = [str(x) for x in ticks]
+    labels[-1] = '> %i' % ticks[-1]
+
+    im = ax.pcolormesh(k, a, supp, cmap='Reds', shading=shading,
+        norm=SymLogNorm(linthresh=linthresh, linscale=linscale, vmin=vmin, vmax=vmax))
+    cbar = fig.colorbar(im, cax=cbar_ax, ticks=ticks)
+    cbar.ax.set_yticklabels(labels)
+
+    if show_nyquist and chi_info.k_nyquist is not None:
+        ls = [':', '-.', '--']
+        ls *= (len(chi_info.k_nyquist) - 1) / 3 + 1
+        ls = iter(ls)
+        val_set = set(chi_info.k_nyquist.itervalues())
+        for val in val_set:
+            ax.axvline(val, ls=next(ls), c='k')
+
+    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
+    ax.set_ylabel(r"$a(t)$", fontsize=label_size)
+    plt.draw()
+
+    # plot k_nl, keep ylim
+    xmin, xmax = ax.get_xlim()
+    ax.plot(m_chi, a_z, 'b-', lw=3)
+    ax.set_xlim(xmin, xmax)
+
+    plt.figtext(0.5, 0.95, "",
+                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
+    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
+    plt.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9)
+
+    # close, save show
+    if out_dir == 'auto':
+        out_dir = report_dir
+    bo = chi_info.box_opt
+    out_file = 'chi_pwr_diff_map_fp_%im_%ip_%iM_%ib' % (bo["mesh_num"], bo["Ng"], bo["mesh_num_pwr"], bo["box_size"])
+    close_fig(out_dir + out_file, fig, save=save, show=show)
 
 def plot_chi_fp_z(data_z, a_sim_info, labels, out_dir='auto', suptitle='auto', save=True, show=False, use_z_eff=False, max_nyquist=True):
     if out_dir == 'auto':
@@ -268,13 +344,13 @@ def plot_chi_fp_z(data_z, a_sim_info, labels, out_dir='auto', suptitle='auto', s
     for data_chi, label in izip(data_z, labels): # each chi
         k = data_chi[0]
         Pk = data_chi[1]
-        std = data_chi[2]
+        # std = data_chi[2]
 
         if max_nyquist:
             idx = (np.abs(k - a_sim_info.k_nyquist["particle"])).argmin()
             k = k[0:idx]
             Pk = Pk[0:idx]
-            std = std[0:idx]
+            # std = std[0:idx]
 
         ymax = max(ymax, np.max(Pk))
         # ax.errorbar(k, Pk, fmt='o', yerr=std, ms=3, label=label)
@@ -541,39 +617,50 @@ def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, sho
             save=save, show=show, is_sigma=is_sigma, only_r2=only_r2,
             extra_data=extra_data, peak_loc=peak_loc, use_z_eff=use_z_eff)
 
-def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False):
+def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False, ls=None, get_last_col=False):
     # load all available data (GSL integration could have failed)
-    zs = a_sim_info.data["corr_func"]["par_peak"][2]
-    cut = slice(1, None) if zs[0] == 'init' else slice(0, None)
-    a = [1./(1+z) for z in zs[cut]]
+    peak_data = [x for x in a_sim_info.data["corr_func"]["par_peak"] if x["z"] != "init"]
+    zs = [x["z"] for x in peak_data]
+    a = [1./(1+z) for z in zs]
 
-    # location / amplitude of the BAO peak, label
-    data = np.array(a_sim_info.data["corr_func"]["par_peak"][idx][cut])
+    # location / amplitude / width of the BAO peak, label
+    data = np.array([x["popt"][idx] for x in peak_data])
+    data_err = np.array([x["perr"][idx] for x in peak_data])
+
     label = a_sim_info.app
+    if label == 'CHI':
+        label = get_chi_label(a_sim_info)
 
+    # get last used colot
+    color = ax.get_lines()[-1].get_color() if get_last_col else None
+    
     # comparison to the non-linear prediction
     if use_z_eff:
         corr = [power.corr_func(use_z_eff['sim'], z=z, non_lin=True) for z in use_z_eff['z']]
-        data_nl = np.array([power.get_bao_peak(x)[idx] for x in corr])
+        data_nl = np.array([power.get_bao_peak(x)["popt"][idx] for x in corr])
+        
     else:
-        data_nl = []
-        for z in zs[cut]:
-            index = a_sim_info.data["corr_func"]["nl_peak"][2].index(z)
-            data_nl.append(a_sim_info.data["corr_func"]["nl_peak"][idx][index])
-        data_nl = np.array(data_nl)
+        peak_data_nl = [x for x in a_sim_info.data["corr_func"]["nl_peak"] if x["z"] != "init"]
+        data_nl = np.array([x["popt"][idx] for x in peak_data_nl])
 
     # plot simulation peak
-    ax.plot(a, data / data_nl, label=label + ' (%s)' % bao_type)
+    ax.set_yscale('symlog', linthreshy=0.01, linscaley=0.5)
+    ax.errorbar(a, data / data_nl - 1, yerr=data_err / data_nl, ls=ls, label=label + ' (%s)' % bao_type, color=color)
+    
 
 def plot_peak_loc(a_sim_info, ax, use_z_eff=False):
     """ plot peak location to the given axis """
-    plot_peak_uni(a_sim_info, ax, "loc", 0, use_z_eff=use_z_eff)
+    plot_peak_uni(a_sim_info, ax, "loc", 1, use_z_eff=use_z_eff, ls='-', get_last_col=False)
 
 def plot_peak_amp(a_sim_info, ax, use_z_eff=False):
     """ plot peak amplitude to the given axis """
-    plot_peak_uni(a_sim_info, ax, "amp", 1, use_z_eff=use_z_eff)
+    plot_peak_uni(a_sim_info, ax, "amp", 0, use_z_eff=use_z_eff, ls=':', get_last_col=True)
 
-def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=False):
+def plot_peak_width(a_sim_info, ax, use_z_eff=False):
+    """ plot peak amplitude to the given axis """
+    plot_peak_uni(a_sim_info, ax, "width", 2, use_z_eff=use_z_eff, ls='--', get_last_col=True)
+
+def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=False, plot_loc=True, plot_amp=True, plot_width=True):
     # output
     if out_dir == 'auto':
         if len(sim_infos) == 1:
@@ -581,20 +668,28 @@ def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=F
         else:
             out_dir = report_dir
     out_file = "corr_peak"
+    if plot_loc:
+        out_file += "_loc"
+    if plot_amp:
+        out_file += "_amp"
 
     # figure
     fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
+    ax.yaxis.grid(True)
 
     for i, a_sim_info in enumerate(sim_infos):
         # use effective redshift
         z_eff = use_z_eff[i] if use_z_eff else False
 
         # peak location
-        plot_peak_loc(a_sim_info, ax, use_z_eff=z_eff)
+        if plot_loc: plot_peak_loc(a_sim_info, ax, use_z_eff=z_eff)
 
         # peak amplitude
-        plot_peak_amp(a_sim_info, ax, use_z_eff=z_eff)
+        if plot_amp: plot_peak_amp(a_sim_info, ax, use_z_eff=z_eff)
+
+        # peak width
+        if plot_width: plot_peak_width(a_sim_info, ax, use_z_eff=z_eff)
 
     # labels
     plt.xlabel(r"$a$", fontsize=label_size)
