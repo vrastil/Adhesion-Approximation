@@ -76,11 +76,16 @@ class Timer{
 public:
    Timer() = default;
    ~Timer(){
-       t.stop();
-       BOOST_LOG_TRIVIAL(info) << "Time elapsed:" << t.format();
+       stop();
+   }
+   void stop(){
+       if (!_t.is_stopped()){
+            _t.stop();
+            BOOST_LOG_TRIVIAL(info) << "Time elapsed:" << _t.format();
+       }
    }
 private:
-    boost::timer::cpu_timer t;
+    boost::timer::cpu_timer _t;
 };
 
 template<class T>
@@ -98,6 +103,9 @@ void init_and_run_app(Sim_Param& sim)
     
     // run the simulation
     APP.run_simulation();
+
+    // stop timer manually so it is in the log file
+    t.stop();
 }
 
 }

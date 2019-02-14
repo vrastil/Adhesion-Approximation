@@ -139,10 +139,7 @@ public:
         track(4, sim.box_opt.par_num_1d),
         a(sim.integ_opt.b_in), a_out(sim.integ_opt.b_out), da(sim.integ_opt.db),
         is_init_pwr_spec_0(false), is_init_vel_pwr_spec_0(false)
-    {
-        // print simulation name
-        print_sim_name();
-    }
+    {}
 
     // ALLOCATE MEMORY
     uint64_t alloc_mesh_vec(App_Var<T>& APP)
@@ -231,6 +228,13 @@ public:
 
     // PUBLIC PRINTING
     const std::string app_str, app_long, z_suffix_const, out_dir_app;
+
+    void print_sim_name() const
+    {
+        std::string app_long_upper(app_long);
+        std::transform(app_long_upper.begin(), app_long_upper.end(), app_long_upper.begin(), ::toupper);
+        BOOST_LOG_TRIVIAL(info) << "Starting: " << app_long_upper;
+    }
 
     void print_end()
     {
@@ -334,13 +338,6 @@ private:
     unsigned int print_every, step;
     Tracking track;
     Interp_obj pwr_spec_input;
-
-    void print_sim_name() const
-    {
-        std::string app_long_upper(app_long);
-        std::transform(app_long_upper.begin(), app_long_upper.end(), app_long_upper.begin(), ::toupper);
-        BOOST_LOG_TRIVIAL(info) << "Starting: " << app_long_upper;
-    }
 
     bool printing() const
     {
@@ -477,6 +474,9 @@ App_Var<T>::~App_Var()
 template <class T> 
 void App_Var<T>::run_simulation()
 {
+    // print simulation name
+    m_impl->print_sim_name();
+
     // print memory usage
     print_mem(memory_alloc);
 
