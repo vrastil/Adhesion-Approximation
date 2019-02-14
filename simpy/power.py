@@ -296,6 +296,10 @@ def get_bao_peak(corr, r_low=80, r_high=120):
     perr, pcor = get_perr_pcor(pcov)
     return {"popt" : popt, "pcov" : pcov, 'perr' : perr, 'pcor' : pcor}
 
+def get_truncation(k, cosmo_par):
+    k2_G = cosmo_par["smoothing_k"]
+    return np.exp(-k*k/k2_G)
+
 def growth_factor(a, cosmo):
     """ return growth factor D at scale factor a, accepts ndarray """
     a = np.array(a)

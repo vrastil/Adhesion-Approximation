@@ -259,7 +259,7 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, err=False, out_dir='aut
 
 
 def plot_chi_fp_map(data_array, zs, chi_info, out_dir='auto', save=True, show=False, shading='flat',
-                    show_nyquist=True, vmin=1, vmax=2):
+                    max_nyquist=True, cut_low=False, vmin=1, vmax=3.0):
     #
     fig = plt.figure(figsize=(8, 8))
     gs = gridspec.GridSpec(1, 15, wspace=0.5)
@@ -272,7 +272,7 @@ def plot_chi_fp_map(data_array, zs, chi_info, out_dir='auto', save=True, show=Fa
     # non-linear scale
     # k_nl = power.chi_psi_k_a(a_z, chi_info.sim.cosmo, chi_info.chi_opt)
     # chameleon mass
-    m_chi = np.sqrt(np.sqrt(power.chi_mass_sq(a_z, chi_info.sim.cosmo, chi_info.chi_opt)))
+    m_chi = np.sqrt(power.chi_mass_sq(a_z, chi_info.sim.cosmo, chi_info.chi_opt))
 
     # hack around pcolormesh plotting edges
     if shading == 'flat':
@@ -284,28 +284,30 @@ def plot_chi_fp_map(data_array, zs, chi_info, out_dir='auto', save=True, show=Fa
     
     k = data_array[0][0]
     supp = data_array[:, 1, :] # extract Pk, shape = (zs, k)
-    linthresh = 1.3
-    linscale = 2.0
 
+    linthresh = 1.05
+    linscale = 10.0
+
+    # cut
+    idx_low = np.where(supp > 1.25)[0][-1] if cut_low else None
+    idx_up = (np.abs(k - chi_info.k_nyquist["particle"])).argmin() if max_nyquist else None
+    k = k[idx_low:idx_up]
+    supp = supp[:, idx_low:idx_up]
+
+    if not max_nyquist:
+        add_nyquist_info(ax, chi_info)
+            
     if vmin < 0:
         ticks = [vmin, -linthresh, 0, linthresh, vmax]
     else:
         ticks = [vmin, linthresh, vmax]
     labels = [str(x) for x in ticks]
-    labels[-1] = '> %i' % ticks[-1]
+    labels[-1] = '> %.1f' % ticks[-1]
 
     im = ax.pcolormesh(k, a, supp, cmap='Reds', shading=shading,
         norm=SymLogNorm(linthresh=linthresh, linscale=linscale, vmin=vmin, vmax=vmax))
     cbar = fig.colorbar(im, cax=cbar_ax, ticks=ticks)
     cbar.ax.set_yticklabels(labels)
-
-    if show_nyquist and chi_info.k_nyquist is not None:
-        ls = [':', '-.', '--']
-        ls *= (len(chi_info.k_nyquist) - 1) / 3 + 1
-        ls = iter(ls)
-        val_set = set(chi_info.k_nyquist.itervalues())
-        for val in val_set:
-            ax.axvline(val, ls=next(ls), c='k')
 
     ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
     ax.set_ylabel(r"$a(t)$", fontsize=label_size)
@@ -326,6 +328,11 @@ def plot_chi_fp_map(data_array, zs, chi_info, out_dir='auto', save=True, show=Fa
         out_dir = report_dir
     bo = chi_info.box_opt
     out_file = 'chi_pwr_diff_map_fp_%im_%ip_%iM_%ib' % (bo["mesh_num"], bo["Ng"], bo["mesh_num_pwr"], bo["box_size"])
+
+    if chi_info.chi_opt["linear"]:
+        out_file += "_lin"
+    else:
+        out_file += "_nl"
     close_fig(out_dir + out_file, fig, save=save, show=show)
 
 def plot_chi_fp_z(data_z, a_sim_info, labels, out_dir='auto', suptitle='auto', save=True, show=False, use_z_eff=False, max_nyquist=True):
@@ -353,8 +360,15 @@ def plot_chi_fp_z(data_z, a_sim_info, labels, out_dir='auto', suptitle='auto', s
             # std = std[0:idx]
 
         ymax = max(ymax, np.max(Pk))
+        if "(lin)" in label:
+            color = ax.get_lines()[-1].get_color()
+            ls = ":"
+        else:
+            color = None
+            ls = "-"
+
         # ax.errorbar(k, Pk, fmt='o', yerr=std, ms=3, label=label)
-        ax.plot(k, Pk, 'o-', ms=3, label=label)
+        ax.plot(k, Pk, 'o', ls=ls, c=color, ms=3, label=label)
 
     if not max_nyquist:
         add_nyquist_info(ax, a_sim_info)
@@ -373,6 +387,24 @@ def plot_chi_fp_z(data_z, a_sim_info, labels, out_dir='auto', suptitle='auto', s
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 
+def plot_chi_fp_res_ax(ax, data_chi, si, ymax):
+    k = data_chi[0]
+    Pk = data_chi[1]
+    # std = data_chi[2]
+    ymax = max(ymax, np.max(Pk))
+    label = r"$k_{nq} = %.1e$" % si.k_nyquist["potential"]
+    if si.chi_opt["linear"]:
+        label += " (lin)"
+        color = ax.get_lines()[-1].get_color()
+        ls = ":"
+    else:
+        label += " (nl)"
+        color = None
+        ls = "-"
+    # ax.errorbar(k, Pk, fmt='o', yerr=std, ms=3, label=label)
+    ax.plot(k, Pk, 'o', ls=ls, ms=3, label=label, c=color)
+    return ymax
+
 def plot_chi_fp_res(data_all, sim_infos, out_dir='auto', suptitle='auto', save=True, show=False):
     if out_dir == 'auto':
         out_dir = report_dir
@@ -388,20 +420,15 @@ def plot_chi_fp_res(data_all, sim_infos, out_dir='auto', suptitle='auto', save=T
 
     # go through all groups FP-CHI with the same resolution
     for data_chi_gr, si_gr in izip(data_all, sim_infos):
-        # go through all chi data, i.e. linear and non-linear
-        for data_chi, si in izip(data_chi_gr, si_gr):
-            k = data_chi[0]
-            Pk = data_chi[1]
-            std = data_chi[2]
-            ymax = max(ymax, np.max(Pk))
-            label = r"$k_{nq} = %.1e$" % si.k_nyquist["potential"]
-            label += " (lin)" if si.chi_opt["linear"] else " (nl)"
-            # ax.errorbar(k, Pk, fmt='o', yerr=std, ms=3, label=label)
-            ax.plot(k, Pk, 'o-', ms=3, label=label)
+        # go through all chi data, i.e. linear and non-linear, plot first non-linear
+        order = [1, 0] if si_gr[0].chi_opt["linear"] else [0, 1]
+
+        for idx in order:
+            ymax = plot_chi_fp_res_ax(ax, data_chi_gr[idx], si_gr[idx], ymax)
 
         # plot appropriate nyquist frequency
-        color = ax.get_lines()[-2].get_color()
-        ax.axvline(x=si.k_nyquist["potential"], ls='--', c=color)
+        color = ax.get_lines()[-1].get_color()
+        ax.axvline(x=si_gr[0].k_nyquist["potential"], ls='--', c=color)
 
     #add_nyquist_info(ax, a_sim_info)
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
@@ -631,7 +658,7 @@ def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False, ls=None, get_l
     if label == 'CHI':
         label = get_chi_label(a_sim_info)
 
-    # get last used colot
+    # get last used color
     color = ax.get_lines()[-1].get_color() if get_last_col else None
     
     # comparison to the non-linear prediction
@@ -648,17 +675,17 @@ def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False, ls=None, get_l
     ax.errorbar(a, data / data_nl - 1, yerr=data_err / data_nl, ls=ls, label=label + ' (%s)' % bao_type, color=color)
     
 
-def plot_peak_loc(a_sim_info, ax, use_z_eff=False):
+def plot_peak_loc(a_sim_info, ax, use_z_eff=False, get_last_col=False):
     """ plot peak location to the given axis """
-    plot_peak_uni(a_sim_info, ax, "loc", 1, use_z_eff=use_z_eff, ls='-', get_last_col=False)
+    plot_peak_uni(a_sim_info, ax, "loc", 1, use_z_eff=use_z_eff, ls='-', get_last_col=get_last_col)
 
-def plot_peak_amp(a_sim_info, ax, use_z_eff=False):
+def plot_peak_amp(a_sim_info, ax, use_z_eff=False, get_last_col=False):
     """ plot peak amplitude to the given axis """
-    plot_peak_uni(a_sim_info, ax, "amp", 0, use_z_eff=use_z_eff, ls=':', get_last_col=True)
+    plot_peak_uni(a_sim_info, ax, "amp", 0, use_z_eff=use_z_eff, ls=':', get_last_col=get_last_col)
 
-def plot_peak_width(a_sim_info, ax, use_z_eff=False):
+def plot_peak_width(a_sim_info, ax, use_z_eff=False, get_last_col=False):
     """ plot peak amplitude to the given axis """
-    plot_peak_uni(a_sim_info, ax, "width", 2, use_z_eff=use_z_eff, ls='--', get_last_col=True)
+    plot_peak_uni(a_sim_info, ax, "width", 2, use_z_eff=use_z_eff, ls='--', get_last_col=get_last_col)
 
 def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=False, plot_loc=True, plot_amp=True, plot_width=True):
     # output
@@ -672,6 +699,8 @@ def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=F
         out_file += "_loc"
     if plot_amp:
         out_file += "_amp"
+    if plot_width:
+        out_file += "_width"
 
     # figure
     fig = plt.figure(figsize=fig_size)
@@ -729,7 +758,7 @@ def plot_eff_time_ax(a_sim_info, ax, a_eff_type="Pk"):
     ax.plot(a_spl, spl(a_spl)/D_eff_spl, '--', color=color)
 
 
-def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=False, use_z_eff=False):
+def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=False, use_z_eff=False, verbose=True):
     # plot everything
     if a_eff_type == 'all':
         plot_eff_time(stack_infos, out_dir=out_dir, a_eff_type="sigma_R", save=save, show=show, use_z_eff=use_z_eff)
@@ -748,7 +777,8 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=
     fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
     
-    ut.print_info("Effective time: '%s'" % a_eff_type)
+    if verbose:
+        ut.print_info("Effective time: '%s'" % a_eff_type)
     for stack_info in stack_infos:
         plot_eff_time_ax(stack_info, ax, a_eff_type)
     
@@ -960,6 +990,10 @@ def plot_pwr_spec_diff_from_data_mlt(data_lists, zs, sim_infos, out_dir='auto', 
         ax = plt.subplot(gs_cur)
         plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=show_scales, pk_type=pk_type)
     
+    # adjust in case of overflow
+    ymin, ymax = ax.get_ylim()
+    if ymin < -1: ymin = -1
+    ax.set_ylim(ymin, ymax)
 
     fig_suptitle(fig, suptitle)
 
@@ -996,6 +1030,10 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', show
     plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=show_scales, pk_type=pk_type,
                                     show_nyquist=show_nyquist, max_nyquist=max_nyquist)
     
+    # adjust in case of overflow
+    ymin, ymax = ax.get_ylim()
+    if ymin < -1: ymin = -1
+    ax.set_ylim(ymin, ymax)
 
     fig_suptitle(fig, suptitle)
     ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)

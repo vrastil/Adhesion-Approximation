@@ -48,7 +48,7 @@ def sort_chi_files(files, zs):
 ###################################
 
 def has_app_lin_pwr(app):
-    return True if app == 'TZA' or app == 'TZA' else False
+    return True if app == 'ZA' or app == 'TZA' else False
 
 def load_k_supp(files, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens'):
     """
@@ -64,6 +64,8 @@ def load_k_supp(files, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens'):
     for i, j in enumerate([0, 3, 6]):
         for ii, a_file in enumerate(files):
             data = np.transpose(np.loadtxt(a_file))
+            if a_sim_info is not None and a_sim_info.app == "TZA":
+                correct_tza_single(a_sim_info, data)
             k = data[0]
             P_diff = data[1]
             if pk_type == 'chi':
@@ -265,6 +267,15 @@ def get_supp_map(a_sim_info, key='input', files=None):
             'zs' : zs,
             'supp' : check_data_consistency_diff(data_array)
         }
+def correct_tza_single(a_sim_info, data):
+    k, P_k = data[0], data[1]
+    truncation = pwr.get_truncation(k, a_sim_info.cosmo)
+    data[1] = (P_k + 1) * truncation - 1
+
+def correct_tza(a_sim_info, data_array):
+    if a_sim_info.app == 'TZA':
+        for data in data_array:
+            correct_tza_single(a_sim_info, data)
 
 def get_plot_supp_map(files, zs, a_sim_info, pk_type='dens', **kwargs):
     data_array = check_data_consistency_diff([np.transpose(np.loadtxt(a_file)) for a_file in files])
@@ -272,6 +283,7 @@ def get_plot_supp_map(files, zs, a_sim_info, pk_type='dens', **kwargs):
 
 def load_plot_pwr_spec_diff(files, zs, a_sim_info, **kwargs):
     data_array = check_data_consistency_diff([np.transpose(np.loadtxt(a_file)) for a_file in files])
+    correct_tza(a_sim_info, data_array)
     plot.plot_pwr_spec_diff_from_data(data_array, zs, a_sim_info, **kwargs)
 
 def split_particle_files(files, zs):
@@ -811,7 +823,7 @@ def stack_group(rerun=None, skip=None, verbose=True, return_stack=False, **kwarg
         ("chi_pwr_spec_supp", '*chi*.dat*', get_plot_supp, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
         ("chi_pwr_spec_supp_map", '*chi*.dat*', get_plot_supp_map, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
         # Effective time
-        ("eff_time", '*.dat', load_plot_a_eff, {'subdir' : 'pwr_spec/'})
+        ("eff_time", '*.dat', load_plot_a_eff, {'subdir' : 'pwr_spec/', 'verbose' : verbose})
     ]
 
     # perform all steps, skip step if Exception occurs
@@ -1022,7 +1034,8 @@ def compare_chi_fp(in_dir="/home/michal/Documents/GIT/FastSim/output/", out_dir=
         
         for lab, data_z in plot.iter_data(zs, [data_g]): # per redshift
             # sort from lowest screening potential and xhameleon exponent
-            sim_infos, data_z = zip(*sorted(sorted(zip(group["CHI"], data_z),
+            sim_infos, data_z = zip(*sorted(sorted(sorted(zip(group["CHI"], data_z),
+                                key=lambda x : x[0].chi_opt['linear']),
                                 key=lambda x : x[0].chi_opt['n']),
                                 key=lambda x : x[0].chi_opt['phi'])
                             )
@@ -1044,15 +1057,21 @@ def compare_chi_fp_map(chi_info, fp_info, in_dir="/home/michal/Documents/GIT/Fas
     group = { "FP" : fp_info, "CHI" : [chi_info]}
     load_chi_fp_files(group, 'pwr_spec', '*par*')
     data = get_data_fp_chi_ratio(group)[0] # we have only one set of chi-parameters
-    zs = group["FP_zs"]
 
-    # get rid if 'init' redshift
-    if zs[0] == 'init':
-        zs = zs[1:]
+    # get effective redshift
+    load_a_eff(fp_info, use_z_eff='Pk')
+    zs_eff = fp_info.data["eff_time"]['Pk']["z_eff"]
+
+    # get rid if 'init' redshift and different ones
+    if group["FP_zs"][0] == 'init':
         data = np.array(data[1:])
 
+    # check lengths
+    if len(zs_eff) != len(data):
+        raise IndexError("Files do not have the same time slices.")
+
     # plot map
-    plot.plot_chi_fp_map(data, zs, chi_info, out_dir=out_dir, save=True, show=True)
+    plot.plot_chi_fp_map(data, zs_eff, chi_info, out_dir=out_dir, save=True, show=True)
 
 
 def compare_chi_res(in_dir, out_dir, n=0.5, phi=1e-5, z=0):
@@ -1065,7 +1084,7 @@ def compare_chi_res(in_dir, out_dir, n=0.5, phi=1e-5, z=0):
     for group in groups:
         for si in group["CHI"]:
             phi.add(si.chi_opt["phi"])
-            n.add([si.chi_opt["n"])
+            n.add(si.chi_opt["n"])
     if len(phi) != len(n) != 1:
             raise IndexError("CHI files do not have the same chameleon parameters.")
     phi = phi.pop()
@@ -1159,7 +1178,7 @@ def corr_func_comp_plot(files=None, sim_infos=None, outdir=report_dir, z=1., bao
     # plot simple correlation function and ratio
     plot.plot_corr_func(data, [zs], sim_info, out_dir=outdir, save=True, show=True, extra_data=extra_data[:-1], peak_loc=peak_loc, use_z_eff=use_z_eff)
 
-def corr_func_comp_plot_peak(files=None, sim_infos=None, outdir=report_dir, plot_loc_amp=True):
+def corr_func_comp_plot_peak(files=None, sim_infos=None, outdir=report_dir, plot_all=True):
     # load struct.SimInfo and get correlation data
     if sim_infos is None:
         sim_infos = [load_get_corr(a_file)[0] for a_file in files]
@@ -1185,11 +1204,12 @@ def corr_func_comp_plot_peak(files=None, sim_infos=None, outdir=report_dir, plot
         })
 
     # plot bao peak and location
-    if plot_loc_amp:
+    if plot_all:
         plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff)
     else:
-        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=False)
-        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_amp=False)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=True, plot_amp=False, plot_width=False)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=False, plot_amp=True, plot_width=False)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=False, plot_amp=False, plot_width=True)
 
 
 def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3):
@@ -1309,9 +1329,10 @@ def get_plot_mlt_pk_diff_broad(stack_infos, plot_diff=True, out_dir='auto'):
         for a_sim_info in group:
             get_supp_map(a_sim_info)
         data_array, zs = get_check_pk_diff_broad(group, cutoff_high=16)
+        correct_tza(group[0], data_array)
         
         # plot
-        print(group[0].app)
+        ut.print_info(group[0].app)
         plot.plot_pwr_spec_diff_map_from_data(
             data_array, zs, a_sim_info, out_dir=out_dir, add_app=True, 
             show_nyquist=False, save=True, show=True, shading='gouraud')
