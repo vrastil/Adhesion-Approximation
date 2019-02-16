@@ -2,6 +2,7 @@
 build/
 output/
 report/
+src/main/include/config.h
 
 # documentation output
 doc/html

@@ -97,12 +97,6 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
         ("pair", po::value<bool>(&sim.run_opt.pair)->default_value(false), "if true run two simulations with opposite phases of random field")
         ("mlt_runs", po::value<size_t>(&sim.run_opt.mlt_runs)->default_value(1), "how many runs should be simulated (only if seed = 0)")
         ;
-    
-    po::options_description config_other("Approximation`s options");
-    config_other.add_options()
-        ("viscosity,v", po::value<FTYPE_t>(&sim.app_opt.nu)->default_value(1., "1.0"), "'viscozity' for adhesion approximation in units of pixel^2")
-        ("cut_radius,r", po::value<FTYPE_t>(&sim.app_opt.rs)->default_value(2.7, "2.7"), "short-range force cutoff radius in units of mesh cells")
-        ;
 
     po::options_description mod_grav("Modified Gravities");
     mod_grav.add_options()
@@ -132,9 +126,9 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
         ;
 
 
-    po::options_description cmdline_options("\n" PROJECT);//< store all normal parameters
+    po::options_description cmdline_options("\n" PROJECT " v" PROJECT_VERSION);//< store all normal parameters
     cmdline_options.add(generic).add(config_mesh).add(config_power).add(config_integ);
-    cmdline_options.add(config_output).add(config_app).add(config_run).add(config_other);
+    cmdline_options.add(config_output).add(config_app).add(config_run);
     cmdline_options.add(mod_grav);
 
     config_test.add(cmdline_options);//< union of test parameters and normaln ones
@@ -147,13 +141,11 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
         std::cout << std::setprecision(3) << cmdline_options;
         no_run = true;
     }
-
-    if (vm.count("version")) {
-        std::cout << PROJECT " v" PROJECT_VERSION;
+    else if (vm.count("version")) {
+        std::cout << PROJECT " v" PROJECT_VERSION "\n";
         no_run = true;
     }
-    
-    if (vm.count("config")) {
+    else if (vm.count("config")) {
         std::ifstream ifs(config_file.c_str());
         if (ifs){
         BOOST_LOG_TRIVIAL(debug) << "Using configuration options defined in file " << config_file << " (given command line options have higher priority).";

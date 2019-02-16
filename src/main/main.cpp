@@ -78,10 +78,10 @@ public:
    ~Timer(){
        stop();
    }
-   void stop(){
+   void stop(bool print = true){
        if (!_t.is_stopped()){
             _t.stop();
-            BOOST_LOG_TRIVIAL(info) << "Time elapsed:" << _t.format();
+            if (print) BOOST_LOG_TRIVIAL(info) << "Time elapsed:" << _t.format();
        }
    }
 private:
@@ -129,7 +129,7 @@ int main(int argc, char* argv[]){
         - compute power spectrum normalization
     */
     Sim_Param sim(argc, argv);
-    if sim.is_ready()
+    if (sim.is_ready())
     {
         sim.print_info();
         do{
@@ -159,7 +159,7 @@ int main(int argc, char* argv[]){
     }
     else
     {
-        t.stop();
+        t.stop(false);
     }
     return 0;
 }

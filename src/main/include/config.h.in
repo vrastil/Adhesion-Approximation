@@ -1,4 +1,4 @@
 #pragma once
 
-#define PROJECT "@PROJECT@"
-#define PROJECT_VERSION "@PROJECT_VERSION@"
+#define PROJECT "${PROJECT_NAME}"
+#define PROJECT_VERSION "${PROJECT_VERSION}"
