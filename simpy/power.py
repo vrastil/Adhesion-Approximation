@@ -13,6 +13,120 @@ import numpy as np
 from scipy.optimize import brentq, curve_fit, minimize_scalar
 from . import fastsim as fs
 
+class Non_Linear_Cosmo(object):
+    # private variables and methods
+    _cosmo_emu = None
+    _cosmo_halofit = None
+    _sim_emu = None
+    _sim_halofit = None
+
+    @staticmethod
+    def _init_cosmo(cosmo):
+        if Non_Linear_Cosmo._cosmo_emu is None:
+            Non_Linear_Cosmo._cosmo_emu = Non_Linear_Cosmo._copy_cosmo(cosmo, fs.ccl_emu, transfer_function=fs.ccl_emulator)
+
+        if Non_Linear_Cosmo._cosmo_halofit is None:
+            Non_Linear_Cosmo._cosmo_halofit = Non_Linear_Cosmo._copy_cosmo(cosmo, fs.ccl_halofit)
+
+    @staticmethod
+    def _init_sim(sim):
+        Non_Linear_Cosmo._init_cosmo(sim.cosmo)
+
+        if Non_Linear_Cosmo._sim_emu is None:
+            Non_Linear_Cosmo._sim_emu = Non_Linear_Cosmo._copy_sim(sim, Non_Linear_Cosmo._cosmo_emu)
+
+        if Non_Linear_Cosmo._sim_halofit is None:
+            Non_Linear_Cosmo._sim_halofit = Non_Linear_Cosmo._copy_sim(sim, Non_Linear_Cosmo._cosmo_halofit)
+
+    @staticmethod
+    def _copy_cosmo(cosmo_from, matter_power_spectrum_method, transfer_function=None):
+        # create empty Cosmo_Param
+        cosmo_to = fs.Cosmo_Param()
+
+        # copy basic parameterz
+        cosmo_to.sigma8 = cosmo_from.sigma8
+        cosmo_to.ns = cosmo_from.ns
+        cosmo_to.k2_G = cosmo_from.k2_G
+        cosmo_to.Omega_m = cosmo_from.Omega_m
+        cosmo_to.Omega_b = cosmo_from.Omega_b
+        cosmo_to.H0 = cosmo_from.H0
+        cosmo_to.truncated_pk = cosmo_from.truncated_pk
+
+        # copy ccl methods
+        cosmo_to.config.baryons_power_spectrum_method = cosmo_from.config.baryons_power_spectrum_method
+        cosmo_to.config.mass_function_method = cosmo_from.config.mass_function_method
+        # -> transfer function and matter power spectrum is different
+        if transfer_function is None:
+            cosmo_to.config.transfer_function_method = cosmo_from.config.transfer_function_method
+        else:
+            cosmo_to.config.transfer_function_method = transfer_function
+
+        cosmo_to.config.matter_power_spectrum_method = matter_power_spectrum_method
+
+        # initialize Cosmo_Param
+        cosmo_to.init()
+
+        return cosmo_to
+
+    @staticmethod
+    def _copy_sim(sim_from, cosmo):
+        sim_to = fs.Sim_Param()
+        sim_to.cosmo = cosmo
+        sim_to.box_opt = sim_from.box_opt
+        sim_to.integ_opt = sim_from.integ_opt
+        sim_to.out_opt = sim_from.out_opt
+        sim_to.comp_app = sim_from.comp_app
+        sim_to.app_opt = sim_from.app_opt
+        sim_to.run_opt = sim_from.run_opt
+        sim_to.other_par = sim_from.other_par
+        sim_to.chi_opt = sim_from.chi_opt
+        sim_to.test_opt = sim_from.test_opt
+        return sim_to
+
+    @staticmethod
+    def non_lin_pow_spec(a, k, cosmo):
+        """ return ndarray of nonlinear power spectrum """
+        # initialize emulator cosmology (if not done already)
+        Non_Linear_Cosmo._init_cosmo(cosmo)
+
+        # for z < 2 use emulator, halofit otherwise
+        if a < 0.3:
+            cosmo_ = Non_Linear_Cosmo._cosmo_halofit
+        else:
+            cosmo_ = Non_Linear_Cosmo._cosmo_emu
+
+        # call non-linear power spectrum
+        k = np.array(k)
+        if k.shape:
+            return np.array([fs.non_lin_pow_spec(a, k_, cosmo_)  for k_ in k])
+        else:
+            return fs.non_lin_pow_spec(a, np.asscalar(k), cosmo_)
+
+    @staticmethod
+    def gen_func(sim, a, data, gen_func):
+        # initialize emulator cosmology (if not done already)
+        Non_Linear_Cosmo._init_sim(sim)
+
+        # for z < 2 use emulator, halofit otherwise
+        if a < 1./3.:
+            sim_ = Non_Linear_Cosmo._sim_halofit
+        else:
+            sim_ = Non_Linear_Cosmo._sim_emu
+
+        # call non-linear gen_func
+        gen_func(sim_, a, data)
+
+    @staticmethod
+    def non_lin_corr_func(sim, a, data):
+        """ return non-linear correlation function """
+        Non_Linear_Cosmo.gen_func(sim, a, data, fs.gen_corr_func_binned_gsl_qawf_nl)
+
+    @staticmethod
+    def non_lin_sigma_func(sim, a, data):
+        """ return non-linear amplitude of density fluctuations """
+        Non_Linear_Cosmo.gen_func(sim, a, data, fs.gen_sigma_func_binned_gsl_qawf_nl)
+
+
 def get_a_init_from_zs(zs):
     """ from list of redshifts returns initial scale factor, i.e. value after 'init' """
     for z in zs:
@@ -74,11 +188,8 @@ def get_Data_vec(data):
 
 def non_lin_pow_spec(a, k, cosmo):
     """ return ndarray of nonlinear power spectrum """
-    k = np.array(k)
-    if k.shape:
-        return np.array([fs.non_lin_pow_spec(a, k_, cosmo)  for k_ in k])
-    else:
-        return fs.non_lin_pow_spec(a, np.asscalar(k), cosmo)
+    # special wrapper -- use emulator power spectrum regardless of the one in cosmo
+    return Non_Linear_Cosmo.non_lin_pow_spec(a, k, cosmo)
 
 def lin_pow_spec(a, k, cosmo):
     """ return ndarray of linear power spectrum """
@@ -203,7 +314,7 @@ def corr_func(sim, Pk=None, z=None, non_lin=False):
     if given redshift, computes linear or non-linear (emulator) correlation function  """
     fc_par = fs.gen_corr_func_binned_gsl_qawf
     fce_lin = fs.gen_corr_func_binned_gsl_qawf_lin
-    fc_nl = fs.gen_corr_func_binned_gsl_qawf_nl
+    fc_nl = Non_Linear_Cosmo.non_lin_corr_func
     return gen_func(sim, fc_par, fce_lin, fc_nl, Pk=Pk, z=z, non_lin=non_lin)
 
 def sigma_R(sim, Pk=None, z=None, non_lin=False):
@@ -212,7 +323,7 @@ def sigma_R(sim, Pk=None, z=None, non_lin=False):
     if given redshift, computes linear or non-linear (emulator) amplitude of density fluctuations  """
     fc_par = fs.gen_sigma_binned_gsl_qawf
     fce_lin = fs.gen_sigma_func_binned_gsl_qawf_lin
-    fc_nl = fs.gen_sigma_func_binned_gsl_qawf_nl
+    fc_nl = Non_Linear_Cosmo.non_lin_sigma_func
     return gen_func(sim, fc_par, fce_lin, fc_nl, Pk=Pk, z=z, non_lin=non_lin)
 
 def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par, a=None, fit_lin=False):

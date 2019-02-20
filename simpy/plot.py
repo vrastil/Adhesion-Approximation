@@ -76,7 +76,7 @@ def close_fig(filename, fig, save=True, show=False, dpi=200, use_z_eff=False, fo
     if save:
         if format == 'all':
             fig.savefig(filename + ".png", dpi=dpi, format="png")
-            fig.savefig(filename + ".eps", dpi=dpi, format="eps")
+            #fig.savefig(filename + ".eps", dpi=dpi, format="eps")
         else:
             fig.savefig(filename + ".%s" % format, dpi=dpi, format=format)
     if show:
@@ -178,8 +178,8 @@ def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False,
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
-def plot_pwr_spec_comparison(data, zs, labels, cosmo,
-                  out_dir='auto', save=True, show=False, use_z_eff=False):
+def plot_pwr_spec_comparison(Pk_list_extrap, data, zs, labels, cosmo,
+                  out_dir='auto', save=True, show=False, use_z_eff=False, scale_to_lin=True):
     """" Plot power spectrum -- points and extrapolated values,
     show 'true' linear Pk at the initial and final redshift """
     if out_dir == 'auto':
@@ -192,26 +192,88 @@ def plot_pwr_spec_comparison(data, zs, labels, cosmo,
     ax.set_yscale('log')
     ax.set_xscale('log')
 
-    for _, Pkk, lab in iter_data(zs, [data, labels]):
+    for _, Pkk, lab, Pk_extrap in iter_data(zs, [data, labels, Pk_list_extrap]):
         k, P_k = Pkk[0], Pkk[1]
-        ax.plot(k, P_k, 'o', ms=3, label=lab)
+
+        if scale_to_lin:
+            P_k_tmp = P_k / Pk_extrap.A_low
+        else:
+            P_k_tmp = Pk
+
+        ax.plot(k, P_k_tmp, 'o', ms=3, label=lab)   
         # show 1 standard deviation
         P_k_std = Pkk[2]
-        ax.fill_between(k, P_k - P_k_std, P_k + P_k_std,
+        ax.fill_between(k, P_k_tmp - P_k_std, P_k_tmp + P_k_std,
                         facecolor='darkgrey', alpha=0.5)
-        k = np.geomspace(k[0],k[-1])
 
     # plot non/linear power spectra
+    k = np.geomspace(k[0],k[-1])
     a_0 = 1./(1.+zs[-1])
-    
     P_0 = power.lin_pow_spec(a_0, k, cosmo)
     P_0_nl = power.non_lin_pow_spec(a_0, k, cosmo)
+
     ax.plot(k, P_0, '-', label=r"$\Lambda$CDM (lin)")
     ax.plot(k, P_0_nl, '-',  label=r"$\Lambda$CDM (nl)")
     
     fig_suptitle(fig, suptitle, y=0.95)
     ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
     ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=label_size)
+
+    # LEGEND manipulation
+    legend_manipulation(ax, "", loc='best')
+    plt.subplots_adjust(**subplt_adj_sym)
+
+    # close & save figure
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
+
+def plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo,
+                  out_dir='auto', save=True, show=False, use_z_eff=False, scale_to_lin=True):
+    """" Plot power spectrum -- points and extrapolated values,
+    show 'true' linear Pk at the initial and final redshift """
+    if out_dir == 'auto':
+        out_dir = report_dir
+    out_file = 'pwr_spec_ratio_nl'
+    suptitle = "Power spectrum"
+
+    fig = plt.figure(figsize=fig_size)
+    ax = plt.gca()
+    # ax.set_yscale('symlog', linthreshy=0.1, linscaley=1)
+    # ax.set_yscale('log')
+    ax.set_xscale('log')
+
+    # get non-linear power spectra
+    k = data[0][0]
+    a_0 = 1./(1.+zs[-1])
+    P_0 = power.lin_pow_spec(a_0, k, cosmo)
+    P_0_nl = power.non_lin_pow_spec(a_0, k, cosmo)
+
+    for _, Pkk, lab, Pk_extrap in iter_data(zs, [data, labels, Pk_list_extrap]):
+        k, P_k = Pkk[0], Pkk[1]
+
+        if scale_to_lin:
+            P_k_tmp = P_k / Pk_extrap.A_low
+        else:
+            P_k_tmp = Pk
+
+
+        P_k_std = Pkk[2]
+        ax.errorbar(k, P_k_tmp / P_0_nl, yerr=P_k_std/P_0_nl, fmt='o', ms=3, label=lab)
+        # ax.plot(k, P_k_tmp / P_0_nl - 1, 'o', ms=3, label=lab)
+
+    # plot linear power spectra
+    k = np.geomspace(k[0],k[-1], num=200)
+    a_0 = 1./(1.+zs[-1])
+    P_0 = power.lin_pow_spec(a_0, k, cosmo)
+    P_0_nl = power.non_lin_pow_spec(a_0, k, cosmo)
+
+    ax.plot(k, P_0 / P_0_nl, '-', label=r"$\Lambda$CDM (lin)")
+    
+    fig_suptitle(fig, suptitle, y=0.95)
+    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
+    ax.set_ylabel(r"$\frac{P(k)}{P_{nl}(k)}$", fontsize=label_size)
+
+    #ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax.yaxis.grid(True)
 
     # LEGEND manipulation
     legend_manipulation(ax, "", loc='best')
@@ -743,19 +805,21 @@ def plot_eff_time_ax(a_sim_info, ax, a_eff_type="Pk"):
     a_err = a_sim_info.data["eff_time"][a_eff_type]['a_err']
     label = a_sim_info.app # +  '$: L = %i$ Mpc/h' % a_sim_info.box_opt["box_size"]
 
-
-    # spline
-    spl = UnivariateSpline(a, D_eff, s=1)
-    a_spl = np.linspace(a[0], a[-1], 100)
-    D_eff_spl = power.growth_factor(a_spl, a_sim_info.sim.cosmo)
-
     # plot
     if a_eff_type == "sigma_R" or a_eff_type == "Pk":
         ax.plot(a, D_eff_ratio, 'o-', label=label)
     elif a_eff_type == "Pk_nl":
         ax.errorbar(a, D_eff_ratio, 'o-', yerr=a_err, label=label)
     color = ax.get_lines()[-1].get_color()
-    ax.plot(a_spl, spl(a_spl)/D_eff_spl, '--', color=color)
+
+    # spline
+    try:
+        spl = UnivariateSpline(a, D_eff, s=1)
+        a_spl = np.linspace(a[0], a[-1], 100)
+        D_eff_spl = power.growth_factor(a_spl, a_sim_info.sim.cosmo)
+        ax.plot(a_spl, spl(a_spl)/D_eff_spl, '--', color=color)
+    except:
+        pass
 
 
 def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=False, use_z_eff=False, verbose=True):

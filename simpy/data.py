@@ -1212,7 +1212,7 @@ def corr_func_comp_plot_peak(files=None, sim_infos=None, outdir=report_dir, plot
         plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=False, plot_amp=False, plot_width=True)
 
 
-def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3):
+def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3, lim_kmax=None):
     data_list_new = [[] for _ in range(3)]
     
     # sort from lowest k
@@ -1223,6 +1223,8 @@ def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3):
     for data, a_sim_info in zip(data_list, sim_infos):
         k, Pk, Pk_std = data
         k_max = a_sim_info.k_nyquist["particle"] / cutoff_high
+        if lim_kmax is not None:
+            k_max = np.min((k_max, lim_kmax))
         idx = (k >= k_last) & (k < k_max)
         data_list_new[0] += k[idx].tolist()
         data_list_new[1] += Pk[idx].tolist()
@@ -1231,6 +1233,8 @@ def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3):
         
     # last data get up to k_nyquist
     k_nq = a_sim_info.k_nyquist["particle"]
+    if lim_kmax is not None:
+        k_nq = np.min((k_nq, lim_kmax))
     idx = (k >= k_last) & (k <= k_nq)
     data_list_new[0] =  np.array(data_list_new[0] + k[idx].tolist())
     data_list_new[1] =  np.array(data_list_new[1] + Pk[idx].tolist())
@@ -1249,7 +1253,7 @@ def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3):
     
     return np.array(data_list_new), extrap_pk
 
-def get_check_pk_broad(stack_infos, idx, data_key="pk", get_extrap_pk=True, cutoff_high=4.45):
+def get_check_pk_broad(stack_infos, idx, data_key="pk", get_extrap_pk=True, cutoff_high=4.48, lim_kmax=None):
     data_list = []
     zs = []
     for a_sim_info in stack_infos:
@@ -1276,7 +1280,7 @@ def get_check_pk_broad(stack_infos, idx, data_key="pk", get_extrap_pk=True, cuto
         raise IndexError("Different simulations.")
 
     # get data
-    data_list_new, extrap_pk = get_pk_broad_k(data_list, stack_infos, get_extrap_pk=get_extrap_pk, cutoff_high=cutoff_high)
+    data_list_new, extrap_pk = get_pk_broad_k(data_list, stack_infos, get_extrap_pk=get_extrap_pk, cutoff_high=cutoff_high, lim_kmax=lim_kmax)
     return data_list_new, extrap_pk
 
 def get_check_pk_diff_broad(stack_infos, cutoff_high=8):
@@ -1312,13 +1316,14 @@ def get_plot_mlt_pk_broad(stack_infos, out_dir='auto', z=0):
         # get idx of nearest redshift in zs
         zs_ = group[0].data["zs"]
         idx = find_nearest_idx(zs_, z)
-        data_list_new, extrap_pk = get_check_pk_broad(group, idx)
+        data_list_new, extrap_pk = get_check_pk_broad(group, idx, lim_kmax=2)
         zs.append(zs_[idx])
         Pk_list_extrap.append(extrap_pk["Pk_par"])
         data_all.append(data_list_new)
     
     # plot
-    plot.plot_pwr_spec_comparison(data_all, zs, groups.keys(), stack_infos[0].sim.cosmo, out_dir=out_dir, save=True, show=True)
+    plot.plot_pwr_spec_comparison(Pk_list_extrap, data_all, zs, groups.keys(), stack_infos[0].sim.cosmo, out_dir=out_dir, save=True, show=True)
+    plot.plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data_all, zs, groups.keys(), stack_infos[0].sim.cosmo, out_dir=out_dir, save=True, show=True)
 
 def get_plot_mlt_pk_diff_broad(stack_infos, plot_diff=True, out_dir='auto'):
     # sort according to app

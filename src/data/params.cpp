@@ -269,6 +269,7 @@ void Cosmo_Param::init()
     if(cosmo)
     {
         ccl_cosmology_free(cosmo);
+        cosmo = NULL;
     }
     /// - basic quantities
     h = H0/100;
