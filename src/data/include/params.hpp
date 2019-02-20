@@ -31,7 +31,7 @@ public:
     ccl_cosmology* cosmo;
 
     // COSMOLOGY (flat LCDM)
-    FTYPE_t A = 1, ns, k2_G, sigma8;
+    FTYPE_t ns, k2_G, sigma8;
     FTYPE_t Omega_m, Omega_b, H0, h;
     FTYPE_t Omega_c() const { return Omega_m - Omega_b; }
     FTYPE_t Omega_L() const { return 1 - Omega_m; }
@@ -192,6 +192,7 @@ class Sim_Param
 {
 public:
     // CONSTRUCTOR
+    Sim_Param(){}; //< from simpy and partial initialization
     Sim_Param(int ac, const char* const av[]); //< load from command line arguments
     Sim_Param(std::string file_name); //< load from sim_param.json file
 

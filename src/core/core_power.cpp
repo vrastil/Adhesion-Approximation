@@ -387,9 +387,9 @@ void gen_sigma_func_binned_gsl(const Sim_Param &sim, const P& P_k, Data_Vec<FTYP
     gen_fce_r_binned_gsl(x_min, x_max, lin_bin, P_k, sigma_binned, sigma_r);
 }
 
-constexpr double GSL_EPSABS = 1e-9; ///< absolute error
-constexpr size_t GSL_LIMIT = 4000; ///< max. number of subintervals for adaptive integration
-constexpr size_t GSL_N = 50; ///< max. number of bisections of integration interval (QAWO / QAWF)
+constexpr double GSL_EPSABS = 1e-6; ///< absolute error
+constexpr size_t GSL_LIMIT = 10000; ///< max. number of subintervals for adaptive integration
+constexpr size_t GSL_N = 100; ///< max. number of bisections of integration interval (QAWO / QAWF)
 
 } ///< end of anonymous namespace (private definitions)
 

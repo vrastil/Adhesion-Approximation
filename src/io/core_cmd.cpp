@@ -25,6 +25,7 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
     std::string config_file;
     bool no_run = false; // do not run approximations if '--help= or '--version' cmd option
     unsigned int trans_func_cmd, matter_pwr_cmd, baryons_pwr_cmd, mass_func_cmd;
+    FTYPE_t k2_G;
     // options ONLY on command line
     po::options_description generic("Generic options");
     generic.add_options()
@@ -86,7 +87,7 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
         ("mass_function", po::value<unsigned int>(&mass_func_cmd)->default_value(2), "mass function type")
         ("n_s,n", po::value<FTYPE_t>(&sim.cosmo.ns)->default_value(1.), "spectral index of the scale-free power spectrum")
         ("sigma8,s", po::value<FTYPE_t>(&sim.cosmo.sigma8)->default_value(1.), "normalization of the power spectrum at R = 8 Mpc/h")
-        ("smoothing_k,k", po::value<FTYPE_t>(&sim.cosmo.k2_G)->default_value(0.),
+        ("smoothing_k,k", po::value<FTYPE_t>(&k2_G)->default_value(0.),
                             "smoothing wavenumber of TZA in units of h/Mpc, set 0 for ZA")
         ;
 
@@ -164,5 +165,6 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
     sim.cosmo.config.matter_power_spectrum_method = static_cast<matter_power_spectrum_t>(matter_pwr_cmd);
     sim.cosmo.config.baryons_power_spectrum_method = static_cast<baryons_power_spectrum_t>(baryons_pwr_cmd);
     sim.cosmo.config.mass_function_method = static_cast<mass_function_t>(mass_func_cmd);
+    sim.cosmo.k2_G = k2_G*k2_G;
     sim.comp_app.TZA &= bool(sim.cosmo.k2_G);
 }

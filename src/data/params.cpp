@@ -4,6 +4,7 @@
  */
 
 #include <omp.h>
+#include "config.h"
 #include "params.hpp"
 #include "core_cmd.h"
 #include "core_out.h"
@@ -32,14 +33,16 @@ const std::map<std::string, transfer_function_t> transfer_function_method = {
 const std::map<std::string, matter_power_spectrum_t> matter_power_spectrum_method = {
     {"linear", ccl_linear},
     {"halofit", ccl_halofit},
-    {"halo_model", ccl_halo_model}
+    {"halo_model", ccl_halo_model},
+    {"emu", ccl_emu}
 };
 // convert to pyccl mass_function_types keys
 const std::map<std::string, mass_function_t> mass_function_method = {
     {"tinker", ccl_tinker},
     {"tinker10", ccl_tinker10},
     {"watson", ccl_watson},
-    {"angulo", ccl_angulo}
+    {"angulo", ccl_angulo},
+    {"shethtormen", ccl_shethtormen}
 };
 // convert to pyccl baryons_power_spectrum keys
 const std::map<std::string, baryons_power_spectrum_t> baryons_power_spectrum_method = {
@@ -67,7 +70,6 @@ T find_value(const std::map<T, U>& map, const U& value)
 void to_json(json& j, const Cosmo_Param& cosmo)
 {
     j = json{
-        {"A", cosmo.A},
         {"index", cosmo.ns},
         {"sigma8", cosmo.sigma8},
         {"smoothing_k", cosmo.k2_G},
@@ -85,7 +87,6 @@ void to_json(json& j, const Cosmo_Param& cosmo)
 
 void from_json(const json& j, Cosmo_Param& cosmo)
 {
-    cosmo.A = j.at("A").get<FTYPE_t>();
     cosmo.ns = j.at("index").get<FTYPE_t>();
     cosmo.sigma8 = j.at("sigma8").get<FTYPE_t>();
     cosmo.k2_G = j.at("smoothing_k").get<FTYPE_t>();
@@ -179,7 +180,8 @@ void to_json(json& j, const Run_Opt& run_opt)
 {
     j = json{
         {"num_thread", run_opt.nt},
-        {"seed", run_opt.seed}
+        {"seed", run_opt.seed},
+        {"version", PROJECT_VERSION}
     };
 }
 
@@ -263,8 +265,12 @@ Cosmo_Param::Cosmo_Param():
 
 void Cosmo_Param::init()
 {
+    // in case we call iniit once again, free cosmo first
+    if(cosmo)
+    {
+        ccl_cosmology_free(cosmo);
+    }
     /// - basic quantities
-    k2_G *= k2_G;
     h = H0/100;
 
     /// - create flat LCDM cosmology
@@ -354,7 +360,7 @@ void Comp_App::reset()
 
 bool Comp_App::is_ready()
 {
-    return (ZA & TZA & FF & FP & AA & FP_pp & chi);
+    return (ZA | TZA | FF | FP | AA | FP_pp | chi);
 }
 
 void App_Opt::init(const Box_Opt& box_opt)
@@ -456,7 +462,7 @@ void Sim_Param::print_info(std::string out, std::string app) const
         "Num_mesh_pwr:\t" << box_opt.mesh_num_pwr << "^3\n"
         "Box size:\t" << box_opt.box_size << " Mpc/h\n"
         "Redshift:\t" << integ_opt.z_in << " ---> " << integ_opt.z_out << "\n"
-        "Pk:\t\t[sigma_8 = " << cosmo.sigma8 << ", As = " << cosmo.A << ", ns = " << cosmo.ns << ", k_smooth = " << sqrt(cosmo.k2_G) << "]\n" << 
+        "Pk:\t\t[sigma_8 = " << cosmo.sigma8 << ", ns = " << cosmo.ns << ", k_smooth = " << sqrt(cosmo.k2_G) << "]\n" << 
         "\t\t[transfer_function_method = " << find_value(transfer_function_method, cosmo.config.transfer_function_method) << "]\n" <<
         "\t\t[matter_power_spectrum_method = " << find_value(matter_power_spectrum_method, cosmo.config.matter_power_spectrum_method) << "]\n" <<
         "\t\t[mass_function_method = " << find_value(mass_function_method, cosmo.config.mass_function_method) << "]\n" <<
