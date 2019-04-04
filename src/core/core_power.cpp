@@ -387,8 +387,8 @@ void gen_sigma_func_binned_gsl(const Sim_Param &sim, const P& P_k, Data_Vec<FTYP
     gen_fce_r_binned_gsl(x_min, x_max, lin_bin, P_k, sigma_binned, sigma_r);
 }
 
-constexpr double GSL_EPSABS = 1e-6; ///< absolute error
-constexpr size_t GSL_LIMIT = 10000; ///< max. number of subintervals for adaptive integration
+constexpr double GSL_EPSABS = 1e-7; ///< absolute error at z = 0, scales for higher redshifts
+constexpr size_t GSL_LIMIT = 1000; ///< max. number of subintervals for adaptive integration
 constexpr size_t GSL_N = 100; ///< max. number of bisections of integration interval (QAWO / QAWF)
 
 } ///< end of anonymous namespace (private definitions)
@@ -632,10 +632,20 @@ double Extrap_Pk_Nl<T, N>::operator()(double k) const {
 }
 
 template<class P>
+static double get_gsl_error(const Cosmo_Param& cosmo, const P& P_k)
+{
+    const FTYPE_t k_ref = 0.1;
+    double ratio = P_k(k_ref) / lin_pow_spec(1, k_ref, cosmo);
+    BOOST_LOG_TRIVIAL(debug) << "\tSet absolute error to " << GSL_EPSABS*ratio;
+    return GSL_EPSABS*ratio;
+}
+
+template<class P>
 void gen_corr_func_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<FTYPE_t, 2>& corr_func_binned)
 {
     BOOST_LOG_TRIVIAL(debug) << "Computing correlation function via GSL integration QAWF...";
-    Integr_obj_qawf xi_r(&xi_integrand_W<P>, 0, GSL_EPSABS,  GSL_LIMIT, GSL_N);
+    const double gsp_epsabs = get_gsl_error(sim.cosmo, P_k);
+    Integr_obj_qawf xi_r(&xi_integrand_W<P>, 0, gsp_epsabs,  GSL_LIMIT, GSL_N);
     gen_corr_func_binned_gsl(sim, P_k, corr_func_binned, xi_r);
 }
 
@@ -655,7 +665,8 @@ template<class P>
 void gen_sigma_binned_gsl_qawf(const Sim_Param &sim, const P& P_k, Data_Vec<FTYPE_t, 2>& sigma_binned)
 {
     BOOST_LOG_TRIVIAL(debug) << "Computing mass fluctuations via GSL integration QAWF...";
-    Integr_obj_qagiu sigma_r(&sigma_integrand_G<P>, 0, GSL_EPSABS,  GSL_LIMIT, GSL_N);
+    const double gsp_epsabs = get_gsl_error(sim.cosmo, P_k);
+    Integr_obj_qagiu sigma_r(&sigma_integrand_G<P>, 0, gsp_epsabs,  GSL_LIMIT, GSL_N);
     gen_sigma_func_binned_gsl(sim, P_k, sigma_binned, sigma_r);
 }
 

@@ -20,6 +20,15 @@ except ImportError:
     izip = zip # python 3
 from scipy.misc import derivative
 from scipy.interpolate import UnivariateSpline
+from scipy.optimize import curve_fit
+
+class MySpline(object):
+    def __init__(self, x, y, func):
+        self.func = func
+        self.popt, self.pcov = curve_fit(func, x, y, p0=(0,0))
+
+    def __call__(self, x):
+        return self.func(x, *self.popt)
 
 from . import power
 from . import utils as ut
@@ -76,7 +85,7 @@ def close_fig(filename, fig, save=True, show=False, dpi=200, use_z_eff=False, fo
     if save:
         if format == 'all':
             fig.savefig(filename + ".png", dpi=dpi, format="png")
-            #fig.savefig(filename + ".eps", dpi=dpi, format="eps")
+            fig.savefig(filename + ".eps", dpi=dpi, format="eps")
         else:
             fig.savefig(filename + ".%s" % format, dpi=dpi, format=format)
     if show:
@@ -606,7 +615,7 @@ def plot_corr_func_ratio(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabe
                          figtext, out_dir, file_name, save, show, extra_data, peak_loc=None, use_z_eff=False):
     # names
     z_out = lab if lab == 'init' else 'z' + lab[4:]
-    ylabel = r'$' + ylabel + r"(r)$"
+    ylabel = r'$\frac{' + ylabel + r"(r)}{" + ylabel + r"_{nl}(r)}$"
     file_name = out_dir + '%s_ratio_%s' % (file_name, z_out)
     
     # check same lengths, validity of xi_n;
@@ -623,22 +632,22 @@ def plot_corr_func_ratio(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabe
     fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
     ax.yaxis.grid(True)
-    ymin = -0.5
-    ymax = 0.5
+    ymin = 0.5
+    ymax = 1.5
     ax.set_ylim(ymin,ymax)
     # ax.set_yscale('symlog', linthreshy=1e-3, linscaley=6)
 
     # plot ratio
     if use_z_eff:
         sim = use_z_eff['sim']
-        xi_an = power.corr_func(sim, z=use_z_eff['z'])[1]
-    plt.plot(r, xi/xi_an - 1, 'o', ms=3, label=lab)
+        xi_an = power.corr_func(sim, z=use_z_eff['z'], non_lin=True)[1]
+    plt.plot(r, xi/xi_an, 'o', ms=3, label=lab)
 
     # plot other data (if available)
     if extra_data is not None:
         for data in extra_data:
-            xi_an = power.corr_func(sim, z=data['z_eff'])[1]
-            plt.plot(data['r'], data['xi']/xi_an - 1, 'o', ms=3, label=data['lab'])
+            xi_an = power.corr_func(sim, z=data['z_eff'], non_lin=True)[1]
+            plt.plot(data['r'], data['xi']/xi_an, 'o', ms=3, label=data['lab'])
 
     # plot BAO peak location (if available)
     if peak_loc is not None:
@@ -774,13 +783,18 @@ def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=F
         z_eff = use_z_eff[i] if use_z_eff else False
 
         # peak location
-        if plot_loc: plot_peak_loc(a_sim_info, ax, use_z_eff=z_eff)
+        if plot_loc:
+            plot_peak_loc(a_sim_info, ax, use_z_eff=z_eff)
 
         # peak amplitude
-        if plot_amp: plot_peak_amp(a_sim_info, ax, use_z_eff=z_eff)
+        if plot_amp:
+            get_last_col = plot_loc
+            plot_peak_amp(a_sim_info, ax, use_z_eff=z_eff, get_last_col=get_last_col)
 
         # peak width
-        if plot_width: plot_peak_width(a_sim_info, ax, use_z_eff=z_eff)
+        if plot_width:
+            get_last_col = plot_loc or plot_amp
+            plot_peak_width(a_sim_info, ax, use_z_eff=z_eff, get_last_col=get_last_col)
 
     # labels
     plt.xlabel(r"$a$", fontsize=label_size)
@@ -814,10 +828,10 @@ def plot_eff_time_ax(a_sim_info, ax, a_eff_type="Pk"):
 
     # spline
     try:
-        spl = UnivariateSpline(a, D_eff, s=1)
+        func = lambda x, b, c : 1 + b*x*np.exp(-c*x)
+        spl = MySpline(a, D_eff_ratio, func)
         a_spl = np.linspace(a[0], a[-1], 100)
-        D_eff_spl = power.growth_factor(a_spl, a_sim_info.sim.cosmo)
-        ax.plot(a_spl, spl(a_spl)/D_eff_spl, '--', color=color)
+        ax.plot(a_spl, spl(a_spl), '--', color=color)
     except:
         pass
 
@@ -907,10 +921,14 @@ def plot_eff_growth_rate_ax(a_sim_info, ax, a_eff_type="Pk"):
     a = np.array(a_sim_info.data["eff_time"][a_eff_type]['a'])
     a_spl = np.linspace(a[0], a[-1], 100)
     D_eff = a_sim_info.data["eff_time"][a_eff_type]['D_eff']
+    D_eff_ratio = a_sim_info.data["eff_time"][a_eff_type]['D_eff_ratio']
+
     f = np.diff(np.log(D_eff)) /np.diff(np.log(a))
     
     # smooth before derivative
-    spl = UnivariateSpline(a, D_eff, s=1)
+    func = lambda x, b, c : 1 + b*x*np.exp(-c*x)
+    spl_ = MySpline(a, D_eff_ratio, func)
+    spl = lambda x : spl_(x) * power.growth_factor(x, a_sim_info.sim.cosmo)
 
     # diff in midpoints
     a_spl = (a_spl[1:] + a_spl[:-1])/2.
@@ -918,7 +936,7 @@ def plot_eff_growth_rate_ax(a_sim_info, ax, a_eff_type="Pk"):
 
     slope = get_slope(a_spl, spl, dx=0.05)
 
-    # linear prediction for growwth rate
+    # linear prediction for growth rate
     f_lin = power.growth_rate(a, a_sim_info.sim.cosmo)
     f_lin_spl = power.growth_rate(a_spl, a_sim_info.sim.cosmo)
 
@@ -1434,57 +1452,62 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir='auto', save=True):
     plt.close(fig)
 
 
-def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=False, use_z_eff=False):
+def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=False, use_z_eff=False, k_scr=False):
     """" Plot evolution of chameleon background values -- Compton wavelength and screening potential """
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     out_file = 'chi_evol'
     suptitle = "Evolution of Chameleon"
 
+    N = 4 if k_scr else 3
+
     # adjust size for 4 subplots
     x_fig_size, y_fig_size = fig_size
-    y_fig_size *= 4./3.
+    y_fig_size *= N/3.
 
     fig = plt.figure(figsize=(x_fig_size, y_fig_size))
     cosmo = a_sim_info.sim.cosmo
     if chi_opt is None:
         chi_opt = [a_sim_info.chi_opt]
         
-    ax1 = plt.subplot(411)
-    ax2 = plt.subplot(412, sharex=ax1)
-    ax3 = plt.subplot(413, sharex=ax1)
-    ax4 = plt.subplot(414, sharex=ax1)
+    ax1 = plt.subplot(N, 1, 1)
+    ax2 = plt.subplot(N, 1, 2, sharex=ax1)
+    ax3 = plt.subplot(N, 1, 3, sharex=ax1)
     
     ax1.set_yscale('log')
     ax2.set_yscale('log')
     ax3.set_yscale('log')
-    ax4.set_yscale('log')
+
+    ax1.set_ylabel(r"$\lambda_C\, [$Mpc$/h]$", fontsize=label_size)
+    ax2.set_ylabel(r"$\chi/M_{pl}$", fontsize=label_size)
+    ax3.set_ylabel(r"$\phi_{scr}$", fontsize=label_size)
+
+    if k_scr:
+        ax4 = plt.subplot(N, 1, 4, sharex=ax1)
+        ax4.set_yscale('log')
+        ax4.set_ylabel(r"$k_{scr}\, [h/$Mpc$]$", fontsize=label_size)
+        ax4.set_xlabel(r"z", fontsize=label_size)
     
     zs = [z for z in zs if z != 'init']
     a = [1./(z+1) for z in zs]
     
     for chi in chi_opt:
         # chameleon parameters
-        wavelengths = [power.chi_compton_wavelength(a_, cosmo, chi) for a_ in a]
+        wavelengths = np.array([power.chi_compton_wavelength(a_, cosmo, chi) for a_ in a])
         psi_a = [power.chi_psi_a(a_, chi) for a_ in a]
         chi_a = [power.chi_bulk_a(a_, chi, CHI_A_UNITS=False) for a_ in a]
-        k_scr = power.chi_psi_k_a(a, cosmo, chi)
 
         # plots
-        ax1.plot(zs, wavelengths, '-', label=r"$\Phi_{scr} = 10^{%i}$, $n=%.1f$" % (np.log10(chi["phi"]), chi["n"]))
+        ax1.plot(zs, 1/wavelengths, '-', label=r"$\Phi_{scr} = 10^{%i}$, $n=%.1f$" % (np.log10(chi["phi"]), chi["n"]))
         ax2.plot(zs, chi_a, '-')
         ax3.plot(zs, psi_a, '-')
-        ax4.plot(zs, k_scr, '-')
+        if k_scr:
+            k_scr_data = power.chi_psi_k_a(a, cosmo, chi)
+            ax4.plot(zs, k_scr_data, '-')
     
     fig_suptitle(fig, suptitle)
     plt.setp(ax1.get_xticklabels(), visible=False)
     plt.setp(ax3.get_xticklabels(), visible=False)
-    
-    ax1.set_ylabel(r"$\lambda_C\, [$Mpc$/h]$", fontsize=label_size)
-    ax2.set_ylabel(r"$\chi/M_{pl}$", fontsize=label_size)
-    ax3.set_ylabel(r"$\phi_{scr}$", fontsize=label_size)
-    ax4.set_ylabel(r"$k_{scr}\, [h/$Mpc$]$", fontsize=label_size)
-    ax4.set_xlabel(r"z", fontsize=label_size)
     
     # legend
     legend_manipulation(ax=ax1, loc='upper right')

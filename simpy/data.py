@@ -323,10 +323,10 @@ def load_a_eff(a_sim_info, files=None, zs=None, use_z_eff='all'):
 def load_plot_a_eff(files, zs, a_sim_info, **kwargs):
     # load a_eff
     load_a_eff(a_sim_info, files=files, zs=zs, use_z_eff="Pk")
-    load_a_eff(a_sim_info, files=files, zs=zs, use_z_eff="sigma_R")
+    # load_a_eff(a_sim_info, files=files, zs=zs, use_z_eff="sigma_R")
     
     # plot
-    plot.plot_eff_time([a_sim_info], a_eff_type="sigma_R", **kwargs)
+    # plot.plot_eff_time([a_sim_info], a_eff_type="sigma_R", **kwargs)
     plot.plot_eff_time([a_sim_info], a_eff_type="Pk", **kwargs)
 
 def load_check_plot(a_sim_info, key, patterns, # type: struct.SimInfo, str, str,
@@ -912,7 +912,7 @@ def stack_all(in_dir='/home/michal/Documents/GIT/FastSim/output/', rerun=None, s
 # ********************************
 
 def plot_chi_wave_pot(a_file="/home/michal/Documents/GIT/FastSim/jobs/output/CHI_run/STACK_512m_512p_1024M_2000b_1e-06Y/stack_info.json",
-                      outdir=report_dir, n=None, phi=None, zs=None, save=True, show=True):
+                      outdir=report_dir, n=None, phi=None, zs=None, save=True, show=True, k_scr=False):
     a_sim_info = struct.SimInfo(a_file)
 
     # parameters of the plot (if not given)
@@ -928,7 +928,7 @@ def plot_chi_wave_pot(a_file="/home/michal/Documents/GIT/FastSim/jobs/output/CHI
     chi_opt = [{'beta' : beta, 'n' : n_, 'phi' : phi_} for phi_ in phi for n_ in n]
 
     # plot
-    plot.plot_chi_evol(zs, a_sim_info, chi_opt=chi_opt, out_dir=outdir, save=save, show=show)
+    plot.plot_chi_evol(zs, a_sim_info, chi_opt=chi_opt, out_dir=outdir, save=save, show=show, k_scr=k_scr)
 
 
 def get_data_fp_chi_ratio(group, z=None):
@@ -1283,12 +1283,12 @@ def get_check_pk_broad(stack_infos, idx, data_key="pk", get_extrap_pk=True, cuto
     data_list_new, extrap_pk = get_pk_broad_k(data_list, stack_infos, get_extrap_pk=get_extrap_pk, cutoff_high=cutoff_high, lim_kmax=lim_kmax)
     return data_list_new, extrap_pk
 
-def get_check_pk_diff_broad(stack_infos, cutoff_high=8):
+def get_check_pk_diff_broad(stack_infos, cutoff_high=8, lim_kmax=2):
     data_lists = []
     zs = stack_infos[0].data["pk_supp_input"]["zs"]
 
     for idx in range(len(zs)):
-        data_list_new, _ = get_check_pk_broad(stack_infos, idx, data_key='supp_z_eff', get_extrap_pk=False, cutoff_high=cutoff_high)
+        data_list_new, _ = get_check_pk_broad(stack_infos, idx, data_key='supp_z_eff', get_extrap_pk=False, cutoff_high=cutoff_high, lim_kmax=lim_kmax)
         data_lists.append(data_list_new)
     return np.array(data_lists), zs
 
@@ -1333,7 +1333,7 @@ def get_plot_mlt_pk_diff_broad(stack_infos, plot_diff=True, out_dir='auto'):
     for group in groups.values():
         for a_sim_info in group:
             get_supp_map(a_sim_info)
-        data_array, zs = get_check_pk_diff_broad(group, cutoff_high=16)
+        data_array, zs = get_check_pk_diff_broad(group, cutoff_high=16, lim_kmax=2)
         correct_tza(group[0], data_array)
         
         # plot

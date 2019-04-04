@@ -20,6 +20,9 @@ class Non_Linear_Cosmo(object):
     _sim_emu = None
     _sim_halofit = None
 
+    _corr_func = {}
+    _sigma_func = {}
+
     @staticmethod
     def _init_cosmo(cosmo):
         if Non_Linear_Cosmo._cosmo_emu is None:
@@ -90,7 +93,7 @@ class Non_Linear_Cosmo(object):
         Non_Linear_Cosmo._init_cosmo(cosmo)
 
         # for z < 2 use emulator, halofit otherwise
-        if a < 0.3:
+        if a < 1./3.:
             cosmo_ = Non_Linear_Cosmo._cosmo_halofit
         else:
             cosmo_ = Non_Linear_Cosmo._cosmo_emu
@@ -103,29 +106,33 @@ class Non_Linear_Cosmo(object):
             return fs.non_lin_pow_spec(a, np.asscalar(k), cosmo_)
 
     @staticmethod
-    def gen_func(sim, a, data, gen_func):
-        # initialize emulator cosmology (if not done already)
-        Non_Linear_Cosmo._init_sim(sim)
+    def gen_func(sim, a, data, gen_func, cache):
+        if a not in cache:
+            # initialize emulator cosmology (if not done already)
+            Non_Linear_Cosmo._init_sim(sim)
 
-        # for z < 2 use emulator, halofit otherwise
-        if a < 1./3.:
-            sim_ = Non_Linear_Cosmo._sim_halofit
-        else:
-            sim_ = Non_Linear_Cosmo._sim_emu
+            # for z < 2 use emulator, halofit otherwise
+            if a < 1./3.:
+                sim_ = Non_Linear_Cosmo._sim_halofit
+            else:
+                sim_ = Non_Linear_Cosmo._sim_emu
 
-        # call non-linear gen_func
-        gen_func(sim_, a, data)
+            # call non-linear gen_func
+            gen_func(sim_, a, data)
+
+            # copy data to cache
+            cache[a] = get_copy_data_vec(data)
+        return cache[a]
 
     @staticmethod
     def non_lin_corr_func(sim, a, data):
         """ return non-linear correlation function """
-        Non_Linear_Cosmo.gen_func(sim, a, data, fs.gen_corr_func_binned_gsl_qawf_nl)
+        return Non_Linear_Cosmo.gen_func(sim, a, data, fs.gen_corr_func_binned_gsl_qawf_nl, Non_Linear_Cosmo._corr_func)
 
     @staticmethod
     def non_lin_sigma_func(sim, a, data):
         """ return non-linear amplitude of density fluctuations """
-        Non_Linear_Cosmo.gen_func(sim, a, data, fs.gen_sigma_func_binned_gsl_qawf_nl)
-
+        return Non_Linear_Cosmo.gen_func(sim, a, data, fs.gen_sigma_func_binned_gsl_qawf_nl, Non_Linear_Cosmo._sigma_func)
 
 def get_a_init_from_zs(zs):
     """ from list of redshifts returns initial scale factor, i.e. value after 'init' """
@@ -164,6 +171,20 @@ def get_a_from_A(cosmo, A):
     else:
         f = lambda a : A - fs.growth_factor(a, cosmo)**2
         return brentq(f, 0, 2)
+
+def get_copy_data_vec(Data_Vec_from):
+    dim = Data_Vec_from.dim()
+    size = Data_Vec_from.size()
+    if dim == 2:
+        Data_Vec = fs.Data_Vec_2(size)
+    elif dim == 3:
+        Data_Vec = fs.Data_Vec_3(size)
+
+    for i in range(dim):
+        for j in range(size):
+            Data_Vec[i][j] = Data_Vec_from[i][j]
+
+    return Data_Vec
 
 def get_ndarray(Data_Vec):
     """ copy C++ class Data_Vec<FTYPE_t, N> into numpy array """
@@ -301,7 +322,7 @@ def gen_func(sim, fc_par, fce_lin, fc_nl, Pk=None, z=None, non_lin=False):
     elif z is not None: # compute (non-)linear function
         a = 1./(1.+z) if z != 'init' else 1.0
         if non_lin:
-            fc_nl(sim, a, data)
+            data = fc_nl(sim, a, data)
         else:
             fce_lin(sim, a, data)
     else:
