@@ -28,6 +28,38 @@ RESULTS_ALL = {
                "pwr_diff_files_i", "pwr_diff_files_h", "pwr_spec_chi_files"]
     }
 
+RESULTS_DIRS = {
+    'pwr_spec' : 'pwr_spec/',
+    'pwr_spec_chi' : 'pwr_spec/',
+    'vel_pwr_spec' : 'vel_pwr_spec/',
+    'pwr_slope' : 'pwr_spec/',
+    'pwr_diff' : 'pwr_diff/',
+    'pwr_diff_h' : 'pwr_diff/',
+    'pwr_diff_i' : 'pwr_diff/',
+    'vel_pwr_diff' : 'vel_pwr_diff/',
+    'chi_pwr_diff' : 'pwr_spec/',
+    'pwr_spec_supp' : 'pwr_diff/',
+    'pwr_spec_supp_map' : 'pwr_diff/',
+    'vel_pwr_spec_supp' : 'vel_pwr_diff/',
+    'chi_pwr_spec_supp' : 'pwr_spec/',
+    'chi_pwr_spec_supp_map' : 'pwr_spec/',
+    'corr_func' : 'pwr_spec/',
+    'bao' : 'pwr_spec/',
+    'sigma_R' : 'pwr_spec/',
+    'dens_hist' : 'rho_bin/',
+    'par_slice' : 'par_cut/',
+    'par_ani' : 'par_cut/',
+    'dens_slice' : 'rho_map/',
+    'dens_ani' : 'rho_map/',
+    'eff_time' : 'pwr_spec/',
+    'pwr_spec_files' : 'pwr_spec/',
+    'pwr_spec_chi_files' : 'pwr_spec/',
+    'pwr_diff_files' : 'pwr_diff/',
+    'pwr_diff_files_h' : 'pwr_diff/',
+    'pwr_diff_files_i' : 'pwr_diff/'
+}
+
+
 def _is_key_strval(key, strval):
     """ check <strval> (rerun or skip) against <key>, true either for
         1) exact match
