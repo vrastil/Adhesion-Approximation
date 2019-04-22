@@ -8,6 +8,7 @@ from __future__ import print_function
 import os
 import sys
 import pymongo
+from bson.son import SON
 from getpass import getpass
 import json
 import datetime
@@ -61,42 +62,76 @@ def create_indices(db, collection='data'):
         ("box_opt.box_size", 1)
     ])
 
+def get_id_keys(db, app, collection='data'):
+    doc = db[collection].find_one({'app' : app})
+    opt_keys = [x for x in doc.keys() if
+        x != 'app' and
+        x != 'data' and
+        x != '_id' and
+        x != 'run_opt' and
+        x != 'out_opt' and
+        x != 'app_opt'
+    ]
+
+    all_keys = {}
+    for key in opt_keys:
+        all_keys[key] = doc[key].keys()
+
+    if app != 'TZA':
+        all_keys["cosmo"].remove("smoothing_k")
+    
+    return all_keys
+
+
+def get_pipeline(db, app):
+    keys = get_id_keys(db, app)
+    group = {"_id" : {}}
+    for opt_key, opt_key_list in keys.items():
+        for key in opt_key_list:
+            group["_id"]["%s_%s" % (opt_key, key)] = "$%s.%s" % (opt_key, key)
+
+    group["count"] = {"$sum": 1}
+    pipeline = [
+        {"$match" : {'app' : app}},
+        {"$group" : group },
+        {"$sort": SON([
+            ("_id.box_opt_mesh_num", 1),
+            ("_id.box_opt_mesh_num_pwr", 1),
+            ("_id.box_opt_par_num", 1)
+            ])}
+    ]
+
+    if app == 'CHI':
+        pipeline[2]["$sort"]["_id.chi_opt_phi"] = 1
+        pipeline[2]["$sort"]["_id.chi_opt_n"] = 1
+
+    return pipeline
+
 def print_db_info(db, collection='data'):
     apps = db.data.distinct('app', {})
     print("There are in total %i number of simulations." % db.data.count_documents({}))
     for app in apps:
         print("%s (%i):" % (app, db[collection].count_documents({'app' : app})))
-        pipeline = [
-            {
-                "$match" : {'app' : app},  
-            },
-            {
-                "$group" : 
-                {
-                    "_id": {
-                        "Nm" : "$box_opt.mesh_num",
-                        "NM" : "$box_opt.mesh_num_pwr",
-                        "Np" : "$box_opt.par_num",
-                        "L" : "$box_opt.box_size"
-                    },
-                    "count": {"$sum": 1}
-                }
-            }
-        ]
-        if app == 'CHI':
-            pipeline[1]["$group"]["_id"]["phi"] = "$chi_opt.phi"
-            pipeline[1]["$group"]["_id"]["n"] = "$chi_opt.n"
-            pipeline[1]["$group"]["_id"]["linear"] = "$chi_opt.linear"
 
-        for x in db.data.aggregate(pipeline):
-            msg = "\tNm = %i, NM = %i, Np = %i, L = %i" % (x['_id']['Nm'], x['_id']['NM'], x['_id']['Np'], x['_id']['L'])
+        pipeline = get_pipeline(db, app)
+        for doc in db.data.aggregate(pipeline):
+            _id = doc["_id"]
+            msg = "\tNm = %i, NM = %i, Np = %i, L = %i" % (
+                _id["box_opt_mesh_num"],
+                _id["box_opt_mesh_num_pwr"],
+                _id["box_opt_par_num"],
+                _id["box_opt_box_size"]
+                )
             if app == 'CHI':
-                msg += ", phi = %.1E, n = %.1f" % (x['_id']['phi'], x['_id']['n'])
-                if x['_id']['linear']:
+                msg += ", phi = %.1E, n = %.1f" % (
+                    _id["chi_opt_phi"],
+                    _id["chi_opt_n"]
+                )
+                if _id['chi_opt_linear']:
                     msg += ' (linear)'
                 else:
                     msg += ' (non-linear)'
-            msg += ", num = %i" % x['count']
+            msg += ", num = %i" % doc['count']
             print(msg)
 
 def add_one_sim_data(a_file, db, collection='data', override=False):
