@@ -83,8 +83,21 @@ def print_db_info(db, collection='data'):
                 }
             }
         ]
+        if app == 'CHI':
+            pipeline[1]["$group"]["_id"]["phi"] = "$chi_opt.phi"
+            pipeline[1]["$group"]["_id"]["n"] = "$chi_opt.n"
+            pipeline[1]["$group"]["_id"]["linear"] = "$chi_opt.linear"
+
         for x in db.data.aggregate(pipeline):
-            print("\tNm = %i, NM = %i, Np = %i, L = %i, num = %i" % (x['_id']['Nm'], x['_id']['NM'], x['_id']['Np'], x['_id']['L'], x['count']))
+            msg = "\tNm = %i, NM = %i, Np = %i, L = %i" % (x['_id']['Nm'], x['_id']['NM'], x['_id']['Np'], x['_id']['L'])
+            if app == 'CHI':
+                msg += ", phi = %.1E, n = %.1f" % (x['_id']['phi'], x['_id']['n'])
+                if x['_id']['linear']:
+                    msg += ' (linear)'
+                else:
+                    msg += ' (non-linear)'
+            msg += ", num = %i" % x['count']
+            print(msg)
 
 def add_one_sim_data(a_file, db, collection='data', override=False):
     """load simulation parameters with available data and save them into database,
