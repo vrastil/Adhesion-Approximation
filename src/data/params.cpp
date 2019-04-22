@@ -60,6 +60,27 @@ T find_value(const std::map<T, U>& map, const U& value)
     throw std::out_of_range("Value not found");
 }
 
+size_t get_seed()
+{
+    // random seed number
+    size_t seed = (static_cast<long>(rand()) << (sizeof(int) * 8)) | rand();
+
+    // check for NULL pointer
+    if (char * job_id_str = std::getenv("SBATCH_JOBID"))
+    {
+        // check for succesfull conversion
+        if (long job_id = atol(job_id_str))
+        {
+            seed *= job_id;
+        }        
+    }
+    else
+    {
+        BOOST_LOG_TRIVIAL(debug) << "Enviromental variable 'SBATCH_JOBID' was not found.";
+    }
+    return seed;
+}
+
 } ///< end of anonymous namespace (private definitions)
 
 /****************************//**
@@ -181,6 +202,7 @@ void to_json(json& j, const Run_Opt& run_opt)
     j = json{
         {"num_thread", run_opt.nt},
         {"seed", run_opt.seed},
+        {"phase", run_opt.phase},
         {"version", PROJECT_VERSION}
     };
 }
@@ -189,6 +211,7 @@ void from_json(const json& j, Run_Opt& run_opt)
 {
     run_opt.nt = j.at("num_thread").get<size_t>();
     run_opt.seed = j.at("seed").get<size_t>();
+    run_opt.phase = j.at("phase").get<bool>();
     run_opt.init();
 }
 
@@ -307,9 +330,8 @@ void Run_Opt::init()
     else omp_set_num_threads(nt);
     if (seed == 0){
         srand(time(NULL));
-        seed = (static_cast<long>(rand()) << (sizeof(int) * 8)) | rand();
+        seed = get_seed();
     } else mlt_runs = 1;
-    phase = true;
 }
 
 void Run_Opt::reset()
@@ -327,7 +349,7 @@ bool Run_Opt::simulate()
     if (!pair || !phase)
     {
         mlt_runs--;
-        seed = (static_cast<long>(rand()) << (sizeof(int) * 8)) | rand();
+        seed = get_seed();
     }
     if (pair) phase = !phase;
     return mlt_runs;

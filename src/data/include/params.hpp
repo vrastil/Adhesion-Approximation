@@ -131,9 +131,9 @@ struct Run_Opt {
     /* cmd args */
     size_t nt, mlt_runs;
     size_t seed;
-    bool pair;        
+    bool pair;
     /* other*/
-    bool phase;
+    bool phase = true;
 };
 
 /**
