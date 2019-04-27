@@ -157,14 +157,18 @@ def get_separated_ids(db, collection='data'):
                 sep_id[app][i].append(x)
     return sep_id
 
-def is_new_sim(results, override):
-    if results is not None and "database" in results:
+def is_new_sim(sim_param, override):
+    # if "database" is not in sim_param.json, we did not processed this run
+    if "database" in sim_param:
+        # in case we do not want to load data again
         if not override:
             return False
+        # in case we do want to load ALL data
         elif isinstance(override, bool):
             return True
+        # in case we do want to load only old data
         elif isinstance(override, datetime.datetime):
-            return datetime.datetime.strptime(data["results"]["database"], '%Y-%m-%d %H:%M:%S.%f') < override      
+            return datetime.datetime.strptime(sim_param["database"]["timestamp"], '%Y-%m-%d %H:%M:%S.%f') < override      
     return True
 
 def add_one_sim_data(a_file, db, collection='data', override=False):
@@ -176,11 +180,11 @@ def add_one_sim_data(a_file, db, collection='data', override=False):
         data = json.loads(json_file.read())
 
     # check if we already loaded this simulation
-    if not is_new_sim(data["results"], override):
+    if not is_new_sim(data, override):
         return False
 
     # get rid of unwanted data
-    data.pop("results")
+    data.pop("results", None)
     data["out_opt"].pop("out_dir")
     data["run_opt"].pop("num_thread")
 
@@ -226,9 +230,11 @@ def add_one_sim_data(a_file, db, collection='data', override=False):
     # update sim_param.json
     with open(a_file, 'r+') as json_file:
         data_orig = json.loads(json_file.read())
-        if data_orig["results"] is None:
-            data_orig["results"] = {}
-        data_orig["results"]["database"] = str(datetime.datetime.utcnow())
+        data_orig.pop("results", None)
+        data_orig["database"] = {
+            "timestamp" : str(datetime.datetime.utcnow()),
+            "_id" : str(db[collection].find_one(data, {'_id' : 1})['_id'])
+        }
         json_file.seek(0)
         json.dump(data_orig, json_file, indent=2)
     
@@ -243,12 +249,10 @@ def add_many_sim_data(a_dir, db, collection='data', a_file='sim_param.json', ver
 
     # find all simulations parameters and load data
     new_docs = 0
-    counter = 0
     sim_files = get_files_in_traverse_dir(a_dir, a_file)
     length = len(sim_files)
-    for sim_file in sim_files:
-        counter += 1
-        print("Adding simulation %i from %i\r" % (counter, length), end='')
+    for i, sim_file in enumerate(sim_files):
+        print("Adding simulation %i from %i\r" % (i + 1, length), end='')
         new_docs += add_one_sim_data(sim_file, db, collection=collection, override=override)
 
     # print some useful info

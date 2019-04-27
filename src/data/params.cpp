@@ -508,8 +508,7 @@ void Sim_Param::print_info(std::string out, std::string app) const
             {"app_opt", app_opt},
             {"run_opt", run_opt},
             {"out_opt", out_opt},
-            {"k_nyquist", other_par.nyquist},
-            {"results", {}},
+            {"k_nyquist", other_par.nyquist}
             {"app", app}
         };
         if (comp_app.chi) j["chi_opt"] = chi_opt;

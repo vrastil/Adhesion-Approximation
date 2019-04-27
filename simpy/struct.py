@@ -108,7 +108,7 @@ class SimInfo(object):
         self.app_opt = doc['app_opt']
         self.run_opt = doc['run_opt']
         self.out_opt = doc['out_opt']
-        self.results = {}
+        self.results = doc.get('results', {})
         self.chi_opt = doc.get('chi_opt', None)
         self.verbose = verbose
         self.file = str(doc['out_opt']['file']) # !!! VERY IMPORTANT -- not to use unicode string
@@ -198,14 +198,8 @@ class SimInfo(object):
 
     def done(self, key):
         self.results[key] = True
-        with open(self.file, 'r+') as data_file:
-            data = json.loads(data_file.read())
-            if data["results"] is None:
-                data["results"] = {}
-            data["results"][key] = True
-            data_file.seek(0)
-            json.dump(data, data_file, indent=2)
-            if self.verbose: ut.print_done()
+        self.collection.find_one_and_update(self.doc_id, {'$set': {'results': self.results}})
+        if self.verbose: ut.print_done()
 
     def get_zs_data(self, key, patterns):
         # get all data for given key

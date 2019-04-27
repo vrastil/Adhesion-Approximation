@@ -836,7 +836,7 @@ def plot_eff_time_ax(a_sim_info, ax, a_eff_type="Pk"):
         pass
 
 
-def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=False, use_z_eff=False, verbose=True):
+def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=False, use_z_eff=False, verbose=False):
     # plot everything
     if a_eff_type == 'all':
         plot_eff_time(stack_infos, out_dir=out_dir, a_eff_type="sigma_R", save=save, show=show, use_z_eff=use_z_eff)
