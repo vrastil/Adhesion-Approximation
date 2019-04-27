@@ -51,7 +51,7 @@ def sort_chi_files(files, zs):
 def has_app_lin_pwr(app):
     return True if app == 'ZA' or app == 'TZA' else False
 
-def load_k_supp(files, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens'):
+def load_k_supp(data_list, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens'):
     """
     Divide available k-values into 7 subinterval from
     k_min = 2*PI / L to k_max = 50% k_nyquist_par
@@ -63,8 +63,7 @@ def load_k_supp(files, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens'):
 
     supp = [[[] for x in range(3)] for y in range(3)]
     for i, j in enumerate([0, 3, 6]):
-        for ii, a_file in enumerate(files):
-            data = np.transpose(np.loadtxt(a_file))
+        for ii, data in enumerate(data_list):
             if a_sim_info is not None and a_sim_info.app == "TZA":
                 correct_tza_single(a_sim_info, data)
             k = data[0]
@@ -77,23 +76,21 @@ def load_k_supp(files, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens'):
         supp[i][2] = [k[j*idx], k[(j+1)*idx]]
     return supp
 
-def get_single_hybrid_pow_spec_amp_w_z(sim, a_file, z, k_nyquist_par, a=None, data=None, fit_lin=False):
-    if data is None:
-        data = np.transpose(np.loadtxt(a_file))
+def get_single_hybrid_pow_spec_amp_w_z(sim, data, z, k_nyquist_par, a=None, fit_lin=False):
     x = pwr.get_hybrid_pow_spec_amp(sim, data, k_nyquist_par, a=a, fit_lin=fit_lin)
     x["z"] = z
     return x
 
-def get_extrap_pk(a_sim_info, files, zs):
+def get_extrap_pk(a_sim_info, data_list, zs):
     if "extrap_pk" not in a_sim_info.data:
         # needed variables
         sim = a_sim_info.sim
         k_nyquist_par = a_sim_info.k_nyquist["particle"]
         fit_lin = has_app_lin_pwr(a_sim_info.app)
-        func = lambda a_file, z : get_single_hybrid_pow_spec_amp_w_z(sim, a_file, z, k_nyquist_par, fit_lin=fit_lin)
+        func = lambda data, z : get_single_hybrid_pow_spec_amp_w_z(sim, data, z, k_nyquist_par, fit_lin=fit_lin)
 
         # get hybrid power spectrum with redshift for each file
-        a_sim_info.data["extrap_pk"] = list(map(func, files, zs))
+        a_sim_info.data["extrap_pk"] = list(map(func, data_list, zs))
 
         # extract 'Pk_par' and 'z' for convenience
         a_sim_info.data["pk_list"] = [x["Pk_par"] for x in a_sim_info.data["extrap_pk"]]
@@ -122,7 +119,7 @@ def get_pk_nl_amp(a_sim_info):
     
     # get amplitude of non-linear power spectrum with redshift for a_eff
     # fit_lin = has_app_lin_pwr(a_sim_info.app)
-    func = lambda a_eff, z, data : get_single_hybrid_pow_spec_amp_w_z(sim, None, z, k_nyquist_par, a=a_eff, data=data)
+    func = lambda a_eff, z, data : get_single_hybrid_pow_spec_amp_w_z(sim, data, z, k_nyquist_par, a=a_eff)
     data_w_amp = list(map(func, as_eff, zs, data_all))        
 
     # extract amplitude and redshift
@@ -163,21 +160,18 @@ def transform_supp_data_to_z_eff(a_sim_info, use_z_eff='Pk'):
 
     return zs_eff, data_array_new
         
-def load_plot_pwr(files, zs, a_sim_info, **kwargs):
-    data_list = [np.transpose(np.loadtxt(x)) for x in files]
-    get_extrap_pk(a_sim_info, files, zs)
+def load_plot_pwr(data_list, zs, a_sim_info, **kwargs):
+    get_extrap_pk(a_sim_info, data_list, zs)
     plot.plot_pwr_spec(data_list, zs, a_sim_info, a_sim_info.data["pk_list"], **kwargs)
 
-def load_plot_chi_pwr(files, zs, a_sim_info, **kwargs):
-    data_list = [np.transpose(np.loadtxt(x)) for x in files]
+def load_plot_chi_pwr(data_list, zs, a_sim_info, **kwargs):
     plot.plot_chi_pwr_spec(data_list, zs, a_sim_info, **kwargs)
 
-def load_plot_slope(files, zs, a_sim_info, **kwargs):
-    data_list = [np.transpose(np.loadtxt(x)) for x in files]
-    get_extrap_pk(a_sim_info, files, zs)
+def load_plot_slope(data_list, zs, a_sim_info, **kwargs):
+    get_extrap_pk(a_sim_info, data_list, zs)
     plot.plot_slope(data_list, zs, a_sim_info, a_sim_info.data["pk_list"], **kwargs)
 
-def get_key_func(files, zs, a_sim_info, key, load=False):
+def get_key_func(data_list, zs, a_sim_info, key, load=False):
     """ key must be name of callable function placed in power with signature:
         key(sim, Pk=None, z=None, non_lin=False) """
 
@@ -190,10 +184,10 @@ def get_key_func(files, zs, a_sim_info, key, load=False):
         }
         gen_func = getattr(pwr, key)
         if load:
-            a_sim_info.data[key]["par"] = [np.transpose(np.loadtxt(a_file)) for a_file in files]
+            a_sim_info.data[key]["par"] = data_list
             a_sim_info.data[key]["zs"] = zs
         else:
-            get_extrap_pk(a_sim_info, files, zs)
+            get_extrap_pk(a_sim_info, data_list, zs)
             zs = a_sim_info.data["zs"]
             for Pk, z in izip(a_sim_info.data["pk_list"], zs):
                 data = gen_func(a_sim_info.sim, Pk=Pk)
@@ -205,11 +199,11 @@ def get_key_func(files, zs, a_sim_info, key, load=False):
         a_sim_info.data[key]["nl"] = [gen_func(a_sim_info.sim, z=z, non_lin=True) for z in a_sim_info.data[key]["zs"]]
         
 
-def get_corr_func(files, zs, a_sim_info, load=False):
-    get_key_func(files, zs, a_sim_info, "corr_func", load=load)
+def get_corr_func(data_list, zs, a_sim_info, load=False):
+    get_key_func(data_list, zs, a_sim_info, "corr_func", load=load)
 
-def get_plot_corr(files, zs, a_sim_info, load=False, **kwargs):
-    get_corr_func(files, zs, a_sim_info, load=load)
+def get_plot_corr(data_list, zs, a_sim_info, load=False, **kwargs):
+    get_corr_func(data_list, zs, a_sim_info, load=load)
     plot.plot_corr_func(a_sim_info.data["corr_func"], zs, a_sim_info, **kwargs)
 
 def get_corr_peak(a_sim_info):
@@ -226,16 +220,16 @@ def get_corr_peak(a_sim_info):
                 bao_peak["z"] = a_sim_info.data["corr_func"]["zs"][i]
                 a_sim_info.data["corr_func"][key + '_peak'].append(bao_peak)
 
-def get_plot_corr_peak(files, zs, a_sim_info, load=False, **kwargs):
-    get_corr_func(files, zs, a_sim_info, load=load)
+def get_plot_corr_peak(data_list, zs, a_sim_info, load=False, **kwargs):
+    get_corr_func(data_list, zs, a_sim_info, load=load)
     get_corr_peak(a_sim_info)
     plot.plot_corr_peak([a_sim_info], **kwargs)
     
-def get_sigma_R(files, zs, a_sim_info, load=False):
-    get_key_func(files, zs, a_sim_info, "sigma_R", load=load)
+def get_sigma_R(data_list, zs, a_sim_info, load=False):
+    get_key_func(data_list, zs, a_sim_info, "sigma_R", load=load)
 
-def get_plot_sigma(files, zs, a_sim_info, load=False, **kwargs):
-    get_sigma_R(files, zs, a_sim_info, load=load)
+def get_plot_sigma(data_list, zs, a_sim_info, load=False, **kwargs):
+    get_sigma_R(data_list, zs, a_sim_info, load=load)
     plot.plot_corr_func(a_sim_info.data["sigma_R"], zs, a_sim_info, is_sigma=True, **kwargs)
 
 def find_nearest_idx(array, value, axis=None):
@@ -254,20 +248,20 @@ def find_nearest_idx(array, value, axis=None):
             idx += 1
     return idx
 
-def get_plot_supp(files, zs, a_sim_info, pk_type='dens', **kwargs):
+def get_plot_supp(data_list, zs, a_sim_info, pk_type='dens', **kwargs):
     a = [1./(z+1.) for z in zs]
-    supp = load_k_supp(files, a_sim_info.k_nyquist["particle"], a_sim_info=a_sim_info, a=a, pk_type=pk_type)
+    supp = load_k_supp(data_list, a_sim_info.k_nyquist["particle"], a_sim_info=a_sim_info, a=a, pk_type=pk_type)
     plot.plot_supp_lms(supp, a, a_sim_info, pk_type=pk_type, **kwargs)
 
-def get_supp_map(a_sim_info, key='input', files=None):
+def get_supp_map(a_sim_info, key='input'):
     if 'pk_supp_%s' % key not in a_sim_info.data:
-        if files is None:
-            zs, files = try_get_zs_files(a_sim_info, 'pwr_diff/', '*%s*' % key)
-        data_array = [np.transpose(np.loadtxt(a_file)) for a_file in files]
+        zs, data_array = a_sim_info.get_zs_data('pwr_diff', '*%s*' % key)
+        
         a_sim_info.data['pk_supp_%s' % key] = {
             'zs' : zs,
             'supp' : check_data_consistency_diff(data_array)
         }
+
 def correct_tza_single(a_sim_info, data):
     k, P_k = data[0], data[1]
     truncation = pwr.get_truncation(k, a_sim_info.cosmo)
@@ -278,53 +272,54 @@ def correct_tza(a_sim_info, data_array):
         for data in data_array:
             correct_tza_single(a_sim_info, data)
 
-def get_plot_supp_map(files, zs, a_sim_info, pk_type='dens', **kwargs):
-    data_array = check_data_consistency_diff([np.transpose(np.loadtxt(a_file)) for a_file in files])
+def get_plot_supp_map(data_list, zs, a_sim_info, pk_type='dens', **kwargs):
+    data_array = check_data_consistency_diff(data_list)
     plot.plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, ext_title="par", pk_type=pk_type, **kwargs)
 
-def load_plot_pwr_spec_diff(files, zs, a_sim_info, **kwargs):
-    data_array = check_data_consistency_diff([np.transpose(np.loadtxt(a_file)) for a_file in files])
+def load_plot_pwr_spec_diff(data_list, zs, a_sim_info, **kwargs):
+    data_array = check_data_consistency_diff(data_list)
     correct_tza(a_sim_info, data_array)
     plot.plot_pwr_spec_diff_from_data(data_array, zs, a_sim_info, **kwargs)
 
-def split_particle_files(files, zs):
-    files_t = [x for x in files if 'track' in x.split('/')[-1]]
-    files = [x for x in files if 'par_cut' in x.split('/')[-1]]
-    zs = ut.del_duplicate(zs)
-    if len(files_t) != len(files):
-        raise IndexError("Different number of 'particle' and 'track' files.")
-    else:
-        return files, files_t, zs
+#
+# !!! TO-DO
+#
+# def split_particle_files(files, zs):
+#     files_t = [x for x in files if 'track' in x.split('/')[-1]]
+#     files = [x for x in files if 'par_cut' in x.split('/')[-1]]
+#     zs = ut.del_duplicate(zs)
+#     if len(files_t) != len(files):
+#         raise IndexError("Different number of 'particle' and 'track' files.")
+#     else:
+#         return files, files_t, zs
 
-def split_plot_par_slice(files, zs, a_sim_info):
-    files, files_t, zs = split_particle_files(files, zs)
-    plot.plot_par_last_slice(files, files_t, zs, a_sim_info)
+# def split_plot_par_slice(files, zs, a_sim_info):
+#     files, files_t, zs = split_particle_files(files, zs)
+#     plot.plot_par_last_slice(files, files_t, zs, a_sim_info)
 
-def split_plot_par_evol(files, zs, a_sim_info):
-    files, files_t, zs = split_particle_files(files, zs)
-    plot.plot_par_evol(files, files_t, zs, a_sim_info)
+# def split_plot_par_evol(files, zs, a_sim_info):
+#     files, files_t, zs = split_particle_files(files, zs)
+#     plot.plot_par_evol(files, files_t, zs, a_sim_info)
 
-def load_plot_dens_histo(files, zs, a_sim_info):
-    data_list = [np.transpose(np.loadtxt(a_file))
-                 for a_file in files]
+def load_plot_dens_histo(data_list, zs, a_sim_info):
     plot.plot_dens_histo(data_list, zs, a_sim_info)
 
-def load_a_eff(a_sim_info, files=None, zs=None, use_z_eff='all'):
+def load_a_eff(a_sim_info, data_list=None, zs=None, use_z_eff='all'):
     # create structure in data
     create_a_eff_struct(a_sim_info)
 
     # load files
-    if files is None or zs is None:
-        zs, files = try_get_zs_files(a_sim_info, subdir='pwr_spec/', patterns='*.dat')
+    if data_list is None or zs is None:
+        zs, data_list = a_sim_info.get_zs_data('pwr_spec', '*.dat')
 
     # effective time from power spectrum and density fluctuations
-    get_a_eff(a_sim_info, files, zs, use_z_eff=use_z_eff)
+    get_a_eff(a_sim_info, data_list, zs, use_z_eff=use_z_eff)
 
 
-def load_plot_a_eff(files, zs, a_sim_info, **kwargs):
+def load_plot_a_eff(data_list, zs, a_sim_info, **kwargs):
     # load a_eff
-    load_a_eff(a_sim_info, files=files, zs=zs, use_z_eff="Pk")
-    # load_a_eff(a_sim_info, files=files, zs=zs, use_z_eff="sigma_R")
+    load_a_eff(a_sim_info, data_list=data_list, zs=zs, use_z_eff="Pk")
+    # load_a_eff(a_sim_info, data_list=data_list, zs=zs, use_z_eff="sigma_R")
     
     # plot
     # plot.plot_eff_time([a_sim_info], a_eff_type="sigma_R", **kwargs)
@@ -346,37 +341,37 @@ def load_check_plot(a_sim_info, key, patterns, # type: struct.SimInfo, str, str,
     if a_sim_info.verbose: print('step: %-25s' % (key + ' ' + info_str), end='')
     sys.stdout.flush()
     
-    zs, files = a_sim_info.get_zs_data(key, patterns)
+    zs, data_list = a_sim_info.get_zs_data(key, patterns)
     if a_sim_info.rerun(rerun, key, skip, zs):
-        plot_func(files, zs, a_sim_info, **kwargs)
+        plot_func(data_list, zs, a_sim_info, **kwargs)
         a_sim_info.done(key)
 
-def cut_zs_files(zs, files, z=None):
+def cut_zs_list(zs, a_list, z=None):
     if z is not None:
         idx = find_nearest_idx(zs, z)
         zs = [zs[idx]]
-        files = [files[idx]]
-    return zs, files
+        a_list = [a_list[idx]]
+    return zs, a_list
 
 def init_data(a_sim_info, z=None, get_pk=False, get_corr=False, get_sigma=False):
     # get files for data
-    zs, files = try_get_zs_files(a_sim_info, subdir='pwr_spec/', patterns='*par*.dat *init*.dat')
+    zs, data_list = a_sim_info.get_zs_data('pwr_spec', '*par*.dat *init*.dat')
 
     # if z is specified, find nearest-value file
-    zs, files = cut_zs_files(zs, files, z)
+    zs, data_list = cut_zs_list(zs, data_list, z)
 
     # get extrapolated power spectrum
     if get_pk:
-        get_extrap_pk(a_sim_info, files, zs)
-        a_sim_info.data["pk_data_par"] = [np.transpose(np.loadtxt(x)) for x in files]
+        get_extrap_pk(a_sim_info, data_list, zs)
+        a_sim_info.data["pk_data_par"] = data_list
 
     # get correlation function
     if get_corr:
-        get_corr_func(files, zs, a_sim_info)
+        get_corr_func(data_list, zs, a_sim_info)
 
     # get amplitude of density fluctuations
     if get_sigma:
-        get_sigma_R(files, zs, a_sim_info)
+        get_sigma_R(data_list, zs, a_sim_info)
 
 def get_initialized_StackInfo(a_file, z=None, get_pk=False, get_corr=False, get_sigma=False):
     # get struct.StackInfo
@@ -431,8 +426,9 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         # Density distribution
         ("dens_hist", '*.dat', load_plot_dens_histo, {}),
         # Particles -- last slice, evolution
-        ("par_slice", 'par*.dat track*.dat', split_plot_par_slice, {}),
-        ("par_ani", 'par*.dat track*.dat', split_plot_par_evol, {}),
+        # !!! TO-DO
+        # ("par_slice", 'par*.dat track*.dat', split_plot_par_slice, {}),
+        # ("par_ani", 'par*.dat track*.dat', split_plot_par_evol, {}),
         # Density -- two slices, evolution
         ("dens_slice", '*.dat', plot.plot_dens_two_slices, {}),
         ("dens_ani", '*.dat', plot.plot_dens_evol, {}),
@@ -1123,7 +1119,7 @@ def load_get_corr(a_file, z=None):
     zs, files = try_get_zs_files(a_sim_info, subdir, patterns)
     
     # if z is specified, find nearest-value file
-    zs, files = cut_zs_files(zs, files, z)
+    zs, files = cut_zs_list(zs, files, z)
     
     # get correlation function
     get_corr_func(files, zs, a_sim_info)

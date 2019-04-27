@@ -211,7 +211,7 @@ def add_one_sim_data(a_file, db, collection='data', override=False):
             data_files_dict[data_dir].append({
                 'file' : data_file,
                 'z' : get_z_from_file(data_file, app),
-                'data' : numpy.loadtxt(data_file).tolist()
+                'data' : numpy.transpose(numpy.loadtxt(data_file)).tolist()
             })
         # delete empty directories from dictionary
         if not data_files_dict[data_dir]:

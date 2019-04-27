@@ -13,6 +13,7 @@ import json
 import os
 import fnmatch
 from IPython.display import Image, display
+import numpy as np
 from . import utils as ut
 from .fastsim import Sim_Param
 
@@ -132,7 +133,6 @@ class SimInfo(object):
         """ create C++ 'Sim_Param(self.file)' object
         may take a while to initialize CCL power spectra """
         if self._sim is None:
-            print(self.file)
             self._sim = Sim_Param(self.file)
         return self._sim
 
@@ -209,7 +209,9 @@ class SimInfo(object):
 
     def get_zs_data(self, key, patterns):
         # get all data for given key
-        all_data = self.collection.find_one(self.doc_id, {'data.files.%s' % key})['data']['files'][key]
+        subdir = RESULTS_DIRS[key]
+        all_data = self.collection.find_one(self.doc_id, {'data.files.%s' % subdir}) # find data
+        all_data = all_data['data']['files'].get(subdir, []) # get data or empty list if no data available
 
         # save zs, data
         zs, data = [], []
@@ -224,7 +226,8 @@ class SimInfo(object):
         
         # check for empty list (no file matched)
         if zs:
-            return ut.sort_lists(zs, data)
+            zs, data = ut.sort_lists(zs, data)
+            return list(zs), np.array(data)
         else:
             return None, None
 
