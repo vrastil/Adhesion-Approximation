@@ -64,16 +64,23 @@ def get_files_in_traverse_dir(a_dir, patterns):
 def sort_lists(*lists):
     return zip(*sorted(zip(*lists), reverse=True))
 
-def sort_get_z(files, app, skip_init=False):
+def get_z_from_file(a_file, app):
+    if app + '_z' in a_file:
+        return float(a_file[a_file.index(app + '_z') + len(app + '_z'):-4])
+    elif app + '_init' in a_file:
+        return 'init'
+    else:
+        return None
+
+def sort_get_z(files, app):
     # type: (List[str], struct.SimInfo) -> List[str], List[TypeVar(str, float)]
     zs = []
     for a_file in files:
-        if app + '_z' in a_file:
-            zs.append(float(a_file[a_file.index(app + '_z') + len(app+'_z'):-4]))
-        elif app + '_init' in a_file and not skip_init:
-            zs.append('init')
+        z = get_z_from_file(a_file, app)
+        if z is not None:
+            zs.append(z)
         else:
-            print("WARNING! Skipping file '%s', unknown format." % a_file)
+            print("WARNING! Skipping file '%s', unknown format." % a_file)        
     return sort_lists(zs, files)
 
 ###################################

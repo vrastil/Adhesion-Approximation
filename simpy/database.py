@@ -70,7 +70,8 @@ def get_id_keys(db, app, collection='data'):
         x != '_id' and
         x != 'run_opt' and
         x != 'out_opt' and
-        x != 'app_opt'
+        x != 'app_opt' and
+        x != 'type'
     ]
 
     all_keys = {}
@@ -82,28 +83,29 @@ def get_id_keys(db, app, collection='data'):
     
     return all_keys
 
+sep_str = '::'
 
-def get_pipeline(db, app):
+def get_pipeline(db, app, info_type='sim_info'):
     keys = get_id_keys(db, app)
     group = {"_id" : {}}
     for opt_key, opt_key_list in keys.items():
         for key in opt_key_list:
-            group["_id"]["%s_%s" % (opt_key, key)] = "$%s.%s" % (opt_key, key)
+            group["_id"]["%s%s%s" % (opt_key, sep_str, key)] = "$%s.%s" % (opt_key, key)
 
     group["count"] = {"$sum": 1}
     pipeline = [
-        {"$match" : {'app' : app}},
+        {"$match" : {'app' : app, 'type' : info_type}},
         {"$group" : group },
         {"$sort": SON([
-            ("_id.box_opt_mesh_num", 1),
-            ("_id.box_opt_mesh_num_pwr", 1),
-            ("_id.box_opt_par_num", 1)
+            ("_id.box_opt%smesh_num" % sep_str, 1),
+            ("_id.box_opt%smesh_num_pwr" % sep_str, 1),
+            ("_id.box_opt%spar_num" % sep_str, 1)
             ])}
     ]
 
     if app == 'CHI':
-        pipeline[2]["$sort"]["_id.chi_opt_phi"] = 1
-        pipeline[2]["$sort"]["_id.chi_opt_n"] = 1
+        pipeline[2]["$sort"]["_id.chi_opt%sphi" % sep_str] = 1
+        pipeline[2]["$sort"]["_id.chi_opt%sn" % sep_str] = 1
 
     return pipeline
 
@@ -117,22 +119,53 @@ def print_db_info(db, collection='data'):
         for doc in db.data.aggregate(pipeline):
             _id = doc["_id"]
             msg = "\tNm = %i, NM = %i, Np = %i, L = %i" % (
-                _id["box_opt_mesh_num"],
-                _id["box_opt_mesh_num_pwr"],
-                _id["box_opt_par_num"],
-                _id["box_opt_box_size"]
+                _id["box_opt%smesh_num" % sep_str],
+                _id["box_opt%smesh_num_pwr" % sep_str],
+                _id["box_opt%spar_num" % sep_str],
+                _id["box_opt%sbox_size" % sep_str]
                 )
             if app == 'CHI':
                 msg += ", phi = %.1E, n = %.1f" % (
-                    _id["chi_opt_phi"],
-                    _id["chi_opt_n"]
+                    _id["chi_opt%sphi" % sep_str],
+                    _id["chi_opt%sn" % sep_str]
                 )
-                if _id['chi_opt_linear']:
+                if _id['chi_opt%slinear' % sep_str]:
                     msg += ' (linear)'
                 else:
                     msg += ' (non-linear)'
             msg += ", num = %i" % doc['count']
             print(msg)
+
+def get_separated_ids(db, collection='data'):
+    apps = db.data.distinct('app', {})
+    sep_id = {}
+    # separate by application
+    for app in apps:
+        sep_id[app] = []
+        pipeline = get_pipeline(db, app)
+        # separate by different runs
+        for i, doc in enumerate(db[collection].aggregate(pipeline)):
+            sep_id[app].append([])
+            # get document by which we can find all belonging docs
+            new_doc = {'app' : app}
+            for key, val in doc['_id'].items():
+                new_key = key.replace(sep_str, '.')
+                new_doc[new_key] = val
+            # get only id of these runs
+            cursor = db.data.find(new_doc, {'_id' : 1})
+            for x in cursor:
+                sep_id[app][i].append(x)
+    return sep_id
+
+def is_new_sim(results, override):
+    if results is not None and "database" in results:
+        if not override:
+            return False
+        elif isinstance(override, bool):
+            return True
+        elif isinstance(override, datetime.datetime):
+            return datetime.datetime.strptime(data["results"]["database"], '%Y-%m-%d %H:%M:%S.%f') < override      
+    return True
 
 def add_one_sim_data(a_file, db, collection='data', override=False):
     """load simulation parameters with available data and save them into database,
@@ -143,28 +176,46 @@ def add_one_sim_data(a_file, db, collection='data', override=False):
         data = json.loads(json_file.read())
 
     # check if we already loaded this simulation
-    if data["results"] is not None and "database" in data["results"]:
-        if not override:
-            return False
-        elif datetime.datetime.strptime(data["results"]["database"], '%Y-%m-%d %H:%M:%S.%f') > override:
-            return False
+    if not is_new_sim(data["results"], override):
+        return False
 
     # get rid of unwanted data
     data.pop("results")
     data["out_opt"].pop("out_dir")
     data["run_opt"].pop("num_thread")
+
+    # extract app
+    app = data['app']
     
-    # load all the files and add data to the database
-    data['data'] = {}
+    # directory with results
     dirs = set(RESULTS_DIRS.values())
     root_dir = os.path.dirname(a_file) + '/'
+
+    # add subdocs
+    data["type"] = 'sim_info'
+    data['data'] = {
+        'files' : {},
+        'processed' : {}
+    }
+    data["out_opt"]["dir"] = root_dir
+    data["out_opt"]["file"] = a_file
+    data_files_dict = data['data']['files']
+
+    # load all the files and add data to the database
     # go through all possible directories
     for data_dir in dirs:
-        data['data'][data_dir] = {}
+        data_files_dict[data_dir] = []
         # go through all files in the directory
         for data_file in get_files_in_traverse_dir(root_dir + data_dir, '*'):
             # load data and save them as plain lists
-            data['data'][data_dir][data_file] = numpy.loadtxt(data_file).tolist()
+            data_files_dict[data_dir].append({
+                'file' : data_file,
+                'z' : get_z_from_file(data_file, app),
+                'data' : numpy.loadtxt(data_file).tolist()
+            })
+        # delete empty directories from dictionary
+        if not data_files_dict[data_dir]:
+            del data_files_dict[data_dir]
 
     # save eveyrthing into the database
     if db[collection].find_one_and_update(data,  {"$set" : data}, upsert=True) is None:
@@ -180,6 +231,7 @@ def add_one_sim_data(a_file, db, collection='data', override=False):
         data_orig["results"]["database"] = str(datetime.datetime.utcnow())
         json_file.seek(0)
         json.dump(data_orig, json_file, indent=2)
+    
     return new
 
 
@@ -215,8 +267,9 @@ def init_database(a_dir, host='localhost', port=27017, user='admin', init=True, 
         raw_input("Press Enter to continue...")
 
     # connect to database and fill it with data
-    db = connect_db(host='localhost', port=27017, user='admin')["fastsim"]
+    db = connect_db(host=host, port=port, user=user)["fastsim"]
     create_indices(db)
     add_many_sim_data(a_dir, db, override=override)
 
     return db
+    

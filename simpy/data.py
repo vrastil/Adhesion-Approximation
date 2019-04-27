@@ -20,19 +20,20 @@ from . import utils as ut
 from . import plot
 from . import struct
 from . import power as pwr
+from . import database
 from plot import report_dir
 
 ###################################
 # FIND, SORT, SLICE
 ###################################
 
-def sort_get_fl_get_z(a_sim_info, subdir, patterns='*.dat', skip_init=False):
+def sort_get_fl_get_z(a_sim_info, subdir, patterns='*.dat'):
     files = ut.get_files_in_traverse_dir(a_sim_info.dir + subdir, patterns)
-    return ut.sort_get_z(files, a_sim_info.app, skip_init=skip_init)
+    return ut.sort_get_z(files, a_sim_info.app)
 
-def try_get_zs_files(a_sim_info, subdir, patterns, skip_init=False):
+def try_get_zs_files(a_sim_info, subdir, patterns):
     try:
-        zs, files = sort_get_fl_get_z(a_sim_info, subdir, patterns=patterns, skip_init=skip_init)
+        zs, files = sort_get_fl_get_z(a_sim_info, subdir, patterns=patterns)
         return list(zs), list(files)
     except ValueError:
         return None, None
@@ -331,7 +332,7 @@ def load_plot_a_eff(files, zs, a_sim_info, **kwargs):
 
 def load_check_plot(a_sim_info, key, patterns, # type: struct.SimInfo, str, str,
                     rerun, skip, plot_func,    # type: List[str], List[str], Callable[List[str], List[str], kwargs],
-                    info_str='', subdir=None,  # type: str, str
+                    info_str='',               # type: str, str
                     **kwargs                   # type: Dict
                    ):
     """bring structure of all steps together:
@@ -344,8 +345,8 @@ def load_check_plot(a_sim_info, key, patterns, # type: struct.SimInfo, str, str,
     """
     if a_sim_info.verbose: print('step: %-25s' % (key + ' ' + info_str), end='')
     sys.stdout.flush()
-    subdir = key + '/' if subdir is None else subdir
-    zs, files = try_get_zs_files(a_sim_info, subdir, patterns)
+    
+    zs, files = a_sim_info.get_zs_data(key, patterns)
     if a_sim_info.rerun(rerun, key, skip, zs):
         plot_func(files, zs, a_sim_info, **kwargs)
         a_sim_info.done(key)
@@ -404,39 +405,39 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
     all_steps = [
         # Power spectrum -- particle, velocity, chameleon, slope
         ("pwr_spec", '*par*.dat *init*.dat', load_plot_pwr, {}),
-        ("pwr_spec_chi", '*chi*.dat*', load_plot_chi_pwr, {'subdir' : 'pwr_spec/'}),
+        ("pwr_spec_chi", '*chi*.dat*', load_plot_chi_pwr, {}),
         ("vel_pwr_spec", '*.dat', load_plot_pwr, {'pk_type' : 'vel'}),
-        ("pwr_slope", '*par*.dat*', load_plot_slope, {'subdir' : 'pwr_spec/'}),
+        ("pwr_slope", '*par*.dat*', load_plot_slope, {}),
         # Power spectrum difference -- input, hybrid, particle, velocity, chameleon
         ("pwr_diff", '*par*', load_plot_pwr_spec_diff,
             {'info_str' : '(particle)', 'ext_title' : 'par'}),
         ("pwr_diff_h", '*hybrid*', load_plot_pwr_spec_diff,
-            {'subdir' : 'pwr_diff/', 'info_str' : '(hybrid)', 'ext_title' : 'hybrid'}),
+            {'info_str' : '(hybrid)', 'ext_title' : 'hybrid'}),
         ("pwr_diff_i", '*input*', load_plot_pwr_spec_diff,
-            {'subdir' : 'pwr_diff/', 'info_str' : '(input)', 'ext_title' : 'input'}),
+            {'info_str' : '(input)', 'ext_title' : 'input'}),
         ("vel_pwr_diff", '*.dat', load_plot_pwr_spec_diff, {'pk_type' : 'vel'}),
         ("chi_pwr_diff", '*chi*.dat*', load_plot_pwr_spec_diff,
-            {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
+            {'pk_type' : 'chi'}),
         # Power spectrum suppression (includes maps) -- particle, velocity, chameleon,
-        ("pwr_spec_supp", '*input*', get_plot_supp, {'subdir' : 'pwr_diff/'}),
-        ("pwr_spec_supp_map", '*input*', get_plot_supp_map, {'subdir' : 'pwr_diff/'}),
-        ("vel_pwr_spec_supp", '*.dat', get_plot_supp, {'subdir' : 'vel_pwr_diff/', 'pk_type' : 'vel'}),
-        ("chi_pwr_spec_supp", '*chi*.dat*', get_plot_supp, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
-        ("chi_pwr_spec_supp_map", '*chi*.dat*', get_plot_supp_map, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
+        ("pwr_spec_supp", '*input*', get_plot_supp, {}),
+        ("pwr_spec_supp_map", '*input*', get_plot_supp_map, {}),
+        ("vel_pwr_spec_supp", '*.dat', get_plot_supp, {'pk_type' : 'vel'}),
+        ("chi_pwr_spec_supp", '*chi*.dat*', get_plot_supp, {'pk_type' : 'chi'}),
+        ("chi_pwr_spec_supp_map", '*chi*.dat*', get_plot_supp_map, {'pk_type' : 'chi'}),
         # Correlation function, BAO peak, amplitude of density fluctuations
-        ("corr_func", '*par*.dat *init*.dat', get_plot_corr, {'subdir' : 'pwr_spec/'}),
-        ("bao", '*par*.dat *init*.dat', get_plot_corr_peak, {'subdir' : 'pwr_spec/'}),
-        ("sigma_R", '*par*.dat *init*.dat', get_plot_sigma, {'subdir' : 'pwr_spec/'}),
+        ("corr_func", '*par*.dat *init*.dat', get_plot_corr, {}),
+        ("bao", '*par*.dat *init*.dat', get_plot_corr_peak, {}),
+        ("sigma_R", '*par*.dat *init*.dat', get_plot_sigma, {}),
         # Density distribution
-        ("dens_hist", '*.dat', load_plot_dens_histo, {'subdir' : 'rho_bin/'}),
+        ("dens_hist", '*.dat', load_plot_dens_histo, {}),
         # Particles -- last slice, evolution
-        ("par_slice", 'par*.dat track*.dat', split_plot_par_slice, {'subdir' : 'par_cut/'}),
-        ("par_ani", 'par*.dat track*.dat', split_plot_par_evol, {'subdir' : 'par_cut/'}),
+        ("par_slice", 'par*.dat track*.dat', split_plot_par_slice, {}),
+        ("par_ani", 'par*.dat track*.dat', split_plot_par_evol, {}),
         # Density -- two slices, evolution
-        ("dens_slice", '*.dat', plot.plot_dens_two_slices, {'subdir' : 'rho_map/'}),
-        ("dens_ani", '*.dat', plot.plot_dens_evol, {'subdir' : 'rho_map/'}),
+        ("dens_slice", '*.dat', plot.plot_dens_two_slices, {}),
+        ("dens_ani", '*.dat', plot.plot_dens_evol, {}),
         # Effective time
-        ("eff_time", '*.dat', load_plot_a_eff, {'subdir' : 'pwr_spec/'})
+        ("eff_time", '*.dat', load_plot_a_eff, {})
     ]
 
     # perform all steps, skip step if Exception occurs
@@ -449,20 +450,22 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         except Exception:
             ut.print_exception()
 
-def analyze_all(out_dir='/home/michal/Documents/GIT/FastSim/output/',
-                rerun=None, skip=None, only=None):
-    files = ut.get_files_in_traverse_dir(out_dir, 'sim_param.json')
+def analyze_all(db, collection='data', query=None, rerun=None, skip=None, only=None):
+    # filter database
+    if query is None:
+        query = {}
+    query["type"] = 'sim_info'
+
+    # get all ids and sim infos
     sim_infos = []
-    for a_file in files:
-        sim_infos.append(struct.SimInfo(a_file))
+    for doc_id in db[collection].find(query, {'_id' : 1}):
+        sim_infos.append(struct.SimInfo(db, doc_id, collection=collection))
 
     if only is not None:
         sim_infos = sim_infos[only]
 
-    info = ''
     for a_sim_info in sim_infos:
         ut.print_info('Analyzing run %s' % a_sim_info.info_tr())
-        
         try:
             analyze_run(a_sim_info, rerun=rerun, skip=skip)
         except KeyboardInterrupt:

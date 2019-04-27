@@ -11,6 +11,7 @@ from __future__ import print_function
 
 import json
 import os
+import fnmatch
 from IPython.display import Image, display
 from . import utils as ut
 from .fastsim import Sim_Param
@@ -89,22 +90,37 @@ def _is_key_val(key, val):
 
 class SimInfo(object):
     """ basic class storing all information about one particular simulation run """
-    def __init__(self, a_file, verbose=True, **kwargs):
-        # type: (str, dict) -> None
-        """ load information in 'a_file', replace parameters in 'self.cosmo'
+    def __init__(self, db, doc_id, collection='data', verbose=True, **kwargs):
+        """ load information from database, replace parameters in 'self.cosmo'
         by any additional parameters in 'kwargs' (optional) """
-        # attributes to load from json file: string & dictionaries
-        self.app = ""
-        self.app_opt, self.box_opt, self.cosmo, self.integ_opt, self.k_nyquist, self.out_opt, self.results, self.run_opt, self.chi_opt = ({} for i in range(9))
+        # load data from the database, omit files
+        doc = db.data.find_one(doc_id, {'data' : 0})
+
+        # attributes
+        self.doc_id = doc_id
+        self.collection = db[collection]
+        self.app = doc['app']
+        self.cosmo = doc['cosmo']
+        self.k_nyquist = doc['k_nyquist']
+        self.integ_opt = doc['integ_opt']
+        self.box_opt = doc['box_opt']
+        self.app_opt = doc['app_opt']
+        self.run_opt = doc['run_opt']
+        self.out_opt = doc['out_opt']
+        self.results = {}
+        self.chi_opt = doc.get('chi_opt', None)
         self.verbose = verbose
+        self.file = str(doc['out_opt']['file']) # !!! VERY IMPORTANT -- not to use unicode string
+        self.dir = doc['out_opt']['dir']
+        self.res_dir = self.dir + 'results/'
+        ut.create_dir(self.res_dir)
+        
+        # check if we added new result keys
+        for key in sum(RESULTS_ALL.values(), []):
+            self.check_new_keys(key)
 
-        if a_file.endswith('.json'):
-            self.load_file(a_file)
-        else:
-            raise IOError("Invalid simulation parameters file '%s'." % a_file)
-
-        # rewrite values in json info if new cosmo param passed
-        for key, value in kwargs.iteritems():
+        # rewrite values in database info if new cosmo param passed
+        for key, value in kwargs.items():
             if self.verbose: print("Using new value for parameter '%s' = '%s'" % (key, value))
             self.cosmo[key] = value
         # other data attributes
@@ -116,6 +132,7 @@ class SimInfo(object):
         """ create C++ 'Sim_Param(self.file)' object
         may take a while to initialize CCL power spectra """
         if self._sim is None:
+            print(self.file)
             self._sim = Sim_Param(self.file)
         return self._sim
 
@@ -154,26 +171,6 @@ class SimInfo(object):
         if key not in self.results and key != 'files':
             self.results[key] = False
 
-    def load_file(self, a_file):
-        # type: (str) -> None
-        """ load information in 'a_file', create results directory """
-        with open(a_file) as data_file:
-            data = json.loads(data_file.read())
-
-        for key in data:
-            setattr(self, key, data[key])
-
-        if self.results is None:
-            self.results = {}
-        
-        for key in sum(RESULTS_ALL.values(), []):
-            self.check_new_keys(key)
-
-        self.file = a_file
-        self.dir = a_file.replace(a_file.split("/")[-1], '')
-        self.res_dir = self.dir + 'results/'
-        ut.create_dir(self.res_dir)
-
     def rerun(self, rerun, key, skip, zs):
         """ steps to rerun or skip """
         # new analysis key?
@@ -201,14 +198,35 @@ class SimInfo(object):
 
     def done(self, key):
         self.results[key] = True
-        with open(self.file) as data_file:
+        with open(self.file, 'r+') as data_file:
             data = json.loads(data_file.read())
-        if data["results"] is None:
-            data["results"] = {}
-        data["results"][key] = True
-        with open(self.file, 'w') as outfile:
-            json.dump(data, outfile, indent=2)
-        if self.verbose: ut.print_done()
+            if data["results"] is None:
+                data["results"] = {}
+            data["results"][key] = True
+            data_file.seek(0)
+            json.dump(data, data_file, indent=2)
+            if self.verbose: ut.print_done()
+
+    def get_zs_data(self, key, patterns):
+        # get all data for given key
+        all_data = self.collection.find_one(self.doc_id, {'data.files.%s' % key})['data']['files'][key]
+
+        # save zs, data
+        zs, data = [], []
+
+        for record in all_data: # go through all data
+            match = False
+            for pattern in patterns.split(): # if multiple patterns given
+                match = match | fnmatch.fnmatch(record['file'], pattern) # pattern matching
+            if match:
+                zs.append(record['z'])
+                data.append(record['data'])
+        
+        # check for empty list (no file matched)
+        if zs:
+            return ut.sort_lists(zs, data)
+        else:
+            return None, None
 
 class StackInfo(SimInfo):
     def __getitem__(self, key):

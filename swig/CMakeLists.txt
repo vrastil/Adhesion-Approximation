@@ -5,6 +5,11 @@ else()
   set(UseSWIG_TARGET_NAME_PREFERENCE LEGACY)
 endif()
 
+# check new policy (from cmake 3.14), use legacy behavior
+if(POLICY CMP0086)
+  cmake_policy(SET CMP0086 OLD)
+endif()
+
 # FastSim python wrapper
 set(LIBRARY_NAME fastsim)
 
@@ -27,7 +32,7 @@ foreach(LIB ${DEP_LIBS})
 endforeach(LIB)
 
 # set include directories
-set_property(SOURCE ${SOURCE_FILE} PROPERTY SWIG_FLAGS ${LIB_INC} "-DPRECISION=2" "-DLESSINFO")
+set_property(SOURCE ${SOURCE_FILE} PROPERTY SWIG_FLAGS ${LIB_INC} "-DPRECISION=2")
 
 # create wrapper
 if(${CMAKE_VERSION} VERSION_LESS "3.8.0")
