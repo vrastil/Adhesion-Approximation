@@ -8,6 +8,8 @@ from __future__ import print_function
 import os
 import sys
 import pymongo
+import pickle
+from bson.binary import Binary
 from bson.son import SON
 from getpass import getpass
 import json
@@ -63,19 +65,20 @@ def create_indices(db, collection='data'):
     ])
 
 def get_id_keys(db, app, collection='data'):
-    doc = db[collection].find_one({'app' : app})
-    opt_keys = [x for x in doc.keys() if
-        x != 'app' and
-        x != 'data' and
-        x != '_id' and
-        x != 'run_opt' and
-        x != 'out_opt' and
-        x != 'app_opt' and
-        x != 'type'
-    ]
+    doc = db[collection].find_one({'app' : app}, {
+        '_id' : 0,
+        'app' : 0,
+        'app_opt' : 0,
+        'data' : 0,
+        'database' : 0,
+        'out_opt' : 0,
+        'results' : 0,
+        'run_opt' : 0,
+        'type' : 0
+    })
 
     all_keys = {}
-    for key in opt_keys:
+    for key in doc.keys():
         all_keys[key] = doc[key].keys()
 
     if app != 'TZA':
@@ -185,6 +188,7 @@ def add_one_sim_data(a_file, db, collection='data', override=False):
 
     # get rid of unwanted data
     data.pop("results", None)
+    data.pop("database", None)
     data["out_opt"].pop("out_dir")
     data["run_opt"].pop("num_thread")
 
@@ -211,11 +215,12 @@ def add_one_sim_data(a_file, db, collection='data', override=False):
         data_files_dict[data_dir] = []
         # go through all files in the directory
         for data_file in get_files_in_traverse_dir(root_dir + data_dir, '*'):
-            # load data and save them as plain lists
+            # load data and save them in binary
+            binary_data = pickle.dumps(numpy.transpose(numpy.loadtxt(data_file)))
             data_files_dict[data_dir].append({
                 'file' : data_file,
                 'z' : get_z_from_file(data_file, app),
-                'data' : numpy.transpose(numpy.loadtxt(data_file)).tolist()
+                'data' : Binary(binary_data)
             })
         # delete empty directories from dictionary
         if not data_files_dict[data_dir]:
@@ -228,14 +233,15 @@ def add_one_sim_data(a_file, db, collection='data', override=False):
         new = False
 
     # update sim_param.json
-    with open(a_file, 'r+') as json_file:
+    with open(a_file) as json_file:
         data_orig = json.loads(json_file.read())
         data_orig.pop("results", None)
+        data_orig.pop("database", None)
         data_orig["database"] = {
             "timestamp" : str(datetime.datetime.utcnow()),
             "_id" : str(db[collection].find_one(data, {'_id' : 1})['_id'])
         }
-        json_file.seek(0)
+    with open(a_file, 'w') as json_file:
         json.dump(data_orig, json_file, indent=2)
     
     return new

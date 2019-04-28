@@ -10,6 +10,8 @@
 from __future__ import print_function
 
 import json
+from bson.binary import Binary
+import pickle
 import os
 import fnmatch
 from IPython.display import Image, display
@@ -95,7 +97,7 @@ class SimInfo(object):
         """ load information from database, replace parameters in 'self.cosmo'
         by any additional parameters in 'kwargs' (optional) """
         # load data from the database, omit files
-        doc = db.data.find_one(doc_id, {'data' : 0})
+        doc = db[collection].find_one(doc_id, {'data' : 0})
 
         # attributes
         self.doc_id = doc_id
@@ -124,6 +126,7 @@ class SimInfo(object):
         for key, value in kwargs.items():
             if self.verbose: print("Using new value for parameter '%s' = '%s'" % (key, value))
             self.cosmo[key] = value
+
         # other data attributes
         self.data = {}
         self._sim = None
@@ -196,10 +199,41 @@ class SimInfo(object):
             if self.verbose: ut.print_skipped(done=True)
             return False
 
+    def update_db(self, upd_doc):
+        self.collection.find_one_and_update(
+            self.doc_id, # find self
+            {'$set': upd_doc} # update
+        )
+
     def done(self, key):
         self.results[key] = True
-        self.collection.find_one_and_update(self.doc_id, {'$set': {'results': self.results}})
+        self.update_db({'results': self.results})
         if self.verbose: ut.print_done()
+
+    def save_data_to_db(self, keys=None):
+        # if not specified, save everything
+        if keys is None:
+            keys = self.data.keys()
+        
+        # save in binary format -- allow saving numpy arrays (not C++ objects)
+        for key in keys:
+            try:
+                binary_data = pickle.dumps(self.data[key])
+            except TypeError: # can't pickle object
+                ut.print_warning("'%s' could not be tranformed into binary data." % key)
+            else:
+                self.update_db({'data.processed.%s' % key : Binary(binary_data)})
+
+    def get_data_from_db(self, keys=None):
+        # if not specified, load everything
+        doc = self.collection.find_one(self.doc_id, {'data.processed'})
+        if keys is None:
+            keys = doc['data']['processed'].keys()
+
+        # load from binary format
+        for key in keys:
+            binary_data = doc['data']['processed'][key]
+            self.data[key] = pickle.loads(binary_data)     
 
     def get_zs_data(self, key, patterns):
         # get all data for given key
@@ -216,12 +250,13 @@ class SimInfo(object):
                 match = match | fnmatch.fnmatch(record['file'], pattern) # pattern matching
             if match:
                 zs.append(record['z'])
-                data.append(record['data'])
+                binary_data = record['data']
+                data.append(pickle.loads(binary_data))
         
         # check for empty list (no file matched)
         if zs:
             zs, data = ut.sort_lists(zs, data)
-            return list(zs), np.array(data)
+            return list(zs), list(data)
         else:
             return None, None
 

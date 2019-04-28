@@ -120,3 +120,6 @@ def print_skipped(done=False):
 
 def print_skipped_miss():
     print(bcolors.WARNING + "[Skipped]  (missing data)" + bcolors.ENDC)
+
+def print_warning(warning):
+    print(bcolors.FAIL + "WARNING! " + warning + bcolors.ENDC)
