@@ -770,9 +770,9 @@ def load_stack_save(stack_info, key, patterns,  # type: struct.StackInfo, str, s
 # RUN ANALYSIS -- STACKING OF RUNS *
 # **********************************
 
-def stack_group(rerun=None, skip=None, verbose=True, return_stack=False, **kwargs):
+def stack_group(db, sep_id, collection='data', rerun=None, skip=None, verbose=False, **kwargs):
     # load & save all info about stack
-    stack_info = struct.StackInfo(verbose=verbose, **kwargs)
+    stack_info = struct.StackInfo(db, sep_id, collection=collection, verbose=verbose, **kwargs)
 
     # load, stack & save all files
     all_files_steps = [
@@ -796,46 +796,7 @@ def stack_group(rerun=None, skip=None, verbose=True, return_stack=False, **kwarg
         except Exception:
             ut.print_exception()
 
-    # load and plot files
-    all_steps = [
-        # Power spectrum
-        ("pwr_spec", '*par*.dat *init*.dat', load_plot_pwr, {'err' : True}),
-        ("pwr_spec_chi", '*chi*.dat*', load_plot_chi_pwr,
-            {'subdir' : 'pwr_spec/', 'err' : True}),
-        ("pwr_slope", '*par*.dat*', load_plot_slope, {'subdir' : 'pwr_spec/'}),
-        # Power spectrum difference -- input, hybrid, particle
-        ("pwr_diff", '*par*', load_plot_pwr_spec_diff,
-            {'info_str' : '(particle)', 'ext_title' : 'par'}),
-        ("pwr_diff_h", '*hybrid*', load_plot_pwr_spec_diff,
-            {'subdir' : 'pwr_diff/', 'info_str' : '(hybrid)', 'ext_title' : 'hybrid'}),
-        ("pwr_diff_i", '*input*', load_plot_pwr_spec_diff,
-            {'subdir' : 'pwr_diff/', 'info_str' : '(input)', 'ext_title' : 'input'}),
-        ("chi_pwr_diff", '*chi*.dat*', load_plot_pwr_spec_diff,
-            {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
-        # Correlation function, BAO peak, amplitude of density fluctuations
-        ("corr_func", '*par*.dat *init*.dat', get_plot_corr, {'subdir' : 'pwr_spec/'}),
-        ("bao", '*par*.dat *init*.dat', get_plot_corr_peak, {'subdir' : 'pwr_spec/'}),
-        ("sigma_R", '*par*.dat *init*.dat', get_plot_sigma, {'subdir' : 'pwr_spec/'}),
-        # Power spectrum suppression
-        ("pwr_spec_supp", '*input*', get_plot_supp, {'subdir' : 'pwr_diff/'}),
-        ("pwr_spec_supp_map", '*input*', get_plot_supp_map, {'subdir' : 'pwr_diff/'}),
-        ("chi_pwr_spec_supp", '*chi*.dat*', get_plot_supp, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
-        ("chi_pwr_spec_supp_map", '*chi*.dat*', get_plot_supp_map, {'subdir' : 'pwr_spec/', 'pk_type' : 'chi'}),
-        # Effective time
-        ("eff_time", '*.dat', load_plot_a_eff, {'subdir' : 'pwr_spec/', 'verbose' : verbose})
-    ]
-
-    # perform all steps, skip step if Exception occurs
-    for key, patterns, plot_func, kwargs in all_steps:
-        try:
-            load_check_plot(stack_info, key, patterns, rerun,
-                            skip, plot_func, **kwargs)
-        except KeyboardInterrupt:
-            raise
-        except Exception:
-            ut.print_exception()
-
-    return stack_info if return_stack else None
+    return stack_info
 
 def get_runs_siminfo(in_dir):
     # get all runs
@@ -871,40 +832,50 @@ def print_runs_info(sep_files, num_all_runs, num_all_sep_runs, num_sep_runs):
                 break
             print("\t" + a_sim_info.dir)
 
-def stack_all(in_dir='/home/michal/Documents/GIT/FastSim/output/', rerun=None, skip=None, verbose=True, return_stack=False, **kwargs):
-    # get & count all runs
-    sep_files = get_runs_siminfo(in_dir)
-    num_all_runs, num_all_sep_runs, num_sep_runs = count_runs(sep_files)
+def stack_all(db, collection='data', query=None, rerun=None, skip=None, verbose=False, **kwargs):
+    # separate all runs
+    all_sep_id = database.get_separated_ids(db)
     
     # remove 1-length sep_sim_infos
-    sep_files[:] = [x for x in sep_files if len(x) != 1]
+    all_sep_id[:] = [x for x in all_sep_id if len(x) != 1]
 
-    # sort sim_infos
-    for sep_sim_infos in sep_files:
-        sep_sim_infos.sort(key=lambda x: x.dir)
-
-    # print info about separated files
-    if verbose: print_runs_info(sep_files, num_all_runs, num_all_sep_runs, num_sep_runs)
-
-    # analysis
-    stack_infos = []    
-    for i, sep_sim_infos in enumerate(sep_files):
+    # stack runs (no analysis)
+    stack_infos = []
+    for i, sep_id in enumerate(all_sep_id):
         if verbose:
-            ut.print_info('Analyzing run %s' % sep_sim_infos[0].info_tr())
+            pass
+            # TODO
+            # ut.print_info('Analyzing run %s' % sep_sim_infos[0].info_tr())
         else:
-            print("\rStacking group %i/%i" % (i + 1, len(sep_files)), end="")
+            print("\rStacking group %i/%i" % (i + 1, len(sep_id)), end="")
             sys.stdout.flush()
         try:
-            stack_infos.append(stack_group(group_sim_infos=sep_sim_infos, rerun=rerun, skip=skip, return_stack=return_stack, verbose=verbose, **kwargs))
+            stack_infos.append(
+                stack_group(db, sep_id, collection=collection, rerun=rerun, skip=skip, verbose=verbose, **kwargs)
+                )
         except KeyboardInterrupt:
             print('Exiting...')
-            if return_stack:
-                return stack_infos
+
     if verbose:
         ut.print_info_end()
     else:
         print('\n')
-    return stack_infos if return_stack else None
+
+    # analysis
+    for i, stack_info in enumerate(stack_infos):
+        if verbose:
+            ut.print_info('Analyzing run %s' % stack_info.info_tr())
+        else:
+            print("\rAnalyzing group %i/%i" % (i + 1, len(stack_infos)), end="")
+            sys.stdout.flush()
+        try:
+            analyze_run(stack_info, rerun=rerun, skip=skip)
+        except KeyboardInterrupt:
+            print('Exiting...')
+    if verbose:
+        ut.print_info_end()
+    else:
+        print('\n')
 
 # ********************************
 # RUN ANALYSIS -- CHI COMPARISON *

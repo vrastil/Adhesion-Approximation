@@ -14,6 +14,7 @@ from bson.binary import Binary
 import pickle
 import os
 import fnmatch
+import datetime
 from IPython.display import Image, display
 import numpy as np
 from . import utils as ut
@@ -93,14 +94,17 @@ def _is_key_val(key, val):
 
 class SimInfo(object):
     """ basic class storing all information about one particular simulation run """
+
     def __init__(self, db, doc_id, collection='data', verbose=True, **kwargs):
         """ load information from database, replace parameters in 'self.cosmo'
         by any additional parameters in 'kwargs' (optional) """
+
         # load data from the database, omit files
         doc = db[collection].find_one(doc_id, {'data' : 0})
 
         # attributes
         self.doc_id = doc_id
+        self.db = db
         self.collection = db[collection]
         self.app = doc['app']
         self.cosmo = doc['cosmo']
@@ -262,33 +266,61 @@ class SimInfo(object):
 
 class StackInfo(SimInfo):
     def __getitem__(self, key):
-        return self.group_sim_infos[key]
+        return self.sim_ids[key]
 
     def __iter__(self):
-        for x in self.group_sim_infos:
+        for x in self.sim_ids:
             yield x
 
-    def __init__(self, group_sim_infos=None, stack_info_file=None, **kwargs):
-        if group_sim_infos is not None:
-            # use last SimInfo of SORTED list, i.e. the last run (if need to add
-            # info, e.g. coorelation data)
-            SimInfo.__init__(self, group_sim_infos[-1].file, **kwargs)
-            self.load_group_sim_infos(group_sim_infos, **kwargs)
-        elif stack_info_file is not None:
-            SimInfo.__init__(self, stack_info_file, **kwargs)
+    def __init__(self, db, sep_id, collection='data', **kwargs):
+        # we can pass single sep_id of StackInfo or group of ids of SimInfo
+        if isinstance(sep_id, list):
+            SimInfo.__init__(self, db, sep_id[0], collection=collection, **kwargs)
+            self.get_dir_name()
+            self.sim_ids = sep_id
+            self.num_run = len(self.sim_ids)
+            self.find_data_in_db()
         else:
-            raise KeyError("Constructor 'StackInfo' called without arguments.")
+            SimInfo.__init__(self, db, sep_id, collection=collection, **kwargs)
+            # load additional variables
+            doc = self.collection.find_one(self.doc_id, {'database' : 1})
+            self.sim_ids = doc['database']['sim_ids']
+            self.num_run = len(self.sim_ids)
+        
+        # self.save() # need to save new cosmo param for C++ to load modified parameters
 
-        self.save() # need to save new cosmo param for C++ to load modified parameters
-        self.data = {}
-        for key in sum(RESULTS_ALL.values(), []):
-            if key not in self.results:
-                self.results[key] = False
+    def find_data_in_db(self):
+        # get document with run information
+        doc = self.collection.find_one(self.sim_ids[0], {
+            '_id' : 0,
+            'app_opt' : 0,
+            'data' : 0,
+            'database' : 0,
+            'out_opt' : 0,
+            'results' : 0,
+            'run_opt' : 0,
+        })
 
-    def load_group_sim_infos(self, group_sim_infos, **kwargs):
-        self.group_sim_infos = group_sim_infos 
+        doc['type'] = 'stack_info'
+        doc_in_db = self.collection.find_one(doc, {'database' : 1})
+        
+        if doc_in_db is not None and doc_in_db['database']['sim_ids'] == self.sim_ids:
+            self.doc_id = {'_id' : doc_in_db['_id']}
+        else:
+            doc['database'] = {
+                'sim_ids' : self.sim_ids,
+                'timestamp' : str(datetime.datetime.utcnow())
+            }
+            doc['run_opt'] = self.run_opt
+            doc['app_opt'] = self.app_opt
+            doc['out_opt'] = self.out_opt
+            doc['out_opt']['file'] = self.file
+            doc['results'] = self.results
+            doc['chi_opt'] = self.chi_opt
+            self.doc_id = {'_id' : self.collection.insert(doc)}
 
-        # directory name
+    def get_dir_name(self):
+        """get directory name for stack info from sim info, create structure"""
         self.dir = self.dir.replace(self.dir.split("/")[-2] + "/", "")
         self.dir += "STACK_%im_%ip_%iM_%ib" % (
             self.box_opt["mesh_num"], self.box_opt["par_num"],
@@ -304,20 +336,7 @@ class StackInfo(SimInfo):
         ut.create_dir(self.dir)
         ut.create_dir(self.dir + "pwr_spec/")
         ut.create_dir(self.dir + "pwr_diff/")
-        ut.create_dir(self.res_dir)
-
-        self.seeds = [SI.run_opt["seed"] for SI in self]
-        self.num_run = len(self.seeds)
-
-        if os.path.isfile(self.file):  # there is already save StackInfo
-            with open(self.file) as data_file:
-                data = json.loads(data_file.read())
-                self.results = data["results"]
-                if self.num_run != data["num_run"]:
-                    print("\tFound stack info but number of files does not seem right. Disregarding any saved data.")
-                    self.results = {}
-        else:  # save new StackInfo
-            self.results = {}     
+        ut.create_dir(self.res_dir)         
 
     def save(self):
         data = self.__dict__.copy()

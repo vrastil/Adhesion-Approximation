@@ -83,6 +83,12 @@ def get_id_keys(db, app, collection='data'):
 
     if app != 'TZA':
         all_keys["cosmo"].remove("smoothing_k")
+
+    # some (new) runs do not have cosmo['A'], it is always 1
+    try:
+        all_keys["cosmo"].remove("A")
+    except ValueError:
+        pass # key not present
     
     return all_keys
 
@@ -141,14 +147,14 @@ def print_db_info(db, collection='data'):
 
 def get_separated_ids(db, collection='data'):
     apps = db.data.distinct('app', {})
-    sep_id = {}
-    # separate by application
+    sep_id = []
+    i = 0
+    # go by application
     for app in apps:
-        sep_id[app] = []
         pipeline = get_pipeline(db, app)
         # separate by different runs
-        for i, doc in enumerate(db[collection].aggregate(pipeline)):
-            sep_id[app].append([])
+        for doc in db[collection].aggregate(pipeline):
+            sep_id.append([])
             # get document by which we can find all belonging docs
             new_doc = {'app' : app}
             for key, val in doc['_id'].items():
@@ -157,7 +163,10 @@ def get_separated_ids(db, collection='data'):
             # get only id of these runs
             cursor = db.data.find(new_doc, {'_id' : 1})
             for x in cursor:
-                sep_id[app][i].append(x)
+                sep_id[i].append(x)
+
+            # increase counter
+            i += 1
     return sep_id
 
 def is_new_sim(sim_param, override):

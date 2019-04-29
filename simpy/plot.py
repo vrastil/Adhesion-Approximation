@@ -132,7 +132,7 @@ def get_chi_label(si):
 def get_chi_labels(sim_infos):
     return [get_chi_label(si) for si in sim_infos]
 
-def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False,
+def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap,
                   out_dir='auto', pk_type='dens', save=True, show=False, use_z_eff=False):
     """" Plot power spectrum -- points and extrapolated values,
     show 'true' linear Pk at the initial and final redshift """
@@ -153,7 +153,7 @@ def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap, err=False,
         k, P_k = Pkk[0], Pkk[1]
         ax.plot(k, P_k, 'o', ms=3, label=lab)
         # show 1 standard deviation
-        if err:
+        if len(Pkk) == 3:
             P_k_std = Pkk[2]
             ax.fill_between(k, P_k - P_k_std, P_k + P_k_std,
                              facecolor='darkgrey', alpha=0.5)
@@ -292,7 +292,7 @@ def plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo,
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 
-def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, err=False, out_dir='auto', save=True, show=False, use_z_eff=False):
+def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, out_dir='auto', save=True, show=False, use_z_eff=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     suptitle = "Chameleon power spectrum"
@@ -311,7 +311,7 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, err=False, out_dir='aut
         color = lines[0].get_color()
         P_a = power.chi_lin_pow_spec(a, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
         ax.plot(k, P_a, '-', color=color)
-        if err:
+        if len(Pkk) == 3:
             P_k_std = Pkk[2] / pow(chi_bulk_a_n, 2)
             ax.fill_between(k, P_k - P_k_std, P_k + P_k_std,
                              facecolor='darkgrey', alpha=0.5)
