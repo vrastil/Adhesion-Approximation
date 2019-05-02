@@ -20,12 +20,23 @@ try:
 except ImportError:
      from urlparse import urlparse
 
+import hashlib
+
 # simpy packages
 from .struct import RESULTS_DIRS
 from .utils import *
 
 # version independent raw_input
 if sys.version[0]=="3": raw_input=input
+
+def get_sorted_bson(a_dict):
+    res = SON()
+    for k, v in sorted(a_dict.items()):
+        if isinstance(v, dict):
+            res[k] = get_sorted_bson(v)
+        else:
+            res[k] = v
+    return res
 
 def create_database(host='localhost', port=27017, user='admin'):
     """create database and user admin in it,
@@ -189,7 +200,7 @@ def add_one_sim_data(a_file, db, collection='data', override=False):
 
     # open sim_param.json
     with open(a_file) as json_file:
-        data = json.loads(json_file.read())
+        data = get_sorted_bson(json.loads(json_file.read()))
 
     # check if we already loaded this simulation
     if not is_new_sim(data, override):
@@ -231,6 +242,7 @@ def add_one_sim_data(a_file, db, collection='data', override=False):
                 'z' : get_z_from_file(data_file, app),
                 'data' : Binary(binary_data)
             })
+
         # delete empty directories from dictionary
         if not data_files_dict[data_dir]:
             del data_files_dict[data_dir]
