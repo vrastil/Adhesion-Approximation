@@ -117,7 +117,7 @@ class SimInfo(object):
         self.results = doc.get('results', {})
         self.chi_opt = doc.get('chi_opt', None)
         self.verbose = verbose
-        self.file = str(doc['out_opt']['file']) # !!! VERY IMPORTANT -- not to use unicode string
+        self.file = doc['out_opt']['file']
         self.dir = doc['out_opt']['dir']
         self.res_dir = self.dir + 'results/'
         ut.create_dir(self.res_dir)
@@ -140,7 +140,7 @@ class SimInfo(object):
         """ create C++ 'Sim_Param(self.file)' object
         may take a while to initialize CCL power spectra """
         if self._sim is None:
-            self._sim = Sim_Param(self.file)
+            self._sim = Sim_Param(str(self.file)) # !!! VERY IMPORTANT -- do not use unicode string
         return self._sim
 
     def info(self):
@@ -287,7 +287,7 @@ class StackInfo(SimInfo):
             self.sim_ids = doc['database']['sim_ids']
             self.num_run = len(self.sim_ids)
         
-        # self.save() # need to save new cosmo param for C++ to load modified parameters
+        self.save() # need to save new cosmo param for C++ to load modified parameters
 
     def find_data_in_db(self):
         # get document with run information
@@ -303,9 +303,21 @@ class StackInfo(SimInfo):
 
         doc['type'] = 'stack_info'
         doc_in_db = self.collection.find_one(doc, {'database' : 1})
-        
-        if doc_in_db is not None and doc_in_db['database']['sim_ids'] == self.sim_ids:
+
+        if doc_in_db is not None:
             self.doc_id = {'_id' : doc_in_db['_id']}
+            if doc_in_db['database']['sim_ids'] == self.sim_ids:
+                # same files, load data
+                # TODO
+                pass
+            else:
+                # wrong number of files
+                doc_in_db['database'] = {
+                    'sim_ids' : self.sim_ids,
+                    'timestamp' : str(datetime.datetime.utcnow())
+                }
+                doc_in_db['results'] = self.results
+                self.update_db(doc_in_db)
         else:
             doc['database'] = {
                 'sim_ids' : self.sim_ids,
@@ -315,6 +327,7 @@ class StackInfo(SimInfo):
             doc['app_opt'] = self.app_opt
             doc['out_opt'] = self.out_opt
             doc['out_opt']['file'] = self.file
+            doc['out_opt']['dir'] = self.dir
             doc['results'] = self.results
             doc['chi_opt'] = self.chi_opt
             self.doc_id = {'_id' : self.collection.insert(doc)}
@@ -339,9 +352,24 @@ class StackInfo(SimInfo):
         ut.create_dir(self.res_dir)         
 
     def save(self):
+        # do not modify self, do a copy
         data = self.__dict__.copy()
-        for key in ('ccl_cosmo', 'run_opt', 'out_dir', 'res_dir', 'data', 'sim', '_sim', 'group_sim_infos'):
+
+        # get rid of unnecessary data
+        for key in ('ccl_cosmo', 'run_opt', 'out_dir', 'res_dir', 'verbose',
+            'data', 'sim', '_sim', 'collection', 'db', 'file', 'dir', 'doc_id', 'sim_ids'):
             data.pop(key, None)
+
+        # convert ObjectId into string and save
+        data['database'] = {
+            "timestamp" : str(datetime.datetime.utcnow()),
+            "_id" : str(self.doc_id['_id']),
+            "sim_ids" : []
+        }
+        
+        for doc_id in self.sim_ids:
+            data['database']['sim_ids'].append(str(doc_id['_id']))
+
         # overriding
         with open(self.file, 'w') as outfile:
             json.dump(data, outfile, indent=2)

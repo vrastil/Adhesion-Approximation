@@ -145,18 +145,18 @@ def print_db_info(db, collection='data'):
             msg += ", num = %i" % doc['count']
             print(msg)
 
-def get_separated_ids(db, collection='data'):
+def get_separated_ids(db, collection='data', info_type='sim_info'):
     apps = db.data.distinct('app', {})
     sep_id = []
     i = 0
     # go by application
     for app in apps:
-        pipeline = get_pipeline(db, app)
+        pipeline = get_pipeline(db, app, info_type=info_type)
         # separate by different runs
         for doc in db[collection].aggregate(pipeline):
             sep_id.append([])
             # get document by which we can find all belonging docs
-            new_doc = {'app' : app}
+            new_doc = {'app' : app, 'type' : info_type}
             for key, val in doc['_id'].items():
                 new_key = key.replace(sep_str, '.')
                 new_doc[new_key] = val
