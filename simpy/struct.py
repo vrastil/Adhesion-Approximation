@@ -229,8 +229,14 @@ class SimInfo(object):
                 self.update_db({'data.processed.%s' % key : Binary(binary_data)})
 
     def get_data_from_db(self, keys=None):
-        # if not specified, load everything
+        # get doc with info about processed data
         doc = self.collection.find_one(self.doc_id, {'data.processed'})
+
+        # check we have loaded any data
+        if doc is None or 'data' not in doc or 'processed' not in doc['data']:
+            return
+        
+        # if not specified, load everything
         if keys is None:
             keys = doc['data']['processed'].keys()
 
@@ -239,10 +245,14 @@ class SimInfo(object):
             binary_data = doc['data']['processed'][key]
             self.data[key] = pickle.loads(binary_data)     
 
-    def get_zs_data(self, key, patterns):
+    def get_zs_data(self, key, patterns, doc_id=None):
+        # if doc_id is specified, do not load self (for StackInfo)
+        if doc_id is None:
+            doc_id = self.doc_id
+
         # get all data for given key
         subdir = RESULTS_DIRS[key]
-        all_data = self.collection.find_one(self.doc_id, {'data.files.%s' % subdir}) # find data
+        all_data = self.collection.find_one(doc_id, {'data.files.%s' % subdir}) # find data
         all_data = all_data['data']['files'].get(subdir, []) # get data or empty list if no data available
 
         # save zs, data
@@ -264,6 +274,26 @@ class SimInfo(object):
         else:
             return None, None
 
+    def save_zs_data(self, key, zs, data_list, fname):
+        data_dir = RESULTS_DIRS[key]
+        db_key = "data.files.%s" % data_dir
+        data_doc = { db_key : [] }
+
+        for z, data in zip(zs, data_list):
+            z_str = 'init.dat' if z == 'init' else 'z%.2f.dat' % z
+            fname_ = self.dir + RESULTS_DIRS[key] + '/' + fname + "_%s_%s" % (self.app, z_str)
+
+            # load data and save them in binary
+            binary_data = pickle.dumps(np.array(data))
+            data_doc[db_key].append({
+                'file' : fname_,
+                'z' : z,
+                'data' : Binary(binary_data)
+            })
+        
+        # save into the database
+        self.update_db(data_doc)
+
 class StackInfo(SimInfo):
     def __getitem__(self, key):
         return self.sim_ids[key]
@@ -281,11 +311,13 @@ class StackInfo(SimInfo):
             self.num_run = len(self.sim_ids)
             self.find_data_in_db()
         else:
-            SimInfo.__init__(self, db, sep_id, collection=collection, **kwargs)
+            SimInfo.__init__(self, db, {'_id' : sep_id}, collection=collection, **kwargs)
             # load additional variables
-            doc = self.collection.find_one(self.doc_id, {'database' : 1})
+            self.get_data_from_db()
+            doc = self.collection.find_one(self.doc_id, {'database' : 1, 'results' : 1})
             self.sim_ids = doc['database']['sim_ids']
             self.num_run = len(self.sim_ids)
+            self.results = doc['results']
         
         self.save() # need to save new cosmo param for C++ to load modified parameters
 
@@ -302,14 +334,15 @@ class StackInfo(SimInfo):
         })
 
         doc['type'] = 'stack_info'
-        doc_in_db = self.collection.find_one(doc, {'database' : 1})
+        doc_in_db = self.collection.find_one(doc, {'database' : 1, 'results' : 1})
 
         if doc_in_db is not None:
             self.doc_id = {'_id' : doc_in_db['_id']}
             if doc_in_db['database']['sim_ids'] == self.sim_ids:
                 # same files, load data
-                # TODO
-                pass
+                self.get_data_from_db()
+                self.results = doc_in_db['results']
+
             else:
                 # wrong number of files
                 doc_in_db['database'] = {
@@ -356,9 +389,11 @@ class StackInfo(SimInfo):
         data = self.__dict__.copy()
 
         # get rid of unnecessary data
-        for key in ('ccl_cosmo', 'run_opt', 'out_dir', 'res_dir', 'verbose',
+        for key in ('ccl_cosmo', 'run_opt', 'out_dir', 'res_dir', 'verbose', 'results',
             'data', 'sim', '_sim', 'collection', 'db', 'file', 'dir', 'doc_id', 'sim_ids'):
             data.pop(key, None)
+        if data['chi_opt'] is None:
+            data.pop('chi_opt')
 
         # convert ObjectId into string and save
         data['database'] = {

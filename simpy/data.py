@@ -473,14 +473,14 @@ def analyze_all(db, collection='data', query=None, rerun=None, skip=None, only=N
 # LOAD DATA FROM MULTIPLE RUNS *
 # ******************************
 
-def load_data_for_stack(stack_info, subdir, a_file):
+def load_data_for_stack(stack_info, key, patterns):
     # load everything
     all_data_k = None
     all_data_Pk = None
     all_zs = None
-    for a_sim_info in stack_info:
-        # load files for ONE run
-        zs, files = try_get_zs_files(a_sim_info, subdir, patterns=a_file)
+    for doc_id in stack_info:
+        # load data for ONE run
+        zs, data_list = stack_info.get_zs_data(key, patterns, doc_id=doc_id)
 
         # if data are missing for this run
         if zs is None:
@@ -490,14 +490,13 @@ def load_data_for_stack(stack_info, subdir, a_file):
 
         # create lists, only for the first run (the rest are assumed to have the same output)
         if all_data_k is None:
-            all_data_k = [[] for x in xrange(len(zs))]
+            all_data_k = [[] for x in range(len(zs))]
         if all_data_Pk is None:
-            all_data_Pk = [[] for x in xrange(len(zs))]
+            all_data_Pk = [[] for x in range(len(zs))]
 
         # load k, Pk
-        for i, data_file in enumerate(files):
-            data = np.loadtxt(data_file)
-            k, P_k = data[:, 0], data[:, 1]
+        for i, data in enumerate(data_list):
+            k, P_k = data[0], data[1]
             all_data_k[i].append(k.tolist())
             all_data_Pk[i].append(P_k.tolist())
     return all_zs, all_data_k, all_data_Pk
@@ -578,13 +577,13 @@ def check_data_consistency_diff(data_list):
         data_array = np.array(data_list)
     return data_array
 
-def stack_files(stack_info, subdir, a_file):
+def stack_files(stack_info, key, a_file):
     """ assume data in files are k = data[:, 0], Pk = data[:, 1]
     return tuple (zs, data_list) where each entry in 'data_list' corresponds to entry in 'zs' list
     data[:, 0] = k, data[:, 1] = mean(Pk), data[:, 2] = std(Pk)
     """
     # load everything
-    zs, all_data_k, all_data_Pk = load_data_for_stack(stack_info, subdir, a_file)
+    zs, all_data_k, all_data_Pk = load_data_for_stack(stack_info, key, a_file)
 
     # if data are missing for all runs
     if zs is None:
@@ -595,12 +594,12 @@ def stack_files(stack_info, subdir, a_file):
 
     # compute means, std
     data_list = []
-    for i in xrange(len(all_data_k)):
-        data_list.append([])
-
-        data_list[i].append(np.mean(all_data_k[i], axis=0))
-        data_list[i].append(np.mean(all_data_Pk[i], axis=0))
-        data_list[i].append(np.std(all_data_Pk[i], axis=0))
+    for k, Pk in izip(all_data_k, all_data_Pk):
+        data_list.append([
+            np.mean(k, axis=0),
+            np.mean(Pk, axis=0),
+            np.std(Pk, axis=0)
+        ])
 
     return zs, data_list
 
@@ -740,12 +739,11 @@ HEADER_CORR = ("This file contains correlation function depending on distance r 
 
 def load_stack_save(stack_info, key, patterns,  # type: struct.StackInfo, str, str,
                     rerun, skip, header, fname, # type: List[str], List[str], str, str
-                    info_str='', subdir=None    # type: str, str
+                    info_str=''                 # type: str
                    ):
     """bring structure of stacking together:
     1) check if the step should be performed (rerun / skip)
     2) stack files through function 'stack_files'
-       - subdirectory is key without '_files' + '/' if not specified in arguments
     3) save stacked files
        - out_dir = stack_info.dir + subdir
        - fname = fname + "_%s_%s" % (app, z_str)
@@ -755,16 +753,19 @@ def load_stack_save(stack_info, key, patterns,  # type: struct.StackInfo, str, s
     sys.stdout.flush()
     # check only rerun / key / skip -- no files loading
     if stack_info.rerun(rerun, key, skip, True):
-        subdir = key.replace('_files', '/') if subdir is None else subdir
-        zs, data_list = stack_files(stack_info, subdir, patterns)
+        zs, data_list = stack_files(stack_info, key, patterns)
 
         # check again if we loaded any data
         if stack_info.rerun(rerun, key, skip, zs):
+            # save all stacked data into the files
             for z, data in zip(zs, data_list):
                 z_str = 'init.dat' if z == 'init' else 'z%.2f.dat' % z
-                fname_ = stack_info.dir + subdir + fname + "_%s_%s" % (stack_info.app, z_str)
+                fname_ = stack_info.dir + struct.RESULTS_DIRS[key] + '/' + fname + "_%s_%s" % (stack_info.app, z_str)
                 np.savetxt(fname_, np.transpose(data), fmt='%.6e', header=header)
-            stack_info.done(key)    
+
+            # save all stacked data into the database
+            stack_info.save_zs_data(key, zs, data_list, fname)
+            stack_info.done(key)
 
 # **********************************
 # RUN ANALYSIS -- STACKING OF RUNS *
@@ -778,14 +779,11 @@ def stack_group(db, sep_id, collection='data', rerun=None, skip=None, verbose=Fa
     all_files_steps = [
         # Power spectrum
         ("pwr_spec_files", '*par*.dat *init*.dat', HEADER_PWR, 'pwr_spec_par', {}),
-        ("pwr_spec_chi_files", '*chi*.dat*', HEADER_PWR_CHI, 'pwr_spec_chi',
-            {'subdir' : 'pwr_spec/'}),
+        ("pwr_spec_chi_files", '*chi*.dat*', HEADER_PWR_CHI, 'pwr_spec_chi', {}),
         # Power spectrum difference -- input, hybrid, particle
         ("pwr_diff_files", '*par*', HEADER_PWR_DIFF_PAR, 'pwr_spec_diff_par', {'info_str' : '(particle)'}),
-        ("pwr_diff_files_h", '*hybrid*', HEADER_PWR_DIFF_HYBRID, 'pwr_spec_diff_hybrid',
-            {'subdir' : 'pwr_diff/', 'info_str' : '(hybrid)'}),
-        ("pwr_diff_files_i", '*input*', HEADER_PWR_DIFF_INPUT, 'pwr_spec_diff_input',
-            {'subdir' : 'pwr_diff/', 'info_str' : '(input)'})
+        ("pwr_diff_files_h", '*hybrid*', HEADER_PWR_DIFF_HYBRID, 'pwr_spec_diff_hybrid', {'info_str' : '(hybrid)'}),
+        ("pwr_diff_files_i", '*input*', HEADER_PWR_DIFF_INPUT, 'pwr_spec_diff_input', {'info_str' : '(input)'})
     ]
     for key, patterns, header, fname, kwargs in all_files_steps:
         try:
@@ -843,11 +841,9 @@ def stack_all(db, collection='data', query=None, rerun=None, skip=None, verbose=
     stack_infos = []
     for i, sep_id in enumerate(all_sep_id):
         if verbose:
-            pass
-            # TODO
-            # ut.print_info('Analyzing run %s' % sep_sim_infos[0].info_tr())
+            ut.print_info('Analyzing run %s' % struct.SimInfo(db, sep_id[0]['_id']).info_tr())
         else:
-            print("\rStacking group %i/%i" % (i + 1, len(sep_id)), end="")
+            print("\rStacking group %i/%i" % (i + 1, len(all_sep_id)), end="")
             sys.stdout.flush()
         try:
             stack_infos.append(
