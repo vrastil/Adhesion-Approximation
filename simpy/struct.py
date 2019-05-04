@@ -143,7 +143,7 @@ class SimInfo(object):
             self._sim = Sim_Param(str(self.file)) # !!! VERY IMPORTANT -- do not use unicode string
         return self._sim
 
-    def info(self):
+    def info(self, math_mode=False):
         # type: () -> str
         """ return string with basic info about run, to be used in plots """
         info = ''
@@ -158,12 +158,17 @@ class SimInfo(object):
             info += r'$\phi_s = %.1e$' % self.chi_opt["phi"]
             info += '   $n = %.1f$' % self.chi_opt["n"]
             info += '  (lin)' if self.chi_opt["linear"] else '  (nl) '
+        
+        # for use in display(Math(...))
+        if math_mode:
+            info = info.replace('$', r'\ ')
+        
         return info
 
-    def info_tr(self):
+    def info_tr(self, math_mode=False):
         # type: () -> str
         """ return 'self.info()' as one-line string """
-        info = self.info()
+        info = self.info(math_mode=math_mode)
         return info.replace('\n', '  ')
 
     def info_supp(self):

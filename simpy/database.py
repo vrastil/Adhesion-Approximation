@@ -105,7 +105,21 @@ def get_id_keys(db, app, collection='data'):
 
 sep_str = '::'
 
-def get_pipeline(db, app, info_type='sim_info'):
+def get_pipeline(db, app, info_type='sim_info', query=None):
+    if query is None:
+        query = {'app' : app, 'type' : info_type}
+    else:
+        if 'app' in query:
+            if query['app'] != app:
+                return None
+        else:
+            query['app'] = app
+        if 'type' in query:
+            if query['type'] != info_type:
+                return None
+        else:
+            query['type'] = info_type
+
     keys = get_id_keys(db, app)
     group = {"_id" : {}}
     for opt_key, opt_key_list in keys.items():
@@ -114,12 +128,13 @@ def get_pipeline(db, app, info_type='sim_info'):
 
     group["count"] = {"$sum": 1}
     pipeline = [
-        {"$match" : {'app' : app, 'type' : info_type}},
+        {"$match" : query },
         {"$group" : group },
         {"$sort": SON([
             ("_id.box_opt%smesh_num" % sep_str, 1),
             ("_id.box_opt%smesh_num_pwr" % sep_str, 1),
-            ("_id.box_opt%spar_num" % sep_str, 1)
+            ("_id.box_opt%spar_num" % sep_str, 1),
+            ("_id.box_opt%sbox_size" % sep_str, 1)
             ])}
     ]
 
@@ -129,9 +144,9 @@ def get_pipeline(db, app, info_type='sim_info'):
 
     return pipeline
 
-def print_db_info(db, collection='data'):
+def print_db_info(db, collection='data', info_type='sim_info'):
     apps = db.data.distinct('app', {})
-    print("There are in total %i number of simulations." % db.data.count_documents({}))
+    print("There are in total %i number of simulations." % db.data.count_documents({'type' : info_type}))
     for app in apps:
         print("%s (%i):" % (app, db[collection].count_documents({'app' : app})))
 
@@ -156,13 +171,15 @@ def print_db_info(db, collection='data'):
             msg += ", num = %i" % doc['count']
             print(msg)
 
-def get_separated_ids(db, collection='data', info_type='sim_info'):
+def get_separated_ids(db, collection='data', info_type='sim_info', query=None):
     apps = db.data.distinct('app', {})
     sep_id = []
     i = 0
     # go by application
     for app in apps:
-        pipeline = get_pipeline(db, app, info_type=info_type)
+        pipeline = get_pipeline(db, app, info_type=info_type, query=query)
+        if pipeline is None:
+            continue
         # separate by different runs
         for doc in db[collection].aggregate(pipeline):
             sep_id.append([])

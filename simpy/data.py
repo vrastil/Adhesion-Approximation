@@ -395,6 +395,9 @@ def reinit_data(sim_infos, get_pk=True, get_corr=True, get_sigma=False):
 # ****************************
 
 def analyze_run(a_sim_info, rerun=None, skip=None):
+    # try to load data, if exists
+    a_sim_info.get_data_from_db()
+
     # Steps to perform -- each entry represents full information needed to perform one step
     # type: Tuple[step_key, data_file_patterns, plot_func, opt_kwargs]
     all_steps = [
@@ -446,6 +449,9 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         except Exception:
             ut.print_exception()
 
+    # save all processed data
+    a_sim_info.save_data_to_db()
+
 def analyze_all(db, collection='data', query=None, rerun=None, skip=None, only=None):
     # filter database
     if query is None:
@@ -461,7 +467,7 @@ def analyze_all(db, collection='data', query=None, rerun=None, skip=None, only=N
         sim_infos = sim_infos[only]
 
     for a_sim_info in sim_infos:
-        ut.print_info('Analyzing run %s' % a_sim_info.info_tr())
+        ut.print_info('Analyzing run: ' , math_mode=a_sim_info.info_tr(math_mode=True))
         try:
             analyze_run(a_sim_info, rerun=rerun, skip=skip)
         except KeyboardInterrupt:
@@ -832,7 +838,7 @@ def print_runs_info(sep_files, num_all_runs, num_all_sep_runs, num_sep_runs):
 
 def stack_all(db, collection='data', query=None, rerun=None, skip=None, verbose=False, **kwargs):
     # separate all runs
-    all_sep_id = database.get_separated_ids(db)
+    all_sep_id = database.get_separated_ids(db, query=query)
     
     # remove 1-length sep_sim_infos
     all_sep_id[:] = [x for x in all_sep_id if len(x) != 1]
@@ -841,7 +847,7 @@ def stack_all(db, collection='data', query=None, rerun=None, skip=None, verbose=
     stack_infos = []
     for i, sep_id in enumerate(all_sep_id):
         if verbose:
-            ut.print_info('Analyzing run %s' % struct.SimInfo(db, sep_id[0]['_id']).info_tr())
+            ut.print_info('Analyzing run ', math_mode=struct.SimInfo(db, sep_id[0]['_id']).info_tr(math_mode=True))
         else:
             print("\rStacking group %i/%i" % (i + 1, len(all_sep_id)), end="")
             sys.stdout.flush()
@@ -860,7 +866,7 @@ def stack_all(db, collection='data', query=None, rerun=None, skip=None, verbose=
     # analysis
     for i, stack_info in enumerate(stack_infos):
         if verbose:
-            ut.print_info('Analyzing run %s' % stack_info.info_tr())
+            ut.print_info('Analyzing run:', math_mode=stack_info.info_tr(math_mode=True))
         else:
             print("\rAnalyzing group %i/%i" % (i + 1, len(stack_infos)), end="")
             sys.stdout.flush()
@@ -872,6 +878,8 @@ def stack_all(db, collection='data', query=None, rerun=None, skip=None, verbose=
         ut.print_info_end()
     else:
         print('\n')
+
+    return stack_infos
 
 # ********************************
 # RUN ANALYSIS -- CHI COMPARISON *

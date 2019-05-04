@@ -16,6 +16,7 @@ import traceback
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import TerminalFormatter
+from IPython.display import display, Math
 
 
 ###################################
@@ -99,10 +100,16 @@ class bcolors:
 
 len_info = 0
 
-def print_info(info):
+def print_info(info, math_mode=False):
     global len_info
     len_info = len(info)
-    print(bcolors.BOLD + '*'*len_info + '\n' + info + '\n' + '*'*len_info + bcolors.ENDC)
+    if math_mode:
+        len_info += len(math_mode)
+        print(bcolors.BOLD + '*'*len_info)
+        display(Math(r'\textrm{' + info + r'}' + math_mode))
+        print(bcolors.BOLD + '*'*len_info + bcolors.ENDC)
+    else:
+        print(bcolors.BOLD + '*'*len_info + '\n' + info + '\n' + '*'*len_info + bcolors.ENDC)
 
 def print_info_end():
     global len_info
