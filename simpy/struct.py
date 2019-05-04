@@ -224,14 +224,17 @@ class SimInfo(object):
         if keys is None:
             keys = self.data.keys()
         
+        err_keys = []
         # save in binary format -- allow saving numpy arrays (not C++ objects)
         for key in keys:
             try:
                 binary_data = pickle.dumps(self.data[key])
             except TypeError: # can't pickle object
-                ut.print_warning("'%s' could not be tranformed into binary data." % key)
+                err_keys.append(key)
             else:
                 self.update_db({'data.processed.%s' % key : Binary(binary_data)})
+
+        return err_keys
 
     def get_data_from_db(self, keys=None):
         # get doc with info about processed data

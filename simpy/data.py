@@ -450,7 +450,13 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
             ut.print_exception()
 
     # save all processed data
-    a_sim_info.save_data_to_db()
+    if a_sim_info.verbose: print('step: %-25s' % 'save', end='')
+    err_keys = a_sim_info.save_data_to_db()
+    if a_sim_info.verbose:
+        if err_keys:
+            ut.print_warning("[Done]     (some data could not be tranformed into binary)")
+        else:
+            ut.print_done()
 
 def analyze_all(db, collection='data', query=None, rerun=None, skip=None, only=None):
     # filter database
@@ -843,7 +849,7 @@ def stack_all(db, collection='data', query=None, rerun=None, skip=None, verbose=
     # remove 1-length sep_sim_infos
     all_sep_id[:] = [x for x in all_sep_id if len(x) != 1]
 
-    # stack runs (no analysis)
+    # stack runs and performe analysis
     stack_infos = []
     for i, sep_id in enumerate(all_sep_id):
         if verbose:
@@ -852,28 +858,12 @@ def stack_all(db, collection='data', query=None, rerun=None, skip=None, verbose=
             print("\rStacking group %i/%i" % (i + 1, len(all_sep_id)), end="")
             sys.stdout.flush()
         try:
-            stack_infos.append(
-                stack_group(db, sep_id, collection=collection, rerun=rerun, skip=skip, verbose=verbose, **kwargs)
-                )
-        except KeyboardInterrupt:
-            print('Exiting...')
-
-    if verbose:
-        ut.print_info_end()
-    else:
-        print('\n')
-
-    # analysis
-    for i, stack_info in enumerate(stack_infos):
-        if verbose:
-            ut.print_info('Analyzing run:', math_mode=stack_info.info_tr(math_mode=True))
-        else:
-            print("\rAnalyzing group %i/%i" % (i + 1, len(stack_infos)), end="")
-            sys.stdout.flush()
-        try:
+            stack_info = stack_group(db, sep_id, collection=collection, rerun=rerun, skip=skip, verbose=verbose, **kwargs)
             analyze_run(stack_info, rerun=rerun, skip=skip)
+            stack_infos.append(stack_info)
         except KeyboardInterrupt:
             print('Exiting...')
+
     if verbose:
         ut.print_info_end()
     else:

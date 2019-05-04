@@ -18,7 +18,6 @@ from pygments.lexers import get_lexer_by_name
 from pygments.formatters import TerminalFormatter
 from IPython.display import display, Math
 
-
 ###################################
 # colorful exception info
 ###################################
@@ -129,4 +128,4 @@ def print_skipped_miss():
     print(bcolors.WARNING + "[Skipped]  (missing data)" + bcolors.ENDC)
 
 def print_warning(warning):
-    print(bcolors.FAIL + "WARNING! " + warning + bcolors.ENDC)
+    print(bcolors.FAIL + warning + bcolors.ENDC)
