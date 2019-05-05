@@ -145,13 +145,13 @@ def get_pipeline(db, app, info_type='sim_info', query=None):
     return pipeline
 
 def print_db_info(db, collection='data', info_type='sim_info'):
-    apps = db.data.distinct('app', {})
-    print("There are in total %i number of simulations." % db.data.count_documents({'type' : info_type}))
+    apps = db[collection].distinct('app', {})
+    print("There are in total %i number of simulations." % db[collection].count_documents({'type' : info_type}))
     for app in apps:
         print("%s (%i):" % (app, db[collection].count_documents({'app' : app})))
 
         pipeline = get_pipeline(db, app)
-        for doc in db.data.aggregate(pipeline):
+        for doc in db[collection].aggregate(pipeline):
             _id = doc["_id"]
             msg = "\tNm = %i, NM = %i, Np = %i, L = %i" % (
                 _id["box_opt%smesh_num" % sep_str],
@@ -172,7 +172,7 @@ def print_db_info(db, collection='data', info_type='sim_info'):
             print(msg)
 
 def get_separated_ids(db, collection='data', info_type='sim_info', query=None):
-    apps = db.data.distinct('app', {})
+    apps = db[collection].distinct('app', {})
     sep_id = []
     i = 0
     # go by application
@@ -189,7 +189,7 @@ def get_separated_ids(db, collection='data', info_type='sim_info', query=None):
                 new_key = key.replace(sep_str, '.')
                 new_doc[new_key] = val
             # get only id of these runs
-            cursor = db.data.find(new_doc, {'_id' : 1})
+            cursor = db[collection].find(new_doc, {'_id' : 1})
             for x in cursor:
                 sep_id[i].append(x)
 

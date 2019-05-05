@@ -64,6 +64,8 @@ RESULTS_DIRS = {
     'pwr_diff_files_i' : 'pwr_diff'
 }
 
+# save all initialized infos here for later retrieve, key by ObjectId
+ALL_STACK_INFOS = {}
 
 def _is_key_strval(key, strval):
     """ check <strval> (rerun or skip) against <key>, true either for
@@ -327,7 +329,37 @@ class StackInfo(SimInfo):
             self.num_run = len(self.sim_ids)
             self.results = doc['results']
         
-        self.save() # need to save new cosmo param for C++ to load modified parameters
+        # need to save new cosmo param for C++ to load modified parameters
+        self.save()
+
+        # try to load data if we already save something during this run of program
+        self.load_temp()
+
+    def save_temp(self):
+        glob_key = self.doc_id['_id']
+        global ALL_STACK_INFOS
+
+        keys = self.data.keys()
+
+        if glob_key not in ALL_STACK_INFOS:
+            ALL_STACK_INFOS[glob_key] = {}
+
+        for key in keys:
+            if key not in ALL_STACK_INFOS[glob_key]:
+                ALL_STACK_INFOS[glob_key][key] = self.data[key]
+        # need to use the sam SimParam as in Extra_Pk, etc.
+        ALL_STACK_INFOS[glob_key]['_sim'] = self._sim
+
+    def load_temp(self):
+        glob_key = self.doc_id['_id']
+        global ALL_STACK_INFOS
+
+        if glob_key in ALL_STACK_INFOS:
+            keys = ALL_STACK_INFOS[glob_key].keys()
+            for key in keys:
+                self.data[key] = ALL_STACK_INFOS[glob_key][key]
+            # need to use the sam SimParam as in Extra_Pk, etc.
+            self._sim = ALL_STACK_INFOS[glob_key]['_sim']
 
     def find_data_in_db(self):
         # get document with run information

@@ -354,6 +354,9 @@ def cut_zs_list(zs, a_list, z=None):
     return zs, a_list
 
 def init_data(a_sim_info, z=None, get_pk=False, get_corr=False, get_sigma=False):
+    # look for already initialized data
+    a_sim_info.load_temp()
+
     # get files for data
     zs, data_list = a_sim_info.get_zs_data('pwr_spec', '*par*.dat *init*.dat')
 
@@ -372,6 +375,9 @@ def init_data(a_sim_info, z=None, get_pk=False, get_corr=False, get_sigma=False)
     # get amplitude of density fluctuations
     if get_sigma:
         get_sigma_R(data_list, zs, a_sim_info)
+
+    # save initialized data
+    a_sim_info.save_temp()
 
 def get_initialized_StackInfo(a_file, z=None, get_pk=False, get_corr=False, get_sigma=False):
     # get struct.StackInfo
@@ -397,6 +403,7 @@ def reinit_data(sim_infos, get_pk=True, get_corr=True, get_sigma=False):
 def analyze_run(a_sim_info, rerun=None, skip=None):
     # try to load data, if exists
     a_sim_info.get_data_from_db()
+    a_sim_info.load_temp()
 
     # Steps to perform -- each entry represents full information needed to perform one step
     # type: Tuple[step_key, data_file_patterns, plot_func, opt_kwargs]
@@ -457,6 +464,7 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
             ut.print_warning("[Done]     (some data could not be tranformed into binary)")
         else:
             ut.print_done()
+    a_sim_info.save_temp()
 
 def analyze_all(db, collection='data', query=None, rerun=None, skip=None, only=None):
     # filter database
@@ -875,9 +883,10 @@ def stack_all(db, collection='data', query=None, rerun=None, skip=None, verbose=
 # RUN ANALYSIS -- CHI COMPARISON *
 # ********************************
 
-def plot_chi_wave_pot(a_file="/home/michal/Documents/GIT/FastSim/jobs/output/CHI_run/STACK_512m_512p_1024M_2000b_1e-06Y/stack_info.json",
-                      outdir=report_dir, n=None, phi=None, zs=None, save=True, show=True, k_scr=False):
-    a_sim_info = struct.SimInfo(a_file)
+def plot_chi_wave_pot(db, collection='data', outdir=report_dir,
+                      n=None, phi=None, zs=None, save=True, show=True, k_scr=False):
+    doc_id = db.data.find_one({'app' : 'CHI'}, {'_id' : 1})
+    a_sim_info = struct.SimInfo(db, doc_id)
 
     # parameters of the plot (if not given)
     if zs is None:
@@ -1256,23 +1265,34 @@ def get_check_pk_diff_broad(stack_infos, cutoff_high=8, lim_kmax=2):
         data_lists.append(data_list_new)
     return np.array(data_lists), zs
 
-def mlt_pl_broad_sort(stack_infos):
-    # sort according to app
-    app_all = set([x.app for x in stack_infos])
-    groups = {app : [] for app in app_all}
-    for a_sim_info in stack_infos:
-        # initialize extrapolated data if not done already
-        init_data(a_sim_info, get_pk=True)
+def get_init_group(db, query, collection='data'):
+    # group by app
+    group = {'_id' : {'app' : '$app'}, 'ids' : {'$addToSet' : '$_id'}}
+    pipeline = [
+        {"$match" : query },
+        {"$group" : group }
+    ]
 
-        # sort
-        app = a_sim_info.app
-        groups[app].append(a_sim_info)
+    # init all, make list
+    groups = {}
+    for doc in db[collection].aggregate(pipeline):
+        app = doc['_id']['app']
+        doc_ids = doc['ids']
+        groups[app] = []
+        for doc_id in doc_ids:
+            stack_info = struct.StackInfo(db, doc_id, collection=collection)
+            init_data(stack_info, get_pk=True)
+            groups[app].append(stack_info)
 
     return groups
 
-def get_plot_mlt_pk_broad(stack_infos, out_dir='auto', z=0):
-    # sort according to app
-    groups = mlt_pl_broad_sort(stack_infos)
+def get_plot_mlt_pk_broad(db, query=None, collection='data', out_dir='auto', z=0):
+    # default to non-CHI StackInfo with NM = 1024
+    if query is None:
+        query = {'app' : {"$ne" : 'CHI'}, 'type' : 'stack_info', 'box_opt.mesh_num_pwr' : 1024}
+
+    # get initializied groups
+    groups = get_init_group(db, query, collection)
 
     # get all data
     zs, Pk_list_extrap, data_all = [], [], []
@@ -1286,12 +1306,13 @@ def get_plot_mlt_pk_broad(stack_infos, out_dir='auto', z=0):
         data_all.append(data_list_new)
     
     # plot
-    plot.plot_pwr_spec_comparison(Pk_list_extrap, data_all, zs, groups.keys(), stack_infos[0].sim.cosmo, out_dir=out_dir, save=True, show=True)
-    plot.plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data_all, zs, groups.keys(), stack_infos[0].sim.cosmo, out_dir=out_dir, save=True, show=True)
+    cosmo = group[0].sim.cosmo
+    plot.plot_pwr_spec_comparison(Pk_list_extrap, data_all, zs, groups.keys(), cosmo, out_dir=out_dir, save=True, show=True)
+    plot.plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data_all, zs, groups.keys(), cosmo, out_dir=out_dir, save=True, show=True)
 
 def get_plot_mlt_pk_diff_broad(stack_infos, plot_diff=True, out_dir='auto'):
     # sort according to app
-    groups = mlt_pl_broad_sort(stack_infos)
+    groups = get_init_group(stack_infos)
 
     # get all data
     for group in groups.values():
