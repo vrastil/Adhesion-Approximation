@@ -185,7 +185,10 @@ public:
         if (!FFTW_PLAN_OMP_INIT()){
             throw std::runtime_error("Errors during multi-thread initialization");
         }
-        FFTW_PLAN_OMP(sim.run_opt.nt);
+        FFTW_PLAN_OMP(sim.run_opt.nt_fftw);
+
+        
+        
         const size_t N_pot = sim.box_opt.mesh_num;
         const size_t N_pwr = sim.box_opt.mesh_num_pwr;
 

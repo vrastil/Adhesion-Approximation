@@ -328,6 +328,7 @@ void Run_Opt::init()
 {
     if(nt == 0) nt = omp_get_max_threads();
     else omp_set_num_threads(nt);
+    if(nt_fftw == 0) nt_fftw = nt;
     if (seed == 0){
         srand(time(NULL));
         seed = get_seed();
@@ -508,7 +509,7 @@ void Sim_Param::print_info(std::string out, std::string app) const
             {"app_opt", app_opt},
             {"run_opt", run_opt},
             {"out_opt", out_opt},
-            {"k_nyquist", other_par.nyquist}
+            {"k_nyquist", other_par.nyquist},
             {"app", app}
         };
         if (comp_app.chi) j["chi_opt"] = chi_opt;

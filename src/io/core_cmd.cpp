@@ -94,6 +94,7 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
     po::options_description config_run("Run options");
     config_run.add_options()
         ("num_thread,t", po::value<size_t>(&sim.run_opt.nt)->default_value(0), "number of threads the program will use, set 0 for max. available")
+        ("num_thread_fftw", po::value<size_t>(&sim.run_opt.nt_fftw)->default_value(0), "number of threads the program will use for FFTW, set 0 for max. available")
         ("seed", po::value<size_t>(&sim.run_opt.seed)->default_value(0), "seed to random number generator, use 0 for random")
         ("pair", po::value<bool>(&sim.run_opt.pair)->default_value(false), "if true run two simulations with opposite phases of random field")
         ("mlt_runs", po::value<size_t>(&sim.run_opt.mlt_runs)->default_value(1), "how many runs should be simulated (only if seed = 0)")

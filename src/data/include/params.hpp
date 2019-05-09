@@ -129,7 +129,7 @@ struct Run_Opt {
     bool is_ready();
     bool simulate();
     /* cmd args */
-    size_t nt, mlt_runs;
+    size_t nt, nt_fftw, mlt_runs;
     size_t seed;
     bool pair;
     /* other*/
