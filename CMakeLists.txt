@@ -18,11 +18,20 @@ find_package(PythonLibs)
 # precision of the simulation
 SET(PRECISION 2 CACHE STRING "Precision of the simulation")
 
+# build release type by default
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
 # set compile flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
     -pipe -MMD -fopenmp \
     -flto=jobserver -fPIC"
 )
+
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -Ofast")
 
 # solve lto errors
 SET(CMAKE_AR  "gcc-ar")
