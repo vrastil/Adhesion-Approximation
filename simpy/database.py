@@ -29,15 +29,6 @@ from .utils import *
 # version independent raw_input
 if sys.version[0]=="3": raw_input=input
 
-def get_sorted_bson(a_dict):
-    res = SON()
-    for k, v in sorted(a_dict.items()):
-        if isinstance(v, dict):
-            res[k] = get_sorted_bson(v)
-        else:
-            res[k] = v
-    return res
-
 def create_database(host='localhost', port=27017, user='admin'):
     """create database and user admin in it,
     databse should be started without authentication this first time"""

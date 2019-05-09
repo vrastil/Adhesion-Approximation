@@ -45,7 +45,7 @@ def sort_chi_files(files, zs):
     return map(list, [files, zs, files_chi, zs_chi])
 
 ###################################
-# LOAD DATA FROM SINGLE RUN 
+# LOAD DATA FROM SINGLE RUN
 ###################################
 
 def has_app_lin_pwr(app):
@@ -57,8 +57,8 @@ def load_k_supp(data_list, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens
     k_min = 2*PI / L to k_max = 50% k_nyquist_par
     large scale :: k = 1st subinterval
     medium scale :: k = 4rd subinterval
-    small scale :: k = 7th subinterval 
-    
+    small scale :: k = 7th subinterval
+
     For chameleon field divide P(k) values by linear prediction """
 
     supp = [[[] for x in range(3)] for y in range(3)]
@@ -100,7 +100,7 @@ def get_pk_nl_amp(a_sim_info):
     # initialize data
     init_data(a_sim_info, get_pk=True)
     load_a_eff(a_sim_info, use_z_eff='Pk')
-        
+
     # needed variables
     sim = a_sim_info.sim
     k_nyquist_par = a_sim_info.k_nyquist["particle"]
@@ -116,11 +116,11 @@ def get_pk_nl_amp(a_sim_info):
     # check lengths
     if not (len(data_all) == len(zs) == len(as_eff)):
         raise IndexError("Data have wrong lengths!")
-    
+
     # get amplitude of non-linear power spectrum with redshift for a_eff
     # fit_lin = has_app_lin_pwr(a_sim_info.app)
     func = lambda a_eff, z, data : get_single_hybrid_pow_spec_amp_w_z(sim, data, z, k_nyquist_par, a=a_eff)
-    data_w_amp = list(map(func, as_eff, zs, data_all))        
+    data_w_amp = list(map(func, as_eff, zs, data_all))
 
     # extract amplitude and redshift
     a_sim_info.data["pk_nl_amp"] = {
@@ -159,7 +159,7 @@ def transform_supp_data_to_z_eff(a_sim_info, use_z_eff='Pk'):
     data_array_new[:, 1] -= Pk_init
 
     return zs_eff, data_array_new
-        
+
 def load_plot_pwr(data_list, zs, a_sim_info, **kwargs):
     get_extrap_pk(a_sim_info, data_list, zs)
     plot.plot_pwr_spec(data_list, zs, a_sim_info, a_sim_info.data["pk_list"], **kwargs)
@@ -197,7 +197,7 @@ def get_key_func(data_list, zs, a_sim_info, key, load=False):
 
         a_sim_info.data[key]["lin"] = [gen_func(a_sim_info.sim, z=z) for z in a_sim_info.data[key]["zs"]]
         a_sim_info.data[key]["nl"] = [gen_func(a_sim_info.sim, z=z, non_lin=True) for z in a_sim_info.data[key]["zs"]]
-        
+
 
 def get_corr_func(data_list, zs, a_sim_info, load=False):
     get_key_func(data_list, zs, a_sim_info, "corr_func", load=load)
@@ -224,7 +224,7 @@ def get_plot_corr_peak(data_list, zs, a_sim_info, load=False, **kwargs):
     get_corr_func(data_list, zs, a_sim_info, load=load)
     get_corr_peak(a_sim_info)
     plot.plot_corr_peak([a_sim_info], **kwargs)
-    
+
 def get_sigma_R(data_list, zs, a_sim_info, load=False):
     get_key_func(data_list, zs, a_sim_info, "sigma_R", load=load)
 
@@ -256,7 +256,7 @@ def get_plot_supp(data_list, zs, a_sim_info, pk_type='dens', **kwargs):
 def get_supp_map(a_sim_info, key='input'):
     if 'pk_supp_%s' % key not in a_sim_info.data:
         zs, data_array = a_sim_info.get_zs_data('pwr_diff', '*%s*' % key)
-        
+
         a_sim_info.data['pk_supp_%s' % key] = {
             'zs' : zs,
             'supp' : check_data_consistency_diff(data_array)
@@ -320,7 +320,7 @@ def load_plot_a_eff(data_list, zs, a_sim_info, **kwargs):
     # load a_eff
     load_a_eff(a_sim_info, data_list=data_list, zs=zs, use_z_eff="Pk")
     # load_a_eff(a_sim_info, data_list=data_list, zs=zs, use_z_eff="sigma_R")
-    
+
     # plot
     # plot.plot_eff_time([a_sim_info], a_eff_type="sigma_R", **kwargs)
     plot.plot_eff_time([a_sim_info], a_eff_type="Pk", **kwargs)
@@ -340,7 +340,7 @@ def load_check_plot(a_sim_info, key, patterns, # type: struct.SimInfo, str, str,
     """
     if a_sim_info.verbose: print('step: %-25s' % (key + ' ' + info_str), end='')
     sys.stdout.flush()
-    
+
     zs, data_list = a_sim_info.get_zs_data(key, patterns)
     if a_sim_info.rerun(rerun, key, skip, zs):
         plot_func(data_list, zs, a_sim_info, **kwargs)
@@ -378,6 +378,24 @@ def init_data(a_sim_info, z=None, get_pk=False, get_corr=False, get_sigma=False)
 
     # save initialized data
     a_sim_info.save_temp()
+
+def get_stack_infos(db, collection='data', query=None, chi_opt=None, **kwargs):
+    if query is None:
+        query = {'app' : {"$ne" : 'CHI'}, 'type' : 'stack_info'}
+
+    for key, val in kwargs.items():
+        query['box_opt.%s' % key] = val
+
+    if chi_opt is not None:
+        for key, val in chi_opt.items():
+            query['chi_opt.%s' % key] = val
+
+    stack_infos = []
+    cursor = db[collection].find(query, {'_id' : 1})
+    for doc in cursor:
+        stack_info = struct.StackInfo(db, doc['_id'])
+        stack_infos.append(stack_info)
+    return stack_infos
 
 def get_initialized_StackInfo(a_file, z=None, get_pk=False, get_corr=False, get_sigma=False):
     # get struct.StackInfo
@@ -547,7 +565,7 @@ def check_data_consistency(all_data_k, all_data_Pk):
                     del all_data_Pk[i][ik][j]
                     # look at the next k
                     k_ = all_data_k[i][ik][j]
-            
+
             j += 1
             # check if j is length of ALL arrays
             for x in all_data_k[i]:
@@ -584,7 +602,7 @@ def check_data_consistency_diff(data_list):
                         pass
                     # look at the next k
                     k_ = data_list[ik][0][j]
-            
+
             j += 1
             # check if j is length of ALL arrays
             for x in data_list:
@@ -669,10 +687,10 @@ def get_a_eff_from_Pk(stack_info):
     a, A = map(np.array, zip(*[ # extract back, store as np.array
         (1/(Pk['z'] + 1), Pk['Pk_par'].A_low) # a, Extrap_Pk_Nl
         for Pk in stack_info.data["extrap_pk"] if Pk["z"] != 'init']))
-    
+
     # get a_eff from amlitude of linear power spectrum
     a_eff = pwr.get_a_from_A(stack_info.sim.cosmo, A)
-    
+
     # derived variables
     D = pwr.growth_factor(a, stack_info.sim.cosmo)
     D_eff = pwr.growth_factor(a_eff, stack_info.sim.cosmo)
@@ -694,7 +712,7 @@ def get_a_eff_from_Pk_nl(stack_info):
     a, popt, perr = map(np.array, zip(*[ # extract back, store as np.array
         (1/(Pk['z'] + 1), Pk['popt'], Pk['perr']) # a, popt, perr
         for Pk in stack_info.data["extrap_pk"] if Pk["z"] != 'init']))
-    
+
 
     # ZA and TZA do not have non-linear fit
     if None in popt:
@@ -716,26 +734,32 @@ def get_a_eff_from_Pk_nl(stack_info):
         'D_eff_ratio' : D_eff / D
     }
 
-def get_a_eff(a_sim_info, files, zs, use_z_eff='Pk'):
+def get_a_eff(a_sim_info, data_list, zs, use_z_eff='Pk'):
     success = False
+
+    # look for already initialized data
+    a_sim_info.load_temp()
 
     # effective time from power spectrum
     if use_z_eff == 'Pk' or use_z_eff == 'all':
-        get_extrap_pk(a_sim_info, files, zs)
+        get_extrap_pk(a_sim_info, data_list, zs)
         get_a_eff_from_Pk(a_sim_info)
         success = True
 
     # effective time from non-linear power spectrum
     if use_z_eff == 'Pk_nl' or use_z_eff == 'all':
-        get_extrap_pk(a_sim_info, files, zs)
+        get_extrap_pk(a_sim_info, data_list, zs)
         get_a_eff_from_Pk_nl(a_sim_info)
         success = True
-    
+
     # effective time from density fluctuations
     if use_z_eff == 'sigma_R' or use_z_eff == 'all':
-        get_sigma_R(files, zs, a_sim_info)
+        get_sigma_R(data_list, zs, a_sim_info)
         get_a_eff_from_dens_fluct(a_sim_info)
         success = True
+
+    # save initialized data
+    a_sim_info.save_temp()
 
     return success
 
@@ -825,7 +849,7 @@ def get_runs_siminfo(in_dir):
     sep_infos = []
     for a_sim_info in sim_infos:
         struct.insert(a_sim_info, sep_infos)
-    
+
     return sep_infos
 
 def count_runs(sep_files):
@@ -853,7 +877,7 @@ def print_runs_info(sep_files, num_all_runs, num_all_sep_runs, num_sep_runs):
 def stack_all(db, collection='data', query=None, rerun=None, skip=None, verbose=False, **kwargs):
     # separate all runs
     all_sep_id = database.get_separated_ids(db, query=query)
-    
+
     # remove 1-length sep_sim_infos
     all_sep_id[:] = [x for x in all_sep_id if len(x) != 1]
 
@@ -885,7 +909,7 @@ def stack_all(db, collection='data', query=None, rerun=None, skip=None, verbose=
 
 def plot_chi_wave_pot(db, collection='data', outdir=report_dir,
                       n=None, phi=None, zs=None, save=True, show=True, k_scr=False):
-    doc_id = db.data.find_one({'app' : 'CHI'}, {'_id' : 1})
+    doc_id = db[collection].find_one({'app' : 'CHI'}, {'_id' : 1})
     a_sim_info = struct.SimInfo(db, doc_id)
 
     # parameters of the plot (if not given)
@@ -906,17 +930,46 @@ def plot_chi_wave_pot(db, collection='data', outdir=report_dir,
 
 def get_data_fp_chi_ratio(group, z=None):
     data_all = []
+    zs_fp, data_fp = group['FP'].get_zs_data('pwr_spec', '*par*')
 
+    # look for single redshift and data
     if z is not None:
-        zs = group["FP_zs"]
-        idx = find_nearest_idx(zs, z, axis=None)
-        cut = slice(idx, idx+1)
+        idx = find_nearest_idx(zs_fp, z, axis=None)
+        z = zs_fp[idx]
+        zs_fp = [z]
+        data_fp = [data_fp[idx]]
     else:
-        cut = slice(None)
+        idx = []
+        zs_fp = set(zs_fp)
+        # create unique zs
+        for chi_info in group["CHI"]:
+            zs_chi,_ = chi_info.get_zs_data('pwr_spec', '*par*')
+            zs_fp &= set(zs_chi)
+        # get indices of these unique z
+        for chi_info in group["CHI"]:
+            zs_chi,_ = chi_info.get_zs_data('pwr_spec', '*par*')
+            idx.append(
+                [i for i, z_chi in enumerate(zs_chi) if z_chi in zs_fp]
+            )
 
-    data_fp = [np.transpose(np.loadtxt(a_file)) for a_file in group["FP_files"][cut]]
-    for files in group["CHI_files"]:
-        data_chi = [np.transpose(np.loadtxt(a_file)) for a_file in files[cut]]
+        # check we have the same number of zs
+        zs_len = len(zs_fp)
+        for idx_ in idx:
+            if zs_len != len(idx_):
+                raise IndexError("CHI and FPA runs do not have the same redshifts.")
+
+    zs_fp = sorted(zs_fp, reverse=True)
+    group['zs'] = zs_fp
+
+    for i_chi, chi_info in enumerate(group["CHI"]):
+        zs_chi, data_chi = chi_info.get_zs_data('pwr_spec', '*par*')
+
+        if z is not None:
+            idx = zs_chi.index(z) # may raise ValueError
+            data_chi = [data_chi[idx]]
+        else:
+            data_chi = [data_chi[i] for i in idx[i_chi]]
+
         data = []
         for data_fp_s, data_chi_s in izip(data_fp, data_chi):
             shape = data_fp_s.shape
@@ -937,46 +990,25 @@ def rm_extra_zs(zs_unique, zs_list, other_list):
         else:
             i += 1
 
-def load_chi_fp_files(group, subdir, patterns):
-    zs_fp, files = try_get_zs_files(group["FP"], subdir, patterns)
-    group["FP_zs"] = zs_fp
-    group["FP_files"] = files
-    group["CHI_zs"] = []
-    group["CHI_files"] = []
-    for chi_info in group["CHI"]:
-        zs, files = try_get_zs_files(chi_info, subdir, patterns)
-        group["CHI_zs"].append(zs)
-        group["CHI_files"].append(files)
+def get_fp_chi_groups(db, collection='data', query=None, chi_opt=None, **kwargs):
+    if query is None:
+        query = {'app' : 'FP', 'type' : 'stack_info'}
 
-    # create zs which are in all subgroups
-    zs_unique = set(zs_fp)
-    for zs in group["CHI_zs"]:
-        zs_unique &= set(zs)
-    zs_unique = list(ut.sort_lists(zs_unique)[0])
-
-    # remove extra files from all list
-    rm_extra_zs(zs_unique, zs_fp, group["FP_files"])
-    for zs_list, other_list in izip(group["CHI_zs"], group["CHI_files"]):
-        rm_extra_zs(zs_unique, zs_list, other_list)
-
-    group["FP_zs"] = zs_unique
-    del group["CHI_zs"]
-
-def get_fp_chi_groups(in_dir,Nm=0, NM=0, Np=0, L=0, n=0, phi=0):
-    res = struct.Results(in_dir)
+    fp_stack_infos = get_stack_infos(db, query=query, **kwargs)
     groups = []
-    for a_sim_info in res.get_subfiles(app='FP', Nm=Nm, NM=NM, Np=Np, L=L):
-        Nm = a_sim_info.box_opt["mesh_num"]
-        NM = a_sim_info.box_opt["mesh_num_pwr"]
-        Np = a_sim_info.box_opt["par_num"]
-        L = a_sim_info.box_opt["box_size"]
-        chi_infos = res.get_subfiles(Nm=Nm, NM=NM, Np=Np, L=L, app='CHI', n=n, phi=phi)
+    for a_sim_info in fp_stack_infos:
+        mesh_num = a_sim_info.box_opt["mesh_num"]
+        mesh_num_pwr = a_sim_info.box_opt["mesh_num_pwr"]
+        par_num = a_sim_info.box_opt["par_num"]
+        box_size = a_sim_info.box_opt["box_size"]
+        query = {'app' : 'CHI', 'type' : 'stack_info'}
+        chi_infos = get_stack_infos(
+            db, query=query, mesh_num=mesh_num, mesh_num_pwr=mesh_num_pwr,
+            par_num=par_num, box_size=box_size, chi_opt=chi_opt
+        )
         if chi_infos:
             groups.append({ "FP" : a_sim_info, "CHI" : chi_infos})
 
-    for group in groups:
-        load_chi_fp_files(group, 'pwr_spec', '*par*')
-    
     return groups
 
 def my_shape(data):
@@ -985,28 +1017,27 @@ def my_shape(data):
         return data.shape
     except ValueError:
         return len(data)
-        
 
 
-def compare_chi_fp(in_dir="/home/michal/Documents/GIT/FastSim/output/", out_dir=report_dir, use_group=None,
-                   z=None, Nm=0, NM=0, Np=0, L=0, n=0, phi=0):
-    groups = get_fp_chi_groups(in_dir, Nm=Nm, Np=Np, L=L, n=n, phi=phi)
+
+def compare_chi_fp(db, collection='data', query=None, out_dir=report_dir, use_group=None, z=None, **kwargs):
+    groups = get_fp_chi_groups(db, collection=collection, query=query, **kwargs)
     if use_group is not None:
         groups = [groups[use_group]]
 
     for group in groups: # per group
         # load data
         data_g = get_data_fp_chi_ratio(group, z=z)
-        
+
         # struct.SimInfo, zs should be the same for all FP / CHI
         a_sim_info = group["FP"]
-        zs = group["FP_zs"] if z is None else [z]
+        zs = group["zs"] if z is None else [z]
 
         # transpoose first and second dimension
         data_g = map(list, zip(*data_g))
-        
+
         for lab, data_z in plot.iter_data(zs, [data_g]): # per redshift
-            # sort from lowest screening potential and xhameleon exponent
+            # sort from lowest screening potential and chameleon exponent
             sim_infos, data_z = zip(*sorted(sorted(sorted(zip(group["CHI"], data_z),
                                 key=lambda x : x[0].chi_opt['linear']),
                                 key=lambda x : x[0].chi_opt['n']),
@@ -1017,7 +1048,7 @@ def compare_chi_fp(in_dir="/home/michal/Documents/GIT/FastSim/output/", out_dir=
             labels = plot.get_chi_labels(sim_infos)
             suptitle = "Relative chameleon power spectrum, " + lab
             ut.print_info(suptitle)
-            
+
             plot.plot_chi_fp_z(data_z, a_sim_info, labels, out_dir=out_dir ,suptitle=suptitle, show=True, save=True)
 
 def compare_chi_fp_map(chi_info, fp_info, in_dir="/home/michal/Documents/GIT/FastSim/output/", out_dir=report_dir):
@@ -1028,7 +1059,6 @@ def compare_chi_fp_map(chi_info, fp_info, in_dir="/home/michal/Documents/GIT/Fas
 
     # load data
     group = { "FP" : fp_info, "CHI" : [chi_info]}
-    load_chi_fp_files(group, 'pwr_spec', '*par*')
     data = get_data_fp_chi_ratio(group)[0] # we have only one set of chi-parameters
 
     # get effective redshift
@@ -1036,7 +1066,7 @@ def compare_chi_fp_map(chi_info, fp_info, in_dir="/home/michal/Documents/GIT/Fas
     zs_eff = fp_info.data["eff_time"]['Pk']["z_eff"]
 
     # get rid if 'init' redshift and different ones
-    if group["FP_zs"][0] == 'init':
+    if group["zs"][0] == 'init':
         data = np.array(data[1:])
 
     # check lengths
@@ -1047,11 +1077,16 @@ def compare_chi_fp_map(chi_info, fp_info, in_dir="/home/michal/Documents/GIT/Fas
     plot.plot_chi_fp_map(data, zs_eff, chi_info, out_dir=out_dir, save=True, show=True)
 
 
-def compare_chi_res(in_dir, out_dir, n=0.5, phi=1e-5, z=0):
+def compare_chi_res(db, collection='data', query=None,out_dir=report_dir, n=0.5, phi=1e-5, z=0, **kwargs):
+    # chi_opt query
+    chi_opt = {
+        'n' : n,
+        'phi' : phi
+    }
     # load all data
-    groups = get_fp_chi_groups(in_dir, n=n, phi=phi)
+    groups = get_fp_chi_groups(db, collection=collection, query=query, chi_opt=chi_opt, **kwargs)
     data_all = [get_data_fp_chi_ratio(group, z=z) for group in groups]
-    
+
     # check we have same chameleon parameters
     phi, n = set(), set()
     for group in groups:
@@ -1086,21 +1121,21 @@ def compare_chi_res(in_dir, out_dir, n=0.5, phi=1e-5, z=0):
 def load_get_corr(a_file, z=None):
     # get struct.StackInfo
     a_sim_info = struct.StackInfo(stack_info_file=a_file)
-    
+
     # get files for correlation function
     patterns = '*par*.dat *init*.dat'
     subdir = 'pwr_spec/'
     zs, files = try_get_zs_files(a_sim_info, subdir, patterns)
-    
+
     # if z is specified, find nearest-value file
     zs, files = cut_zs_list(zs, files, z)
-    
+
     # get correlation function
     get_corr_func(files, zs, a_sim_info)
-    
+
     # return struct.SimInfo with all loaded data and redshifts
     return a_sim_info, zs
-    
+
 def corr_func_comp_plot(files=None, sim_infos=None, outdir=report_dir, z=1., bao_peak=True):
 
     extra_data = []
@@ -1124,7 +1159,7 @@ def corr_func_comp_plot(files=None, sim_infos=None, outdir=report_dir, z=1., bao
         idx_eff = idx - 1 if 'init' in zs_ else idx
         z_eff = sim_info.data["eff_time"]["Pk"]["z_eff"][idx_eff]
         extra_data.append({'r' : r, 'xi' : xi, 'lab' : sim_info.app, 'mlt' : 1, 'z_eff' : z_eff})
-    
+
         # check redshifts
         if zs is None:
             zs = zs_[idx]
@@ -1187,7 +1222,7 @@ def corr_func_comp_plot_peak(files=None, sim_infos=None, outdir=report_dir, plot
 
 def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3, lim_kmax=None):
     data_list_new = [[] for _ in range(3)]
-    
+
     # sort from lowest k
     data_list, sim_infos = zip(*sorted(zip(data_list, sim_infos), key=lambda x : x[0][0][0]))
 
@@ -1203,7 +1238,7 @@ def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3, li
         data_list_new[1] += Pk[idx].tolist()
         data_list_new[2] += Pk_std[idx].tolist()
         k_last = k_max
-        
+
     # last data get up to k_nyquist
     k_nq = a_sim_info.k_nyquist["particle"]
     if lim_kmax is not None:
@@ -1212,18 +1247,18 @@ def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3, li
     data_list_new[0] =  np.array(data_list_new[0] + k[idx].tolist())
     data_list_new[1] =  np.array(data_list_new[1] + Pk[idx].tolist())
     data_list_new[2] =  np.array(data_list_new[2] + Pk_std[idx].tolist())
-        
+
     # get new extrapolated Pk, use last a_sim_info for k_nyquist and simulation param.
     sim = a_sim_info.sim
     fit_lin = has_app_lin_pwr(sim_infos[0].app)
     extrap_pk = pwr.get_hybrid_pow_spec_amp(sim, data_list_new, k_nq, fit_lin=fit_lin) if get_extrap_pk else None
-    
+
     # plot data only to half nyquist frequency (previusly needed for extra_pk)
     idx = (data_list_new[0] <= k_nq/2)
     data_list_new[0] = data_list_new[0][idx]
     data_list_new[1] = data_list_new[1][idx]
     data_list_new[2] = data_list_new[2][idx]
-    
+
     return np.array(data_list_new), extrap_pk
 
 def get_check_pk_broad(stack_infos, idx, data_key="pk", get_extrap_pk=True, cutoff_high=4.48, lim_kmax=None):
@@ -1247,7 +1282,7 @@ def get_check_pk_broad(stack_infos, idx, data_key="pk", get_extrap_pk=True, cuto
     # check of consistency
     if len(set(zs)) != 1:
         raise IndexError("Redshift do not have same value.")
-        
+
     APP = [x.app for x in stack_infos]
     if len(set(APP)) != 1:
         raise IndexError("Different simulations.")
@@ -1304,15 +1339,19 @@ def get_plot_mlt_pk_broad(db, query=None, collection='data', out_dir='auto', z=0
         zs.append(zs_[idx])
         Pk_list_extrap.append(extrap_pk["Pk_par"])
         data_all.append(data_list_new)
-    
+
     # plot
     cosmo = group[0].sim.cosmo
     plot.plot_pwr_spec_comparison(Pk_list_extrap, data_all, zs, groups.keys(), cosmo, out_dir=out_dir, save=True, show=True)
     plot.plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data_all, zs, groups.keys(), cosmo, out_dir=out_dir, save=True, show=True)
 
-def get_plot_mlt_pk_diff_broad(stack_infos, plot_diff=True, out_dir='auto'):
-    # sort according to app
-    groups = get_init_group(stack_infos)
+def get_plot_mlt_pk_diff_broad(db, query=None, collection='data', plot_diff=True, out_dir='auto'):
+    # default to non-CHI StackInfo with NM = 1024
+    if query is None:
+        query = {'app' : {"$ne" : 'CHI'}, 'type' : 'stack_info', 'box_opt.mesh_num_pwr' : 1024}
+
+    # get initializied groups
+    groups = get_init_group(db, query, collection)
 
     # get all data
     for group in groups.values():
@@ -1320,14 +1359,14 @@ def get_plot_mlt_pk_diff_broad(stack_infos, plot_diff=True, out_dir='auto'):
             get_supp_map(a_sim_info)
         data_array, zs = get_check_pk_diff_broad(group, cutoff_high=16, lim_kmax=2)
         correct_tza(group[0], data_array)
-        
+
         # plot
         ut.print_info(group[0].app)
         plot.plot_pwr_spec_diff_map_from_data(
-            data_array, zs, a_sim_info, out_dir=out_dir, add_app=True, 
+            data_array, zs, a_sim_info, out_dir=out_dir, add_app=True,
             show_nyquist=False, save=True, show=True, shading='gouraud')
-        
+
         if plot_diff:
             plot.plot_pwr_spec_diff_from_data(
-                data_array, zs, a_sim_info, out_dir=out_dir, add_app=True, 
+                data_array, zs, a_sim_info, out_dir=out_dir, add_app=True,
                 show_nyquist=False, show_scales=False, save=True, show=True)

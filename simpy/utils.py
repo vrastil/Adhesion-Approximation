@@ -11,12 +11,25 @@ from __future__ import print_function
 import os
 import sys
 import fnmatch
+from bson.son import SON
 
 import traceback
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import TerminalFormatter
 from IPython.display import display, Math
+
+###################################
+# sorted dictionary
+###################################
+def get_sorted_bson(a_dict):
+    res = SON()
+    for k, v in sorted(a_dict.items()):
+        if isinstance(v, dict):
+            res[k] = get_sorted_bson(v)
+        else:
+            res[k] = v
+    return res
 
 ###################################
 # colorful exception info

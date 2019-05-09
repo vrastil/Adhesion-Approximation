@@ -11,6 +11,7 @@ from __future__ import print_function
 
 import json
 from bson.binary import Binary
+from bson.son import SON
 import pickle
 import os
 import fnmatch
@@ -287,7 +288,6 @@ class SimInfo(object):
     def save_zs_data(self, key, zs, data_list, fname):
         data_dir = RESULTS_DIRS[key]
         db_key = "data.files.%s" % data_dir
-        data_doc = { db_key : [] }
 
         for z, data in zip(zs, data_list):
             z_str = 'init.dat' if z == 'init' else 'z%.2f.dat' % z
@@ -295,14 +295,17 @@ class SimInfo(object):
 
             # load data and save them in binary
             binary_data = pickle.dumps(np.array(data))
-            data_doc[db_key].append({
+            upd_doc = SON({
                 'file' : fname_,
                 'z' : z,
                 'data' : Binary(binary_data)
             })
         
-        # save into the database
-        self.update_db(data_doc)
+            # save into the database
+            self.collection.find_one_and_update(
+                self.doc_id, # find self
+                {'$addToSet': {db_key : upd_doc}} # update
+            )
 
 class StackInfo(SimInfo):
     def __getitem__(self, key):
