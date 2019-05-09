@@ -12,8 +12,8 @@ from __future__ import print_function
 import json
 from bson.binary import Binary
 from bson.son import SON
+from bson.objectid import ObjectId
 import pickle
-import os
 import fnmatch
 import datetime
 from IPython.display import Image, display
@@ -102,6 +102,13 @@ class SimInfo(object):
         """ load information from database, replace parameters in 'self.cosmo'
         by any additional parameters in 'kwargs' (optional) """
 
+        if isinstance(doc_id, dict) and '_id' in doc_id:
+            pass # default option
+        elif isinstance(doc_id, ObjectId):
+            doc_id = {'_id' : doc_id}
+        else:
+            raise ValueError("Wrong type of argument: '%s'" % type(doc_id))
+        
         # load data from the database, omit files
         doc = db[collection].find_one(doc_id, {'data' : 0})
 
@@ -324,7 +331,7 @@ class StackInfo(SimInfo):
             self.num_run = len(self.sim_ids)
             self.find_data_in_db()
         else:
-            SimInfo.__init__(self, db, {'_id' : sep_id}, collection=collection, **kwargs)
+            SimInfo.__init__(self, db, sep_id, collection=collection, **kwargs)
             # load additional variables
             self.get_data_from_db()
             doc = self.collection.find_one(self.doc_id, {'database' : 1, 'results' : 1})
@@ -481,120 +488,3 @@ def insert(a_sim_info, sep_files):
             sep_sim_infos.append(a_sim_info)
             return
     sep_files.append([a_sim_info])
-
-class Results(object):
-    """
-    Class to handle all the results. Find, sort, show.
-    """
-    def __init__(self, out_dir=''):
-        if out_dir != '':
-            self.load(out_dir)
-        else: self.sim_infos = []
-
-    def sort(self):
-        self.sim_infos = sorted(self.sim_infos, key=lambda si: si.app_opt["viscosity"])
-        self.sim_infos = sorted(self.sim_infos, key=lambda si: si.box_opt["mesh_num_pwr"])
-        self.sim_infos = sorted(self.sim_infos, key=lambda si: si.app)
-
-    def load(self, out_dir):
-        self.sim_infos = []
-        files = ut.get_files_in_traverse_dir(out_dir, 'stack_info.json')
-        for a_file in files:
-            self.sim_infos.append(StackInfo(stack_info_file=a_file))
-        self.sort()
-
-    def get_subfiles(self, Nm=0, NM=0, Np=0, L=0, nu=0, rs=0, phi=0, n=0, chi_lin=None, app='', app_not=''):
-        subfiles = []
-        for a_sim_info in self.sim_infos:
-            check = bool (
-                    (Nm == 0 or a_sim_info.box_opt["mesh_num"] == Nm) and
-                    (NM == 0 or a_sim_info.box_opt["mesh_num_pwr"] == NM) and
-                    (Np == 0 or a_sim_info.box_opt["par_num"]  == Np) and
-                    (L == 0 or a_sim_info.box_opt["box_size"]  == L) and
-                    (nu == 0 or a_sim_info.app_opt["viscosity"] == nu) and
-                    (rs == 0 or a_sim_info.app_opt["cut_radius"] == rs) and
-                    (app == '' or a_sim_info.app == app) and
-                    (app_not == '' or a_sim_info.app != app_not)
-                )
-            if a_sim_info.chi_opt:
-                check = check and (phi == 0 or a_sim_info.chi_opt["phi"] == phi)
-                check = check and (n == 0 or a_sim_info.chi_opt["n"] == n)
-                check = check and (chi_lin is None or a_sim_info.chi_opt["linear"] == chi_lin)
-            if check:
-                subfiles.append(a_sim_info)
-
-        return subfiles
-
-    def info(self, Nm=0, NM=0, Np=0, L=0, nu=0, rs=0, phi=0, n=0, chi_lin=None, app='', app_not=''):
-        for a_sim_info in self.get_subfiles(Nm=Nm, NM=NM, Np=Np, L=L, nu=nu, rs=rs, phi=phi, n=n, chi_lin=chi_lin, app=app, app_not=app_not):
-            info = a_sim_info.info_tr().replace('$', '')
-            if hasattr(a_sim_info, 'num_run'):
-                info += "\tnum runs = %i" % a_sim_info.num_run
-            print(info)
-
-    def show_folder(self, a_sim_info):
-        subprocess.Popen(["xdg-open", a_sim_info.dir + 'results/'])
-
-    def show_results(self, Nm=0, Np=0, L=0, nu=0, rs=0, phi=0, app='', plots=None):
-        if plots is None:
-            return
-        elif plots == "all":
-            return
-
-        for a_sim_info in self.get_subfiles(Nm=Nm, Np=Np, L=L, nu=nu, rs=rs, phi=phi, app=app):
-            results_dir = a_sim_info.dir + 'results/'
-            for plot in plots:
-                try:
-                    filename=results_dir + plot + ".png"
-                    display(Image(filename=filename))
-                except IOError:
-                    pass
-    
-    # def load_k_supp(self, a_sim_info):
-    #     if not hasattr(a_sim_info, "supp"):
-    #         zs, files = try_get_zs_files(a_sim_info, 'pwr_diff/')
-    #         if zs is not None:
-    #             a_sim_info.supp = load_k_supp(files)
-    #             a_sim_info.a = [1./(z+1) for z in zs]
-
-    # def plot_supp_compare(self, out_dir='/home/michal/Documents/GIT/Adhesion-Approximation/output/supp_comparison/',
-    #                       Nm=0, Np=0, L=0, nu=0, rs=0, app='', scale=['small', 'medium', 'large'], show_k_lms=False, res=None):
-    #     subfiles = self.get_subfiles(Nm=Nm, Np=Np, L=L, nu=nu, rs=rs, app=app)
-
-    #     for a_sim_info in subfiles:
-    #         self.load_k_supp(a_sim_info)
-    #     for sc in scale:
-    #         plot_supp(subfiles, out_dir+sc, suptitle=' on %s scales' % sc, save=True, show=True, scale=sc, show_k_lms=show_k_lms, res=res)
-
-class Map(dict):
-    """
-    Example:
-    m = Map({'first_name': 'Eduardo'}, last_name='Pool', age=24, sports=['Soccer'])
-    """
-    def __init__(self, *args, **kwargs):
-        super(Map, self).__init__(*args, **kwargs)
-        for arg in args:
-            if isinstance(arg, dict):
-                for k, v in arg.iteritems():
-                    self[k] = v
-
-        if kwargs:
-            for k, v in kwargs.iteritems():
-                self[k] = v
-
-    def __getattr__(self, attr):
-        return self.get(attr)
-
-    def __setattr__(self, key, value):
-        self.__setitem__(key, value)
-
-    def __setitem__(self, key, value):
-        super(Map, self).__setitem__(key, value)
-        self.__dict__.update({key: value})
-
-    def __delattr__(self, item):
-        self.__delitem__(item)
-
-    def __delitem__(self, key):
-        super(Map, self).__delitem__(key)
-        del self.__dict__[key]

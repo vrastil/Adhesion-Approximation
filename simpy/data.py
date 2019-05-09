@@ -393,13 +393,13 @@ def get_stack_infos(db, collection='data', query=None, chi_opt=None, **kwargs):
     stack_infos = []
     cursor = db[collection].find(query, {'_id' : 1})
     for doc in cursor:
-        stack_info = struct.StackInfo(db, doc['_id'])
+        stack_info = struct.StackInfo(db, doc)
         stack_infos.append(stack_info)
     return stack_infos
 
-def get_initialized_StackInfo(a_file, z=None, get_pk=False, get_corr=False, get_sigma=False):
+def get_initialized_StackInfo(db, doc_id, collection='data', z=None, get_pk=False, get_corr=False, get_sigma=False):
     # get struct.StackInfo
-    a_sim_info = struct.StackInfo(stack_info_file=a_file)
+    a_sim_info = struct.StackInfo(db, doc_id, collection=collection)
 
     # get data
     init_data(a_sim_info, z=z, get_pk=True, get_corr=get_corr, get_sigma=get_sigma)
@@ -840,18 +840,6 @@ def stack_group(db, sep_id, collection='data', rerun=None, skip=None, verbose=Fa
 
     return stack_info
 
-def get_runs_siminfo(in_dir):
-    # get all runs
-    files = ut.get_files_in_traverse_dir(in_dir, 'sim_param.json')
-    sim_infos =  [struct.SimInfo(a_file) for a_file in files]
-
-    # separate files according to run parameters
-    sep_infos = []
-    for a_sim_info in sim_infos:
-        struct.insert(a_sim_info, sep_infos)
-
-    return sep_infos
-
 def count_runs(sep_files):
     # count number of runs
     num_all_runs = num_all_sep_runs = num_sep_runs = 0
@@ -1118,32 +1106,32 @@ def compare_chi_res(db, collection='data', query=None,out_dir=report_dir, n=0.5,
 # RUN ANALYSIS -- CORR COMPARISON *
 # *********************************
 
-def load_get_corr(a_file, z=None):
+def load_get_corr(db, doc_id, collection='data', z=None):
     # get struct.StackInfo
-    a_sim_info = struct.StackInfo(stack_info_file=a_file)
+    a_sim_info = struct.StackInfo(db, doc_id, collection=collection)
 
     # get files for correlation function
     patterns = '*par*.dat *init*.dat'
-    subdir = 'pwr_spec/'
-    zs, files = try_get_zs_files(a_sim_info, subdir, patterns)
+    key = 'pwr_spec'
+    zs, data_list = a_sim_info.get_zs_data(key, patterns)
 
     # if z is specified, find nearest-value file
-    zs, files = cut_zs_list(zs, files, z)
+    zs, data_list = cut_zs_list(zs, data_list, z)
 
     # get correlation function
-    get_corr_func(files, zs, a_sim_info)
+    get_corr_func(data_list, zs, a_sim_info)
 
     # return struct.SimInfo with all loaded data and redshifts
     return a_sim_info, zs
 
-def corr_func_comp_plot(files=None, sim_infos=None, outdir=report_dir, z=1., bao_peak=True):
+def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=report_dir, z=1., bao_peak=True):
 
     extra_data = []
     zs = None
 
     # load struct.SimInfo and get correlation data
     if sim_infos is None:
-        sim_infos = [load_get_corr(a_file)[0] for a_file in files]
+        sim_infos = [load_get_corr(db, doc_id, collection=collection, z=z)[0]]
 
     # get data, check redshift
     for sim_info in sim_infos:

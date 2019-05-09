@@ -15,16 +15,10 @@ from getpass import getpass
 import json
 import datetime
 import numpy
-try:
-    from urllib.parse import urlparse
-except ImportError:
-     from urlparse import urlparse
-
-import hashlib
 
 # simpy packages
 from .struct import RESULTS_DIRS
-from .utils import *
+from . import utils as ut
 
 # version independent raw_input
 if sys.version[0]=="3": raw_input=input
@@ -208,7 +202,7 @@ def add_one_sim_data(a_file, db, collection='data', override=False):
 
     # open sim_param.json
     with open(a_file) as json_file:
-        data = get_sorted_bson(json.loads(json_file.read()))
+        data = ut.get_sorted_bson(json.loads(json_file.read()))
 
     # check if we already loaded this simulation
     if not is_new_sim(data, override):
@@ -242,12 +236,12 @@ def add_one_sim_data(a_file, db, collection='data', override=False):
     for data_dir in dirs:
         data_files_dict[data_dir] = []
         # go through all files in the directory
-        for data_file in get_files_in_traverse_dir(root_dir + data_dir, '*'):
+        for data_file in ut.get_files_in_traverse_dir(root_dir + data_dir, '*'):
             # load data and save them in binary
             binary_data = pickle.dumps(numpy.transpose(numpy.loadtxt(data_file)))
             data_files_dict[data_dir].append({
                 'file' : data_file,
-                'z' : get_z_from_file(data_file, app),
+                'z' : ut.get_z_from_file(data_file, app),
                 'data' : Binary(binary_data)
             })
 
@@ -284,7 +278,7 @@ def add_many_sim_data(a_dir, db, collection='data', a_file='sim_param.json', ver
 
     # find all simulations parameters and load data
     new_docs = 0
-    sim_files = get_files_in_traverse_dir(a_dir, a_file)
+    sim_files = ut.get_files_in_traverse_dir(a_dir, a_file)
     length = len(sim_files)
     for i, sim_file in enumerate(sim_files):
         print("Adding simulation %i from %i\r" % (i + 1, length), end='')
