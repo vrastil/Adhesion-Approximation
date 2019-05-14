@@ -461,7 +461,7 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
         ("dens_slice", '*.dat', plot.plot_dens_two_slices, {}),
         ("dens_ani", '*.dat', plot.plot_dens_evol, {}),
         # Effective time
-        ("eff_time", '*.dat', load_plot_a_eff, {})
+        ("eff_time", '*par*.dat *init*.dat', load_plot_a_eff, {})
     ]
 
     # perform all steps, skip step if Exception occurs

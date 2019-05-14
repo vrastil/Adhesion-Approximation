@@ -91,19 +91,13 @@ def get_id_keys(db, app, collection='data'):
 sep_str = '::'
 
 def get_pipeline(db, app, info_type='sim_info', query=None):
-    if query is None:
-        query = {'app' : app, 'type' : info_type}
-    else:
-        if 'app' in query:
-            if query['app'] != app:
-                return None
-        else:
-            query['app'] = app
-        if 'type' in query:
-            if query['type'] != info_type:
-                return None
-        else:
-            query['type'] = info_type
+    _query = {'app' : app, 'type' : info_type}
+    if query is not None:
+        if 'app' in query and query['app'] != app:
+            return None
+
+        if 'type' in query and query['type'] != info_type:
+            return None
 
     keys = get_id_keys(db, app)
     group = {"_id" : {}}
@@ -113,7 +107,7 @@ def get_pipeline(db, app, info_type='sim_info', query=None):
 
     group["count"] = {"$sum": 1}
     pipeline = [
-        {"$match" : query },
+        {"$match" : _query },
         {"$group" : group },
         {"$sort": SON([
             ("_id.box_opt%smesh_num" % sep_str, 1),

@@ -112,11 +112,15 @@ class bcolors:
 
 len_info = 0
 
-def print_info(info, math_mode=False):
+def print_info(info, math_mode=False, app=None):
     global len_info
     len_info = len(info)
     if math_mode:
         len_info += len(math_mode)
+        if app == 'CHI':
+            len_info -= 25
+        elif app:
+            len_info -= 10
         print(bcolors.BOLD + '*'*len_info)
         display(Math(r'\textrm{' + info + r'}' + math_mode))
         print(bcolors.BOLD + '*'*len_info + bcolors.ENDC)
