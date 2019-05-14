@@ -19,7 +19,7 @@ try:
 except ImportError:
     izip = zip # python 3
 from scipy.misc import derivative
-from scipy.interpolate import UnivariateSpline
+#from scipy.interpolate import UnivariateSpline
 from scipy.optimize import curve_fit
 
 class MySpline(object):
@@ -253,7 +253,6 @@ def plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo,
     # get non-linear power spectra
     k = data[0][0]
     a_0 = 1./(1.+zs[-1])
-    P_0 = power.lin_pow_spec(a_0, k, cosmo)
     P_0_nl = power.non_lin_pow_spec(a_0, k, cosmo)
 
     for _, Pkk, lab, Pk_extrap in iter_data(zs, [data, labels, Pk_list_extrap]):
@@ -262,7 +261,7 @@ def plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo,
         if scale_to_lin:
             P_k_tmp = P_k / Pk_extrap.A_low
         else:
-            P_k_tmp = Pk
+            P_k_tmp = P_k
 
 
         P_k_std = Pkk[2]
@@ -814,7 +813,7 @@ def plot_eff_time_ax(a_sim_info, ax, a_eff_type="Pk"):
 
     # extract variables
     a = a_sim_info.data["eff_time"][a_eff_type]['a']
-    D_eff = a_sim_info.data["eff_time"][a_eff_type]['D_eff']
+    # D_eff = a_sim_info.data["eff_time"][a_eff_type]['D_eff']
     D_eff_ratio = a_sim_info.data["eff_time"][a_eff_type]['D_eff_ratio']
     a_err = a_sim_info.data["eff_time"][a_eff_type]['a_err']
     label = a_sim_info.app # +  '$: L = %i$ Mpc/h' % a_sim_info.box_opt["box_size"]
@@ -1020,11 +1019,7 @@ def plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=T
             ymax = max(ymax, np.max(P_k[0:7 * idx] + P_k_std[0:7 * idx]))
             ymin = min(ymin, np.min(P_k[0:7 * idx] - P_k_std[0:7 * idx]))
 
-    if max_nyquist:
-        k = k[0:7*idx]
-        P_k = P_k[0:7*idx]
-        P_k_std = P_k_std[0:7*idx] if P_k_std is not None else None
-    elif show_nyquist:
+    if show_nyquist:
         add_nyquist_info(ax, a_sim_info)
 
     if pk_type != 'chi' and ymax > 1:

@@ -1174,10 +1174,11 @@ def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=re
     # plot simple correlation function and ratio
     plot.plot_corr_func(data, [zs], sim_info, out_dir=outdir, save=True, show=True, extra_data=extra_data[:-1], peak_loc=peak_loc, use_z_eff=use_z_eff)
 
-def corr_func_comp_plot_peak(files=None, sim_infos=None, outdir=report_dir, plot_all=True):
-    # load struct.SimInfo and get correlation data
+def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outdir=report_dir, plot_all=True):
+
+        # load struct.SimInfo and get correlation data
     if sim_infos is None:
-        sim_infos = [load_get_corr(a_file)[0] for a_file in files]
+        sim_infos = [load_get_corr(db, doc_id, collection=collection)[0]]
 
     # sort from lowest screening potential and chameleon exponent
     non_chi_sim_infos = [x for x in sim_infos if x.app != 'CHI']
