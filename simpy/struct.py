@@ -16,7 +16,6 @@ from bson.objectid import ObjectId
 import pickle
 import fnmatch
 import datetime
-from IPython.display import Image, display
 import numpy as np
 from . import utils as ut
 from .fastsim import Sim_Param
