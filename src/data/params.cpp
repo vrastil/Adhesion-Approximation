@@ -281,6 +281,26 @@ void from_json(const json& j, Test_Opt& test_opt)
  * @brief:	class storing parameters for power spectrum
  */
 
+static ccl_cosmology * ccl_cosmology_create_flat_lcdm(
+    double Omega_c, double Omega_b, double h, double norm_pk, double n_s,
+    ccl_configuration config, int *status)
+{
+    double Omega_k = 0.0;
+    double Neff = 3.04;
+    double w0 = -1.0;
+    double wa = 0.0;
+    double *mnu;
+    double mnuval = 0.;  // a pointer to the variable is not kept past the lifetime of this function
+    mnu = &mnuval;
+    ccl_mnu_convention mnu_type = ccl_mnu_sum;
+
+    ccl_parameters params = ccl_parameters_create(Omega_c, Omega_b, Omega_k, Neff,
+            mnu, mnu_type, w0, wa, h, norm_pk, n_s, -1, -1, -1, -1, NULL, NULL, status);
+
+    ccl_cosmology * cosmo = ccl_cosmology_create(params, config);
+    return cosmo;
+}
+
 Cosmo_Param::Cosmo_Param():
     // cosmo == NULL as indicator of uninitialization
     // config first initialize to default (in case new configuration options are added)
@@ -300,7 +320,7 @@ void Cosmo_Param::init()
     /// - create flat LCDM cosmology
     int status = 0;
     ccl_set_error_policy(CCL_ERROR_POLICY_CONTINUE);
-    cosmo = ccl_cosmology_create_with_lcdm_params(Omega_c(), Omega_b, 0, h, sigma8, ns, config, &status);
+    cosmo = ccl_cosmology_create_flat_lcdm(Omega_c(), Omega_b, h, sigma8, ns, config, &status);
     if (status) throw std::runtime_error(cosmo->status_message);
     
     /// - compute value of growth factor normalization, use only when outside CCL range
