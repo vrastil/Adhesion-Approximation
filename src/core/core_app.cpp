@@ -226,18 +226,30 @@ static void gen_rho_w_pow_k(const Sim_Param &sim, Mesh& rho)
     const size_t len = rho.length / 2;
     const FTYPE_t mod = phase * pow(N / L, 3/2.); // pair sim, gaussian real -> fourier factor, dimension trans. Pk -> Pk*
     const bool truncation = sim.cosmo.truncated_pk;
-    const FTYPE_t k2_G = sim.cosmo.k2_G;
 
-    // truncation function
-    #define TRUNCATION (truncation ? truncation_fce(k, k2_G) : 1)
-
-	#pragma omp parallel for
-	for(size_t i=0; i < len; i++)
-	{
-        FTYPE_t k = k0*sqrt(get_k_sq(N, i));
-        rho[2*i] *= mod*sqrt(lin_pow_spec(1, k, sim.cosmo))*TRUNCATION;
-        rho[2*i+1] *= mod*sqrt(lin_pow_spec(1, k, sim.cosmo))*TRUNCATION;
-	}
+    if(truncation)
+    {
+        const FTYPE_t k2_G = sim.cosmo.k2_G;
+        #pragma omp parallel for
+        for(size_t i=0; i < len; i++)
+        {
+            FTYPE_t k = k0*sqrt(get_k_sq(N, i));
+            FTYPE_t tr = truncation_fce(k, k2_G);
+            rho[2*i] *= mod*sqrt(lin_pow_spec(1, k, sim.cosmo))*tr;
+            rho[2*i+1] *= mod*sqrt(lin_pow_spec(1, k, sim.cosmo))*tr;
+        }
+    }
+    else
+    {
+        #pragma omp parallel for
+        for(size_t i=0; i < len; i++)
+        {
+            FTYPE_t k = k0*sqrt(get_k_sq(N, i));
+            rho[2*i] *= mod*sqrt(lin_pow_spec(1, k, sim.cosmo));
+            rho[2*i+1] *= mod*sqrt(lin_pow_spec(1, k, sim.cosmo));
+        }
+    }
+    
 }
 
 /**

@@ -463,6 +463,10 @@ Sim_Param::Sim_Param(std::string file_name)
         }
 
         from_json(j.at("cosmo"), cosmo); //< call explicitly, SWIG has some issues with json.hpp
+        if ("TZA" == j.at("app"))
+        {
+            cosmo.truncated_pk = true;
+        }
 
         box_opt = j.at("box_opt");
         box_opt.init(cosmo);

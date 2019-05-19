@@ -53,7 +53,6 @@ class Non_Linear_Cosmo(object):
         cosmo_to.Omega_m = cosmo_from.Omega_m
         cosmo_to.Omega_b = cosmo_from.Omega_b
         cosmo_to.H0 = cosmo_from.H0
-        cosmo_to.truncated_pk = cosmo_from.truncated_pk
 
         # copy ccl methods
         cosmo_to.config.baryons_power_spectrum_method = cosmo_from.config.baryons_power_spectrum_method
@@ -87,7 +86,7 @@ class Non_Linear_Cosmo(object):
         return sim_to
 
     @staticmethod
-    def non_lin_pow_spec(a, k, cosmo):
+    def non_lin_pow_spec(a, k, cosmo, lin_scale):
         """ return ndarray of nonlinear power spectrum """
         # initialize emulator cosmology (if not done already)
         Non_Linear_Cosmo._init_cosmo(cosmo)
@@ -97,6 +96,12 @@ class Non_Linear_Cosmo(object):
             cosmo_ = Non_Linear_Cosmo._cosmo_halofit
         else:
             cosmo_ = Non_Linear_Cosmo._cosmo_emu
+
+        # always check for TZA
+        cosmo_.truncated_pk = cosmo.truncated_pk
+
+        # scale to match linear power spectrum at small scales
+        # TODO
 
         # call non-linear power spectrum
         k = np.array(k)
@@ -116,6 +121,9 @@ class Non_Linear_Cosmo(object):
                 sim_ = Non_Linear_Cosmo._sim_halofit
             else:
                 sim_ = Non_Linear_Cosmo._sim_emu
+
+            # always check fo TZA
+            sim_.cosmo.truncated_pk = sim.cosmo.truncated_pk
 
             # call non-linear gen_func
             gen_func(sim_, a, data)
@@ -207,10 +215,10 @@ def get_Data_vec(data):
             Data_Vec[j][i] = data[j][i]
     return Data_Vec
 
-def non_lin_pow_spec(a, k, cosmo):
+def non_lin_pow_spec(a, k, cosmo, lin_scale=False):
     """ return ndarray of nonlinear power spectrum """
     # special wrapper -- use emulator power spectrum regardless of the one in cosmo
-    return Non_Linear_Cosmo.non_lin_pow_spec(a, k, cosmo)
+    return Non_Linear_Cosmo.non_lin_pow_spec(a, k, cosmo, lin_scale)
 
 def lin_pow_spec(a, k, cosmo):
     """ return ndarray of linear power spectrum """
@@ -430,7 +438,12 @@ def get_bao_peak(corr, r_low=80, r_high=120):
 
 def get_truncation(k, cosmo_par):
     k2_G = cosmo_par["smoothing_k"]
-    return np.exp(-k*k/k2_G)
+
+    # default value
+    if k2_G == 0:
+        return 1
+    else:
+        return np.exp(-k*k/k2_G)
 
 def growth_factor(a, cosmo):
     """ return growth factor D at scale factor a, accepts ndarray """

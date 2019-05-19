@@ -263,9 +263,10 @@ def get_supp_map(a_sim_info, key='input'):
         }
 
 def correct_tza_single(a_sim_info, data):
-    k, P_k = data[0], data[1]
-    truncation = pwr.get_truncation(k, a_sim_info.cosmo)
-    data[1] = (P_k + 1) * truncation - 1
+    pass
+    # k, P_k = data[0], data[1]
+    # truncation = pwr.get_truncation(k, a_sim_info.cosmo)
+    # data[1] = (P_k + 1) / truncation - 1
 
 def correct_tza(a_sim_info, data_array):
     if a_sim_info.app == 'TZA':
@@ -1345,7 +1346,7 @@ def get_plot_mlt_pk_diff_broad(db, query=None, collection='data', plot_diff=True
     # get all data
     for group in groups.values():
         for a_sim_info in group:
-            get_supp_map(a_sim_info)
+            get_supp_map(a_sim_info, key='par')
         data_array, zs = get_check_pk_diff_broad(group, cutoff_high=16, lim_kmax=2)
         correct_tza(group[0], data_array)
 

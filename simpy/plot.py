@@ -23,9 +23,9 @@ from scipy.misc import derivative
 from scipy.optimize import curve_fit
 
 class MySpline(object):
-    def __init__(self, x, y, func):
+    def __init__(self, x, y, func, p0=0):
         self.func = func
-        self.popt, self.pcov = curve_fit(func, x, y, p0=(0,0))
+        self.popt, self.pcov = curve_fit(func, x, y, p0=p0)
 
     def __call__(self, x):
         return self.func(x, *self.popt)
@@ -827,8 +827,8 @@ def plot_eff_time_ax(a_sim_info, ax, a_eff_type="Pk"):
 
     # spline
     try:
-        func = lambda x, b, c : 1 + b*x*np.exp(-c*x)
-        spl = MySpline(a, D_eff_ratio, func)
+        func = lambda x, d, b, c : d + b*x*np.exp(-c*x)
+        spl = MySpline(a, D_eff_ratio, func, p0=(1,0,0))
         a_spl = np.linspace(a[0], a[-1], 100)
         ax.plot(a_spl, spl(a_spl), '--', color=color)
     except:
@@ -925,8 +925,8 @@ def plot_eff_growth_rate_ax(a_sim_info, ax, a_eff_type="Pk"):
     f = np.diff(np.log(D_eff)) /np.diff(np.log(a))
     
     # smooth before derivative
-    func = lambda x, b, c : 1 + b*x*np.exp(-c*x)
-    spl_ = MySpline(a, D_eff_ratio, func)
+    func = lambda x, d, b, c : d + b*x*np.exp(-c*x)
+    spl_ = MySpline(a, D_eff_ratio, func, p0=(1,0,0))
     spl = lambda x : spl_(x) * power.growth_factor(x, a_sim_info.sim.cosmo)
 
     # diff in midpoints
