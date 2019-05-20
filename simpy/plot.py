@@ -187,13 +187,19 @@ def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap,
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
-def plot_pwr_spec_comparison(Pk_list_extrap, data, zs, labels, cosmo,
-                  out_dir='auto', save=True, show=False, use_z_eff=False, scale_to_lin=True):
+def plot_pwr_spec_comparison(Pk_list_extrap, data, zs, labels, cosmo, out_dir='auto',
+            save=True, show=False, use_z_eff=False, scale_to_lin=True, pk_type='dens'):
     """" Plot power spectrum -- points and extrapolated values,
     show 'true' linear Pk at the initial and final redshift """
     if out_dir == 'auto':
         out_dir = report_dir
-    out_file = 'pwr_spec'
+
+    if pk_type == 'dens':
+        out_file = 'pwr_spec'
+    elif pk_type == 'vel':
+        out_file = 'vel_pwr_spec'
+    else:
+        raise KeyError("Uknown pk_type: %s" % pk_type)
     suptitle = "Power spectrum"
 
     fig = plt.figure(figsize=fig_size)
@@ -207,7 +213,7 @@ def plot_pwr_spec_comparison(Pk_list_extrap, data, zs, labels, cosmo,
         if scale_to_lin:
             P_k_tmp = P_k / Pk_extrap.A_low
         else:
-            P_k_tmp = Pk
+            P_k_tmp = P_k
 
         ax.plot(k, P_k_tmp, 'o', ms=3, label=lab)   
         # show 1 standard deviation
@@ -220,6 +226,10 @@ def plot_pwr_spec_comparison(Pk_list_extrap, data, zs, labels, cosmo,
     a_0 = 1./(1.+zs[-1])
     P_0 = power.lin_pow_spec(a_0, k, cosmo)
     P_0_nl = power.non_lin_pow_spec(a_0, k, cosmo)
+
+    if pk_type == 'vel' and not scale_to_lin:
+        P_0 *= power.growth_change(a_0, cosmo)**2
+        P_0_nl *= power.growth_change(a_0, cosmo)**2
 
     ax.plot(k, P_0, '-', label=r"$\Lambda$CDM (lin)")
     ax.plot(k, P_0_nl, '-',  label=r"$\Lambda$CDM (nl)")
@@ -235,13 +245,19 @@ def plot_pwr_spec_comparison(Pk_list_extrap, data, zs, labels, cosmo,
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
-def plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo,
-                  out_dir='auto', save=True, show=False, use_z_eff=False, scale_to_lin=True):
+def plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo, out_dir='auto',
+        save=True, show=False, use_z_eff=False, scale_to_lin=True, pk_type='dens'):
     """" Plot power spectrum -- points and extrapolated values,
     show 'true' linear Pk at the initial and final redshift """
     if out_dir == 'auto':
         out_dir = report_dir
-    out_file = 'pwr_spec_ratio_nl'
+    if pk_type == 'dens':
+        out_file = 'pwr_spec_ratio_nl'
+    elif pk_type == 'vel':
+        out_file = 'vel_pwr_spec_ratio_nl'
+    else:
+        raise KeyError("Uknown pk_type: %s" % pk_type)
+
     suptitle = "Power spectrum"
 
     fig = plt.figure(figsize=fig_size)

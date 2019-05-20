@@ -383,7 +383,8 @@ def get_hybrid_pow_spec_amp(sim, data, k_nyquist_par, a=None, fit_lin=False):
         if Pk_par.n_s > -1.5:
             P_0 = Pk_par(Pk_par.k_max)
             Pk_par.n_s = -1
-            Pk_par.A_up *= P_0 / Pk_par(Pk_par.k_max)
+            if P_0:
+                Pk_par.A_up *= P_0 / Pk_par(Pk_par.k_max)
 
     # fit hybrid power spectrum
     else:
