@@ -148,6 +148,15 @@ def print_db_info(db, collection='data', info_type='sim_info'):
                 else:
                     msg += ' (non-linear)'
             msg += ", num = %i" % doc['count']
+
+            query = {'app' : app, 'type' : info_type, 'data.files.vel_pwr_spec' : {"$exists": True }}
+            for key, val in _id.items():
+                new_key = key.replace(sep_str, '.')
+                query[new_key] = val
+
+            count_vel = db.data.count_documents(query)
+            if count_vel:
+                msg += ", num_vel = %i" % count_vel
             print(msg)
 
 def get_separated_ids(db, collection='data', info_type='sim_info', query=None):

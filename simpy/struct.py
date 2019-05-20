@@ -30,7 +30,8 @@ RESULTS_ALL = {
     "vel" : ["vel_pwr_spec", "vel_pwr_diff", "vel_pwr_spec_supp"],
     "eff_time" : ["Pk", "sigma_R"],
     "files" : ["corr_files", "sigma_files", "pwr_spec_files", "pwr_diff_files",
-               "pwr_diff_files_i", "pwr_diff_files_h", "pwr_spec_chi_files"]
+               "pwr_diff_files_i", "pwr_diff_files_h", "pwr_spec_chi_files",
+               "vel_pwr_spec_files", "vel_pwr_diff_spec_files"]
     }
 
 RESULTS_DIRS = {
@@ -61,7 +62,9 @@ RESULTS_DIRS = {
     'pwr_spec_chi_files' : 'pwr_spec',
     'pwr_diff_files' : 'pwr_diff',
     'pwr_diff_files_h' : 'pwr_diff',
-    'pwr_diff_files_i' : 'pwr_diff'
+    'pwr_diff_files_i' : 'pwr_diff',
+    "vel_pwr_spec_files" : "vel_pwr_spec",
+    "vel_pwr_diff_spec_files" : "vel_pwr_diff"
 }
 
 # save all initialized infos here for later retrieve, key by ObjectId
@@ -431,6 +434,8 @@ class StackInfo(SimInfo):
         ut.create_dir(self.dir)
         ut.create_dir(self.dir + "pwr_spec/")
         ut.create_dir(self.dir + "pwr_diff/")
+        ut.create_dir(self.dir + "vel_pwr_spec/")
+        ut.create_dir(self.dir + "vel_pwr_diff/")
         ut.create_dir(self.res_dir)         
 
     def save(self):

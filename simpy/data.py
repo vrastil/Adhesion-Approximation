@@ -81,8 +81,20 @@ def get_single_hybrid_pow_spec_amp_w_z(sim, data, z, k_nyquist_par, a=None, fit_
     x["z"] = z
     return x
 
-def get_extrap_pk(a_sim_info, data_list, zs):
-    if "extrap_pk" not in a_sim_info.data:
+def get_extrap_pk(a_sim_info, data_list, zs, pk_type='dens'):
+    # matter power spectrum vs velocity divergence
+    if pk_type == 'dens':
+        key = 'extrap_pk'
+        key_pl = 'pk_list'
+        key_z = 'zs'
+    elif pk_type == 'vel':
+        key = 'extrap_vel_pk'
+        key_pl = 'vel_pk_list'
+        key_z = 'zs_vel'
+    else:
+        raise KeyError("Uknown pk_type: %s" % pk_type)
+
+    if key not in a_sim_info.data:
         # needed variables
         sim = a_sim_info.sim
         k_nyquist_par = a_sim_info.k_nyquist["particle"]
@@ -90,11 +102,11 @@ def get_extrap_pk(a_sim_info, data_list, zs):
         func = lambda data, z : get_single_hybrid_pow_spec_amp_w_z(sim, data, z, k_nyquist_par, fit_lin=fit_lin)
 
         # get hybrid power spectrum with redshift for each file
-        a_sim_info.data["extrap_pk"] = list(map(func, data_list, zs))
+        a_sim_info.data[key] = list(map(func, data_list, zs))
 
         # extract 'Pk_par' and 'z' for convenience
-        a_sim_info.data["pk_list"] = [x["Pk_par"] for x in a_sim_info.data["extrap_pk"]]
-        a_sim_info.data["zs"] = [x["z"] for x in a_sim_info.data["extrap_pk"]]
+        a_sim_info.data[key_pl] = [x["Pk_par"] for x in a_sim_info.data[key]]
+        a_sim_info.data[key_z] = [x["z"] for x in a_sim_info.data[key]]
 
 def get_pk_nl_amp(a_sim_info):
     # initialize data
@@ -263,9 +275,10 @@ def get_supp_map(a_sim_info, key='input'):
         }
 
 def correct_tza_single(a_sim_info, data):
-    k, P_k = data[0], data[1]
-    truncation = pwr.get_truncation(k, a_sim_info.cosmo)
-    data[1] = (P_k + 1) * truncation - 1
+    pass
+    # k, P_k = data[0], data[1]
+    # truncation = pwr.get_truncation(k, a_sim_info.cosmo)
+    # data[1] = (P_k + 1) / truncation - 1
 
 def correct_tza(a_sim_info, data_array):
     if a_sim_info.app == 'TZA':
@@ -353,20 +366,36 @@ def cut_zs_list(zs, a_list, z=None):
         a_list = [a_list[idx]]
     return zs, a_list
 
-def init_data(a_sim_info, z=None, get_pk=False, get_corr=False, get_sigma=False):
+def init_data(a_sim_info, z=None, get_pk=False, get_corr=False, get_sigma=False, pk_type='dens'):
     # look for already initialized data
     a_sim_info.load_temp()
 
+    # matter power spectrum vs velocity divergence
+    if pk_type == 'dens':
+        key = 'pwr_spec'
+        data_key = 'pk_data_par'
+        patterns = '*par*.dat *init*.dat'
+    elif pk_type == 'vel':
+        key = 'vel_pwr_spec'
+        data_key = 'vel_pk_data'
+        patterns = '*.dat'
+    else:
+        raise KeyError("Uknown pk_type: %s" % pk_type)
+
     # get files for data
-    zs, data_list = a_sim_info.get_zs_data('pwr_spec', '*par*.dat *init*.dat')
+    zs, data_list = a_sim_info.get_zs_data(key, patterns)
+
+    # check for empty data
+    if zs is None:
+        return False
 
     # if z is specified, find nearest-value file
     zs, data_list = cut_zs_list(zs, data_list, z)
 
     # get extrapolated power spectrum
     if get_pk:
-        get_extrap_pk(a_sim_info, data_list, zs)
-        a_sim_info.data["pk_data_par"] = data_list
+        get_extrap_pk(a_sim_info, data_list, zs, pk_type=pk_type)
+        a_sim_info.data[data_key] = data_list
 
     # get correlation function
     if get_corr:
@@ -378,6 +407,8 @@ def init_data(a_sim_info, z=None, get_pk=False, get_corr=False, get_sigma=False)
 
     # save initialized data
     a_sim_info.save_temp()
+
+    return True
 
 def get_stack_infos(db, collection='data', query=None, chi_opt=None, **kwargs):
     if query is None:
@@ -499,7 +530,7 @@ def analyze_all(db, collection='data', query=None, rerun=None, skip=None, only=N
         sim_infos = sim_infos[only]
 
     for a_sim_info in sim_infos:
-        ut.print_info('Analyzing run: ' , math_mode=a_sim_info.info_tr(math_mode=True))
+        ut.print_info('Analyzing run: ' , math_mode=a_sim_info.info_tr(math_mode=True), app=a_sim_info.app)
         try:
             analyze_run(a_sim_info, rerun=rerun, skip=skip)
         except KeyboardInterrupt:
@@ -771,6 +802,7 @@ HEADER_PWR = ("This file contains power spectrum P(k) in units [(Mpc/h)^3] "
               "depending on wavenumber k in units [h/Mpc] with standard deviation in units [h/Mpc].\n"
               "k [h/Mpc]\tP(k) [(Mpc/h)^3]\tstd [(Mpc/h)^3]")
 HEADER_PWR_CHI = HEADER_PWR.replace("power", "chameleon power").replace("units", "units of chi_a/(1-n)")
+HEADER_PWR_VEL = HEADER_PWR.replace("power", "velocity divergence of power")
 HEADER_PWR_DIFF = ("This file contains relative difference between power spectrum P(k)\n"
                    "and lineary extrapolated <STRING_TO_REPLACE>\n"
                    "depending on wavenumber k in units [h/Mpc] with standard deviation in units [h/Mpc].\n"
@@ -778,6 +810,8 @@ HEADER_PWR_DIFF = ("This file contains relative difference between power spectru
 HEADER_PWR_DIFF_PAR = HEADER_PWR_DIFF.replace("<STRING_TO_REPLACE>", "power spectrum of initial particle position")
 HEADER_PWR_DIFF_INPUT = HEADER_PWR_DIFF.replace("<STRING_TO_REPLACE>", "input power spectrum")
 HEADER_PWR_DIFF_HYBRID = HEADER_PWR_DIFF.replace("<STRING_TO_REPLACE>", "'hybrid' power spectrum")
+HEADER_PWR_DIFF_VEL = HEADER_PWR_DIFF.replace("power", "velocity divergence power").replace("<STRING_TO_REPLACE>", "velocity divergence power spectrum")
+
 HEADER_CORR = ("This file contains correlation function depending on distance r in units [Mpc/h]."
                "r [Mpc/h]\txsi(r)")
 
@@ -827,7 +861,10 @@ def stack_group(db, sep_id, collection='data', rerun=None, skip=None, verbose=Fa
         # Power spectrum difference -- input, hybrid, particle
         ("pwr_diff_files", '*par*', HEADER_PWR_DIFF_PAR, 'pwr_spec_diff_par', {'info_str' : '(particle)'}),
         ("pwr_diff_files_h", '*hybrid*', HEADER_PWR_DIFF_HYBRID, 'pwr_spec_diff_hybrid', {'info_str' : '(hybrid)'}),
-        ("pwr_diff_files_i", '*input*', HEADER_PWR_DIFF_INPUT, 'pwr_spec_diff_input', {'info_str' : '(input)'})
+        ("pwr_diff_files_i", '*input*', HEADER_PWR_DIFF_INPUT, 'pwr_spec_diff_input', {'info_str' : '(input)'}),
+        # Velocity power spectrum
+        ("vel_pwr_spec_files", '*.dat', HEADER_PWR_VEL, 'vel_pwr_spec', {}),
+        ("vel_pwr_diff_spec_files", '*.dat', HEADER_PWR_DIFF_VEL, 'vel_pwr_spec_diff', {})
     ]
     for key, patterns, header, fname, kwargs in all_files_steps:
         try:
@@ -873,7 +910,8 @@ def stack_all(db, collection='data', query=None, rerun=None, skip=None, verbose=
     stack_infos = []
     for i, sep_id in enumerate(all_sep_id):
         if verbose:
-            ut.print_info('Analyzing run ', math_mode=struct.SimInfo(db, sep_id[0]['_id']).info_tr(math_mode=True))
+            si = struct.SimInfo(db, sep_id[0]['_id'])
+            ut.print_info('Analyzing run ', math_mode=si.info_tr(math_mode=True), app=si.app)
         else:
             print("\rStacking group %i/%i" % (i + 1, len(all_sep_id)), end="")
             sys.stdout.flush()
@@ -1250,13 +1288,22 @@ def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3, li
 
     return np.array(data_list_new), extrap_pk
 
-def get_check_pk_broad(stack_infos, idx, data_key="pk", get_extrap_pk=True, cutoff_high=4.48, lim_kmax=None):
+def get_check_pk_broad(stack_infos, idx, data_key="pk", get_extrap_pk=True, cutoff_high=4.48, lim_kmax=None, pk_type='dens'):
     data_list = []
     zs = []
     for a_sim_info in stack_infos:
         if data_key == 'pk':
-            data = a_sim_info.data["pk_data_par"][idx]
-            z = a_sim_info.data["zs"][idx]
+            if pk_type == 'dens':
+                pk_data_key = 'pk_data_par'
+                key_z = 'zs'
+            elif pk_type == 'vel':
+                pk_data_key = 'vel_pk_data'
+                key_z = 'zs_vel'
+            else:
+                raise KeyError("Uknown pk_type: %s" % pk_type)
+
+            data = a_sim_info.data[pk_data_key][idx]
+            z = a_sim_info.data[key_z][idx]
         elif data_key == 'supp':
             data = a_sim_info.data["pk_supp_input"]["supp"][idx]
             z = a_sim_info.data["pk_supp_input"]["zs"][idx]
@@ -1289,7 +1336,7 @@ def get_check_pk_diff_broad(stack_infos, cutoff_high=8, lim_kmax=2):
         data_lists.append(data_list_new)
     return np.array(data_lists), zs
 
-def get_init_group(db, query, collection='data'):
+def get_init_group(db, query, collection='data', pk_type='dens'):
     # group by app
     group = {'_id' : {'app' : '$app'}, 'ids' : {'$addToSet' : '$_id'}}
     pipeline = [
@@ -1305,34 +1352,47 @@ def get_init_group(db, query, collection='data'):
         groups[app] = []
         for doc_id in doc_ids:
             stack_info = struct.StackInfo(db, doc_id, collection=collection)
-            init_data(stack_info, get_pk=True)
-            groups[app].append(stack_info)
+            if init_data(stack_info, get_pk=True, pk_type=pk_type):
+                groups[app].append(stack_info)
+        # delete empty groups
+        if not groups[app]:
+            del groups[app]
 
     return groups
 
-def get_plot_mlt_pk_broad(db, query=None, collection='data', out_dir='auto', z=0):
+def get_plot_mlt_pk_broad(db, query=None, collection='data', out_dir='auto', z=0, pk_type='dens'):
     # default to non-CHI StackInfo with NM = 1024
     if query is None:
         query = {'app' : {"$ne" : 'CHI'}, 'type' : 'stack_info', 'box_opt.mesh_num_pwr' : 1024}
 
+   # matter power spectrum vs velocity divergence
+    if pk_type == 'dens':
+        key_pl = 'pk_list'
+        key_z = 'zs'
+    elif pk_type == 'vel':
+        key_z = 'zs_vel'
+        key_pl = 'vel_pk_list'
+    else:
+        raise KeyError("Uknown pk_type: %s" % pk_type)
+
     # get initializied groups
-    groups = get_init_group(db, query, collection)
+    groups = get_init_group(db, query, collection, pk_type=pk_type)
 
     # get all data
     zs, Pk_list_extrap, data_all = [], [], []
     for group in groups.values():
         # get idx of nearest redshift in zs
-        zs_ = group[0].data["zs"]
+        zs_ = group[0].data[key_z]
         idx = find_nearest_idx(zs_, z)
-        data_list_new, extrap_pk = get_check_pk_broad(group, idx, lim_kmax=2)
+        data_list_new, extrap_pk = get_check_pk_broad(group, idx, lim_kmax=2, pk_type=pk_type)
         zs.append(zs_[idx])
         Pk_list_extrap.append(extrap_pk["Pk_par"])
         data_all.append(data_list_new)
 
     # plot
     cosmo = group[0].sim.cosmo
-    plot.plot_pwr_spec_comparison(Pk_list_extrap, data_all, zs, groups.keys(), cosmo, out_dir=out_dir, save=True, show=True)
-    plot.plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data_all, zs, groups.keys(), cosmo, out_dir=out_dir, save=True, show=True)
+    plot.plot_pwr_spec_comparison(Pk_list_extrap, data_all, zs, groups.keys(), cosmo, out_dir=out_dir, save=True, show=True, pk_type=pk_type)
+    plot.plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data_all, zs, groups.keys(), cosmo, out_dir=out_dir, save=True, show=True, pk_type=pk_type)
 
 def get_plot_mlt_pk_diff_broad(db, query=None, collection='data', plot_diff=True, out_dir='auto'):
     # default to non-CHI StackInfo with NM = 1024
@@ -1345,7 +1405,7 @@ def get_plot_mlt_pk_diff_broad(db, query=None, collection='data', plot_diff=True
     # get all data
     for group in groups.values():
         for a_sim_info in group:
-            get_supp_map(a_sim_info)
+            get_supp_map(a_sim_info, key='par')
         data_array, zs = get_check_pk_diff_broad(group, cutoff_high=16, lim_kmax=2)
         correct_tza(group[0], data_array)
 

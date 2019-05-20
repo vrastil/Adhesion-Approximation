@@ -551,11 +551,17 @@ Extrap_Pk<T, N>::Extrap_Pk(const Data_Vec<T, N>& data, const Sim_Param& sim):
         0, get_nearest(sim.other_par.nyquist.at("particle")/2, data[0]) + 1
     ) {}
 
+static FTYPE_t truncation_fce(FTYPE_t k, FTYPE_t k2_G)
+{
+    return exp(-k*k/k2_G);
+}
+
 template <typename T, size_t N>
 void Extrap_Pk<T, N>::fit_lin(const Data_Vec<T, N>& data, const size_t m, const size_t n, double &A)
 {
     // FIT linear power spectrum to data[m:n)
     // fit 'P(k) = A * P_lin(k)' via A
+    // for TZA correct for truncation
     // for N = 2 perform non-weighted least-square fitting
     // for N = 3 use data[2] as sigma, w = 1/sigma^2
     double Pk;
@@ -566,11 +572,26 @@ void Extrap_Pk<T, N>::fit_lin(const Data_Vec<T, N>& data, const size_t m, const 
     }
     std::vector<double> A_vec(n-m, 1);
 
-    for(size_t i = m; i < n; i++){
-        Pk = lin_pow_spec(1, data[0][i], cosmo);
-        Pk_res.push_back(data[1][i] / Pk);
-        if (N == 3) w.push_back(pow2(Pk/data[2][i]));
+    if (cosmo.truncated_pk)
+    {
+        const FTYPE_t k2_G = cosmo.k2_G;
+        for(size_t i = m; i < n; i++){
+            FTYPE_t k = data[0][i];
+            Pk = lin_pow_spec(1, k, cosmo) * truncation_fce(k, k2_G);;
+            Pk_res.push_back(data[1][i] / Pk);
+            if (N == 3) w.push_back(pow2(Pk/data[2][i]));
+        }
     }
+    else
+    {
+        for(size_t i = m; i < n; i++){
+            Pk = lin_pow_spec(1, data[0][i], cosmo);
+            Pk_res.push_back(data[1][i] / Pk);
+            if (N == 3) w.push_back(pow2(Pk/data[2][i]));
+        }
+    }
+    
+    
     double A_sigma2, sumsq;
 
     int gsl_errno;
