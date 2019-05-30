@@ -1214,7 +1214,7 @@ def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=re
 
 def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outdir=report_dir, plot_all=True):
 
-        # load struct.SimInfo and get correlation data
+    # load struct.SimInfo and get correlation data
     if sim_infos is None:
         sim_infos = [load_get_corr(db, doc_id, collection=collection)[0]]
 
@@ -1246,6 +1246,30 @@ def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outd
         plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=False, plot_amp=True, plot_width=False)
         plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=False, plot_amp=False, plot_width=True)
 
+
+def corr_func_chi_fp_plot_peak(db, collection='data', query=None, out_dir=report_dir, use_group=None, z=None, plot_all=False, **kwargs):
+    # get groups of FP / CHI
+    groups = get_fp_chi_groups(db, collection=collection, query=query, **kwargs)
+    if use_group is not None:
+        groups = [groups[use_group]]
+
+    for i, group in enumerate(groups):
+        # skip 1-length
+        if len(group["CHI"]) == 1:
+            continue
+
+        # init BAO peak
+        get_corr_peak(group["FP"])
+        map(get_corr_peak, group["CHI"])
+
+        # # plot bao peak and location
+        _outdir = "%s%i_" % (out_dir, i)
+        if plot_all:
+            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"])
+        else:
+            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=True, plot_amp=False, plot_width=False)
+            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=False, plot_amp=True, plot_width=False)
+            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=False, plot_amp=False, plot_width=True)
 
 def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3, lim_kmax=None):
     data_list_new = [[] for _ in range(3)]
@@ -1405,6 +1429,7 @@ def get_plot_mlt_pk_diff_broad(db, query=None, collection='data', plot_diff=True
     # get all data
     for group in groups.values():
         for a_sim_info in group:
+            transform_supp_data_to_z_eff(a_sim_info)
             get_supp_map(a_sim_info, key='par')
         data_array, zs = get_check_pk_diff_broad(group, cutoff_high=16, lim_kmax=2)
         correct_tza(group[0], data_array)
@@ -1419,3 +1444,34 @@ def get_plot_mlt_pk_diff_broad(db, query=None, collection='data', plot_diff=True
             plot.plot_pwr_spec_diff_from_data(
                 data_array, zs, a_sim_info, out_dir=out_dir, add_app=True,
                 show_nyquist=False, show_scales=False, save=True, show=True)
+
+
+def plot_pwr_spec_comparison_si(stack_infos, z=0, out_dir='auto', save=True, show=False,
+                                use_z_eff=False, scale_to_lin=True):
+    Pk_list_extrap = []
+    data = []
+    zs = []
+    labels = plot.get_chi_labels(stack_infos)
+    cosmo = stack_infos[0].sim.cosmo
+
+    k_max = 1e6 # non-realistic large value
+
+    for si in stack_infos:
+        # init
+        init_data(si, get_pk=True)
+
+        # redshift
+        zs_ = si.data["zs"]
+        idx = find_nearest_idx(zs_, z)
+        zs.append(zs_[idx])
+
+        # data
+        data.append(si.data["pk_data_par"][idx])
+        Pk_list_extrap.append(si.data["extrap_pk"][idx]["Pk_par"])
+
+        k_max = np.minimum(k_max, si.k_nyquist["particle"])    
+
+    plot.plot_pwr_spec_comparison(Pk_list_extrap, data, zs, labels, cosmo, out_dir=out_dir, save=save, show=show,
+                    use_z_eff=use_z_eff, scale_to_lin=scale_to_lin, k_max=k_max)
+    plot.plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo, out_dir=out_dir,
+        save=save, show=show, use_z_eff=use_z_eff, scale_to_lin=scale_to_lin, k_max=k_max)
