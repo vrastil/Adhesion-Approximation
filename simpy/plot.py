@@ -36,6 +36,7 @@ from . import utils as ut
 matplotlib.rcParams['legend.numpoints'] = 1
 label_size = 20
 suptitle_size = 25
+tick_size = 18
 # fig_size = (15, 11)
 fig_size = (14, 9)
 subplt_adj_sym = {'left' : 0.15, 'right' : 0.95, 'bottom' : 0.15, 'top' : 0.95}
@@ -105,7 +106,7 @@ def add_nyquist_info(ax, a_sim_info):
     for val, lab in val_lab.items():
         ax.axvline(val, ls=next(ls), c='k', label=lab + r")")
 
-def legend_manipulation(ax=None, figtext="", loc='upper left', bbox_to_anchor=(1.0, 1.0)):
+def legend_manipulation(ax=None, figtext="", loc='upper left', bbox_to_anchor=(1.0, 1.0), set_tick_size=True):
     ax = plt.gca() if ax is None else ax
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles, labels, loc=loc,
@@ -115,6 +116,9 @@ def legend_manipulation(ax=None, figtext="", loc='upper left', bbox_to_anchor=(1
         plt.figtext(0.5, 0.95, figtext,
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
     plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
+
+    if set_tick_size:
+        ax.tick_params(axis='both', which='major', labelsize=tick_size)
 
 
 def adjust_extreme_values(ax, ymin, ymax):
@@ -416,6 +420,7 @@ def plot_chi_fp_map(data_array, zs, chi_info, out_dir='auto', save=True, show=Fa
 
     ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
     ax.set_ylabel(r"$a(t)$", fontsize=label_size)
+    ax.tick_params(axis='both', which='major', labelsize=tick_size)
     plt.draw()
 
     # plot k_nl, keep ylim
@@ -1118,7 +1123,7 @@ def plot_pwr_spec_diff_from_data_mlt(data_lists, zs, sim_infos, out_dir='auto', 
     fig_suptitle(fig, suptitle)
 
     ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
-    ax.set_ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$", fontsize=25)
+    ax.set_ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$", fontsize=label_size)
 
     # legend_manipulation(ax, a_sim_info.info_tr())
     legend_manipulation(ax, "")
@@ -1157,7 +1162,7 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', show
 
     fig_suptitle(fig, suptitle)
     ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
-    ax.set_ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$", fontsize=25)
+    ax.set_ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$", fontsize=label_size)
     # legend_manipulation(ax, a_sim_info.info_tr())
     legend_manipulation(ax, "")
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
@@ -1293,7 +1298,7 @@ def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, use_z_eff=
     ylabel = r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$"
     if res is not None:
         ylabel += r', residual from $\nu=%.1f$' % res.nu
-    plt.ylabel(ylabel, fontsize=25)
+    plt.ylabel(ylabel, fontsize=label_size)
     legend_manipulation()
     close_fig(out_dir + 'supp', fig, save=save, show=show, use_z_eff=use_z_eff)
 
@@ -1525,6 +1530,10 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
         ax4.set_yscale('log')
         ax4.set_ylabel(r"$k_{scr}\, [h/$Mpc$]$", fontsize=label_size)
         ax4.set_xlabel(r"z", fontsize=label_size)
+        ax4.tick_params(axis='both', which='major', labelsize=tick_size)
+    else:
+        ax3.set_xlabel(r"z", fontsize=label_size)
+        ax3.tick_params(axis='both', which='major', labelsize=tick_size)
     
     zs = [z for z in zs if z != 'init']
     a = [1./(z+1) for z in zs]
@@ -1545,10 +1554,10 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
     
     fig_suptitle(fig, suptitle)
     plt.setp(ax1.get_xticklabels(), visible=False)
-    plt.setp(ax3.get_xticklabels(), visible=False)
+    plt.setp(ax2.get_xticklabels(), visible=False)
     
     # legend
-    legend_manipulation(ax=ax1, loc='upper right')
+    legend_manipulation(ax=ax1, loc='upper right', set_tick_size=False)
 
     # subplots
     plt.subplots_adjust(hspace=0, **subplt_adj_sym)
@@ -1598,7 +1607,7 @@ def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle=
     fig_suptitle(fig, suptitle)
     plt.xlabel(r"$a(t)$", fontsize=label_size)
     plt.ylabel(
-        r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$", fontsize=25)
+        r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$", fontsize=label_size)
     
     # legend
     if scale_in_leg:

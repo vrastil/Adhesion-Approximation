@@ -1229,7 +1229,7 @@ def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outd
     # get data, check redshift
     use_z_eff = []
     for sim_info in sim_infos:
-        init_data(sim_info, get_corr=True)
+        init_data(sim_info, get_corr=True, get_pk=True)
         get_a_eff_from_Pk(sim_info)
         get_corr_peak(sim_info)
 
