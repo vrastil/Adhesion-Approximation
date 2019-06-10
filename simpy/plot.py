@@ -135,9 +135,13 @@ def adjust_extreme_values_range(ax, x, y, x_max):
     y_max = np.max(y_valid)*1.2
     ax.set_ylim(y_min, y_max)
 
-def get_chi_label(si):
-    return r"$\Phi_{scr}=%.1e,\ n=%.1f$%s" % (
-                si.chi_opt["phi"], si.chi_opt["n"], " (lin)" if si.chi_opt["linear"] else " (nl)")
+def get_chi_label(si, single=False):
+    label = r"$\Phi_{scr}=%.1e,\ n=%.1f$" % (
+                si.chi_opt["phi"], si.chi_opt["n"])
+    if not single:
+        label += r" (lin)" if si.chi_opt["linear"] else r" (nl)"
+
+    return label
 
 def get_chi_labels(sim_infos):
     return [get_chi_label(si) for si in sim_infos]
@@ -754,7 +758,7 @@ def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, sho
             save=save, show=show, is_sigma=is_sigma, only_r2=only_r2,
             extra_data=extra_data, peak_loc=peak_loc, use_z_eff=use_z_eff)
 
-def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False, ls=None, get_last_col=False, fp_comp=False):
+def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False, ls=None, get_last_col=False, fp_comp=False, single=False):
     # load all available data (GSL integration could have failed)
     peak_data = [x for x in a_sim_info.data["corr_func"]["par_peak"] if x["z"] != "init"]
     zs = [x["z"] for x in peak_data]
@@ -766,7 +770,7 @@ def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False, ls=None, get_l
 
     label = a_sim_info.app
     if label == 'CHI':
-        label = get_chi_label(a_sim_info)
+        label = get_chi_label(a_sim_info, single=single)
 
     # get last used color
     color = ax.get_lines()[-1].get_color() if get_last_col else None
@@ -787,23 +791,25 @@ def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False, ls=None, get_l
         data_nl = np.array([x["popt"][idx] for x in peak_data_nl])
 
     # plot simulation peak
-    ax.set_yscale('symlog', linthreshy=0.01, linscaley=0.5)
-    ax.errorbar(a, data / data_nl - 1, yerr=data_err / data_nl, ls=ls, label=label + ' (%s)' % bao_type, color=color)
+    # ax.set_yscale('symlog', linthreshy=0.01, linscaley=0.5)
+    if not single:
+        label += ' (%s)' % bao_type
+    ax.errorbar(a, data / data_nl - 1, yerr=data_err / data_nl, ls=ls, label=label, color=color)
     
 
-def plot_peak_loc(a_sim_info, ax, use_z_eff=False, get_last_col=False, fp_comp=False):
+def plot_peak_loc(a_sim_info, ax, use_z_eff=False, get_last_col=False, fp_comp=False, single=False):
     """ plot peak location to the given axis """
-    plot_peak_uni(a_sim_info, ax, "loc", 1, use_z_eff=use_z_eff, ls='-', get_last_col=get_last_col, fp_comp=fp_comp)
+    plot_peak_uni(a_sim_info, ax, "loc", 1, use_z_eff=use_z_eff, ls='-', get_last_col=get_last_col, fp_comp=fp_comp, single=single)
 
-def plot_peak_amp(a_sim_info, ax, use_z_eff=False, get_last_col=False, fp_comp=False):
+def plot_peak_amp(a_sim_info, ax, use_z_eff=False, get_last_col=False, fp_comp=False, single=False):
     """ plot peak amplitude to the given axis """
-    plot_peak_uni(a_sim_info, ax, "amp", 0, use_z_eff=use_z_eff, ls=':', get_last_col=get_last_col, fp_comp=fp_comp)
+    plot_peak_uni(a_sim_info, ax, "amp", 0, use_z_eff=use_z_eff, ls=':', get_last_col=get_last_col, fp_comp=fp_comp, single=single)
 
-def plot_peak_width(a_sim_info, ax, use_z_eff=False, get_last_col=False, fp_comp=False):
+def plot_peak_width(a_sim_info, ax, use_z_eff=False, get_last_col=False, fp_comp=False, single=False):
     """ plot peak amplitude to the given axis """
-    plot_peak_uni(a_sim_info, ax, "width", 2, use_z_eff=use_z_eff, ls='--', get_last_col=get_last_col, fp_comp=fp_comp)
+    plot_peak_uni(a_sim_info, ax, "width", 2, use_z_eff=use_z_eff, ls='--', get_last_col=get_last_col, fp_comp=fp_comp, single=single)
 
-def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=False, plot_loc=True, plot_amp=True, plot_width=True, fp_comp=False):
+def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=False, plot_loc=True, plot_amp=True, plot_width=True, fp_comp=False, single=False):
     # output
     if out_dir == 'auto':
         if len(sim_infos) == 1:
@@ -831,17 +837,17 @@ def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=F
 
         # peak location
         if plot_loc:
-            plot_peak_loc(a_sim_info, ax, use_z_eff=z_eff, fp_comp=fp_comp)
+            plot_peak_loc(a_sim_info, ax, use_z_eff=z_eff, fp_comp=fp_comp, single=single)
 
         # peak amplitude
         if plot_amp:
             get_last_col = plot_loc
-            plot_peak_amp(a_sim_info, ax, use_z_eff=z_eff, get_last_col=get_last_col, fp_comp=fp_comp)
+            plot_peak_amp(a_sim_info, ax, use_z_eff=z_eff, get_last_col=get_last_col, fp_comp=fp_comp, single=single)
 
         # peak width
         if plot_width:
             get_last_col = plot_loc or plot_amp
-            plot_peak_width(a_sim_info, ax, use_z_eff=z_eff, get_last_col=get_last_col, fp_comp=fp_comp)
+            plot_peak_width(a_sim_info, ax, use_z_eff=z_eff, get_last_col=get_last_col, fp_comp=fp_comp, single=single)
 
     # labels
     plt.xlabel(r"$a$", fontsize=label_size)

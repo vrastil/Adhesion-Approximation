@@ -1242,9 +1242,9 @@ def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outd
     if plot_all:
         plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff)
     else:
-        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=True, plot_amp=False, plot_width=False)
-        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=False, plot_amp=True, plot_width=False)
-        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=False, plot_amp=False, plot_width=True)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=True, plot_amp=False, plot_width=False, single=True)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=False, plot_amp=True, plot_width=False, single=True)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=False, plot_amp=False, plot_width=True, single=True)
 
 
 def corr_func_chi_fp_plot_peak(db, collection='data', query=None, out_dir=report_dir, use_group=None, z=None, plot_all=False, **kwargs):
@@ -1267,9 +1267,9 @@ def corr_func_chi_fp_plot_peak(db, collection='data', query=None, out_dir=report
         if plot_all:
             plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"])
         else:
-            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=True, plot_amp=False, plot_width=False)
-            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=False, plot_amp=True, plot_width=False)
-            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=False, plot_amp=False, plot_width=True)
+            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=True, plot_amp=False, plot_width=False, single=True)
+            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=False, plot_amp=True, plot_width=False, single=True)
+            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=False, plot_amp=False, plot_width=True, single=True)
 
 def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3, lim_kmax=None):
     data_list_new = [[] for _ in range(3)]
