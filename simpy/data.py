@@ -1451,7 +1451,7 @@ def plot_pwr_spec_comparison_si(stack_infos, z=0, out_dir='auto', save=True, sho
     Pk_list_extrap = []
     data = []
     zs = []
-    labels = plot.get_chi_labels(stack_infos)
+    labels = plot.get_chi_labels(stack_infos, single=True)
     cosmo = stack_infos[0].sim.cosmo
 
     k_max = 1e6 # non-realistic large value

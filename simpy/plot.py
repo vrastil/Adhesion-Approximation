@@ -143,8 +143,8 @@ def get_chi_label(si, single=False):
 
     return label
 
-def get_chi_labels(sim_infos):
-    return [get_chi_label(si) for si in sim_infos]
+def get_chi_labels(sim_infos, single=False):
+    return [get_chi_label(si, single=single) for si in sim_infos]
 
 def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap,
                   out_dir='auto', pk_type='dens', save=True, show=False, use_z_eff=False):
@@ -375,9 +375,9 @@ def plot_chi_fp_map(data_array, zs, chi_info, out_dir='auto', save=True, show=Fa
                     max_nyquist=True, cut_low=False, vmin=1, vmax=3.0):
     #
     fig = plt.figure(figsize=(8, 8))
-    gs = gridspec.GridSpec(1, 15, wspace=0.5)
-    ax = plt.subplot(gs[0, : -1])
-    cbar_ax = plt.subplot(gs[0, -1])
+    gs = gridspec.GridSpec(1, 60, wspace=0.5)
+    ax = plt.subplot(gs[0, : -5])
+    cbar_ax = plt.subplot(gs[0, -4 :])
 
     ax.set_xscale('log')
     a_z = [1 / (1 + z) for z in zs]
@@ -1207,9 +1207,9 @@ def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto',
         out_file += '_%s' % a_sim_info.app
 
     fig = plt.figure(figsize=(8, 8))
-    gs = gridspec.GridSpec(1, 15, wspace=0.5)
-    ax = plt.subplot(gs[0, : -1])
-    cbar_ax = plt.subplot(gs[0, -1])
+    gs = gridspec.GridSpec(1, 60, wspace=0.5)
+    ax = plt.subplot(gs[0, : -5])
+    cbar_ax = plt.subplot(gs[0, -4 :])
 
     ax.set_xscale('log')
     a = [1 / (1 + z) for z in zs]
