@@ -13,6 +13,8 @@ import matplotlib.gridspec as gridspec
 import matplotlib.cm as cm
 from matplotlib.colors import SymLogNorm
 from matplotlib.ticker import FormatStrFormatter
+from cycler import cycler
+
 import numpy as np
 try:
     from itertools import izip # python 2
@@ -33,14 +35,25 @@ class MySpline(object):
 from . import power
 from . import utils as ut
 
+# default values
 matplotlib.rcParams['legend.numpoints'] = 1
-label_size = 20
+matplotlib.rcParams['lines.linewidth'] = 3.0
+matplotlib.rcParams['lines.markersize'] = 4.0
+# matplotlib.rcParams['axes.prop_cycle'] = (
+#     cycler('color', ['red', 'green', 'blue', 'orange', 'brown', 'violet', 'black']) +
+#     cycler('ls', ['solid', 'dashed', 'dashdot', (0, (5, 10)), (0, (3, 5, 1, 5)), (0, (3, 1, 1, 1)), (0, (1, 1))])
+# )
+matplotlib.rcParams['font.size'] = 20
+matplotlib.rcParams['axes.labelsize'] = 20
+matplotlib.rcParams['xtick.labelsize'] = 25
+matplotlib.rcParams['ytick.labelsize'] = 25
+matplotlib.rcParams['legend.fontsize'] = 20
 suptitle_size = 25
 tick_size = 18
 # fig_size = (15, 11)
 fig_size = (14, 9)
+fig_size_map = (14, 14)
 subplt_adj_sym = {'left' : 0.15, 'right' : 0.95, 'bottom' : 0.15, 'top' : 0.95}
-matplotlib.rcParams.update({'font.size': 15})
 report_dir = "/home/michal/Documents/GIT/FastSim/report/clanek/"
 
 def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True, get_a=False, only_last=False):
@@ -79,7 +92,7 @@ def fig_suptitle(fig, suptitle="", y=0.99, size=suptitle_size):
     #fig.suptitle(suptitle, y=0.99, size=suptitle_size)
     pass
 
-def close_fig(filename, fig, save=True, show=False, dpi=200, use_z_eff=False, format='all'):
+def close_fig(filename, fig, save=True, show=False, dpi=400, use_z_eff=False, format='eps'):
     """save and/or show figure, close figure"""
     if use_z_eff:
         filename += '_z_eff'
@@ -165,7 +178,7 @@ def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap,
 
     for lab, Pkk, Pk_ext in iter_data(zs, [data, Pk_list_extrap]):
         k, P_k = Pkk[0], Pkk[1]
-        ax.plot(k, P_k, 'o', ms=3, label=lab)
+        ax.plot(k, P_k, 'o', label=lab)
         # show 1 standard deviation
         if len(Pkk) == 3:
             P_k_std = Pkk[2]
@@ -191,8 +204,8 @@ def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap,
     ax.plot(k, P_i, '-')
     
     fig_suptitle(fig, suptitle)
-    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
-    ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=label_size)
+    ax.set_xlabel(r"$k [h/$Mpc$]$")
+    ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]")
 
     # LEGEND manipulation
     # legend_manipulation(ax, a_sim_info.info_tr())
@@ -235,7 +248,7 @@ def plot_pwr_spec_comparison(Pk_list_extrap, data, zs, labels, cosmo, out_dir='a
         else:
             P_k_tmp = P_k
 
-        ax.plot(k, P_k_tmp, 'o', ms=3, label=lab)   
+        ax.plot(k, P_k_tmp, 'o', label=lab)   
 
         # show 1 standard deviation
         ax.fill_between(k, P_k_tmp - P_k_std, P_k_tmp + P_k_std,
@@ -255,8 +268,8 @@ def plot_pwr_spec_comparison(Pk_list_extrap, data, zs, labels, cosmo, out_dir='a
     ax.plot(k, P_0_nl, '-',  label=r"$\Lambda$CDM (nl)")
 
     fig_suptitle(fig, suptitle, y=0.95)
-    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
-    ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=label_size)
+    ax.set_xlabel(r"$k [h/$Mpc$]$")
+    ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]")
 
     # LEGEND manipulation
     legend_manipulation(ax, "", loc='best')
@@ -308,8 +321,8 @@ def plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo, o
         else:
             P_k_tmp = P_k
 
-        ax.errorbar(k, P_k_tmp / P_0_nl, yerr=P_k_std/P_0_nl, fmt='o', ms=3, label=lab)
-        # ax.plot(k, P_k_tmp / P_0_nl - 1, 'o', ms=3, label=lab)
+        ax.errorbar(k, P_k_tmp / P_0_nl, yerr=P_k_std/P_0_nl, fmt='o', label=lab)
+        # ax.plot(k, P_k_tmp / P_0_nl - 1, 'o', label=lab)
 
     # plot linear power spectra
     k_ = np.geomspace(k[0],k[-1], num=200)
@@ -320,8 +333,8 @@ def plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo, o
     ax.plot(k_, P_0 / P_0_nl_, '-', label=r"$\Lambda$CDM (lin)")
     
     fig_suptitle(fig, suptitle, y=0.95)
-    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
-    ax.set_ylabel(r"$\frac{P(k)}{P_{nl}(k)}$", fontsize=label_size)
+    ax.set_xlabel(r"$k [h/$Mpc$]$")
+    ax.set_ylabel(r"$\frac{P(k)}{P_{nl}(k)}$")
 
     #ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax.yaxis.grid(True)
@@ -349,7 +362,7 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, out_dir='auto', save=Tr
         k, P_k = Pkk[0], Pkk[1]
         chi_bulk_a_n = power.chi_bulk_a_n(a, a_sim_info.chi_opt)
         P_k /= pow(chi_bulk_a_n, 2)
-        lines = ax.plot(k, P_k, 'o', ms=3, label=lab)
+        lines = ax.plot(k, P_k, 'o', label=lab)
         color = lines[0].get_color()
         P_a = power.chi_lin_pow_spec(a, k, a_sim_info.sim.cosmo, a_sim_info.chi_opt)
         ax.plot(k, P_a, '-', color=color)
@@ -360,8 +373,8 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, out_dir='auto', save=Tr
 
     add_nyquist_info(ax, a_sim_info)
     fig_suptitle(fig, suptitle)
-    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
-    ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]", fontsize=label_size)
+    ax.set_xlabel(r"$k [h/$Mpc$]$")
+    ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]")
 
     # LEGEND manipulation
     # legend_manipulation(ax, a_sim_info.info_tr())
@@ -374,7 +387,7 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, out_dir='auto', save=Tr
 def plot_chi_fp_map(data_array, zs, chi_info, out_dir='auto', save=True, show=False, shading='flat',
                     max_nyquist=True, cut_low=False, vmin=1, vmax=3.0):
     #
-    fig = plt.figure(figsize=(8, 8))
+    fig = plt.figure(figsize=fig_size_map)
     gs = gridspec.GridSpec(1, 60, wspace=0.5)
     ax = plt.subplot(gs[0, : -5])
     cbar_ax = plt.subplot(gs[0, -4 :])
@@ -422,8 +435,8 @@ def plot_chi_fp_map(data_array, zs, chi_info, out_dir='auto', save=True, show=Fa
     cbar = fig.colorbar(im, cax=cbar_ax, ticks=ticks)
     cbar.ax.set_yticklabels(labels)
 
-    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
-    ax.set_ylabel(r"$a(t)$", fontsize=label_size)
+    ax.set_xlabel(r"$k [h/$Mpc$]$")
+    ax.set_ylabel(r"$a(t)$")
     ax.tick_params(axis='both', which='major', labelsize=tick_size)
     plt.draw()
 
@@ -434,7 +447,6 @@ def plot_chi_fp_map(data_array, zs, chi_info, out_dir='auto', save=True, show=Fa
 
     plt.figtext(0.5, 0.95, "",
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
     plt.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9)
 
     # close, save show
@@ -481,8 +493,8 @@ def plot_chi_fp_z(data_z, a_sim_info, labels, out_dir='auto', suptitle='auto', s
             color = None
             ls = "-"
 
-        # ax.errorbar(k, Pk, fmt='o', yerr=std, ms=3, label=label)
-        ax.plot(k, Pk, 'o', ls=ls, c=color, ms=3, label=label)
+        # ax.errorbar(k, Pk, fmt='o', yerr=std, label=label)
+        ax.plot(k, Pk, 'o', ls=ls, c=color, label=label)
 
     if not max_nyquist:
         add_nyquist_info(ax, a_sim_info)
@@ -493,8 +505,8 @@ def plot_chi_fp_z(data_z, a_sim_info, labels, out_dir='auto', suptitle='auto', s
     ax.set_ylim(ymin, ymax)
 
     fig_suptitle(fig, suptitle)
-    plt.xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
-    plt.ylabel(r"${P_\chi(k)}/{P_{FP}(k)}$", fontsize=label_size)
+    plt.xlabel(r"$k [h/$Mpc$]$")
+    plt.ylabel(r"${P_\chi(k)}/{P_{FP}(k)}$")
     #figtext = a_sim_info.info_tr().replace("FP: ", "")
     legend_manipulation(ax, figtext="", loc='upper left', bbox_to_anchor=(0.0,1.0))
     plt.subplots_adjust(**subplt_adj_sym)
@@ -515,8 +527,8 @@ def plot_chi_fp_res_ax(ax, data_chi, si, ymax):
         label += " (nl)"
         color = None
         ls = "-"
-    # ax.errorbar(k, Pk, fmt='o', yerr=std, ms=3, label=label)
-    ax.plot(k, Pk, 'o', ls=ls, ms=3, label=label, c=color)
+    # ax.errorbar(k, Pk, fmt='o', yerr=std, label=label)
+    ax.plot(k, Pk, 'o', ls=ls, label=label, c=color)
     return ymax
 
 def plot_chi_fp_res(data_all, sim_infos, out_dir='auto', suptitle='auto', save=True, show=False):
@@ -552,8 +564,8 @@ def plot_chi_fp_res(data_all, sim_infos, out_dir='auto', suptitle='auto', save=T
     ax.set_ylim(ymin, ymax)
 
     fig_suptitle(fig, suptitle)
-    plt.xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
-    plt.ylabel(r"${P_\chi(k)}/{P_{FP}(k)}$", fontsize=label_size)
+    plt.xlabel(r"$k [h/$Mpc$]$")
+    plt.ylabel(r"${P_\chi(k)}/{P_{FP}(k)}$")
     #figtext = a_sim_info.info_tr().replace("FP: ", "")
     legend_manipulation(ax, figtext="", loc='upper left', bbox_to_anchor=(0.0,1.0))
     plt.subplots_adjust(**subplt_adj_sym)
@@ -583,7 +595,7 @@ def plot_slope(data, zs, a_sim_info, Pk_list_extrap,
         k, P_k = Pkk[0], Pkk[1]
         slope = np.diff(np.log(P_k))/np.diff(np.log(k))
         k_half = (k[1:] + k[:-1]) / 2.
-        ax.plot(k_half, slope, 'o', ms=3, label=lab)
+        ax.plot(k_half, slope, 'o', label=lab)
         k = np.geomspace(k[0]/5,k[-1], num=400) # extra half a decade for lin-/nl-/extrpolated-pk
         slope = get_slope(k, Pk_ext, dx=0.2)
         ax.plot(k, slope, '--')
@@ -600,8 +612,8 @@ def plot_slope(data, zs, a_sim_info, Pk_list_extrap,
     ax.plot(k, slope, '-', label=r"$\Lambda$CDM (nl)")
 
     fig_suptitle(fig, suptitle)
-    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
-    ax.set_ylabel(r"d$\ln P(k)/$d$\ln k$]", fontsize=label_size)
+    ax.set_xlabel(r"$k [h/$Mpc$]$")
+    ax.set_ylabel(r"d$\ln P(k)/$d$\ln k$]")
 
     # LEGEND manipulation
     # legend_manipulation(ax, a_sim_info.info_tr())
@@ -638,16 +650,16 @@ def plot_corr_func_universal(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, y
         plt.yscale("log")
 
     # plot all -- sim, lin, non-lin
-    plt.plot(r, xi*mlt, 'o', ms=3, label=lab)
+    plt.plot(r, xi*mlt, 'o', label=lab)
     for data in extra_data:
-        plt.plot(data["r"], data["xi"]*data["mlt"], 'o', ms=3, label=data["lab"])
+        plt.plot(data["r"], data["xi"]*data["mlt"], 'o', label=data["lab"])
     if xi_lin is not None: plt.plot(r_lin, xi_lin*mlt_lin, '-', label=r"$\Lambda$CDM (lin)")
     if xi_nl is not None: plt.plot(r_nl, xi_nl*mlt_nl, '-', label=r"$\Lambda$CDM (nl)")
 
     # adjust figure, labels
     fig_suptitle(fig, suptitle)
-    plt.xlabel(r"$r [$Mpc$/h]$", fontsize=label_size)
-    plt.ylabel(ylabel, fontsize=label_size)
+    plt.xlabel(r"$r [$Mpc$/h]$")
+    plt.ylabel(ylabel)
     legend_manipulation(figtext="", loc='best')
     plt.subplots_adjust(**subplt_adj_sym)
 
@@ -680,17 +692,20 @@ def plot_corr_func_ratio(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabe
     ax.set_ylim(ymin,ymax)
     # ax.set_yscale('symlog', linthreshy=1e-3, linscaley=6)
 
-    # plot ratio
+    # plot ratio, linear
     if use_z_eff:
         sim = use_z_eff['sim']
         xi_an = power.corr_func(sim, z=use_z_eff['z'], non_lin=True)[1]
-    plt.plot(r, xi/xi_an, 'o', ms=3, label=lab)
+        xi_lin = power.corr_func(sim, z=use_z_eff['z'], non_lin=False)[1]
+
+    ax.plot(r, xi_lin/xi_an, 'k-', label=r" $\Lambda$CDM (lin)")
+    ax.plot(r, xi/xi_an, 'o', label=lab)
 
     # plot other data (if available)
     if extra_data is not None:
         for data in extra_data:
             xi_an = power.corr_func(sim, z=data['z_eff'], non_lin=True)[1]
-            plt.plot(data['r'], data['xi']/xi_an, 'o', ms=3, label=data['lab'])
+            ax.plot(data['r'], data['xi']/xi_an, 'o', label=data['lab'])
 
     # plot BAO peak location (if available)
     if peak_loc is not None:
@@ -698,8 +713,8 @@ def plot_corr_func_ratio(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabe
 
     # adjust figure, labels
     fig_suptitle(fig, suptitle)
-    plt.xlabel(r"$r [$Mpc$/h]$", fontsize=label_size)
-    plt.ylabel(ylabel, fontsize=label_size)
+    plt.xlabel(r"$r [$Mpc$/h]$")
+    plt.ylabel(ylabel)
     legend_manipulation(figtext="", loc='best')
     plt.subplots_adjust(**subplt_adj_sym)
 
@@ -849,8 +864,22 @@ def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=F
             get_last_col = plot_loc or plot_amp
             plot_peak_width(a_sim_info, ax, use_z_eff=z_eff, get_last_col=get_last_col, fp_comp=fp_comp, single=single)
 
+    # linear prediction
+    if single:
+        sim = a_sim_info.sim
+        a = np.linspace(1./201, 1, num=100)
+        zs = 1/a - 1
+        if plot_loc: idx = 1
+        elif plot_amp: idx = 0
+        elif plot_width: idx = 2
+        corr = [power.corr_func(sim, z=z, non_lin=False) for z in zs]
+        corr_nl = [power.corr_func(sim, z=z, non_lin=True) for z in zs]
+        data_lin = np.array([power.get_bao_peak(x)["popt"][idx] for x in corr])
+        data_nl = np.array([power.get_bao_peak(x)["popt"][idx] for x in corr_nl])
+        ax.plot(a, data_lin/data_nl - 1, 'k-', label=r"$\Lambda$CDM (lin)")
+
     # labels
-    plt.xlabel(r"$a$", fontsize=label_size)
+    plt.xlabel(r"$a$")
     fig_suptitle(fig, "Relative BAO peak location and amplitude")
 
     # LEGEND manipulation
@@ -913,8 +942,8 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=
     for stack_info in stack_infos:
         plot_eff_time_ax(stack_info, ax, a_eff_type)
     
-    ax.set_ylabel(r'$D_{eff}/D_{GR}$', fontsize=label_size)
-    ax.set_xlabel(r'$a$', fontsize=label_size)
+    ax.set_ylabel(r'$D_{eff}/D_{GR}$')
+    ax.set_xlabel(r'$a$')
     ax.legend()
     plt.subplots_adjust(**subplt_adj_sym)
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
@@ -955,8 +984,8 @@ def plot_pwr_spec_nl_amp(stack_infos, out_dir='auto', save=True, show=False):
     for stack_info in stack_infos:
         plot_pwr_spec_nl_amp_ax(stack_info, ax)
     
-    ax.set_ylabel(r'$A_{nl}$', fontsize=label_size)
-    ax.set_xlabel(r'$a$', fontsize=label_size)
+    ax.set_ylabel(r'$A_{nl}$')
+    ax.set_xlabel(r'$a$')
     ax.legend()
     plt.subplots_adjust(**subplt_adj_sym)
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
@@ -995,7 +1024,7 @@ def plot_eff_growth_rate_ax(a_sim_info, ax, a_eff_type="Pk"):
 
     # plot
     label = a_sim_info.app # +  '$: L = %i$ Mpc/h' % a_sim_info.box_opt["box_size"]
-    ax.plot(a, f/f_lin, 'o-', ms=3, label=label)
+    ax.plot(a, f/f_lin, 'o-', label=label)
     color = ax.get_lines()[-1].get_color()
     ax.plot(a_spl, slope/f_lin_spl, '--', color=color)
 
@@ -1022,8 +1051,8 @@ def plot_eff_growth_rate(stack_infos, out_dir='auto', a_eff_type="Pk", save=True
     for stack_info in stack_infos:
         plot_eff_growth_rate_ax(stack_info, ax, a_eff_type)
     
-    ax.set_ylabel(r'$f/f_{GR}$', fontsize=label_size)
-    ax.set_xlabel(r'$a$', fontsize=label_size)
+    ax.set_ylabel(r'$f/f_{GR}$')
+    ax.set_xlabel(r'$a$')
     ax.legend()
     plt.subplots_adjust(**subplt_adj_sym)
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
@@ -1065,11 +1094,11 @@ def plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=T
         P_k_std = data[2] if len(data) == 3 else None
 
         if P_k_std is None:
-            plt.plot(k, P_k, 'o', ms=3, label=lab)
+            plt.plot(k, P_k, 'o', label=lab)
             ymax = max(ymax, np.max(P_k[0:7 * idx]))
             ymin = min(ymin, np.min(P_k[0:7 * idx]))
         else:
-            plt.errorbar(k, P_k, fmt='o', yerr=P_k_std, ms=3, label=lab)
+            plt.errorbar(k, P_k, fmt='o', yerr=P_k_std, label=lab)
             ymax = max(ymax, np.max(P_k[0:7 * idx] + P_k_std[0:7 * idx]))
             ymin = min(ymin, np.min(P_k[0:7 * idx] - P_k_std[0:7 * idx]))
 
@@ -1128,8 +1157,8 @@ def plot_pwr_spec_diff_from_data_mlt(data_lists, zs, sim_infos, out_dir='auto', 
 
     fig_suptitle(fig, suptitle)
 
-    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
-    ax.set_ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$", fontsize=label_size)
+    ax.set_xlabel(r"$k [h/$Mpc$]$")
+    ax.set_ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$")
 
     # legend_manipulation(ax, a_sim_info.info_tr())
     legend_manipulation(ax, "")
@@ -1167,8 +1196,8 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', show
     ax.set_ylim(ymin, ymax)
 
     fig_suptitle(fig, suptitle)
-    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
-    ax.set_ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$", fontsize=label_size)
+    ax.set_xlabel(r"$k [h/$Mpc$]$")
+    ax.set_ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$")
     # legend_manipulation(ax, a_sim_info.info_tr())
     legend_manipulation(ax, "")
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
@@ -1206,7 +1235,7 @@ def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto',
     if add_app:
         out_file += '_%s' % a_sim_info.app
 
-    fig = plt.figure(figsize=(8, 8))
+    fig = plt.figure(figsize=fig_size_map)
     gs = gridspec.GridSpec(1, 60, wspace=0.5)
     ax = plt.subplot(gs[0, : -5])
     cbar_ax = plt.subplot(gs[0, -4 :])
@@ -1252,12 +1281,11 @@ def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto',
             ax.axvline(val, ls=next(ls), c='k')
 
     fig_suptitle(fig, suptitle)
-    ax.set_xlabel(r"$k [h/$Mpc$]$", fontsize=label_size)
-    ax.set_ylabel(r"$a(t)$", fontsize=label_size)
+    ax.set_xlabel(r"$k [h/$Mpc$]$")
+    ax.set_ylabel(r"$a(t)$")
     plt.draw()
     plt.figtext(0.5, 0.95, "",
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
     plt.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9)
 
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
@@ -1283,7 +1311,7 @@ def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, use_z_eff=
         else:
             print("WARNING! Unknown scale ='%s'. Skipping." % scale)
             return None
-        plt.plot(a, supp, '-o', ms=3,
+        plt.plot(a, supp, '-o',
                  color=colors[i], label=a_sim_info.info_supp())
         del a, supp
 
@@ -1300,11 +1328,11 @@ def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, use_z_eff=
 
     #plt.ylim(ymin=-1, ymax=0)
     fig_suptitle(fig, "Power spectrum suppression" + suptitle)
-    plt.xlabel(r"$a(t)$", fontsize=label_size)
+    plt.xlabel(r"$a(t)$")
     ylabel = r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$"
     if res is not None:
         ylabel += r', residual from $\nu=%.1f$' % res.nu
-    plt.ylabel(ylabel, fontsize=label_size)
+    plt.ylabel(ylabel)
     legend_manipulation()
     close_fig(out_dir + 'supp', fig, save=save, show=show, use_z_eff=use_z_eff)
 
@@ -1366,8 +1394,8 @@ def plot_par_last_slice(files, files_t, zs, a_sim_info, out_dir='auto', save=Tru
 
     plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=label_size)
-    ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=label_size)
+    ax.set_xlabel(r"$x [$Mpc$/h]$")
+    ax.set_ylabel(r"$z [$Mpc$/h]$")
     fig_suptitle(fig, "Slice through simulation box (particles), z = %.2f" % zs[-1])
     close_fig(out_dir + 'par_evol_last', fig, save=save, show=show, use_z_eff=use_z_eff)
 
@@ -1394,8 +1422,8 @@ def plot_par_evol(files, files_t, zs, a_sim_info, out_dir='auto', save=True):
 
     plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=label_size)
-    ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=label_size)
+    ax.set_xlabel(r"$x [$Mpc$/h]$")
+    ax.set_ylabel(r"$z [$Mpc$/h]$")
     del x, y, data
 
     def animate(j):
@@ -1437,8 +1465,8 @@ def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=Fals
 
     plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=label_size)
-    ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=label_size)
+    ax.set_xlabel(r"$x [$Mpc$/h]$")
+    ax.set_ylabel(r"$z [$Mpc$/h]$")
     L = int(np.sqrt(rho.shape[0]))
     rho.shape = L, L
     im = ax.imshow(rho, interpolation='bicubic', cmap='gnuplot',
@@ -1471,8 +1499,8 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir='auto', save=True):
     cbar_ax = plt.subplot(gs[0, -1])
     plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    ax.set_xlabel(r"$x [$Mpc$/h]$", fontsize=label_size)
-    ax.set_ylabel(r"$z [$Mpc$/h]$", fontsize=label_size)
+    ax.set_xlabel(r"$x [$Mpc$/h]$")
+    ax.set_ylabel(r"$z [$Mpc$/h]$")
 
     def animate(j):
         if j < num:
@@ -1527,23 +1555,27 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
     ax2.set_yscale('log')
     ax3.set_yscale('log')
 
-    ax1.set_ylabel(r"$\lambda_C\, [$Mpc$/h]$", fontsize=label_size)
-    ax2.set_ylabel(r"$\chi/M_{pl}$", fontsize=label_size)
-    ax3.set_ylabel(r"$\phi_{scr}$", fontsize=label_size)
+    ax1.set_ylabel(r"$\lambda_C\, [$Mpc$/h]$")
+    ax2.set_ylabel(r"$\chi/M_{pl}$")
+    ax3.set_ylabel(r"$\phi_{scr}$")
+
+    ax1.tick_params(axis='both', which='major', labelsize=tick_size)
+    ax2.tick_params(axis='both', which='major', labelsize=tick_size)
+    ax3.tick_params(axis='both', which='major', labelsize=tick_size)
 
     if k_scr:
         ax4 = plt.subplot(N, 1, 4, sharex=ax1)
         ax4.set_yscale('log')
-        ax4.set_ylabel(r"$k_{scr}\, [h/$Mpc$]$", fontsize=label_size)
-        ax4.set_xlabel(r"z", fontsize=label_size)
+        ax4.set_ylabel(r"$k_{scr}\, [h/$Mpc$]$")
+        ax4.set_xlabel(r"z")
         ax4.tick_params(axis='both', which='major', labelsize=tick_size)
     else:
-        ax3.set_xlabel(r"z", fontsize=label_size)
-        ax3.tick_params(axis='both', which='major', labelsize=tick_size)
+        ax3.set_xlabel(r"z")
     
     zs = [z for z in zs if z != 'init']
     a = [1./(z+1) for z in zs]
     
+    linestyle_cycler = iter(['-','--',':','-.'])
     for chi in chi_opt:
         # chameleon parameters
         wavelengths = np.array([power.chi_compton_wavelength(a_, cosmo, chi) for a_ in a])
@@ -1551,12 +1583,13 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
         chi_a = [power.chi_bulk_a(a_, chi, CHI_A_UNITS=False) for a_ in a]
 
         # plots
-        ax1.plot(zs, 1/wavelengths, '-', label=r"$\Phi_{scr} = 10^{%i}$, $n=%.1f$" % (np.log10(chi["phi"]), chi["n"]))
-        ax2.plot(zs, chi_a, '-')
-        ax3.plot(zs, psi_a, '-')
+        ls = linestyle_cycler.next()
+        ax1.plot(zs, 1/wavelengths, ls=ls, label=r"$\Phi_{scr} = 10^{%i}$, $n=%.1f$" % (np.log10(chi["phi"]), chi["n"]))
+        ax2.plot(zs, chi_a, ls=ls)
+        ax3.plot(zs, psi_a, ls=ls)
         if k_scr:
             k_scr_data = power.chi_psi_k_a(a, cosmo, chi)
-            ax4.plot(zs, k_scr_data, '-')
+            ax4.plot(zs, k_scr_data)
     
     fig_suptitle(fig, suptitle)
     plt.setp(ax1.get_xticklabels(), visible=False)
@@ -1596,8 +1629,8 @@ def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle=
         else:
             label = None
             print('%s-scale: %.4f,%.4f' % (scale, supp[i][2][0], supp[i][2][0]))
-        ax.errorbar(a, supp[i][0], fmt='-o', yerr=supp[i][1], ms=3,
-                    color=cmap(0.1+i*0.4), lw=4-i*1.5,
+        ax.errorbar(a, supp[i][0], fmt='-o', yerr=supp[i][1],
+                    color=cmap(0.1+i*0.4), lw=5-i*1.5,
                     label=label)
 
     ymin, ymax = ax.get_ylim()
@@ -1611,9 +1644,9 @@ def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle=
     ax.yaxis.grid(True)
 
     fig_suptitle(fig, suptitle)
-    plt.xlabel(r"$a(t)$", fontsize=label_size)
+    plt.xlabel(r"$a(t)$")
     plt.ylabel(
-        r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$", fontsize=label_size)
+        r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$")
     
     # legend
     if scale_in_leg:
@@ -1647,4 +1680,4 @@ def get_err_ell(ax, opt, cov):
     ell = Ellipse(xy=(x, y), width=width, height=height, angle=angle,
                   edgecolor='k', facecolor='none')
     ax.add_artist(ell)
-    ax.plot(x, y, 'ko', ms=3)
+    ax.plot(x, y, 'ko')
