@@ -46,3 +46,23 @@ target_link_libraries(${EXECUTABLE}
 install(TARGETS FastSim
         RUNTIME DESTINATION bin
 )
+
+##########################
+# test executable - test #
+##########################
+
+set(EXECUTABLE test)
+
+# source files
+set(SOURCE_FILES 
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_main.cpp
+)
+
+# create executable
+add_executable(${EXECUTABLE} ${SOURCE_FILES})
+
+# dependencies
+target_link_libraries(${EXECUTABLE}
+        main
+        catch
+)

@@ -18,11 +18,13 @@ find_package(PythonLibs)
 # precision of the simulation
 SET(PRECISION 2 CACHE STRING "Precision of the simulation")
 
+# precision of the simulation
+SET(ARCH "native" CACHE STRING "Optimization for architecture")
+
 # build release type by default
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
-
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # set compile flags
@@ -31,9 +33,15 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
     -flto=jobserver -fPIC"
 )
 
+# supress some warnings
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
+    -Wno-deprecated-declarations"
+)
+
+# debug / release flags
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -Ofast")
+set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -march=${ARCH} -mtune=${ARCH}")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -Ofast -march=${ARCH} -mtune=${ARCH}")
 
 # solve lto errors
 SET(CMAKE_AR  "gcc-ar")

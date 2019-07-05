@@ -9,3 +9,6 @@ add_subdirectory (JSON/)
 
 # (modified) Poisson equation solver
 add_subdirectory (MultiGridSolver/)
+
+# Catch (unit testing)
+add_subdirectory (Catch/)
