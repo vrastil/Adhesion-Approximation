@@ -1,5 +1,13 @@
-# This will run on Travis' 'new' container-based infrastructure
-sudo: false 
+# the newest version of ubuntu that's supported by travis-ci and require sudo
+dist: xenial
+sudo: require 
+cache:
+  directories:
+    - boost_1_69_0
+
+# set the language and the compiler
+language: cpp
+compiler: gcc
 
 # Blacklist
 branches:
@@ -9,12 +17,45 @@ branches:
 # Install dependencies
 addons:
   apt:
+    update: true
+    sources:
+      - sourceline: 'ppa:ubuntu-toolchain-r/test'
     packages:
       - doxygen
       - graphviz
+      - gcc-9
+      - g++-9
+      - libstdc++6
+      - swig
+      - libfftw3-dev
 
-# Build your code e.g. by calling make
+before_install:
+  - sudo apt-get -y install libgsl-dev
+
+install:
+  # install boost manually (need new version)
+  - wget https://dl.bintray.com/boostorg/release/1.69.0/source/boost_1_69_0.tar.bz2
+  - tar --bzip2 -xf boost_1_69_0.tar.bz2 && cd boost_1_69_0
+  - ./bootstrap.sh --with-libraries=program_options,filesystem,system,log,timer,thread
+  - sudo ./b2 install -j 4
+  - cd ..
+
 script:
+  # set up gcc, g++
+  - sudo ln -s /usr/bin/gcc-9 /usr/local/bin/gcc
+  - sudo ln -s /usr/bin/g++-9 /usr/local/bin/g++
+
+  # check versions
+  - gcc -v && g++ -v && cmake --version && swig -version
+
+  # FastSim
+  - mkdir build && cd build && cmake ..
+  - make
+  - cd ..
+
+  # Tests
+
+  # documentation
   - cd doc && doxygen Doxyfile && cd ..
 
 # Generate and deploy documentation
