@@ -320,6 +320,7 @@ void Cosmo_Param::init()
     /// - create flat LCDM cosmology
     int status = 0;
     ccl_set_error_policy(CCL_ERROR_POLICY_CONTINUE);
+    ccl_set_debug_policy(CCL_DEBUG_MODE_OFF);
     cosmo = ccl_cosmology_create_flat_lcdm(Omega_c(), Omega_b, h, sigma8, ns, config, &status);
     if (status) throw std::runtime_error(cosmo->status_message);
     

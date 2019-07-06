@@ -33,6 +33,7 @@ set(TEST_NAME test_core)
 # source files
 set(SOURCE_FILES 
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_core_mesh.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_core_power.cpp
 )
 
 # create static library

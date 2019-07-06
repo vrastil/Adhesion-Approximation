@@ -38,6 +38,7 @@ install:
   - tar --bzip2 -xf boost_1_69_0.tar.bz2 && cd boost_1_69_0
   - ./bootstrap.sh --with-libraries=program_options,filesystem,system,log,timer,thread
   - sudo ./b2 install -j 4 > /dev/null
+  - sudo ldconfig
   - cd ..
 
 script:
@@ -55,7 +56,7 @@ script:
   - cd ..
 
   # Tests
-  ./build/src/main/test_all
+  - ./build/src/main/test_all
 
   # documentation
   - doxygen doc/Doxyfile

@@ -38,7 +38,7 @@ public:
      * @return T& position
      */
 	T &operator[](unsigned int i){ return position[i]; }
-	const T& operator[](int i) const{ return position[i]; }
+	const T& operator[](unsigned int i) const{ return position[i]; }
 };
 
 /**
@@ -65,6 +65,6 @@ public:
 	Vec_3D<T> velocity;
 
 	// OPERATORS
-	T &operator()(int i){ return velocity[i]; }
-	const T& operator()(int i) const{ return velocity[i]; }
+	T &operator()(unsigned int i){ return velocity[i]; }
+	const T& operator()(unsigned int i) const{ return velocity[i]; }
 };

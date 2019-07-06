@@ -28,6 +28,7 @@ set(TEST_NAME test_data)
 set(SOURCE_FILES 
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_vec_3d.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_mesh.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_particles.cpp
 )
 
 # create static library

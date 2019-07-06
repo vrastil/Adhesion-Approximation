@@ -1,11 +1,13 @@
 #include <catch.hpp>
-#include "test.hpp"
+#define BOOST_LOG_DYN_LINK 1
+#include <boost/log/trivial.hpp>
+
 #include "class_particles.hpp"
 #include "precision.hpp"
     
 TEST_CASE( "UNIT TEST: particle class {Particle_x}", "[core]" )
 {
-    print_unit_msg("particle class {Particle_x}");
+    BOOST_LOG_TRIVIAL(info) << "particle class {Particle_x}";
 
     Vec_3D<FTYPE_t> position(0., -3.14, 4E5);
     Particle_x<FTYPE_t> par1(position);
@@ -33,7 +35,7 @@ TEST_CASE( "UNIT TEST: particle class {Particle_x}", "[core]" )
 
 TEST_CASE( "UNIT TEST: particle class {Particle_v}", "[core]" )
 {
-    print_unit_msg("particle class {Particle_v}");
+    BOOST_LOG_TRIVIAL(info) << "particle class {Particle_v}";
 
     Vec_3D<FTYPE_t> position(0., -3.14, 4E5);
     Vec_3D<FTYPE_t> velocity(2.3E-6, -4.56E-7, 6.87903E-6);
