@@ -51,9 +51,11 @@ script:
   # FastSim
   - mkdir build && cd build && cmake ..
   - make
+  - make test_all
   - cd ..
 
   # Tests
+  ./build/src/main/test_all
 
   # documentation
   - doxygen doc/Doxyfile

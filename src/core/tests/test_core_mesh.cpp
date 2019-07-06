@@ -1,10 +1,13 @@
 #include <catch.hpp>
-#include "test.hpp"
-#include "core_mesh.cpp"
+
+#define BOOST_LOG_DYN_LINK 1
+#include <boost/log/trivial.hpp>
+
+#include "../core_mesh.cpp"
 
 TEST_CASE( "UNIT TEST: sign function {sgn<T>}", "[core]" )
 {
-    print_unit_msg("sign function {sgn<T>}");
+    BOOST_LOG_TRIVIAL(info) << "sign function {sgn<T>}";
 
     CHECK( sgn(0) == 0 );
     CHECK( sgn(10) == 1 );
@@ -16,7 +19,7 @@ TEST_CASE( "UNIT TEST: sign function {sgn<T>}", "[core]" )
 
 TEST_CASE( "UNIT TEST: periodicity functions {get_per}", "[core_mesh]" )
 {
-    print_unit_msg("periodicity functions {get_per}");
+    BOOST_LOG_TRIVIAL(info) << "periodicity functions {get_per}";
 
     CHECK( get_per(9.4, 10) == Approx(9.4) );
     CHECK( get_per(31.4, 10) == Approx(1.4) );
@@ -61,24 +64,24 @@ TEST_CASE( "UNIT TEST: periodicity functions {get_per}", "[core_mesh]" )
 
 TEST_CASE( "UNIT TEST: assign functions iterator {IT}", "[core_mesh]" )
 {
-    print_unit_msg("assign functions iterator {IT}");
+    BOOST_LOG_TRIVIAL(info) <<  "assign functions iterator {IT}";
 
     IT<1> it1(Vec_3D<FTYPE_t>(3.2, 7.8, 4.0));
-    REQUIRE( it1.vec == Vec_3D<int>(3, 8, 4) );
+    REQUIRE( it1.vec == Vec_3D<size_t>(3, 8, 4) );
     CHECK( it1.counter == 0);
     CHECK_FALSE( it1.iter() );
 
     IT<2> it2(Vec_3D<FTYPE_t>(3.2, 7.8, 4.0));
-    REQUIRE( it2.vec == Vec_3D<int>(3, 7, 4) );
+    REQUIRE( it2.vec == Vec_3D<size_t>(3, 7, 4) );
     CHECK( it2.iter() );
 
     IT<3> it3(Vec_3D<FTYPE_t>(3.2, 7.8, 4.0), 2);
-    REQUIRE( it3.vec == Vec_3D<int>(0, 2, 1) );
+    REQUIRE( it3.vec == Vec_3D<size_t>(0, 2, 1) );
 
-    CHECK( it2.vec == Vec_3D<int>(3, 7, 5) );
+    CHECK( it2.vec == Vec_3D<size_t>(3, 7, 5) );
     CHECK( it2.iter() );
-    CHECK( it2.vec == Vec_3D<int>(3, 8, 4) );
+    CHECK( it2.vec == Vec_3D<size_t>(3, 8, 4) );
     
     do{} while( it2.iter() );
-    CHECK( it2.vec == Vec_3D<int>(4, 8, 5) );
+    CHECK( it2.vec == Vec_3D<size_t>(4, 8, 5) );
 }

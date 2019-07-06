@@ -51,7 +51,7 @@ install(TARGETS FastSim
 # test executable - test #
 ##########################
 
-set(EXECUTABLE test)
+set(EXECUTABLE test_all)
 
 # source files
 set(SOURCE_FILES 
@@ -59,10 +59,12 @@ set(SOURCE_FILES
 )
 
 # create executable
-add_executable(${EXECUTABLE} ${SOURCE_FILES})
+add_executable(${EXECUTABLE} EXCLUDE_FROM_ALL ${SOURCE_FILES})
 
 # dependencies
 target_link_libraries(${EXECUTABLE}
         main
         catch
+        test_data
+        test_core
 )

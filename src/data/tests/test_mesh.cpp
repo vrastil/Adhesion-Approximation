@@ -1,10 +1,13 @@
 #include <catch.hpp>
-#include "test.hpp"
+
+#define BOOST_LOG_DYN_LINK 1
+#include <boost/log/trivial.hpp>
+
 #include "class_mesh.hpp"
 
 TEST_CASE( "UNIT TEST: mesh class {Mesh_base<T>}", "[core]" )
 {
-    print_unit_msg("mesh class {Mesh_base<T>}");
+    BOOST_LOG_TRIVIAL(info) << "mesh class {Mesh_base<T>}";
 
     // dimension
     Mesh_base<double> mesh(8, 16, 20);
@@ -61,7 +64,7 @@ TEST_CASE( "UNIT TEST: mesh class {Mesh_base<T>}", "[core]" )
 
 TEST_CASE( "UNIT TEST: mesh class {Mesh}", "[core]" )
 {
-    print_unit_msg("mesh class {Mesh}");
+    BOOST_LOG_TRIVIAL(info) << "mesh class {Mesh}";
 
     // dimension
     Mesh mesh_c(8);

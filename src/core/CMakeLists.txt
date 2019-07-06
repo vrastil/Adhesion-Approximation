@@ -26,3 +26,21 @@ target_link_libraries(${LIBRARY_NAME}
 
 # publish headers for this library
 target_include_directories(${LIBRARY_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+
+# unit tests
+set(TEST_NAME test_core)
+
+# source files
+set(SOURCE_FILES 
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_core_mesh.cpp
+)
+
+# create static library
+add_library(${TEST_NAME} EXCLUDE_FROM_ALL OBJECT ${SOURCE_FILES})
+
+# dependencies
+target_link_libraries(${TEST_NAME}
+        main
+        catch
+        ${LIBRARY_NAME}
+)

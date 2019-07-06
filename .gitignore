@@ -1,13 +1,11 @@
-# build directory, test output, internal documents
+# build directory, test output, configuration
 build/
 output/
-report/
 src/main/include/config.h
 
 # documentation output
-doc/html
-doc/latex
-doc/main.html
+doc/
+!doc/Doxyfile
 
 # swig files, created symlinks
 swig/*.cpp

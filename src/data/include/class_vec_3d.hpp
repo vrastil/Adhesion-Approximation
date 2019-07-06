@@ -24,7 +24,7 @@ public:
     template<typename ...U> Vec_3D(U...init):
     std::array<T, 3>{init...} {}
 
-    Vec_3D(const Vec_3D<size_t>& vec):
+    template<typename U> Vec_3D(const Vec_3D<U>& vec):
     std::array<T, 3>({T(std::get<0>(vec)), T(std::get<1>(vec)), T(std::get<2>(vec))}) {}
 
     // METHODS

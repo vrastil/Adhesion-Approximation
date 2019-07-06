@@ -48,9 +48,9 @@ template<typename T>
 static typename std::enable_if<std::is_integral<T>::value, T>::type get_per(T vec, size_t per)
 {
     static_assert(std::is_integral<T>::value, "Integral required.");
-    if ((vec >= per) || (vec < 0) ){
-        vec %= per;
-        return (vec < 0) ? vec + per : vec;
+    if ((vec >= (int)per) || (vec < 0) ){
+        vec %= (int)per;
+        return (vec < 0) ? vec + (int)per : vec;
     }
     else return vec;
 }
