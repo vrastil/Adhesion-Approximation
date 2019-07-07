@@ -1,9 +1,13 @@
 # the newest version of ubuntu that's supported by travis-ci and require sudo
 dist: xenial
-sudo: require 
+sudo: require
+env:
+  BOOST_VERSION=1.69.0
+  BOOST_DIR=boost_1_69_0
+
 cache:
   directories:
-    - boost_1_69_0
+    - $BOOST_DIR
 
 # set the language and the compiler
 language: cpp
@@ -34,9 +38,14 @@ before_install:
 
 install:
   # install boost manually (need new version)
-  - wget https://dl.bintray.com/boostorg/release/1.69.0/source/boost_1_69_0.tar.bz2
-  - tar --bzip2 -xf boost_1_69_0.tar.bz2 && cd boost_1_69_0
-  - ./bootstrap.sh --with-libraries=program_options,filesystem,system,log,timer,thread
+  - |
+    if [ -d "$DIRECTORY" ]; then
+      cd $BOOST_DIR
+    else
+      wget https://dl.bintray.com/boostorg/release/$BOOST_VERSION/source/$BOOST_DIR.tar.bz2
+      tar --bzip2 -xf $BOOST_DIR.tar.bz2 && cd $BOOST_DIR
+      ./bootstrap.sh --with-libraries=program_options,filesystem,system,log,timer,thread
+    fi
   - sudo ./b2 install -j 4 > /dev/null
   - sudo ldconfig
   - cd ..
