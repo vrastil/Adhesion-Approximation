@@ -43,14 +43,13 @@ matplotlib.rcParams['lines.markersize'] = 4.0
 #     cycler('color', ['red', 'green', 'blue', 'orange', 'brown', 'violet', 'black']) +
 #     cycler('ls', ['solid', 'dashed', 'dashdot', (0, (5, 10)), (0, (3, 5, 1, 5)), (0, (3, 1, 1, 1)), (0, (1, 1))])
 # )
-matplotlib.rcParams['font.size'] = 20
-matplotlib.rcParams['axes.labelsize'] = 20
-matplotlib.rcParams['xtick.labelsize'] = 25
-matplotlib.rcParams['ytick.labelsize'] = 25
-matplotlib.rcParams['legend.fontsize'] = 20
+matplotlib.rcParams['axes.labelsize'] = 30
+matplotlib.rcParams['xtick.labelsize'] = 20
+matplotlib.rcParams['ytick.labelsize'] = 20
+matplotlib.rcParams['legend.fontsize'] = 25
+matplotlib.rcParams['font.size'] = 25
+
 suptitle_size = 25
-tick_size = 18
-# fig_size = (15, 11)
 fig_size = (14, 9)
 fig_size_map = (14, 14)
 subplt_adj_sym = {'left' : 0.15, 'right' : 0.95, 'bottom' : 0.15, 'top' : 0.95}
@@ -92,7 +91,7 @@ def fig_suptitle(fig, suptitle="", y=0.99, size=suptitle_size):
     #fig.suptitle(suptitle, y=0.99, size=suptitle_size)
     pass
 
-def close_fig(filename, fig, save=True, show=False, dpi=400, use_z_eff=False, format='eps'):
+def close_fig(filename, fig, save=True, show=False, dpi=500, use_z_eff=False, format='eps', ext_legen=None):
     """save and/or show figure, close figure"""
     if use_z_eff:
         filename += '_z_eff'
@@ -102,10 +101,19 @@ def close_fig(filename, fig, save=True, show=False, dpi=400, use_z_eff=False, fo
             fig.savefig(filename + ".eps", dpi=dpi, format="eps")
         else:
             fig.savefig(filename + ".%s" % format, dpi=dpi, format=format)
+        
+        if ext_legen is not None:
+            ext_legen.savefig(filename + "_legend.eps", bbox_inches='tight', dpi=dpi, format="eps")
     if show:
         plt.show()
+
     fig.clf()
     plt.close(fig)
+
+    if ext_legen is not None:
+        ext_legen.clf()
+        plt.close(ext_legen)
+
 
 def add_nyquist_info(ax, a_sim_info):
     """plot lines corresponding to particle, potential and analys nyquist wavelengtsh"""
@@ -119,19 +127,41 @@ def add_nyquist_info(ax, a_sim_info):
     for val, lab in val_lab.items():
         ax.axvline(val, ls=next(ls), c='k', label=lab + r")")
 
-def legend_manipulation(ax=None, figtext="", loc='upper left', bbox_to_anchor=(1.0, 1.0), set_tick_size=True):
+def trans_legend(handles, labels, ncol):
+    n = len(labels)
+    nrow = (n - 1) / ncol + 1
+    order = []
+    for i in range(n):
+        row = i
+        order.append()
+
+def legend_manipulation(ax=None, figtext="", loc='upper left', bbox_to_anchor=(1.0, 1.0), ext_legen=False):
     ax = plt.gca() if ax is None else ax
+    fig = plt.gcf()
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles, labels, loc=loc,
-               bbox_to_anchor=bbox_to_anchor, fontsize=14)
-    plt.draw()
+    if ext_legen:
+        if isinstance(ext_legen, dict):
+            mlt_col = ext_legen['mlt_col']
+            ncol = ext_legen['ncol']
+            nrow = (len(labels) - 1) / ncol + 1
+            ext_legen = plt.figure(figsize=(14, nrow*mlt_col))
+            ax_leg = plt.gca()
+            ax_leg.legend(handles, labels, loc='center', ncol=ncol, frameon=False, mode='expand')
+            ax_leg.axes.get_xaxis().set_visible(False)
+            ax_leg.axes.get_yaxis().set_visible(False)
+            ext_legen.subplots_adjust(left=0.01, right=0.99, bottom=0.01, top=0.99)
+            ext_legen.canvas.draw()
+        else:
+            ext_legen = False
+    else:
+        ax.legend(handles, labels, loc=loc,
+                   bbox_to_anchor=bbox_to_anchor, fontsize=14)
+    fig.canvas.draw()
     if figtext != "":
         plt.figtext(0.5, 0.95, figtext,
-                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    plt.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
-
-    if set_tick_size:
-        ax.tick_params(axis='both', which='major', labelsize=tick_size)
+                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top', figure=fig)
+    fig.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
+    return ext_legen
 
 
 def adjust_extreme_values(ax, ymin, ymax):
@@ -149,7 +179,7 @@ def adjust_extreme_values_range(ax, x, y, x_max):
     ax.set_ylim(y_min, y_max)
 
 def get_chi_label(si, single=False):
-    label = r"$\Phi_{scr}=%.1e,\ n=%.1f$" % (
+    label = r"$\Phi_{\rm scr}=%.1e,\ n=%.1f$" % (
                 si.chi_opt["phi"], si.chi_opt["n"])
     if not single:
         label += r" (lin)" if si.chi_opt["linear"] else r" (nl)"
@@ -204,8 +234,8 @@ def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap,
     ax.plot(k, P_i, '-')
     
     fig_suptitle(fig, suptitle)
-    ax.set_xlabel(r"$k [h/$Mpc$]$")
-    ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]")
+    ax.set_xlabel(r"$k [h{\rm Mpc}^{-1}]$")
+    ax.set_ylabel(r"$P(k) [(h^{-1}{\rm Mpc})^3]$")
 
     # LEGEND manipulation
     # legend_manipulation(ax, a_sim_info.info_tr())
@@ -215,7 +245,7 @@ def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap,
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 def plot_pwr_spec_comparison(Pk_list_extrap, data, zs, labels, cosmo, out_dir='auto',
-            save=True, show=False, use_z_eff=False, scale_to_lin=True, pk_type='dens', k_max=None):
+            save=True, show=False, use_z_eff=False, scale_to_lin=True, pk_type='dens', k_max=None, chi=False):
     """" Plot power spectrum -- points and extrapolated values,
     show 'true' linear Pk at the initial and final redshift """
     if out_dir == 'auto':
@@ -268,18 +298,22 @@ def plot_pwr_spec_comparison(Pk_list_extrap, data, zs, labels, cosmo, out_dir='a
     ax.plot(k, P_0_nl, '-',  label=r"$\Lambda$CDM (nl)")
 
     fig_suptitle(fig, suptitle, y=0.95)
-    ax.set_xlabel(r"$k [h/$Mpc$]$")
-    ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]")
+    ax.set_xlabel(r"$k [h{\rm Mpc}^{-1}]$")
+    ax.set_ylabel(r"$P(k) [(h^{-1}{\rm Mpc})^3]$")
 
     # LEGEND manipulation
-    legend_manipulation(ax, "", loc='best')
-    plt.subplots_adjust(**subplt_adj_sym)
+    if chi:
+        ext_legen = {'mlt_col' : 0.6, 'ncol' : 2}
+    else:
+        ext_legen = {'mlt_col' : 0.5, 'ncol' : 4}
+    fig_leg = legend_manipulation(ax, "", ext_legen=ext_legen)
+    fig.subplots_adjust(**subplt_adj_sym)
 
     # close & save figure
-    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff, ext_legen=fig_leg)
 
 def plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo, out_dir='auto',
-        save=True, show=False, use_z_eff=False, scale_to_lin=True, pk_type='dens', k_max=None):
+        save=True, show=False, use_z_eff=False, scale_to_lin=True, pk_type='dens', k_max=None, chi=False):
     """" Plot power spectrum -- points and extrapolated values,
     show 'true' linear Pk at the initial and final redshift """
     if out_dir == 'auto':
@@ -333,15 +367,15 @@ def plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo, o
     ax.plot(k_, P_0 / P_0_nl_, '-', label=r"$\Lambda$CDM (lin)")
     
     fig_suptitle(fig, suptitle, y=0.95)
-    ax.set_xlabel(r"$k [h/$Mpc$]$")
-    ax.set_ylabel(r"$\frac{P(k)}{P_{nl}(k)}$")
+    ax.set_xlabel(r"$k [h{\rm Mpc}^{-1}]$")
+    ax.set_ylabel(r"$P(k)/P_{\rm nl}(k)$")
 
     #ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax.yaxis.grid(True)
 
     # LEGEND manipulation
-    legend_manipulation(ax, "", loc='best')
-    plt.subplots_adjust(**subplt_adj_sym)
+    legend_manipulation(ax, "", ext_legen=True)
+    fig.subplots_adjust(**subplt_adj_sym)
 
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
@@ -373,8 +407,8 @@ def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, out_dir='auto', save=Tr
 
     add_nyquist_info(ax, a_sim_info)
     fig_suptitle(fig, suptitle)
-    ax.set_xlabel(r"$k [h/$Mpc$]$")
-    ax.set_ylabel(r"$P(k) [$Mpc$/h)^3$]")
+    ax.set_xlabel(r"$k [h{\rm Mpc}^{-1}]$")
+    ax.set_ylabel(r"$P(k) [(h^{-1}{\rm Mpc})^3]$")
 
     # LEGEND manipulation
     # legend_manipulation(ax, a_sim_info.info_tr())
@@ -435,9 +469,9 @@ def plot_chi_fp_map(data_array, zs, chi_info, out_dir='auto', save=True, show=Fa
     cbar = fig.colorbar(im, cax=cbar_ax, ticks=ticks)
     cbar.ax.set_yticklabels(labels)
 
-    ax.set_xlabel(r"$k [h/$Mpc$]$")
+    ax.set_xlabel(r"$k [h{\rm Mpc}^{-1}]$")
     ax.set_ylabel(r"$a(t)$")
-    ax.tick_params(axis='both', which='major', labelsize=tick_size)
+    ax.tick_params(axis='both', which='major')
     plt.draw()
 
     # plot k_nl, keep ylim
@@ -447,7 +481,7 @@ def plot_chi_fp_map(data_array, zs, chi_info, out_dir='auto', save=True, show=Fa
 
     plt.figtext(0.5, 0.95, "",
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    plt.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9)
+    fig.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9)
 
     # close, save show
     if out_dir == 'auto':
@@ -459,7 +493,7 @@ def plot_chi_fp_map(data_array, zs, chi_info, out_dir='auto', save=True, show=Fa
         out_file += "_lin"
     else:
         out_file += "_nl"
-    close_fig(out_dir + out_file, fig, save=save, show=show)
+    close_fig(out_dir + out_file, fig, save=save, show=show, format='png')
 
 def plot_chi_fp_z(data_z, a_sim_info, labels, out_dir='auto', suptitle='auto', save=True, show=False, use_z_eff=False, max_nyquist=True):
     if out_dir == 'auto':
@@ -505,11 +539,11 @@ def plot_chi_fp_z(data_z, a_sim_info, labels, out_dir='auto', suptitle='auto', s
     ax.set_ylim(ymin, ymax)
 
     fig_suptitle(fig, suptitle)
-    plt.xlabel(r"$k [h/$Mpc$]$")
-    plt.ylabel(r"${P_\chi(k)}/{P_{FP}(k)}$")
+    plt.xlabel(r"$k [h{\rm Mpc}^{-1}]$")
+    plt.ylabel(r"${P_\chi(k)}/{P_{\rm FP}(k)}$")
     #figtext = a_sim_info.info_tr().replace("FP: ", "")
     legend_manipulation(ax, figtext="", loc='upper left', bbox_to_anchor=(0.0,1.0))
-    plt.subplots_adjust(**subplt_adj_sym)
+    fig.subplots_adjust(**subplt_adj_sym)
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 
@@ -564,11 +598,11 @@ def plot_chi_fp_res(data_all, sim_infos, out_dir='auto', suptitle='auto', save=T
     ax.set_ylim(ymin, ymax)
 
     fig_suptitle(fig, suptitle)
-    plt.xlabel(r"$k [h/$Mpc$]$")
-    plt.ylabel(r"${P_\chi(k)}/{P_{FP}(k)}$")
+    plt.xlabel(r"$k [h{\rm Mpc}^{-1}]$")
+    plt.ylabel(r"${P_\chi(k)}/{P_{\rm FP}(k)}$")
     #figtext = a_sim_info.info_tr().replace("FP: ", "")
     legend_manipulation(ax, figtext="", loc='upper left', bbox_to_anchor=(0.0,1.0))
-    plt.subplots_adjust(**subplt_adj_sym)
+    fig.subplots_adjust(**subplt_adj_sym)
     close_fig(out_dir + out_file, fig, save=save, show=show)
 
 def get_slope(k, P_k, dx=0.01,order=5):
@@ -612,7 +646,7 @@ def plot_slope(data, zs, a_sim_info, Pk_list_extrap,
     ax.plot(k, slope, '-', label=r"$\Lambda$CDM (nl)")
 
     fig_suptitle(fig, suptitle)
-    ax.set_xlabel(r"$k [h/$Mpc$]$")
+    ax.set_xlabel(r"$k [h{\rm Mpc}^{-1}]$")
     ax.set_ylabel(r"d$\ln P(k)/$d$\ln k$]")
 
     # LEGEND manipulation
@@ -624,7 +658,7 @@ def plot_slope(data, zs, a_sim_info, Pk_list_extrap,
     
 
 def plot_corr_func_universal(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabel,
-                             figtext, out_dir, file_name, save, show, r2, extra_data=None, use_z_eff=False):
+                             figtext, out_dir, file_name, save, show, r2, extra_data=None, use_z_eff=False, chi=False):
     
     z_out = lab if lab == 'init' else 'z' + lab[4:]
     fig = plt.figure(figsize=fig_size)
@@ -658,19 +692,23 @@ def plot_corr_func_universal(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, y
 
     # adjust figure, labels
     fig_suptitle(fig, suptitle)
-    plt.xlabel(r"$r [$Mpc$/h]$")
+    plt.xlabel(r"$r [h^{-1}{\rm Mpc}]$")
     plt.ylabel(ylabel)
-    legend_manipulation(figtext="", loc='best')
-    plt.subplots_adjust(**subplt_adj_sym)
+    if chi:
+        ext_legen = {'mlt_col' : 0.5, 'ncol' : 4}
+    else:
+        ext_legen = {'mlt_col' : 0.5, 'ncol' : 4}
+    fig_leg = legend_manipulation(figtext="", ext_legen=ext_legen)
+    fig.subplots_adjust(**subplt_adj_sym)
 
     # save & show (in jupyter)
-    close_fig(file_name, fig, save=save, show=show, use_z_eff=use_z_eff)
+    close_fig(file_name, fig, save=save, show=show, use_z_eff=use_z_eff, ext_legen=fig_leg)
 
 def plot_corr_func_ratio(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabel,
-                         figtext, out_dir, file_name, save, show, extra_data, peak_loc=None, use_z_eff=False):
+                         figtext, out_dir, file_name, save, show, extra_data, peak_loc=None, use_z_eff=False, chi=False):
     # names
     z_out = lab if lab == 'init' else 'z' + lab[4:]
-    ylabel = r'$\frac{' + ylabel + r"(r)}{" + ylabel + r"_{nl}(r)}$"
+    ylabel = r'$' + ylabel + r"(r)/" + ylabel + r"_{\rm nl}(r)$"
     file_name = out_dir + '%s_ratio_%s' % (file_name, z_out)
     
     # check same lengths, validity of xi_n;
@@ -713,13 +751,17 @@ def plot_corr_func_ratio(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabe
 
     # adjust figure, labels
     fig_suptitle(fig, suptitle)
-    plt.xlabel(r"$r [$Mpc$/h]$")
+    plt.xlabel(r"$r [h^{-1}{\rm Mpc}]$")
     plt.ylabel(ylabel)
-    legend_manipulation(figtext="", loc='best')
-    plt.subplots_adjust(**subplt_adj_sym)
+    if chi:
+        ext_legen = {'mlt_col' : 0.5, 'ncol' : 4}
+    else:
+        ext_legen = {'mlt_col' : 0.5, 'ncol' : 4}
+    fig_leg = legend_manipulation(figtext="", ext_legen=ext_legen)
+    fig.subplots_adjust(**subplt_adj_sym)
 
     # save & show (in jupyter)
-    close_fig(file_name, fig, save=save, show=show, use_z_eff=use_z_eff)
+    close_fig(file_name, fig, save=save, show=show, use_z_eff=use_z_eff, ext_legen=fig_leg)
 
 def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_data_nl=None, out_dir='auto',
                           save=True, show=False, use_z_eff=False, is_sigma=False, only_r2=True, extra_data=None, peak_loc=None):
@@ -824,7 +866,7 @@ def plot_peak_width(a_sim_info, ax, use_z_eff=False, get_last_col=False, fp_comp
     """ plot peak amplitude to the given axis """
     plot_peak_uni(a_sim_info, ax, "width", 2, use_z_eff=use_z_eff, ls='--', get_last_col=get_last_col, fp_comp=fp_comp, single=single)
 
-def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=False, plot_loc=True, plot_amp=True, plot_width=True, fp_comp=False, single=False):
+def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=False, plot_loc=True, plot_amp=True, plot_width=True, fp_comp=False, single=False, chi=False):
     # output
     if out_dir == 'auto':
         if len(sim_infos) == 1:
@@ -883,11 +925,15 @@ def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=F
     fig_suptitle(fig, "Relative BAO peak location and amplitude")
 
     # LEGEND manipulation
-    legend_manipulation(ax, "", loc='lower left', bbox_to_anchor=(0.0, 0.0))
-    plt.subplots_adjust(**subplt_adj_sym)
+    if chi:
+        ext_legen = {'mlt_col' : 0.6, 'ncol' : 2}
+    else:
+        ext_legen = {'mlt_col' : 0.5, 'ncol' : 4}
+    fig_leg = legend_manipulation(figtext="", ext_legen=ext_legen)
+    fig.subplots_adjust(**subplt_adj_sym)
 
     # close & save figure
-    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff, ext_legen=fig_leg)
 
 def plot_eff_time_ax(a_sim_info, ax, a_eff_type="Pk"):
     # ZA and TZA do not have non-linear power spectra
@@ -945,7 +991,7 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=
     ax.set_ylabel(r'$D_{eff}/D_{GR}$')
     ax.set_xlabel(r'$a$')
     ax.legend()
-    plt.subplots_adjust(**subplt_adj_sym)
+    fig.subplots_adjust(**subplt_adj_sym)
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax.yaxis.grid(True)
 
@@ -984,10 +1030,10 @@ def plot_pwr_spec_nl_amp(stack_infos, out_dir='auto', save=True, show=False):
     for stack_info in stack_infos:
         plot_pwr_spec_nl_amp_ax(stack_info, ax)
     
-    ax.set_ylabel(r'$A_{nl}$')
+    ax.set_ylabel(r'$A_{\rm nl}$')
     ax.set_xlabel(r'$a$')
     ax.legend()
-    plt.subplots_adjust(**subplt_adj_sym)
+    fig.subplots_adjust(**subplt_adj_sym)
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax.yaxis.grid(True)
     
@@ -1054,7 +1100,7 @@ def plot_eff_growth_rate(stack_infos, out_dir='auto', a_eff_type="Pk", save=True
     ax.set_ylabel(r'$f/f_{GR}$')
     ax.set_xlabel(r'$a$')
     ax.legend()
-    plt.subplots_adjust(**subplt_adj_sym)
+    fig.subplots_adjust(**subplt_adj_sym)
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax.yaxis.grid(True)
 
@@ -1157,15 +1203,15 @@ def plot_pwr_spec_diff_from_data_mlt(data_lists, zs, sim_infos, out_dir='auto', 
 
     fig_suptitle(fig, suptitle)
 
-    ax.set_xlabel(r"$k [h/$Mpc$]$")
-    ax.set_ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$")
+    ax.set_xlabel(r"$k [h{\rm Mpc}^{-1}]$")
+    ax.set_ylabel(r"$P(k)/P_{\rm lin}(k)-1$")
 
     # legend_manipulation(ax, a_sim_info.info_tr())
     legend_manipulation(ax, "")
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
 def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', show_scales=True, pk_type='dens',
-                                 ext_title='par', save=True, show=False, use_z_eff=False, add_app=False, show_nyquist=True, max_nyquist=False):
+                                 ext_title='par', save=True, show=False, use_z_eff=False, add_app=False, show_nyquist=True, max_nyquist=False, chi=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if pk_type == "dens":
@@ -1196,11 +1242,15 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', show
     ax.set_ylim(ymin, ymax)
 
     fig_suptitle(fig, suptitle)
-    ax.set_xlabel(r"$k [h/$Mpc$]$")
-    ax.set_ylabel(r"$\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}$")
+    ax.set_xlabel(r"$k [h{\rm Mpc}^{-1}]$")
+    ax.set_ylabel(r"$P(k)/P_{\rm lin}(k)-1$")
     # legend_manipulation(ax, a_sim_info.info_tr())
-    legend_manipulation(ax, "")
-    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
+    if chi:
+        ext_legen = {'mlt_col' : 0.5, 'ncol' : 4}
+    else:
+        ext_legen = {'mlt_col' : 0.7, 'ncol' : 4}
+    fig_leg = legend_manipulation(ax, "", ext_legen=ext_legen)
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff, ext_legen=fig_leg)
 
 
 def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto', add_app=False, pk_type='dens',
@@ -1281,14 +1331,14 @@ def plot_pwr_spec_diff_map_from_data(data_array, zs, a_sim_info, out_dir='auto',
             ax.axvline(val, ls=next(ls), c='k')
 
     fig_suptitle(fig, suptitle)
-    ax.set_xlabel(r"$k [h/$Mpc$]$")
+    ax.set_xlabel(r"$k [h{\rm Mpc}^{-1}]$")
     ax.set_ylabel(r"$a(t)$")
     plt.draw()
     plt.figtext(0.5, 0.95, "",
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    plt.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9)
+    fig.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9)
 
-    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff, format='png')
 
 def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, use_z_eff=False, scale='', show_k_lms=False, res=None):
     fig = plt.figure(figsize=fig_size)
@@ -1329,7 +1379,7 @@ def plot_supp(sim_infos, out_dir, suptitle='', save=True, show=False, use_z_eff=
     #plt.ylim(ymin=-1, ymax=0)
     fig_suptitle(fig, "Power spectrum suppression" + suptitle)
     plt.xlabel(r"$a(t)$")
-    ylabel = r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$"
+    ylabel = r"$\langle{P(k)/P_{\rm lin}(k)-1}\rangle$"
     if res is not None:
         ylabel += r', residual from $\nu=%.1f$' % res.nu
     plt.ylabel(ylabel)
@@ -1394,8 +1444,8 @@ def plot_par_last_slice(files, files_t, zs, a_sim_info, out_dir='auto', save=Tru
 
     plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    ax.set_xlabel(r"$x [$Mpc$/h]$")
-    ax.set_ylabel(r"$z [$Mpc$/h]$")
+    ax.set_xlabel(r"$x [h^{-1}{\rm Mpc}]$")
+    ax.set_ylabel(r"$z [h^{-1}{\rm Mpc}]$")
     fig_suptitle(fig, "Slice through simulation box (particles), z = %.2f" % zs[-1])
     close_fig(out_dir + 'par_evol_last', fig, save=save, show=show, use_z_eff=use_z_eff)
 
@@ -1422,8 +1472,8 @@ def plot_par_evol(files, files_t, zs, a_sim_info, out_dir='auto', save=True):
 
     plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    ax.set_xlabel(r"$x [$Mpc$/h]$")
-    ax.set_ylabel(r"$z [$Mpc$/h]$")
+    ax.set_xlabel(r"$x [h^{-1}{\rm Mpc}]$")
+    ax.set_ylabel(r"$z [h^{-1}{\rm Mpc}]$")
     del x, y, data
 
     def animate(j):
@@ -1465,8 +1515,8 @@ def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=Fals
 
     plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    ax.set_xlabel(r"$x [$Mpc$/h]$")
-    ax.set_ylabel(r"$z [$Mpc$/h]$")
+    ax.set_xlabel(r"$x [h^{-1}{\rm Mpc}]$")
+    ax.set_ylabel(r"$z [h^{-1}{\rm Mpc}]$")
     L = int(np.sqrt(rho.shape[0]))
     rho.shape = L, L
     im = ax.imshow(rho, interpolation='bicubic', cmap='gnuplot',
@@ -1476,7 +1526,7 @@ def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=Fals
     fig_suptitle(fig, "Slice through simulation box (overdensity), z = %.2f" % z)
     cbar = fig.colorbar(im, cax=cbar_ax, ticks=[-1, 0, 1, 10, 100])
     cbar.ax.set_yticklabels(['-1', '0', '1', '10', '> 100'])
-    close_fig(out_dir + 'dens_z%.2f' % z, fig, save=save, show=show, use_z_eff=use_z_eff)
+    close_fig(out_dir + 'dens_z%.2f' % z, fig, save=save, show=show, use_z_eff=use_z_eff, format='png')
 
 def plot_dens_two_slices(files, zs, a_sim_info, out_dir='auto', save=True, show=False, use_z_eff=False):
     half = len(files) // 2
@@ -1499,8 +1549,8 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir='auto', save=True):
     cbar_ax = plt.subplot(gs[0, -1])
     plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    ax.set_xlabel(r"$x [$Mpc$/h]$")
-    ax.set_ylabel(r"$z [$Mpc$/h]$")
+    ax.set_xlabel(r"$x [h^{-1}{\rm Mpc}]$")
+    ax.set_ylabel(r"$z [h^{-1}{\rm Mpc}]$")
 
     def animate(j):
         if j < num:
@@ -1555,20 +1605,20 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
     ax2.set_yscale('log')
     ax3.set_yscale('log')
 
-    ax1.set_ylabel(r"$\lambda_C\, [$Mpc$/h]$")
-    ax2.set_ylabel(r"$\chi/M_{pl}$")
-    ax3.set_ylabel(r"$\phi_{scr}$")
+    ax1.set_ylabel(r"$\lambda_C\, [h^{-1}{\rm Mpc}]$")
+    ax2.set_ylabel(r"$\chi/M_{\rm Pl}$")
+    ax3.set_ylabel(r"$\phi_{\rm scr}$")
 
-    ax1.tick_params(axis='both', which='major', labelsize=tick_size)
-    ax2.tick_params(axis='both', which='major', labelsize=tick_size)
-    ax3.tick_params(axis='both', which='major', labelsize=tick_size)
+    ax1.tick_params(axis='both', which='major')
+    ax2.tick_params(axis='both', which='major')
+    ax3.tick_params(axis='both', which='major')
 
     if k_scr:
         ax4 = plt.subplot(N, 1, 4, sharex=ax1)
         ax4.set_yscale('log')
-        ax4.set_ylabel(r"$k_{scr}\, [h/$Mpc$]$")
+        ax4.set_ylabel(r"$k_{\rm scr}\, [h{\rm Mpc}^{-1}]$")
         ax4.set_xlabel(r"z")
-        ax4.tick_params(axis='both', which='major', labelsize=tick_size)
+        ax4.tick_params(axis='both', which='major')
     else:
         ax3.set_xlabel(r"z")
     
@@ -1584,7 +1634,7 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
 
         # plots
         ls = linestyle_cycler.next()
-        ax1.plot(zs, 1/wavelengths, ls=ls, label=r"$\Phi_{scr} = 10^{%i}$, $n=%.1f$" % (np.log10(chi["phi"]), chi["n"]))
+        ax1.plot(zs, 1/wavelengths, ls=ls, label=r"$\Phi_{\rm scr} = 10^{%i}$, $n=%.1f$" % (np.log10(chi["phi"]), chi["n"]))
         ax2.plot(zs, chi_a, ls=ls)
         ax3.plot(zs, psi_a, ls=ls)
         if k_scr:
@@ -1596,10 +1646,10 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
     plt.setp(ax2.get_xticklabels(), visible=False)
     
     # legend
-    legend_manipulation(ax=ax1, loc='upper right', set_tick_size=False)
+    legend_manipulation(ax=ax1, loc='upper right')
 
     # subplots
-    plt.subplots_adjust(hspace=0, **subplt_adj_sym)
+    fig.subplots_adjust(hspace=0, **subplt_adj_sym)
 
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
@@ -1646,7 +1696,7 @@ def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle=
     fig_suptitle(fig, suptitle)
     plt.xlabel(r"$a(t)$")
     plt.ylabel(
-        r"$\langle{\frac{P(k)-P_{lin}(k)}{P_{lin}(k)}}\rangle$")
+        r"$\langle{P(k)/P_{\rm lin}(k)-1}\rangle$")
     
     # legend
     if scale_in_leg:

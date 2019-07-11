@@ -1212,7 +1212,7 @@ def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=re
     # plot simple correlation function and ratio
     plot.plot_corr_func(data, [zs], sim_info, out_dir=outdir, save=True, show=True, extra_data=extra_data[:-1], peak_loc=peak_loc, use_z_eff=use_z_eff)
 
-def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outdir=report_dir, plot_all=True):
+def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outdir=report_dir, plot_all=True, chi=False):
 
     # load struct.SimInfo and get correlation data
     if sim_infos is None:
@@ -1240,11 +1240,11 @@ def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outd
 
     # plot bao peak and location
     if plot_all:
-        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, chi=chi)
     else:
-        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=True, plot_amp=False, plot_width=False, single=True)
-        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=False, plot_amp=True, plot_width=False, single=True)
-        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=False, plot_amp=False, plot_width=True, single=True)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=True, plot_amp=False, plot_width=False, single=True, chi=chi)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=False, plot_amp=True, plot_width=False, single=True, chi=chi)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=False, plot_amp=False, plot_width=True, single=True, chi=chi)
 
 
 def corr_func_chi_fp_plot_peak(db, collection='data', query=None, out_dir=report_dir, use_group=None, z=None, plot_all=False, **kwargs):
@@ -1265,11 +1265,11 @@ def corr_func_chi_fp_plot_peak(db, collection='data', query=None, out_dir=report
         # # plot bao peak and location
         _outdir = "%s%i_" % (out_dir, i)
         if plot_all:
-            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"])
+            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], chi=True)
         else:
-            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=True, plot_amp=False, plot_width=False, single=True)
-            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=False, plot_amp=True, plot_width=False, single=True)
-            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=False, plot_amp=False, plot_width=True, single=True)
+            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=True, plot_amp=False, plot_width=False, single=True, chi=True)
+            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=False, plot_amp=True, plot_width=False, single=True, chi=True)
+            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=False, plot_amp=False, plot_width=True, single=True, chi=True)
 
 def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3, lim_kmax=None):
     data_list_new = [[] for _ in range(3)]
@@ -1447,7 +1447,7 @@ def get_plot_mlt_pk_diff_broad(db, query=None, collection='data', plot_diff=True
 
 
 def plot_pwr_spec_comparison_si(stack_infos, z=0, out_dir='auto', save=True, show=False,
-                                use_z_eff=False, scale_to_lin=True):
+                                use_z_eff=False, scale_to_lin=True, chi=False):
     Pk_list_extrap = []
     data = []
     zs = []
@@ -1472,6 +1472,6 @@ def plot_pwr_spec_comparison_si(stack_infos, z=0, out_dir='auto', save=True, sho
         k_max = np.minimum(k_max, si.k_nyquist["particle"])    
 
     plot.plot_pwr_spec_comparison(Pk_list_extrap, data, zs, labels, cosmo, out_dir=out_dir, save=save, show=show,
-                    use_z_eff=use_z_eff, scale_to_lin=scale_to_lin, k_max=k_max)
+                    use_z_eff=use_z_eff, scale_to_lin=scale_to_lin, k_max=k_max, chi=chi)
     plot.plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo, out_dir=out_dir,
-        save=save, show=show, use_z_eff=use_z_eff, scale_to_lin=scale_to_lin, k_max=k_max)
+        save=save, show=show, use_z_eff=use_z_eff, scale_to_lin=scale_to_lin, k_max=k_max, chi=chi)
