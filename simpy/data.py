@@ -1062,12 +1062,16 @@ def my_shape(data):
 
 
 
-def compare_chi_fp(db, collection='data', query=None, out_dir=report_dir, use_group=None, z=None, show=True, **kwargs):
+def compare_chi_fp(db, collection='data', query=None, out_dir=report_dir, use_group=None, z=None, show=True, reverse=False, **kwargs):
     groups = get_fp_chi_groups(db, collection=collection, query=query, **kwargs)
     if use_group is not None:
         groups = [groups[use_group]]
 
     for group in groups: # per group
+        # skip 1-length (lin + nl)
+        if len(group["CHI"]) <= 2:
+            continue
+
         # load data
         data_g = get_data_fp_chi_ratio(group, z=z)
 
@@ -1083,7 +1087,7 @@ def compare_chi_fp(db, collection='data', query=None, out_dir=report_dir, use_gr
             sim_infos, data_z = zip(*sorted(sorted(sorted(zip(group["CHI"], data_z),
                                 key=lambda x : x[0].chi_opt['linear']),
                                 key=lambda x : x[0].chi_opt['n']),
-                                key=lambda x : x[0].chi_opt['phi'])
+                                key=lambda x : x[0].chi_opt['phi'], reverse=reverse)
                             )
 
             # get labels
@@ -1119,7 +1123,7 @@ def compare_chi_fp_map(chi_info, fp_info, in_dir="/home/michal/Documents/GIT/Fas
     plot.plot_chi_fp_map(data, zs_eff, chi_info, out_dir=out_dir, save=True, show=show)
 
 
-def compare_chi_res(db, collection='data', query=None,out_dir=report_dir, n=0.5, phi=1e-5, z=0, show=True, **kwargs):
+def compare_chi_res(db, collection='data', query=None,out_dir=report_dir, n=0.5, phi=1e-5, z=0, show=True, reverse=False, **kwargs):
     # chi_opt query
     chi_opt = {
         'n' : n,
@@ -1151,8 +1155,8 @@ def compare_chi_res(db, collection='data', query=None,out_dir=report_dir, n=0.5,
     print('Phi = ', phi, "\tn = ", n)
     sim_infos = [group["CHI"] for group in groups]
 
-    # sort from lowest to highest resolution
-    sim_infos, data_all = zip(*sorted(zip(sim_infos, data_all), key=lambda x : x[0][0].k_nyquist["potential"]))
+    # sort from lowest to highest resolution (or reversed)
+    sim_infos, data_all = zip(*sorted(zip(sim_infos, data_all), reverse=reverse, key=lambda x : x[0][0].k_nyquist["potential"]))
 
     plot.plot_chi_fp_res(data_all, sim_infos, out_dir=out_dir, show=show, save=True)
 
@@ -1228,7 +1232,7 @@ def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=re
     # plot simple correlation function and ratio
     plot.plot_corr_func(data, [zs], sim_info, out_dir=outdir, save=True, show=show, extra_data=extra_data[:-1], peak_loc=peak_loc, use_z_eff=use_z_eff)
 
-def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outdir=report_dir, plot_all=True, chi=False, yrange=None, show=True):
+def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outdir=report_dir, plot_all=True, chi=False, yrange=None, show=True, reverse=False):
 
     # load struct.SimInfo and get correlation data
     if sim_infos is None:
@@ -1237,9 +1241,10 @@ def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outd
     # sort from lowest screening potential and chameleon exponent
     non_chi_sim_infos = [x for x in sim_infos if x.app != 'CHI']
     chi_sim_infos = [x for x in sim_infos if x.app == 'CHI']
-    chi_sim_infos = sorted(sorted(chi_sim_infos,
+    chi_sim_infos = sorted(sorted(sorted(chi_sim_infos,
+                        key=lambda x : x.chi_opt['linear']),
                         key=lambda x : x.chi_opt['n']),
-                        key=lambda x : x.chi_opt['phi'])
+                        key=lambda x : x.chi_opt['phi'], reverse=reverse)
     sim_infos = non_chi_sim_infos + chi_sim_infos
 
     # get data, check redshift
@@ -1263,7 +1268,7 @@ def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outd
         plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=show, use_z_eff=use_z_eff, plot_loc=False, plot_amp=False, plot_width=True, single=True, chi=chi, yrange=yrange)
 
 
-def corr_func_chi_fp_plot_peak(db, collection='data', query=None, out_dir=report_dir, use_group=None, z=None, plot_all=False, show=True, yrange=None, **kwargs):
+def corr_func_chi_fp_plot_peak(db, collection='data', query=None, out_dir=report_dir, use_group=None, z=None, plot_all=False, show=True, yrange=None, reverse=False, **kwargs):
     # get groups of FP / CHI
     groups = get_fp_chi_groups(db, collection=collection, query=query, **kwargs)
     if use_group is not None:
@@ -1273,6 +1278,12 @@ def corr_func_chi_fp_plot_peak(db, collection='data', query=None, out_dir=report
         # skip 1-length
         if len(group["CHI"]) == 1:
             continue
+
+        # sorting
+        group["CHI"] = sorted(sorted(sorted(group["CHI"],
+                                key=lambda x : x.chi_opt['linear']),
+                                key=lambda x : x.chi_opt['n']),
+                                key=lambda x : x.chi_opt['phi'], reverse=reverse)
 
         # init BAO peak
         get_corr_peak(group["FP"])
