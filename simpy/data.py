@@ -76,12 +76,22 @@ def load_k_supp(data_list, k_nyquist_par, a_sim_info=None, a=None, pk_type='dens
         supp[i][2] = [k[j*idx], k[(j+1)*idx]]
     return supp
 
+def get_init_amp(a_sim_info):
+    Pk_init = next(x['Pk_par'] for x in a_sim_info.data['extrap_pk'] if x['z'] == 'init')
+    return Pk_init.A_low
+
+def correct_pk_amp(a_sim_info):
+    A_init = get_init_amp(a_sim_info)
+    for x in a_sim_info.data['extrap_pk']:
+        x['Pk_par'].A_low /= A_init
+        x['Pk_par'].A_up /= A_init
+
 def get_single_hybrid_pow_spec_amp_w_z(sim, data, z, k_nyquist_par, a=None, fit_lin=False):
     x = pwr.get_hybrid_pow_spec_amp(sim, data, k_nyquist_par, a=a, fit_lin=fit_lin)
     x["z"] = z
     return x
 
-def get_extrap_pk(a_sim_info, data_list, zs, pk_type='dens'):
+def get_extrap_pk(a_sim_info, data_list, zs, pk_type='dens', correct=True):
     # matter power spectrum vs velocity divergence
     if pk_type == 'dens':
         key = 'extrap_pk'
@@ -108,7 +118,10 @@ def get_extrap_pk(a_sim_info, data_list, zs, pk_type='dens'):
         a_sim_info.data[key_pl] = [x["Pk_par"] for x in a_sim_info.data[key]]
         a_sim_info.data[key_z] = [x["z"] for x in a_sim_info.data[key]]
 
-def get_pk_nl_amp(a_sim_info):
+        if correct:
+            correct_pk_amp(a_sim_info)
+
+def get_pk_nl_amp(a_sim_info, correct=True):
     # initialize data
     init_data(a_sim_info, get_pk=True)
     load_a_eff(a_sim_info, use_z_eff='Pk')
@@ -133,6 +146,9 @@ def get_pk_nl_amp(a_sim_info):
     # fit_lin = has_app_lin_pwr(a_sim_info.app)
     func = lambda a_eff, z, data : get_single_hybrid_pow_spec_amp_w_z(sim, data, z, k_nyquist_par, a=a_eff)
     data_w_amp = list(map(func, as_eff, zs, data_all))
+
+    if correct:
+        correct_pk_amp(a_sim_info)
 
     # extract amplitude and redshift
     a_sim_info.data["pk_nl_amp"] = {
@@ -1046,7 +1062,7 @@ def my_shape(data):
 
 
 
-def compare_chi_fp(db, collection='data', query=None, out_dir=report_dir, use_group=None, z=None, **kwargs):
+def compare_chi_fp(db, collection='data', query=None, out_dir=report_dir, use_group=None, z=None, show=True, **kwargs):
     groups = get_fp_chi_groups(db, collection=collection, query=query, **kwargs)
     if use_group is not None:
         groups = [groups[use_group]]
@@ -1073,11 +1089,11 @@ def compare_chi_fp(db, collection='data', query=None, out_dir=report_dir, use_gr
             # get labels
             labels = plot.get_chi_labels(sim_infos)
             suptitle = "Relative chameleon power spectrum, " + lab
-            ut.print_info(suptitle)
+            # ut.print_info(suptitle)
 
-            plot.plot_chi_fp_z(data_z, a_sim_info, labels, out_dir=out_dir ,suptitle=suptitle, show=True, save=True)
+            plot.plot_chi_fp_z(data_z, a_sim_info, labels, out_dir=out_dir ,suptitle=suptitle, show=show, save=True)
 
-def compare_chi_fp_map(chi_info, fp_info, in_dir="/home/michal/Documents/GIT/FastSim/output/", out_dir=report_dir):
+def compare_chi_fp_map(chi_info, fp_info, in_dir="/home/michal/Documents/GIT/FastSim/output/", out_dir=report_dir, show=True):
     # check we have same parameters
     for key in ("mesh_num", "mesh_num_pwr", "par_num", "box_size"):
         if chi_info.box_opt[key] != fp_info.box_opt[key]:
@@ -1100,10 +1116,10 @@ def compare_chi_fp_map(chi_info, fp_info, in_dir="/home/michal/Documents/GIT/Fas
         raise IndexError("Files do not have the same time slices.")
 
     # plot map
-    plot.plot_chi_fp_map(data, zs_eff, chi_info, out_dir=out_dir, save=True, show=True)
+    plot.plot_chi_fp_map(data, zs_eff, chi_info, out_dir=out_dir, save=True, show=show)
 
 
-def compare_chi_res(db, collection='data', query=None,out_dir=report_dir, n=0.5, phi=1e-5, z=0, **kwargs):
+def compare_chi_res(db, collection='data', query=None,out_dir=report_dir, n=0.5, phi=1e-5, z=0, show=True, **kwargs):
     # chi_opt query
     chi_opt = {
         'n' : n,
@@ -1138,7 +1154,7 @@ def compare_chi_res(db, collection='data', query=None,out_dir=report_dir, n=0.5,
     # sort from lowest to highest resolution
     sim_infos, data_all = zip(*sorted(zip(sim_infos, data_all), key=lambda x : x[0][0].k_nyquist["potential"]))
 
-    plot.plot_chi_fp_res(data_all, sim_infos, out_dir=out_dir, show=True, save=True)
+    plot.plot_chi_fp_res(data_all, sim_infos, out_dir=out_dir, show=show, save=True)
 
 # *********************************
 # RUN ANALYSIS -- CORR COMPARISON *
@@ -1162,7 +1178,7 @@ def load_get_corr(db, doc_id, collection='data', z=None):
     # return struct.SimInfo with all loaded data and redshifts
     return a_sim_info, zs
 
-def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=report_dir, z=1., bao_peak=True):
+def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=report_dir, z=1., bao_peak=True, show=True):
 
     extra_data = []
     zs = None
@@ -1210,9 +1226,9 @@ def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=re
     }
 
     # plot simple correlation function and ratio
-    plot.plot_corr_func(data, [zs], sim_info, out_dir=outdir, save=True, show=True, extra_data=extra_data[:-1], peak_loc=peak_loc, use_z_eff=use_z_eff)
+    plot.plot_corr_func(data, [zs], sim_info, out_dir=outdir, save=True, show=show, extra_data=extra_data[:-1], peak_loc=peak_loc, use_z_eff=use_z_eff)
 
-def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outdir=report_dir, plot_all=True, chi=False):
+def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outdir=report_dir, plot_all=True, chi=False, yrange=None, show=True):
 
     # load struct.SimInfo and get correlation data
     if sim_infos is None:
@@ -1240,14 +1256,14 @@ def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outd
 
     # plot bao peak and location
     if plot_all:
-        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, chi=chi)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=show, use_z_eff=use_z_eff, chi=chi, yrange=yrange)
     else:
-        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=True, plot_amp=False, plot_width=False, single=True, chi=chi)
-        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=False, plot_amp=True, plot_width=False, single=True, chi=chi)
-        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=True, use_z_eff=use_z_eff, plot_loc=False, plot_amp=False, plot_width=True, single=True, chi=chi)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=show, use_z_eff=use_z_eff, plot_loc=True, plot_amp=False, plot_width=False, single=True, chi=chi, yrange=yrange)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=show, use_z_eff=use_z_eff, plot_loc=False, plot_amp=True, plot_width=False, single=True, chi=chi, yrange=yrange)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=show, use_z_eff=use_z_eff, plot_loc=False, plot_amp=False, plot_width=True, single=True, chi=chi, yrange=yrange)
 
 
-def corr_func_chi_fp_plot_peak(db, collection='data', query=None, out_dir=report_dir, use_group=None, z=None, plot_all=False, **kwargs):
+def corr_func_chi_fp_plot_peak(db, collection='data', query=None, out_dir=report_dir, use_group=None, z=None, plot_all=False, show=True, yrange=None, **kwargs):
     # get groups of FP / CHI
     groups = get_fp_chi_groups(db, collection=collection, query=query, **kwargs)
     if use_group is not None:
@@ -1265,11 +1281,11 @@ def corr_func_chi_fp_plot_peak(db, collection='data', query=None, out_dir=report
         # # plot bao peak and location
         _outdir = "%s%i_" % (out_dir, i)
         if plot_all:
-            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], chi=True)
+            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=show, fp_comp=group["FP"], chi=True, yrange=yrange)
         else:
-            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=True, plot_amp=False, plot_width=False, single=True, chi=True)
-            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=False, plot_amp=True, plot_width=False, single=True, chi=True)
-            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=True, fp_comp=group["FP"], plot_loc=False, plot_amp=False, plot_width=True, single=True, chi=True)
+            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=show, fp_comp=group["FP"], plot_loc=True, plot_amp=False, plot_width=False, single=True, chi=True, yrange=yrange)
+            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=show, fp_comp=group["FP"], plot_loc=False, plot_amp=True, plot_width=False, single=True, chi=True, yrange=yrange)
+            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=show, fp_comp=group["FP"], plot_loc=False, plot_amp=False, plot_width=True, single=True, chi=True, yrange=yrange)
 
 def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3, lim_kmax=None):
     data_list_new = [[] for _ in range(3)]
@@ -1384,7 +1400,7 @@ def get_init_group(db, query, collection='data', pk_type='dens'):
 
     return groups
 
-def get_plot_mlt_pk_broad(db, query=None, collection='data', out_dir='auto', z=0, pk_type='dens'):
+def get_plot_mlt_pk_broad(db, query=None, collection='data', out_dir='auto', z=0, pk_type='dens', show=True):
     # default to non-CHI StackInfo with NM = 1024
     if query is None:
         query = {'app' : {"$ne" : 'CHI'}, 'type' : 'stack_info', 'box_opt.mesh_num_pwr' : 1024}
@@ -1415,10 +1431,10 @@ def get_plot_mlt_pk_broad(db, query=None, collection='data', out_dir='auto', z=0
 
     # plot
     cosmo = group[0].sim.cosmo
-    plot.plot_pwr_spec_comparison(Pk_list_extrap, data_all, zs, groups.keys(), cosmo, out_dir=out_dir, save=True, show=True, pk_type=pk_type)
-    plot.plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data_all, zs, groups.keys(), cosmo, out_dir=out_dir, save=True, show=True, pk_type=pk_type)
+    plot.plot_pwr_spec_comparison(Pk_list_extrap, data_all, zs, groups.keys(), cosmo, out_dir=out_dir, save=True, show=show, pk_type=pk_type)
+    plot.plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data_all, zs, groups.keys(), cosmo, out_dir=out_dir, save=show, show=show, pk_type=pk_type)
 
-def get_plot_mlt_pk_diff_broad(db, query=None, collection='data', plot_diff=True, out_dir='auto'):
+def get_plot_mlt_pk_diff_broad(db, query=None, collection='data', plot_diff=True, out_dir='auto', show=True):
     # default to non-CHI StackInfo with NM = 1024
     if query is None:
         query = {'app' : {"$ne" : 'CHI'}, 'type' : 'stack_info', 'box_opt.mesh_num_pwr' : 1024}
@@ -1435,15 +1451,15 @@ def get_plot_mlt_pk_diff_broad(db, query=None, collection='data', plot_diff=True
         correct_tza(group[0], data_array)
 
         # plot
-        ut.print_info(group[0].app)
+        # ut.print_info(group[0].app)
         plot.plot_pwr_spec_diff_map_from_data(
             data_array, zs, a_sim_info, out_dir=out_dir, add_app=True,
-            show_nyquist=False, save=True, show=True, shading='gouraud')
+            show_nyquist=False, save=True, show=show, shading='gouraud')
 
         if plot_diff:
             plot.plot_pwr_spec_diff_from_data(
                 data_array, zs, a_sim_info, out_dir=out_dir, add_app=True,
-                show_nyquist=False, show_scales=False, save=True, show=True)
+                show_nyquist=False, show_scales=False, save=True, show=show)
 
 
 def plot_pwr_spec_comparison_si(stack_infos, z=0, out_dir='auto', save=True, show=False,

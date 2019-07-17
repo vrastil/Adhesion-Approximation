@@ -5,6 +5,7 @@
 from __future__ import print_function
 
 import math
+import itertools
 import matplotlib
 matplotlib.use('Agg', warn=False)
 from matplotlib import animation
@@ -12,6 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.cm as cm
 from matplotlib.colors import SymLogNorm
+from matplotlib.colors import ListedColormap
 from matplotlib.ticker import FormatStrFormatter
 from cycler import cycler
 
@@ -35,14 +37,18 @@ class MySpline(object):
 from . import power
 from . import utils as ut
 
+# color-blind
+CB_colors = ['#377eb8', '#ff7f00', '#4daf4a',
+                  '#f781bf', '#a65628', '#984ea3',
+                  '#999999', '#e41a1c', '#dede00']
+# newcmp = ListedColormap(CB_colors, name='ColorBlind')
+
+
 # default values
 matplotlib.rcParams['legend.numpoints'] = 1
-matplotlib.rcParams['lines.linewidth'] = 3.0
-matplotlib.rcParams['lines.markersize'] = 4.0
-# matplotlib.rcParams['axes.prop_cycle'] = (
-#     cycler('color', ['red', 'green', 'blue', 'orange', 'brown', 'violet', 'black']) +
-#     cycler('ls', ['solid', 'dashed', 'dashdot', (0, (5, 10)), (0, (3, 5, 1, 5)), (0, (3, 1, 1, 1)), (0, (1, 1))])
-# )
+matplotlib.rcParams['lines.linewidth'] = 4.0
+matplotlib.rcParams['lines.markersize'] = 6.0
+matplotlib.rcParams['axes.prop_cycle'] = cycler(color=CB_colors)
 matplotlib.rcParams['axes.labelsize'] = 30
 matplotlib.rcParams['xtick.labelsize'] = 20
 matplotlib.rcParams['ytick.labelsize'] = 20
@@ -127,32 +133,57 @@ def add_nyquist_info(ax, a_sim_info):
     for val, lab in val_lab.items():
         ax.axvline(val, ls=next(ls), c='k', label=lab + r")")
 
-def trans_legend(handles, labels, ncol):
-    n = len(labels)
-    nrow = (n - 1) / ncol + 1
-    order = []
-    for i in range(n):
-        row = i
-        order.append()
+def flip(items, ncol):
+    return itertools.chain(*[items[i::ncol] for i in range(ncol)])
 
-def legend_manipulation(ax=None, figtext="", loc='upper left', bbox_to_anchor=(1.0, 1.0), ext_legen=False):
+def order_by_app(app):
+    if app == 'ZA':
+        return 0
+    elif app == 'TZA':
+        return 1
+    elif app == 'FF':
+        return 2
+    elif app == 'FP':
+        return 3
+    else:
+        return 4
+
+def ordered_legend(handles, labels, ncol):
+    # ZA, TZA, FF, FP
+    handles, labels = zip(*sorted(zip(handles, labels), key=lambda x: order_by_app(x[1])))
+
+    # transpozition
+    handles, labels = zip(*flip(zip(handles, labels), ncol))
+
+    # return list
+    return list(handles), list(labels)
+
+def legend_manipulation(ax=None, figtext="", loc='upper left', bbox_to_anchor=(1.0, 1.0), ext_legen=None):
     ax = plt.gca() if ax is None else ax
     fig = plt.gcf()
     handles, labels = ax.get_legend_handles_labels()
-    if ext_legen:
+    if ext_legen is not None:
         if isinstance(ext_legen, dict):
             mlt_col = ext_legen['mlt_col']
             ncol = ext_legen['ncol']
+            half_page = ext_legen.get('half_page', False)
+            fontsize = ext_legen.get('fontsize', 34)
             nrow = (len(labels) - 1) / ncol + 1
-            ext_legen = plt.figure(figsize=(14, nrow*mlt_col))
+            if half_page:
+                fig_size = (10, nrow*mlt_col)
+            else:
+                fig_size = (10, nrow*mlt_col)
+                fontsize /= 2
+            ext_legen = plt.figure(figsize=fig_size)
             ax_leg = plt.gca()
-            ax_leg.legend(handles, labels, loc='center', ncol=ncol, frameon=False, mode='expand')
+            handles, labels = ordered_legend(handles, labels, ncol)
+            ax_leg.legend(handles, labels, loc='center', ncol=ncol, frameon=False, mode='expand', fontsize=fontsize)
             ax_leg.axes.get_xaxis().set_visible(False)
             ax_leg.axes.get_yaxis().set_visible(False)
-            ext_legen.subplots_adjust(left=0.01, right=0.99, bottom=0.01, top=0.99)
+            ext_legen.subplots_adjust(left=0., right=1.3, bottom=0., top=1.)
             ext_legen.canvas.draw()
         else:
-            ext_legen = False
+            ext_legen = None
     else:
         ax.legend(handles, labels, loc=loc,
                    bbox_to_anchor=bbox_to_anchor, fontsize=14)
@@ -160,7 +191,7 @@ def legend_manipulation(ax=None, figtext="", loc='upper left', bbox_to_anchor=(1
     if figtext != "":
         plt.figtext(0.5, 0.95, figtext,
                 bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top', figure=fig)
-    fig.subplots_adjust(left=0.1, right=0.84, bottom=0.1, top=0.89)
+    fig.subplots_adjust(left=0.0, right=1.0, bottom=0.0, top=1.0)
     return ext_legen
 
 
@@ -303,9 +334,9 @@ def plot_pwr_spec_comparison(Pk_list_extrap, data, zs, labels, cosmo, out_dir='a
 
     # LEGEND manipulation
     if chi:
-        ext_legen = {'mlt_col' : 0.6, 'ncol' : 2}
+        ext_legen = {'mlt_col' : 0.5, 'ncol' : 3}
     else:
-        ext_legen = {'mlt_col' : 0.5, 'ncol' : 4}
+        ext_legen = {'mlt_col' : 0.5, 'ncol' : 6}
     fig_leg = legend_manipulation(ax, "", ext_legen=ext_legen)
     fig.subplots_adjust(**subplt_adj_sym)
 
@@ -542,9 +573,12 @@ def plot_chi_fp_z(data_z, a_sim_info, labels, out_dir='auto', suptitle='auto', s
     plt.xlabel(r"$k [h{\rm Mpc}^{-1}]$")
     plt.ylabel(r"${P_\chi(k)}/{P_{\rm FP}(k)}$")
     #figtext = a_sim_info.info_tr().replace("FP: ", "")
-    legend_manipulation(ax, figtext="", loc='upper left', bbox_to_anchor=(0.0,1.0))
+    ext_legen = {'mlt_col' : 0.6, 'ncol' : 2, 'half_page' : True, 'fontsize' : 25}
+    fig_leg = legend_manipulation(figtext="", ext_legen=ext_legen)
     fig.subplots_adjust(**subplt_adj_sym)
-    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
+
+    # save & show (in jupyter)
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff, ext_legen=fig_leg)
 
 
 def plot_chi_fp_res_ax(ax, data_chi, si, ymax):
@@ -601,9 +635,10 @@ def plot_chi_fp_res(data_all, sim_infos, out_dir='auto', suptitle='auto', save=T
     plt.xlabel(r"$k [h{\rm Mpc}^{-1}]$")
     plt.ylabel(r"${P_\chi(k)}/{P_{\rm FP}(k)}$")
     #figtext = a_sim_info.info_tr().replace("FP: ", "")
-    legend_manipulation(ax, figtext="", loc='upper left', bbox_to_anchor=(0.0,1.0))
+    ext_legen = {'mlt_col' : 0.8, 'ncol' : 2, 'half_page' : True}
+    fig_leg = legend_manipulation(figtext="", ext_legen=ext_legen)
     fig.subplots_adjust(**subplt_adj_sym)
-    close_fig(out_dir + out_file, fig, save=save, show=show)
+    close_fig(out_dir + out_file, fig, save=save, show=show, ext_legen=fig_leg)
 
 def get_slope(k, P_k, dx=0.01,order=5):
     logk = np.log(k)
@@ -694,10 +729,7 @@ def plot_corr_func_universal(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, y
     fig_suptitle(fig, suptitle)
     plt.xlabel(r"$r [h^{-1}{\rm Mpc}]$")
     plt.ylabel(ylabel)
-    if chi:
-        ext_legen = {'mlt_col' : 0.5, 'ncol' : 4}
-    else:
-        ext_legen = {'mlt_col' : 0.5, 'ncol' : 4}
+    ext_legen = {'mlt_col' : 0.75, 'ncol' : 4, 'half_page' : True}
     fig_leg = legend_manipulation(figtext="", ext_legen=ext_legen)
     fig.subplots_adjust(**subplt_adj_sym)
 
@@ -753,11 +785,11 @@ def plot_corr_func_ratio(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabe
     fig_suptitle(fig, suptitle)
     plt.xlabel(r"$r [h^{-1}{\rm Mpc}]$")
     plt.ylabel(ylabel)
-    if chi:
-        ext_legen = {'mlt_col' : 0.5, 'ncol' : 4}
-    else:
-        ext_legen = {'mlt_col' : 0.5, 'ncol' : 4}
-    fig_leg = legend_manipulation(figtext="", ext_legen=ext_legen)
+    # if chi:
+    #     ext_legen = {'mlt_col' : 0.5, 'ncol' : 4}
+    # else:
+    #     ext_legen = {'mlt_col' : 0.5, 'ncol' : 4}
+    fig_leg = legend_manipulation(figtext="", ext_legen=True)
     fig.subplots_adjust(**subplt_adj_sym)
 
     # save & show (in jupyter)
@@ -815,7 +847,7 @@ def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, sho
             save=save, show=show, is_sigma=is_sigma, only_r2=only_r2,
             extra_data=extra_data, peak_loc=peak_loc, use_z_eff=use_z_eff)
 
-def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False, ls=None, get_last_col=False, fp_comp=False, single=False):
+def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False, ls=None, get_last_col=False, fp_comp=False, single=False, yrange=None):
     # load all available data (GSL integration could have failed)
     peak_data = [x for x in a_sim_info.data["corr_func"]["par_peak"] if x["z"] != "init"]
     zs = [x["z"] for x in peak_data]
@@ -847,6 +879,10 @@ def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False, ls=None, get_l
         peak_data_nl = [x for x in a_sim_info.data["corr_func"]["nl_peak"] if x["z"] != "init"]
         data_nl = np.array([x["popt"][idx] for x in peak_data_nl])
 
+    if yrange is not None:
+        yrange = yrange.get(bao_type, None)
+        ax.set_ylim(*yrange)
+
     # plot simulation peak
     # ax.set_yscale('symlog', linthreshy=0.01, linscaley=0.5)
     if not single:
@@ -854,19 +890,19 @@ def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False, ls=None, get_l
     ax.errorbar(a, data / data_nl - 1, yerr=data_err / data_nl, ls=ls, label=label, color=color)
     
 
-def plot_peak_loc(a_sim_info, ax, use_z_eff=False, get_last_col=False, fp_comp=False, single=False):
+def plot_peak_loc(a_sim_info, ax, use_z_eff=False, get_last_col=False, fp_comp=False, single=False, yrange=None):
     """ plot peak location to the given axis """
-    plot_peak_uni(a_sim_info, ax, "loc", 1, use_z_eff=use_z_eff, ls='-', get_last_col=get_last_col, fp_comp=fp_comp, single=single)
+    plot_peak_uni(a_sim_info, ax, "loc", 1, use_z_eff=use_z_eff, ls='-', get_last_col=get_last_col, fp_comp=fp_comp, single=single, yrange=yrange)
 
-def plot_peak_amp(a_sim_info, ax, use_z_eff=False, get_last_col=False, fp_comp=False, single=False):
+def plot_peak_amp(a_sim_info, ax, use_z_eff=False, get_last_col=False, fp_comp=False, single=False, yrange=None):
     """ plot peak amplitude to the given axis """
-    plot_peak_uni(a_sim_info, ax, "amp", 0, use_z_eff=use_z_eff, ls=':', get_last_col=get_last_col, fp_comp=fp_comp, single=single)
+    plot_peak_uni(a_sim_info, ax, "amp", 0, use_z_eff=use_z_eff, ls=':', get_last_col=get_last_col, fp_comp=fp_comp, single=single, yrange=yrange)
 
-def plot_peak_width(a_sim_info, ax, use_z_eff=False, get_last_col=False, fp_comp=False, single=False):
+def plot_peak_width(a_sim_info, ax, use_z_eff=False, get_last_col=False, fp_comp=False, single=False, yrange=None):
     """ plot peak amplitude to the given axis """
-    plot_peak_uni(a_sim_info, ax, "width", 2, use_z_eff=use_z_eff, ls='--', get_last_col=get_last_col, fp_comp=fp_comp, single=single)
+    plot_peak_uni(a_sim_info, ax, "width", 2, use_z_eff=use_z_eff, ls='--', get_last_col=get_last_col, fp_comp=fp_comp, single=single, yrange=yrange)
 
-def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=False, plot_loc=True, plot_amp=True, plot_width=True, fp_comp=False, single=False, chi=False):
+def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=False, plot_loc=True, plot_amp=True, plot_width=True, fp_comp=False, single=False, chi=False, yrange=None):
     # output
     if out_dir == 'auto':
         if len(sim_infos) == 1:
@@ -894,17 +930,17 @@ def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=F
 
         # peak location
         if plot_loc:
-            plot_peak_loc(a_sim_info, ax, use_z_eff=z_eff, fp_comp=fp_comp, single=single)
+            plot_peak_loc(a_sim_info, ax, use_z_eff=z_eff, fp_comp=fp_comp, single=single, yrange=yrange)
 
         # peak amplitude
         if plot_amp:
             get_last_col = plot_loc
-            plot_peak_amp(a_sim_info, ax, use_z_eff=z_eff, get_last_col=get_last_col, fp_comp=fp_comp, single=single)
+            plot_peak_amp(a_sim_info, ax, use_z_eff=z_eff, get_last_col=get_last_col, fp_comp=fp_comp, single=single, yrange=yrange)
 
         # peak width
         if plot_width:
             get_last_col = plot_loc or plot_amp
-            plot_peak_width(a_sim_info, ax, use_z_eff=z_eff, get_last_col=get_last_col, fp_comp=fp_comp, single=single)
+            plot_peak_width(a_sim_info, ax, use_z_eff=z_eff, get_last_col=get_last_col, fp_comp=fp_comp, single=single, yrange=yrange)
 
     # linear prediction
     if single:
@@ -926,9 +962,9 @@ def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=F
 
     # LEGEND manipulation
     if chi:
-        ext_legen = {'mlt_col' : 0.6, 'ncol' : 2}
+        ext_legen = {'mlt_col' : 0.48, 'ncol' : 3, 'half_page' : False}
     else:
-        ext_legen = {'mlt_col' : 0.5, 'ncol' : 4}
+        ext_legen = {'mlt_col' : 0.75, 'ncol' : 5, 'half_page' : True}
     fig_leg = legend_manipulation(figtext="", ext_legen=ext_legen)
     fig.subplots_adjust(**subplt_adj_sym)
 
@@ -990,7 +1026,11 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=
     
     ax.set_ylabel(r'$D_{eff}/D_{GR}$')
     ax.set_xlabel(r'$a$')
-    ax.legend()
+
+    # LEGEND manipulation
+    ext_legen = {'mlt_col' : 0.75, 'ncol' : 4, 'half_page' : True}
+    fig_leg = legend_manipulation(ax=ax, figtext="", ext_legen=ext_legen)
+
     fig.subplots_adjust(**subplt_adj_sym)
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax.yaxis.grid(True)
@@ -999,7 +1039,7 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=
     adjust_extreme_values(ax, 0.9, 1.1)
     
     # save & show (in jupyter)
-    close_fig(out_dir + 'D_eff_' + a_eff_type, fig, save=save, show=show, use_z_eff=use_z_eff)
+    close_fig(out_dir + 'D_eff_' + a_eff_type, fig, save=save, show=show, use_z_eff=use_z_eff, ext_legen=fig_leg)
 
 def plot_pwr_spec_nl_amp_ax(a_sim_info, ax, ymin=0, ymax=0.4):
     # extract variables
@@ -1129,8 +1169,9 @@ def plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=T
     # half of nyquist wavelength, 7 subintervals
     k = data_list[-1][0]
     idx = (np.abs(k - 0.5 * a_sim_info.k_nyquist["particle"])).argmin() / 7
-    cmap = cm.get_cmap('gnuplot')
+    
     if show_scales:
+        cmap = cm.get_cmap('gnuplot')
         ax.axvspan(k[0 * idx], k[1 * idx], alpha=0.2, color=cmap(0.1))
         ax.axvspan(k[3 * idx], k[4 * idx], alpha=0.3, color=cmap(0.5))
         ax.axvspan(k[6 * idx], k[7 * idx], alpha=0.4, color=cmap(0.9))
@@ -1139,16 +1180,18 @@ def plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=T
         k, P_k = data[0], data[1]
         P_k_std = data[2] if len(data) == 3 else None
 
+        idx_up = (np.abs(k - a_sim_info.k_nyquist["particle"])).argmin() if max_nyquist else -1
+
         if P_k_std is None:
-            plt.plot(k, P_k, 'o', label=lab)
+            plt.plot(k[:idx_up], P_k[:idx_up], 'o', label=lab)
             ymax = max(ymax, np.max(P_k[0:7 * idx]))
             ymin = min(ymin, np.min(P_k[0:7 * idx]))
         else:
-            plt.errorbar(k, P_k, fmt='o', yerr=P_k_std, label=lab)
+            plt.errorbar(k[:idx_up], P_k[:idx_up], fmt='o', yerr=P_k_std[:idx_up], label=lab)
             ymax = max(ymax, np.max(P_k[0:7 * idx] + P_k_std[0:7 * idx]))
             ymin = min(ymin, np.min(P_k[0:7 * idx] - P_k_std[0:7 * idx]))
 
-    if show_nyquist:
+    if not max_nyquist:
         add_nyquist_info(ax, a_sim_info)
 
     if pk_type != 'chi' and ymax > 1:
@@ -1245,10 +1288,10 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', show
     ax.set_xlabel(r"$k [h{\rm Mpc}^{-1}]$")
     ax.set_ylabel(r"$P(k)/P_{\rm lin}(k)-1$")
     # legend_manipulation(ax, a_sim_info.info_tr())
-    if chi:
-        ext_legen = {'mlt_col' : 0.5, 'ncol' : 4}
+    if max_nyquist:
+        ext_legen = {'mlt_col' : 0.5, 'ncol' : 7}
     else:
-        ext_legen = {'mlt_col' : 0.7, 'ncol' : 4}
+        ext_legen = {'mlt_col' : 0.55, 'ncol' : 4}
     fig_leg = legend_manipulation(ax, "", ext_legen=ext_legen)
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff, ext_legen=fig_leg)
 
@@ -1645,14 +1688,15 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
     plt.setp(ax1.get_xticklabels(), visible=False)
     plt.setp(ax2.get_xticklabels(), visible=False)
     
-    # legend
-    legend_manipulation(ax=ax1, loc='upper right')
+    # LEGEND manipulation
+    ext_legen = {'mlt_col' : 0.75, 'ncol' : 2, 'half_page' : True}
+    fig_leg = legend_manipulation(ax=ax1, figtext="", ext_legen=ext_legen)
 
     # subplots
     fig.subplots_adjust(hspace=0, **subplt_adj_sym)
 
     # close & save figure
-    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
+    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff, ext_legen=fig_leg)
 
 
 def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle='', save=True, show=False,
