@@ -339,7 +339,7 @@ def load_a_eff(a_sim_info, data_list=None, zs=None, use_z_eff='all'):
 
     # load files
     if data_list is None or zs is None:
-        zs, data_list = a_sim_info.get_zs_data('pwr_spec', '*.dat')
+        zs, data_list = a_sim_info.get_zs_data('pwr_spec', '*par*.dat *init*.dat')
 
     # effective time from power spectrum and density fluctuations
     get_a_eff(a_sim_info, data_list, zs, use_z_eff=use_z_eff)
@@ -1204,7 +1204,10 @@ def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=re
         r, xi = sim_info.data["corr_func"]["par"][idx]
         idx_eff = idx - 1 if 'init' in zs_ else idx
         z_eff = sim_info.data["eff_time"]["Pk"]["z_eff"][idx_eff]
-        extra_data.append({'r' : r, 'xi' : xi, 'lab' : sim_info.app, 'mlt' : 1, 'z_eff' : z_eff})
+        lab = sim_info.app
+        if lab == 'CHI':
+            lab = r'$\chi$'
+        extra_data.append({'r' : r, 'xi' : xi, 'lab' : lab, 'mlt' : 1, 'z_eff' : z_eff})
 
         # check redshifts
         if zs is None:
