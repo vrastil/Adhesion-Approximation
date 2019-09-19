@@ -37,7 +37,7 @@ set(SOURCE_FILES
 )
 
 # create static library
-add_library(${TEST_NAME} EXCLUDE_FROM_ALL OBJECT ${SOURCE_FILES})
+add_library(${TEST_NAME} EXCLUDE_FROM_ALL STATIC ${SOURCE_FILES})
 
 # dependencies
 target_link_libraries(${TEST_NAME}
