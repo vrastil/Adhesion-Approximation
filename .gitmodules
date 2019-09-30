@@ -1,9 +1,6 @@
 [submodule "jobs"]
 	path = jobs
 	url = https://github.com/vrastil/FastSim-Jobs.git
-[submodule "install"]
-	path = singularity
-	url = https://github.com/vrastil/FastSim-Container.git
 [submodule "src/3party/CCL"]
 	path = src/3party/CCL
 	url = https://github.com/vrastil/CCL.git
