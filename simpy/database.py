@@ -132,11 +132,12 @@ def print_db_info(db, collection='data', info_type='sim_info'):
         pipeline = get_pipeline(db, app)
         for doc in db[collection].aggregate(pipeline):
             _id = doc["_id"]
-            msg = "\tNm = %i, NM = %i, Np = %i, L = %i" % (
+            msg = "\tNm = %i, NM = %i, Np = %i, L = %i, Nt = %i" % (
                 _id["box_opt%smesh_num" % sep_str],
                 _id["box_opt%smesh_num_pwr" % sep_str],
                 _id["box_opt%spar_num" % sep_str],
-                _id["box_opt%sbox_size" % sep_str]
+                _id["box_opt%sbox_size" % sep_str],
+              1/_id[u"integ_opt%stime_step" % sep_str],
                 )
             if app == 'CHI':
                 msg += ", phi = %.1E, n = %.1f" % (

@@ -426,12 +426,15 @@ def init_data(a_sim_info, z=None, get_pk=False, get_corr=False, get_sigma=False,
 
     return True
 
-def get_stack_infos(db, collection='data', query=None, chi_opt=None, **kwargs):
+def get_stack_infos(db, collection='data', query=None, chi_opt=None, Nt=100, **kwargs):
     if query is None:
         query = {'app' : {"$ne" : 'CHI'}, 'type' : 'stack_info'}
 
     for key, val in kwargs.items():
         query['box_opt.%s' % key] = val
+    
+    if Nt != 0:
+        query['integ_opt.time_step'] = 1./Nt
 
     if chi_opt is not None:
         for key, val in chi_opt.items():
@@ -1415,9 +1418,10 @@ def get_init_group(db, query, collection='data', pk_type='dens'):
     return groups
 
 def get_plot_mlt_pk_broad(db, query=None, collection='data', out_dir='auto', z=0, pk_type='dens', show=True):
-    # default to non-CHI StackInfo with NM = 1024
+    # default to non-CHI StackInfo with NM = 1024 and da = 0.
     if query is None:
-        query = {'app' : {"$ne" : 'CHI'}, 'type' : 'stack_info', 'box_opt.mesh_num_pwr' : 1024}
+        query = {'app' : {"$ne" : 'CHI'}, 'type' : 'stack_info',
+                'box_opt.mesh_num_pwr' : 1024, 'integ_opt.time_step' : 0.01}
 
    # matter power spectrum vs velocity divergence
     if pk_type == 'dens':

@@ -979,6 +979,20 @@ def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=F
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff, ext_legen=fig_leg)
 
+def get_spl(a_sim_info, a_eff_type="Pk"):
+    # extract variables
+    a = a_sim_info.data["eff_time"][a_eff_type]['a']
+    # D_eff = a_sim_info.data["eff_time"][a_eff_type]['D_eff']
+    D_eff_ratio = a_sim_info.data["eff_time"][a_eff_type]['D_eff_ratio']
+
+    # spline
+    try:
+        func = lambda x, d, b, c : d + b*x*np.exp(-c*x)
+        return MySpline(a, D_eff_ratio, func, p0=(1,0,0))
+    except:
+        return None
+
+
 def plot_eff_time_ax(a_sim_info, ax, a_eff_type="Pk"):
     # ZA and TZA do not have non-linear power spectra
     if not a_sim_info.data["eff_time"][a_eff_type]:
@@ -998,15 +1012,10 @@ def plot_eff_time_ax(a_sim_info, ax, a_eff_type="Pk"):
         ax.errorbar(a, D_eff_ratio, 'o-', yerr=a_err, label=label)
     color = ax.get_lines()[-1].get_color()
 
-    # spline
-    try:
-        func = lambda x, d, b, c : d + b*x*np.exp(-c*x)
-        spl = MySpline(a, D_eff_ratio, func, p0=(1,0,0))
+    spl = get_spl(a_sim_info, a_eff_type=a_eff_type)
+    if spl is not None:
         a_spl = np.linspace(a[0], a[-1], 100)
         ax.plot(a_spl, spl(a_spl), '--', color=color)
-    except:
-        pass
-
 
 def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=False, use_z_eff=False, verbose=False):
     # plot everything
@@ -1721,7 +1730,7 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
 
         # plots
         ls = linestyle_cycler.next()
-        ax1.plot(zs, 1/wavelengths, ls=ls, label=r"$\Phi_{\rm scr} = 10^{%i}$, $n=%.1f$" % (np.log10(chi["phi"]), chi["n"]))
+        ax1.plot(zs, wavelengths, ls=ls, label=r"$\Phi_{\rm scr} = 10^{%i}$, $n=%.1f$" % (np.log10(chi["phi"]), chi["n"]))
         ax2.plot(zs, chi_a, ls=ls)
         ax3.plot(zs, psi_a, ls=ls)
         if k_scr:

@@ -280,13 +280,17 @@ def chi_psi_k_a(a, cosmo, chi_opt, k_min=1e-5, k_max=1e3, rel_tol=1e-1):
 
 def chi_mass_sq(a, cosmo, chi_opt, MPL=1, c_kms=299792.458):
     """ return mass squared of chameleon field sitting at chi_bulk(a, 0) """
-    prefactor = (3*MPL*chi_opt["beta"]*cosmo.Omega_m *pow(cosmo.H0 # beta*rho_m,0 / Mpl
-               * cosmo.h / c_kms # units factor for 'c = 1' and [L] = Mpc / h
-               ,2))
+    # prefactor = (3*MPL*chi_opt["beta"]*cosmo.Omega_m *pow(cosmo.H0 # beta*rho_m,0 / Mpl
+    #            * cosmo.h / c_kms # units factor for 'c = 1' and [L] = Mpc / h
+    #            ,2))
     # evolve rho_m,0 -> rho_m
     a = np.array(a)
-    prefactor /= pow(a, 3)
-    return prefactor/chi_bulk_a_n(a, chi_opt, MPL=MPL, CHI_A_UNITS=False)
+    # prefactor /= pow(a, 3)
+    # return prefactor/chi_bulk_a_n(a, chi_opt, MPL=MPL, CHI_A_UNITS=False)
+    n = chi_opt["n"]
+    mu = phi_G_prefactor(cosmo, c_kms=c_kms)
+    phi_a = chi_psi_a(a, chi_opt)
+    return (1-n)/(a*mu*phi_a)
 
 def chi_compton_wavelength(a, cosmo, chi_opt, MPL=1, c_kms=299792.458):
     m_sq = chi_mass_sq(a, cosmo, chi_opt, MPL=MPL, c_kms=c_kms)
