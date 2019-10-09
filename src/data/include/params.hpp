@@ -98,7 +98,7 @@ struct Out_Opt {
 struct Comp_App {
     /* cmd args */
     bool ZA, TZA, FF, FP, AA, FP_pp; //< approximations
-    bool chi; //< modified gravities
+    bool chi, chi_ff; //< modified gravities
     void reset();
     bool is_ready();
 };

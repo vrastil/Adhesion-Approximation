@@ -154,6 +154,9 @@ int main(int argc, char* argv[]){
             /* CHAMELEON GRAVITY (FROZEN-POTENTIAL APPROXIMATION) */
             if(sim.comp_app.chi) init_and_run_app<App_Var_Chi>(sim);
 
+            /* CHAMELEON GRAVITY (FROZEN-FLOW APPROXIMATION) */
+            if(sim.comp_app.chi_ff) init_and_run_app<App_Var_Chi_FF>(sim);
+
         } while (sim.simulate());
         BOOST_LOG_TRIVIAL(info) << "All simulations completed.";
     }

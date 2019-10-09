@@ -786,6 +786,26 @@ public:
         }
     }
 
+    void kick_step_w_chi_no_momentum(const Cosmo_Param &cosmo, const FTYPE_t a, const FTYPE_t da, std::vector<Particle_v<FTYPE_t>>& particles, const std::vector< Mesh> &vel_field)
+    {
+        const size_t Np = particles.size();
+        Vec_3D<FTYPE_t> vel;
+        const FTYPE_t D = growth_factor(a, cosmo);
+        const FTYPE_t dDda = growth_change(a, cosmo); // dD / da
+
+        /// - chameleon force factor + units
+        const FTYPE_t f3 = a/D*sol.chi_force_units(a)/pow2(x_0);      
+        
+        #pragma omp parallel for private(vel)
+        for (size_t i = 0; i < Np; i++)
+        {
+            vel.fill(0.);
+            assign_from(vel_field, particles[i].position, vel);
+            assign_from(chi_force, particles[i].position, vel, f3);
+            particles[i].velocity = vel*dDda;
+        }
+    }
+
 private:
     const size_t N_level_orig;
     const FTYPE_t x_0;
@@ -807,11 +827,14 @@ private:
     }
 };
 
-App_Var_Chi::App_Var_Chi(const Sim_Param &sim):
-    App_Var<Particle_v<FTYPE_t>>(sim, "CHI", "Chameleon gravity"), m_impl(new ChiImpl(sim))
+App_Var_Chi::App_Var_Chi(const Sim_Param &sim, const std::string& app_short, const std::string& app_long):
+    App_Var<Particle_v<FTYPE_t>>(sim, app_short, app_long), m_impl(new ChiImpl(sim))
 {
     memory_alloc += m_impl->memory_alloc;
 }
+
+App_Var_Chi::App_Var_Chi(const Sim_Param &sim):
+    App_Var_Chi(sim, "CHI", "Chameleon gravity (FP)") {}
 
 App_Var_Chi::~App_Var_Chi() = default;
 
@@ -839,3 +862,19 @@ void App_Var_Chi::upd_pos()
     };
     stream_kick_stream(da(), particles, kick_step, sim.box_opt.mesh_num);
 }
+
+App_Var_Chi_FF::App_Var_Chi_FF(const Sim_Param &sim):
+    App_Var_Chi(sim, "CHI_FF", "Chameleon gravity (FF)") {}
+
+void App_Var_Chi_FF::upd_pos()
+{// Leapfrog method for chameleon gravity (frozen-flow)
+    auto kick_step = [&]()
+    {
+        m_impl->solve(a_half(), particles, sim, p_F, p_B);
+        m_impl->get_chi_force(p_F, p_B);
+        m_impl->kick_step_w_chi_no_momentum(sim.cosmo, a_half(), da(), particles, app_field);
+    };
+    stream_kick_stream(da(), particles, kick_step, sim.box_opt.mesh_num);
+}
+
+App_Var_Chi_FF::~App_Var_Chi_FF() = default;
