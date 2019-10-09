@@ -70,7 +70,7 @@ struct Box_Opt {
 struct Integ_Opt {
     void init();
     FTYPE_t z_in, z_out, db; ///< cmd args
-    FTYPE_t b_in, b_out; ///< derived parameters
+    FTYPE_t a_in, a_out; ///< derived parameters
 };
 
 

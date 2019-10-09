@@ -387,8 +387,8 @@ void Box_Opt::init(const Cosmo_Param& cosmo)
 
 void Integ_Opt::init()
 {
-    b_in = 1/(z_in + 1);
-	b_out = 1/(z_out + 1);
+    a_in = 1/(z_in + 1);
+	a_out = 1/(z_out + 1);
 }
 
 void Out_Opt::init()
