@@ -137,7 +137,7 @@ public:
         step(0), print_every(sim.out_opt.print_every),
         app_str(app_short), app_long(app_long), z_suffix_const("_" + app_short + "_"), out_dir_app(std_out_dir(app_short + "_run/", sim)),
         track(4, sim.box_opt.par_num_1d),
-        a(sim.integ_opt.b_in), a_out(sim.integ_opt.b_out), da(sim.integ_opt.db),
+        a(sim.integ_opt.a_in), a_out(sim.integ_opt.a_out), da(sim.integ_opt.db),
         is_init_pwr_spec_0(false), is_init_vel_pwr_spec_0(false)
     {}
 
@@ -204,7 +204,7 @@ public:
 
     void set_init_pos(App_Var<T>& APP)
     {   
-        set_pert_pos(APP.sim, APP.sim.integ_opt.b_in, APP.particles, APP.app_field);
+        set_pert_pos(APP.sim, APP.sim.integ_opt.a_in, APP.particles, APP.app_field);
     }
 
     void set_init_cond(App_Var<T>& APP)

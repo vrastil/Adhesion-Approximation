@@ -111,24 +111,26 @@ void set_unpert_pos_w_vel(const Sim_Param &sim, std::vector<Particle_v<FTYPE_t>>
 	}
 }
 
-void set_pert_pos(const Sim_Param &sim, const FTYPE_t db, std::vector<Particle_x<FTYPE_t>>& particles, const std::vector< Mesh> &vel_field)
+void set_pert_pos(const Sim_Param &sim, const FTYPE_t a, std::vector<Particle_x<FTYPE_t>>& particles, const std::vector< Mesh> &vel_field)
 {
     BOOST_LOG_TRIVIAL(debug) << "Setting initial positions of particles...";
 	Vec_3D<size_t> unpert_pos;
-	Vec_3D<FTYPE_t> displ_field;
+	Vec_3D<FTYPE_t> velocity;
 	Vec_3D<FTYPE_t> pert_pos;
 	
     const size_t par_per_dim = sim.box_opt.par_num_1d;
     const size_t Ng = sim.box_opt.Ng;
     const size_t Nm = sim.box_opt.mesh_num;
     const size_t Np = sim.box_opt.par_num;
+
+    const FTYPE_t D = growth_factor(a, sim.cosmo); // growth factor
 	
-	#pragma omp parallel for private(unpert_pos, displ_field, pert_pos)
+	#pragma omp parallel for private(unpert_pos, velocity, pert_pos)
 	for(size_t i=0; i< Np; i++)
 	{
 		set_unpert_pos_one_par(unpert_pos, i, par_per_dim, Ng);
-		set_velocity_one_par(unpert_pos, displ_field, vel_field);
-		pert_pos = displ_field*db + unpert_pos;
+		set_velocity_one_par(unpert_pos, velocity, vel_field);
+		pert_pos = velocity*D + unpert_pos;
 		get_per(pert_pos, Nm);
 		particles[i] = Particle_x<FTYPE_t>(pert_pos);		
 	}

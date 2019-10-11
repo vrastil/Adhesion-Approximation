@@ -14,7 +14,7 @@ simpy/fastsim.py
 simpy/*.so
 
 # jupyter checkpoints
-pynotebooks/.ipynb_checkpoints
+.ipynb_checkpoints
 
 # other files
 *.gcda

@@ -102,7 +102,8 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
 
     po::options_description mod_grav("Modified Gravities");
     mod_grav.add_options()
-        ("comp_chi", po::value<bool>(&sim.comp_app.chi)->default_value(false), "compute chameleon gravity")
+        ("comp_chi", po::value<bool>(&sim.comp_app.chi)->default_value(false), "compute chameleon gravity (frozen-potential)")
+        ("comp_chi_ff", po::value<bool>(&sim.comp_app.chi_ff)->default_value(false), "compute chameleon gravity (frozen-flow)")
         ;
     
     po::options_description config_cham("Chameleon parameters");

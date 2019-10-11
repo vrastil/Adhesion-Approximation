@@ -70,7 +70,7 @@ struct Box_Opt {
 struct Integ_Opt {
     void init();
     FTYPE_t z_in, z_out, db; ///< cmd args
-    FTYPE_t b_in, b_out; ///< derived parameters
+    FTYPE_t a_in, a_out; ///< derived parameters
 };
 
 
@@ -98,7 +98,7 @@ struct Out_Opt {
 struct Comp_App {
     /* cmd args */
     bool ZA, TZA, FF, FP, AA, FP_pp; //< approximations
-    bool chi; //< modified gravities
+    bool chi, chi_ff; //< modified gravities
     void reset();
     bool is_ready();
 };

@@ -237,7 +237,7 @@ void to_json(json& j, const Chi_Opt& chi_opt)
         {"beta", chi_opt.beta},
         {"n", chi_opt.n},
         {"phi", chi_opt.phi},
-        {"linear", chi_opt.linear}
+        {"linear", chi_opt.linear},
     };
 }
 
@@ -246,14 +246,10 @@ void from_json(const json& j, Chi_Opt& chi_opt)
     chi_opt.beta = j.at("beta").get<FTYPE_t>();
     chi_opt.n = j.at("n").get<FTYPE_t>();
     chi_opt.phi = j.at("phi").get<FTYPE_t>();
-    try
-    {
-        chi_opt.linear = j.at("linear").get<bool>();
-    }
-    catch(const json::out_of_range& oor)
-    {
-        chi_opt.linear = false;
-    }
+
+    // optional parameters (old runs do not have everything)
+    try {chi_opt.linear = j.at("linear").get<bool>();}
+    catch (const json::out_of_range& oor){chi_opt.linear = false;}
 }
 
 void to_json(json& j, const Test_Opt& test_opt)
@@ -387,8 +383,8 @@ void Box_Opt::init(const Cosmo_Param& cosmo)
 
 void Integ_Opt::init()
 {
-    b_in = 1/(z_in + 1);
-	b_out = 1/(z_out + 1);
+    a_in = 1/(z_in + 1);
+	a_out = 1/(z_out + 1);
 }
 
 void Out_Opt::init()
@@ -400,12 +396,12 @@ void Out_Opt::init()
 
 void Comp_App::reset()
 {
-    ZA = TZA = FF = FP = AA = FP_pp = chi = false;
+    ZA = TZA = FF = FP = AA = FP_pp = chi = chi_ff = false;
 }
 
 bool Comp_App::is_ready()
 {
-    return (ZA | TZA | FF | FP | AA | FP_pp | chi);
+    return (ZA | TZA | FF | FP | AA | FP_pp | chi | chi_ff);
 }
 
 void App_Opt::init(const Box_Opt& box_opt)
@@ -487,8 +483,9 @@ Sim_Param::Sim_Param(std::string file_name)
 
         try{
             chi_opt = j.at("chi_opt");
-            comp_app.chi = true;
-        } catch(const json::out_of_range& oor){ comp_app.chi = false; }
+            comp_app.chi = (("CHI" == j.at("app")));
+            comp_app.chi_ff = (("CHI_FF" == j.at("app")));
+        } catch(const json::out_of_range& oor){ comp_app.chi = comp_app.chi_ff = false; }
         
     }
     catch(const json::out_of_range& oor){
@@ -537,7 +534,7 @@ void Sim_Param::print_info(std::string out, std::string app) const
             {"k_nyquist", other_par.nyquist},
             {"app", app}
         };
-        if (comp_app.chi) j["chi_opt"] = chi_opt;
+        if (comp_app.chi | comp_app.chi_ff) j["chi_opt"] = chi_opt;
         if (app == "test") j["test_opt"] = test_opt;
 
         o << std::setw(2) << j << std::endl;
