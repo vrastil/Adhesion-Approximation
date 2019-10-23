@@ -139,7 +139,7 @@ def print_db_info(db, collection='data', info_type='sim_info'):
                 _id["box_opt%sbox_size" % sep_str],
               1/_id[u"integ_opt%stime_step" % sep_str],
                 )
-            if app == 'CHI':
+            if app == 'CHI' or app == 'CHI_FF':
                 msg += ", phi = %.1E, n = %.1f" % (
                     _id["chi_opt%sphi" % sep_str],
                     _id["chi_opt%sn" % sep_str]

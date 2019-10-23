@@ -24,6 +24,13 @@ from . import database
 from plot import report_dir
 
 ###################################
+# MACROS
+###################################
+ALL_CHI_APP = ['CHI', 'CHI_FF']
+NON_CHI = {"$nin" : ALL_CHI_APP}
+CHI = {"$in" : ALL_CHI_APP}
+
+###################################
 # FIND, SORT, SLICE
 ###################################
 
@@ -43,6 +50,12 @@ def sort_chi_files(files, zs):
     files_chi, zs_chi = zip(*[x for x in zip(files, zs) if 'chi' in x[0]])
     files, zs = zip(*[x for x in zip(files, zs) if 'chi' not in x[0]])
     return map(list, [files, zs, files_chi, zs_chi])
+
+def sort_chi_infos(chi_sim_infos, reverse=False):
+    return sorted(sorted(sorted(chi_sim_infos,
+                  key=lambda x : x.chi_opt['linear']),
+                  key=lambda x : x.chi_opt['n']),
+                  key=lambda x : x.chi_opt['phi'], reverse=reverse)
 
 ###################################
 # LOAD DATA FROM SINGLE RUN
@@ -428,7 +441,7 @@ def init_data(a_sim_info, z=None, get_pk=False, get_corr=False, get_sigma=False,
 
 def get_stack_infos(db, collection='data', query=None, chi_opt=None, Nt=100, **kwargs):
     if query is None:
-        query = {'app' : {"$ne" : 'CHI'}, 'type' : 'stack_info'}
+        query = {'app' : NON_CHI, 'type' : 'stack_info'}
 
     for key, val in kwargs.items():
         query['box_opt.%s' % key] = val
@@ -954,7 +967,7 @@ def stack_all(db, collection='data', query=None, rerun=None, skip=None, verbose=
 
 def plot_chi_wave_pot(db, collection='data', outdir=report_dir,
                       n=None, phi=None, zs=None, save=True, show=True, k_scr=False):
-    doc_id = db[collection].find_one({'app' : 'CHI'}, {'_id' : 1})
+    doc_id = db[collection].find_one({'app' : CHI}, {'_id' : 1})
     a_sim_info = struct.SimInfo(db, doc_id)
 
     # parameters of the plot (if not given)
@@ -973,9 +986,9 @@ def plot_chi_wave_pot(db, collection='data', outdir=report_dir,
     plot.plot_chi_evol(zs, a_sim_info, chi_opt=chi_opt, out_dir=outdir, save=save, show=show, k_scr=k_scr)
 
 
-def get_data_fp_chi_ratio(group, z=None):
+def get_data_fp_chi_ratio(group, app='FP', app_chi='CHI', z=None):
     data_all = []
-    zs_fp, data_fp = group['FP'].get_zs_data('pwr_spec', '*par*')
+    zs_fp, data_fp = group[app].get_zs_data('pwr_spec', '*par*')
 
     # look for single redshift and data
     if z is not None:
@@ -987,11 +1000,11 @@ def get_data_fp_chi_ratio(group, z=None):
         idx = []
         zs_fp = set(zs_fp)
         # create unique zs
-        for chi_info in group["CHI"]:
+        for chi_info in group[app_chi]:
             zs_chi,_ = chi_info.get_zs_data('pwr_spec', '*par*')
             zs_fp &= set(zs_chi)
         # get indices of these unique z
-        for chi_info in group["CHI"]:
+        for chi_info in group[app_chi]:
             zs_chi,_ = chi_info.get_zs_data('pwr_spec', '*par*')
             idx.append(
                 [i for i, z_chi in enumerate(zs_chi) if z_chi in zs_fp]
@@ -1001,12 +1014,12 @@ def get_data_fp_chi_ratio(group, z=None):
         zs_len = len(zs_fp)
         for idx_ in idx:
             if zs_len != len(idx_):
-                raise IndexError("CHI and FPA runs do not have the same redshifts.")
+                raise IndexError("%s and %s runs do not have the same redshifts." % (app, app_chi))
 
     zs_fp = sorted(zs_fp, reverse=True)
     group['zs'] = zs_fp
 
-    for i_chi, chi_info in enumerate(group["CHI"]):
+    for i_chi, chi_info in enumerate(group[app_chi]):
         zs_chi, data_chi = chi_info.get_zs_data('pwr_spec', '*par*')
 
         if z is not None:
@@ -1035,9 +1048,9 @@ def rm_extra_zs(zs_unique, zs_list, other_list):
         else:
             i += 1
 
-def get_fp_chi_groups(db, collection='data', query=None, chi_opt=None, **kwargs):
+def get_fp_chi_groups(db, collection='data', query=None, app='FP', app_chi='CHI', chi_opt=None, **kwargs):
     if query is None:
-        query = {'app' : 'FP', 'type' : 'stack_info'}
+        query = {'app' : app, 'type' : 'stack_info'}
 
     fp_stack_infos = get_stack_infos(db, query=query, **kwargs)
     groups = []
@@ -1046,13 +1059,13 @@ def get_fp_chi_groups(db, collection='data', query=None, chi_opt=None, **kwargs)
         mesh_num_pwr = a_sim_info.box_opt["mesh_num_pwr"]
         par_num = a_sim_info.box_opt["par_num"]
         box_size = a_sim_info.box_opt["box_size"]
-        query = {'app' : 'CHI', 'type' : 'stack_info'}
+        query = {'app' : app_chi, 'type' : 'stack_info'}
         chi_infos = get_stack_infos(
             db, query=query, mesh_num=mesh_num, mesh_num_pwr=mesh_num_pwr,
             par_num=par_num, box_size=box_size, chi_opt=chi_opt
         )
         if chi_infos:
-            groups.append({ "FP" : a_sim_info, "CHI" : chi_infos})
+            groups.append({ app : a_sim_info, app_chi : chi_infos})
 
     return groups
 
@@ -1065,21 +1078,21 @@ def my_shape(data):
 
 
 
-def compare_chi_fp(db, collection='data', query=None, out_dir=report_dir, use_group=None, z=None, show=True, reverse=False, **kwargs):
-    groups = get_fp_chi_groups(db, collection=collection, query=query, **kwargs)
+def compare_chi_fp(db, collection='data', query=None, app='FP', app_chi='CHI', out_dir=report_dir, use_group=None, z=None, show=True, reverse=False, **kwargs):
+    groups = get_fp_chi_groups(db, collection=collection, query=query, app=app, app_chi=app_chi, **kwargs)
     if use_group is not None:
         groups = [groups[use_group]]
 
     for group in groups: # per group
         # skip 1-length (lin + nl)
-        if len(group["CHI"]) <= 2:
+        if len(group[app_chi]) <= 2:
             continue
 
         # load data
-        data_g = get_data_fp_chi_ratio(group, z=z)
+        data_g = get_data_fp_chi_ratio(group, app=app, app_chi=app_chi, z=z)
 
         # struct.SimInfo, zs should be the same for all FP / CHI
-        a_sim_info = group["FP"]
+        a_sim_info = group[app_chi][0]
         zs = group["zs"] if z is None else [z]
 
         # transpoose first and second dimension
@@ -1087,7 +1100,7 @@ def compare_chi_fp(db, collection='data', query=None, out_dir=report_dir, use_gr
 
         for lab, data_z in plot.iter_data(zs, [data_g]): # per redshift
             # sort from lowest screening potential and chameleon exponent
-            sim_infos, data_z = zip(*sorted(sorted(sorted(zip(group["CHI"], data_z),
+            sim_infos, data_z = zip(*sorted(sorted(sorted(zip(group[app_chi], data_z),
                                 key=lambda x : x[0].chi_opt['linear']),
                                 key=lambda x : x[0].chi_opt['n']),
                                 key=lambda x : x[0].chi_opt['phi'], reverse=reverse)
@@ -1100,15 +1113,17 @@ def compare_chi_fp(db, collection='data', query=None, out_dir=report_dir, use_gr
 
             plot.plot_chi_fp_z(data_z, a_sim_info, labels, out_dir=out_dir ,suptitle=suptitle, show=show, save=True)
 
-def compare_chi_fp_map(chi_info, fp_info, in_dir="/home/michal/Documents/GIT/FastSim/output/", out_dir=report_dir, show=True):
+def compare_chi_fp_map(chi_info, fp_info, out_dir=report_dir, show=True):
     # check we have same parameters
+    app = fp_info.app
+    app_chi = chi_info.app
     for key in ("mesh_num", "mesh_num_pwr", "par_num", "box_size"):
         if chi_info.box_opt[key] != fp_info.box_opt[key]:
-            raise IndexError("CHI and FPA files do not have the same parameters.")
+            raise IndexError("%s and %s files do not have the same parameters." % (app, app_chi))
 
     # load data
-    group = { "FP" : fp_info, "CHI" : [chi_info]}
-    data = get_data_fp_chi_ratio(group)[0] # we have only one set of chi-parameters
+    group = { app : fp_info, app_chi : [chi_info]}
+    data = get_data_fp_chi_ratio(group, app=app, app_chi=app_chi)[0] # we have only one set of chi-parameters
 
     # get effective redshift
     load_a_eff(fp_info, use_z_eff='Pk')
@@ -1125,25 +1140,30 @@ def compare_chi_fp_map(chi_info, fp_info, in_dir="/home/michal/Documents/GIT/Fas
     # plot map
     plot.plot_chi_fp_map(data, zs_eff, chi_info, out_dir=out_dir, save=True, show=show)
 
+def compare_chi_res_FF(db, collection='data', query=None, out_dir=report_dir, n=0.5, phi=1e-5, z=0, show=True, reverse=False, **kwargs):
+    compare_chi_res(db, collection=collection, query=query, app='FF', app_chi='CHI_FF', out_dir=out_dir, n=n, phi=phi, z=z, show=show, reverse=reverse, **kwargs)
 
-def compare_chi_res(db, collection='data', query=None,out_dir=report_dir, n=0.5, phi=1e-5, z=0, show=True, reverse=False, **kwargs):
+def compare_chi_res_FP(db, collection='data', query=None, out_dir=report_dir, n=0.5, phi=1e-5, z=0, show=True, reverse=False, **kwargs):
+    compare_chi_res(db, collection=collection, query=query, app='FP', app_chi='CHI', out_dir=out_dir, n=n, phi=phi, z=z, show=show, reverse=reverse, **kwargs)
+
+def compare_chi_res(db, collection='data', query=None, app='FP', app_chi='CHI', out_dir=report_dir, n=0.5, phi=1e-5, z=0, show=True, reverse=False, **kwargs):
     # chi_opt query
     chi_opt = {
         'n' : n,
         'phi' : phi
     }
     # load all data
-    groups = get_fp_chi_groups(db, collection=collection, query=query, chi_opt=chi_opt, **kwargs)
-    data_all = [get_data_fp_chi_ratio(group, z=z) for group in groups]
+    groups = get_fp_chi_groups(db, collection=collection, query=query, app=app, app_chi=app_chi, chi_opt=chi_opt, **kwargs)
+    data_all = [get_data_fp_chi_ratio(group, app=app, app_chi=app_chi, z=z) for group in groups]
 
     # check we have same chameleon parameters
     phi, n = set(), set()
     for group in groups:
-        for si in group["CHI"]:
+        for si in group[app_chi]:
             phi.add(si.chi_opt["phi"])
             n.add(si.chi_opt["n"])
     if len(phi) != len(n) != 1:
-            raise IndexError("CHI files do not have the same chameleon parameters.")
+            raise IndexError("%s files do not have the same chameleon parameters." % app)
     phi = phi.pop()
     n = n.pop()
 
@@ -1156,7 +1176,7 @@ def compare_chi_res(db, collection='data', query=None,out_dir=report_dir, n=0.5,
         data_all[i] = data.reshape(new_shape)
 
     print('Phi = ', phi, "\tn = ", n)
-    sim_infos = [group["CHI"] for group in groups]
+    sim_infos = [group[app_chi] for group in groups]
 
     # sort from lowest to highest resolution (or reversed)
     sim_infos, data_all = zip(*sorted(zip(sim_infos, data_all), reverse=reverse, key=lambda x : x[0][0].k_nyquist["potential"]))
@@ -1208,7 +1228,7 @@ def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=re
         idx_eff = idx - 1 if 'init' in zs_ else idx
         z_eff = sim_info.data["eff_time"]["Pk"]["z_eff"][idx_eff]
         lab = sim_info.app
-        if lab == 'CHI':
+        if 'CHI' in lab:
             lab = r'$\chi$'
         extra_data.append({'r' : r, 'xi' : xi, 'lab' : lab, 'mlt' : 1, 'z_eff' : z_eff})
 
@@ -1245,12 +1265,9 @@ def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outd
         sim_infos = [load_get_corr(db, doc_id, collection=collection)[0]]
 
     # sort from lowest screening potential and chameleon exponent
-    non_chi_sim_infos = [x for x in sim_infos if x.app != 'CHI']
-    chi_sim_infos = [x for x in sim_infos if x.app == 'CHI']
-    chi_sim_infos = sorted(sorted(sorted(chi_sim_infos,
-                        key=lambda x : x.chi_opt['linear']),
-                        key=lambda x : x.chi_opt['n']),
-                        key=lambda x : x.chi_opt['phi'], reverse=reverse)
+    non_chi_sim_infos = [x for x in sim_infos if 'CHI' not in x.app]
+    chi_sim_infos = [x for x in sim_infos if 'CHI' in x.app]
+    chi_sim_infos = sort_chi_infos(chi_sim_infos, reverse=reverse)
     sim_infos = non_chi_sim_infos + chi_sim_infos
 
     # get data, check redshift
@@ -1274,35 +1291,35 @@ def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outd
         plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=show, use_z_eff=use_z_eff, plot_loc=False, plot_amp=False, plot_width=True, single=True, chi=chi, yrange=yrange)
 
 
-def corr_func_chi_fp_plot_peak(db, collection='data', query=None, out_dir=report_dir, use_group=None, z=None, plot_all=False, show=True, yrange=None, reverse=False, **kwargs):
+def corr_func_chi_fp_plot_peak(db, collection='data', query=None, app='FP', app_chi='CHI', out_dir=report_dir, use_group=None, z=None, plot_all=False, show=True, yrange=None, reverse=False, **kwargs):
     # get groups of FP / CHI
-    groups = get_fp_chi_groups(db, collection=collection, query=query, **kwargs)
+    groups = get_fp_chi_groups(db, collection=collection, query=query, app=app, app_chi=app_chi, **kwargs)
     if use_group is not None:
         groups = [groups[use_group]]
 
     for i, group in enumerate(groups):
         # skip 1-length
-        if len(group["CHI"]) == 1:
+        if len(group[app_chi]) == 1:
             continue
 
         # sorting
-        group["CHI"] = sorted(sorted(sorted(group["CHI"],
+        group[app_chi] = sorted(sorted(sorted(group[app_chi],
                                 key=lambda x : x.chi_opt['linear']),
                                 key=lambda x : x.chi_opt['n']),
                                 key=lambda x : x.chi_opt['phi'], reverse=reverse)
 
         # init BAO peak
-        get_corr_peak(group["FP"])
-        map(get_corr_peak, group["CHI"])
+        get_corr_peak(group[app])
+        map(get_corr_peak, group[app_chi])
 
         # # plot bao peak and location
         _outdir = "%s%i_" % (out_dir, i)
         if plot_all:
-            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=show, fp_comp=group["FP"], chi=True, yrange=yrange)
+            plot.plot_corr_peak(group[app_chi], out_dir=_outdir, save=True, show=show, fp_comp=group[app], chi=True, yrange=yrange)
         else:
-            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=show, fp_comp=group["FP"], plot_loc=True, plot_amp=False, plot_width=False, single=True, chi=True, yrange=yrange)
-            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=show, fp_comp=group["FP"], plot_loc=False, plot_amp=True, plot_width=False, single=True, chi=True, yrange=yrange)
-            plot.plot_corr_peak(group["CHI"], out_dir=_outdir, save=True, show=show, fp_comp=group["FP"], plot_loc=False, plot_amp=False, plot_width=True, single=True, chi=True, yrange=yrange)
+            plot.plot_corr_peak(group[app_chi], out_dir=_outdir, save=True, show=show, fp_comp=group[app], plot_loc=True, plot_amp=False, plot_width=False, single=True, chi=True, yrange=yrange)
+            plot.plot_corr_peak(group[app_chi], out_dir=_outdir, save=True, show=show, fp_comp=group[app], plot_loc=False, plot_amp=True, plot_width=False, single=True, chi=True, yrange=yrange)
+            plot.plot_corr_peak(group[app_chi], out_dir=_outdir, save=True, show=show, fp_comp=group[app], plot_loc=False, plot_amp=False, plot_width=True, single=True, chi=True, yrange=yrange)
 
 def get_pk_broad_k(data_list, sim_infos, get_extrap_pk=True, cutoff_high=4.3, lim_kmax=None):
     data_list_new = [[] for _ in range(3)]
@@ -1420,7 +1437,7 @@ def get_init_group(db, query, collection='data', pk_type='dens'):
 def get_plot_mlt_pk_broad(db, query=None, collection='data', out_dir='auto', z=0, pk_type='dens', show=True):
     # default to non-CHI StackInfo with NM = 1024 and da = 0.
     if query is None:
-        query = {'app' : {"$ne" : 'CHI'}, 'type' : 'stack_info',
+        query = {'app' : NON_CHI, 'type' : 'stack_info',
                 'box_opt.mesh_num_pwr' : 1024, 'integ_opt.time_step' : 0.01}
 
    # matter power spectrum vs velocity divergence
@@ -1455,7 +1472,7 @@ def get_plot_mlt_pk_broad(db, query=None, collection='data', out_dir='auto', z=0
 def get_plot_mlt_pk_diff_broad(db, query=None, collection='data', plot_diff=True, out_dir='auto', show=True):
     # default to non-CHI StackInfo with NM = 1024
     if query is None:
-        query = {'app' : {"$ne" : 'CHI'}, 'type' : 'stack_info', 'box_opt.mesh_num_pwr' : 1024}
+        query = {'app' : NON_CHI, 'type' : 'stack_info', 'box_opt.mesh_num_pwr' : 1024}
 
     # get initializied groups
     groups = get_init_group(db, query, collection)

@@ -515,7 +515,8 @@ def plot_chi_fp_map(data_array, zs, chi_info, out_dir='auto', save=True, show=Fa
     if out_dir == 'auto':
         out_dir = report_dir
     bo = chi_info.box_opt
-    out_file = 'chi_pwr_diff_map_fp_%im_%ip_%iM_%ib' % (bo["mesh_num"], bo["Ng"], bo["mesh_num_pwr"], bo["box_size"])
+    app = chi_info.app.lower()
+    out_file = '%s_pwr_diff_map_%im_%ip_%iM_%ib' % (app, bo["mesh_num"], bo["Ng"], bo["mesh_num_pwr"], bo["box_size"])
 
     if chi_info.chi_opt["linear"]:
         out_file += "_lin"
@@ -527,7 +528,8 @@ def plot_chi_fp_z(data_z, a_sim_info, labels, out_dir='auto', suptitle='auto', s
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     bo = a_sim_info.box_opt
-    out_file = 'chi_pwr_diff_fp_%im_%ip_%iM_%ib' % (bo["mesh_num"], bo["Ng"], bo["mesh_num_pwr"], bo["box_size"])
+    app = a_sim_info.app.lower()
+    out_file = '%s_pwr_diff_%im_%ip_%iM_%ib' % (app, bo["mesh_num"], bo["Ng"], bo["mesh_num_pwr"], bo["box_size"])
     # if suptitle == 'auto':
     #     suptitle = "Relative chameleon power spectrum"
 
@@ -599,7 +601,8 @@ def plot_chi_fp_res_ax(ax, data_chi, si, ymax):
 def plot_chi_fp_res(data_all, sim_infos, out_dir='auto', suptitle='auto', save=True, show=False):
     if out_dir == 'auto':
         out_dir = report_dir
-    out_file = 'chi_resolution_eff'
+    app = sim_infos[0][0].app
+    out_file = '%s_resolution_eff' % app.lower()
 
     fig = plt.figure(figsize=fig_size)
     ax = plt.gca()
@@ -809,6 +812,8 @@ def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_d
         suptitle = "Correlation function"
         file_name = "corr_func"
         ylabel = r"\xi"
+    if 'CHI' in a_sim_info.app:
+        file_name = a_sim_info.app.lower() + '_' + file_name
 
     figtext = a_sim_info.info_tr()
 
@@ -817,7 +822,7 @@ def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_d
         figtext = figtext.replace(a_sim_info.app + ": ", "")
         suptitle += ", " + lab
         lab = a_sim_info.app
-        if lab == 'CHI':
+        if 'CHI' in lab:
             lab = r'$\chi$'
 
     # get data
@@ -862,7 +867,7 @@ def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False, ls=None, get_l
     data_err = np.array([x["perr"][idx] for x in peak_data if x["z"] < zs_cut])
 
     label = a_sim_info.app
-    if label == 'CHI':
+    if 'CHI' in label:
         label = get_chi_label(a_sim_info, single=single)
 
     # get last used color
