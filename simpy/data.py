@@ -367,6 +367,28 @@ def load_plot_a_eff(data_list, zs, a_sim_info, **kwargs):
     # plot.plot_eff_time([a_sim_info], a_eff_type="sigma_R", **kwargs)
     plot.plot_eff_time([a_sim_info], a_eff_type="Pk", **kwargs)
 
+def get_timestep_data(db, query=None, a_eff_type="Pk"):
+    if query is None:
+        query = {'app' : NON_CHI, 'type' : 'stack_info'}
+    non_chi_stack_infos = get_stack_infos(db, box_size=2000, mesh_num_pwr=1024, Nt=0, query=query)
+    data = {}
+    
+    # get data
+    for stack_info in non_chi_stack_infos:
+        app = stack_info.app
+        if app not in data:
+            data[app] = []
+        load_a_eff(stack_info)
+        D_eff = stack_info.data["eff_time"][a_eff_type]['D_eff_ratio'][-1]
+        data[app].append([
+            (1/stack_info.integ_opt['time_step']),
+            D_eff])
+        
+    # sort data & conver tu numpy
+    for key, val in data.items():
+        data[key] = np.array(sorted(val, key=lambda x : x[0]))
+    return data
+
 def load_check_plot(a_sim_info, key, patterns, # type: struct.SimInfo, str, str,
                     rerun, skip, plot_func,    # type: List[str], List[str], Callable[List[str], List[str], kwargs],
                     info_str='',               # type: str, str

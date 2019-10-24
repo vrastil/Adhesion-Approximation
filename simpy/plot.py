@@ -60,6 +60,61 @@ fig_size = (14, 9)
 fig_size_map = (14, 14)
 report_dir = "/home/michal/Documents/GIT/FastSim/report/clanek/"
 
+class PlotOptions(object):
+    def __init__(self, def_dir='auto', save=True, show=False, use_z_eff=False):
+        
+        self.save = save
+        self.show = show
+        self.use_z_eff = use_z_eff
+        self.def_dir = def_dir
+        self.out_dir = self.def_dir
+
+    def append_dir(self, a_dir):
+        # make sure default directory ends with '/'
+        if not self.def_dir.endswith('/'):
+            self.def_dir += '/'
+        
+        # append subdirectory
+        self.out_dir = self.def_dir + a_dir
+
+        # make sure subdirectory ends with '/'
+        if not self.out_dir.endswith('/'):
+            self.out_dir += '/'
+        return self
+
+
+class FigOptions(object):
+    def __init__(self, PlotOpt, figsize=fig_size):
+        self.PlotOpt = PlotOpt
+        self.figsize = figsize
+        self.fig = plt.figure(figsize=self.figsize)
+        self.ext_legen = None
+
+    @property
+    def ax(self):
+        return plt.gca()
+
+    def legend(self, figtext="", ext_legen=None):
+        if ext_legen is None:
+            ext_legen = {'mlt_col' : 0.75, 'ncol' : 4, 'half_page' : True}
+        self.ext_legen = legend_manipulation(self.ax, figtext=figtext, ext_legen=ext_legen)
+
+    def close(self, file_name, figtext="", ext_legen=None):
+        # create legend if not already done
+        if self.ext_legen is None:
+            self.legend(figtext=figtext, ext_legen=ext_legen)
+
+        # append filename after directory
+        file_name = self.PlotOpt.out_dir + file_name
+
+        # save and close
+        close_fig(file_name, self.fig, save=self.PlotOpt.save, show=self.PlotOpt.show, use_z_eff=self.PlotOpt.use_z_eff, ext_legen=self.ext_legen)
+
+class DataOptions(object):
+    def __init__(self, a_sim_info=None, data=None):
+        self.a_sim_info = a_sim_info
+        self.data = data
+
 def iter_data(zs, iterables, a_end=None, a_slice=1.5, skip_init=True, get_a=False, only_last=False):
     """ Generator: iterate through data in list 'iterables'
     yield list of values when a_i > a_slice*a_i-1 and a_i < a_slice*a_end
@@ -1061,6 +1116,22 @@ def plot_eff_time(stack_infos, out_dir='auto', a_eff_type="Pk", save=True, show=
     
     # save & show (in jupyter)
     close_fig(out_dir + 'D_eff_' + a_eff_type, fig, save=save, show=show, use_z_eff=use_z_eff, ext_legen=fig_leg)
+
+def plot_timesteps(PlotOpt, DataOpt):
+    Fig = FigOptions(PlotOpt)
+    Fig.ax.set_ylabel(r'$D_{eff}/D_{GR}$')
+    Fig.ax.set_xlabel(r'$N$')
+    Fig.ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    Fig.ax.yaxis.grid(True)
+    # plot data
+    for app, data in DataOpt.data.items():
+        x = data[:,0]
+        y = data[:,1]
+        Fig.ax.plot(x, y, 'o-', label=app)
+
+    # legend and closing
+    Fig.close('timesteps')
+
 
 def plot_pwr_spec_nl_amp_ax(a_sim_info, ax, ymin=0, ymax=0.4):
     # extract variables
