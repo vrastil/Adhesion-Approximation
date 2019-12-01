@@ -324,10 +324,15 @@ void print_rho_map(const Mesh& delta, const Sim_Param &sim, std::string out_dir,
 	BOOST_LOG_TRIVIAL(debug) << "Writing density map into file " << file_name;
 	File << "# This file contains density map delta(x).\n";
     File << "# x [Mpc/h]\tz [Mpc/h]\tdelta\n";
+    #define HALF_THICKNESS 1
     const size_t N = sim.box_opt.mesh_num_pwr;
 	for (size_t i = 0; i < N; i++){
 		for (size_t j = 0; j < N; j++){
-            File << i*x_0 << "\t" << j*x_0 << "\t" << delta(i, sim.box_opt.mesh_num_pwr/2, j) << "\n";
+            FTYPE_t proj_delta = 0;
+            for (int k = -HALF_THICKNESS; k < HALF_THICKNESS; j++){
+                proj_delta += delta(i, sim.box_opt.mesh_num_pwr/2 + k, j) + 1;
+            }
+            File << i*x_0 << "\t" << j*x_0 << "\t" << proj_delta - 1 << "\n";
 		}
 		File << "\n";
 	}
