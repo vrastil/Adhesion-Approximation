@@ -987,8 +987,8 @@ def stack_all(db, collection='data', query=None, rerun=None, skip=None, verbose=
 # RUN ANALYSIS -- CHI COMPARISON *
 # ********************************
 
-def plot_chi_wave_pot(db, collection='data', outdir=report_dir,
-                      n=None, phi=None, zs=None, save=True, show=True, k_scr=False):
+def plot_chi_wave_pot(db, PlotOpt, collection='data',
+                      n=None, phi=None, zs=None, k_scr=False):
     doc_id = db[collection].find_one({'app' : CHI}, {'_id' : 1})
     a_sim_info = struct.SimInfo(db, doc_id)
 
@@ -1005,7 +1005,7 @@ def plot_chi_wave_pot(db, collection='data', outdir=report_dir,
     chi_opt = [{'beta' : beta, 'n' : n_, 'phi' : phi_} for phi_ in phi for n_ in n]
 
     # plot
-    plot.plot_chi_evol(zs, a_sim_info, chi_opt=chi_opt, out_dir=outdir, save=save, show=show, k_scr=k_scr)
+    plot.plot_chi_evol(zs, a_sim_info, PlotOpt, chi_opt=chi_opt, k_scr=k_scr)
 
 
 def get_data_fp_chi_ratio(group, app='FP', app_chi='CHI', z=None):
@@ -1100,7 +1100,7 @@ def my_shape(data):
 
 
 
-def compare_chi_fp(db, collection='data', query=None, app='FP', app_chi='CHI', out_dir=report_dir, use_group=None, z=None, show=True, reverse=False, **kwargs):
+def compare_chi_fp(db, PlotOpt, collection='data', query=None, app='FP', app_chi='CHI', use_group=None, z=None, show=True, reverse=False, psl_ratio=False, **kwargs):
     groups = get_fp_chi_groups(db, collection=collection, query=query, app=app, app_chi=app_chi, **kwargs)
     if use_group is not None:
         groups = [groups[use_group]]
@@ -1133,7 +1133,7 @@ def compare_chi_fp(db, collection='data', query=None, app='FP', app_chi='CHI', o
             suptitle = "Relative chameleon power spectrum, " + lab
             # ut.print_info(suptitle)
 
-            plot.plot_chi_fp_z(data_z, a_sim_info, labels, out_dir=out_dir ,suptitle=suptitle, show=show, save=True)
+            plot.plot_chi_fp_z(PlotOpt, data_z, a_sim_info, labels, app_lab=app, suptitle=suptitle, psl_ratio=psl_ratio)
 
 def compare_chi_fp_map(chi_info, fp_info, out_dir=report_dir, show=True):
     # check we have same parameters
@@ -1227,7 +1227,7 @@ def load_get_corr(db, doc_id, collection='data', z=None):
     # return struct.SimInfo with all loaded data and redshifts
     return a_sim_info, zs
 
-def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=report_dir, z=1., bao_peak=True, show=True):
+def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=report_dir, z=1., bao_peak=True, show=True, scale_to_lin=False):
 
     extra_data = []
     zs = None
@@ -1239,7 +1239,7 @@ def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=re
     # get data, check redshift
     for sim_info in sim_infos:
         # init data
-        init_data(sim_info, get_corr=True)
+        init_data(sim_info, get_pk=True, get_corr=True)
         load_a_eff(sim_info, use_z_eff='Pk')
 
         zs_ = sim_info.data["corr_func"]["zs"]
@@ -1248,6 +1248,12 @@ def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=re
         # save needed values
         r, xi = sim_info.data["corr_func"]["par"][idx]
         idx_eff = idx - 1 if 'init' in zs_ else idx
+
+        # scale to linear
+        if scale_to_lin:
+            D_ratio = sim_info.data["eff_time"]["Pk"]["D_eff_ratio"][idx_eff]
+            xi /= pow(D_ratio, 2)
+        
         z_eff = sim_info.data["eff_time"]["Pk"]["z_eff"][idx_eff]
         lab = sim_info.app
         if 'CHI' in lab:
@@ -1268,7 +1274,7 @@ def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=re
         peak_loc = None
 
     data = {
-        'par' : [sim_info.data["corr_func"]["par"][idx]],
+        'par' : [[extra_data[-1]['r'], extra_data[-1]['xi']]],
         'lin': [sim_info.data["corr_func"]["lin"][idx]],
         'nl' : [sim_info.data["corr_func"]["nl"][idx]]
     }
@@ -1278,7 +1284,8 @@ def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=re
     }
 
     # plot simple correlation function and ratio
-    plot.plot_corr_func(data, [zs], sim_info, out_dir=outdir, save=True, show=show, extra_data=extra_data[:-1], peak_loc=peak_loc, use_z_eff=use_z_eff)
+    plot.plot_corr_func(data, [zs], sim_info, out_dir=outdir, save=True, show=show, extra_data=extra_data[:-1],
+                        peak_loc=peak_loc, use_z_eff=use_z_eff)
 
 def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outdir=report_dir, plot_all=True, chi=False, yrange=None, show=True, reverse=False):
 
@@ -1456,11 +1463,13 @@ def get_init_group(db, query, collection='data', pk_type='dens'):
 
     return groups
 
-def get_plot_mlt_pk_broad(db, query=None, collection='data', out_dir='auto', z=0, pk_type='dens', show=True):
+def get_plot_mlt_pk_broad(db, PlotOpt, query=None, collection='data', z=0, pk_type='dens', no_err=False):
     # default to non-CHI StackInfo with NM = 1024 and da = 0.
     if query is None:
         query = {'app' : NON_CHI, 'type' : 'stack_info',
-                'box_opt.mesh_num_pwr' : 1024, 'integ_opt.time_step' : 0.01}
+                'box_opt.mesh_num_pwr' : 1024, 'integ_opt.time_step' : 0.01,
+                }
+    database.add_smoothing_k_to_query(query)
 
    # matter power spectrum vs velocity divergence
     if pk_type == 'dens':
@@ -1488,8 +1497,8 @@ def get_plot_mlt_pk_broad(db, query=None, collection='data', out_dir='auto', z=0
 
     # plot
     cosmo = group[0].sim.cosmo
-    plot.plot_pwr_spec_comparison(Pk_list_extrap, data_all, zs, groups.keys(), cosmo, out_dir=out_dir, save=True, show=show, pk_type=pk_type)
-    plot.plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data_all, zs, groups.keys(), cosmo, out_dir=out_dir, save=show, show=show, pk_type=pk_type)
+    plot.plot_pwr_spec_comparison(PlotOpt, Pk_list_extrap, data_all, zs, groups.keys(), cosmo, pk_type=pk_type)
+    plot.plot_pwr_spec_comparison_ratio_nl(PlotOpt, Pk_list_extrap, data_all, zs, groups.keys(), cosmo, pk_type=pk_type, no_err=no_err)
 
 def get_plot_mlt_pk_diff_broad(db, query=None, collection='data', plot_diff=True, out_dir='auto', show=True):
     # default to non-CHI StackInfo with NM = 1024
@@ -1519,8 +1528,7 @@ def get_plot_mlt_pk_diff_broad(db, query=None, collection='data', plot_diff=True
                 show_nyquist=False, show_scales=False, save=True, show=show)
 
 
-def plot_pwr_spec_comparison_si(stack_infos, z=0, out_dir='auto', save=True, show=False,
-                                use_z_eff=False, scale_to_lin=True, chi=False):
+def plot_pwr_spec_comparison_si(stack_infos, PlotOpt, z=0, scale_to_lin=True, chi=False):
     Pk_list_extrap = []
     data = []
     zs = []
@@ -1544,7 +1552,27 @@ def plot_pwr_spec_comparison_si(stack_infos, z=0, out_dir='auto', save=True, sho
 
         k_max = np.minimum(k_max, si.k_nyquist["particle"])    
 
-    plot.plot_pwr_spec_comparison(Pk_list_extrap, data, zs, labels, cosmo, out_dir=out_dir, save=save, show=show,
-                    use_z_eff=use_z_eff, scale_to_lin=scale_to_lin, k_max=k_max, chi=chi)
-    plot.plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo, out_dir=out_dir,
-        save=save, show=show, use_z_eff=use_z_eff, scale_to_lin=scale_to_lin, k_max=k_max, chi=chi)
+    # plot.plot_pwr_spec_comparison(PlotOpt, Pk_list_extrap, data, zs, labels, cosmo, scale_to_lin=scale_to_lin, k_max=k_max, chi=chi)
+    plot.plot_pwr_spec_comparison_ratio_nl(PlotOpt, Pk_list_extrap, data, zs, labels, cosmo, scale_to_lin=scale_to_lin, k_max=k_max, chi=chi)
+
+
+def get_plot_pwr_spec_diff(db, PlotOpt, query=None, collection='data', pk_type='dens'):
+    # query
+    if query is None:
+        query = {'type' : 'stack_info', 'integ_opt.time_step' : 0.01}
+    database.add_smoothing_k_to_query(query)
+
+    # stack infos
+    stack_infos = get_stack_infos(db, box_size=2000, mesh_num_pwr=1024, query=query)
+
+    for stack_info in stack_infos:
+        zs, data_list = stack_info.get_zs_data("pwr_diff", '*input*')
+        a = [1./(z+1.) for z in zs if z != 'init']
+        correct_tza(stack_info, data_list)
+        supp = load_k_supp(data_list, stack_info.k_nyquist["particle"], a_sim_info=stack_info, a=a)
+        
+        # plots -- diff, supp 
+        plot.plot_pwr_spec_diff_from_data(PlotOpt, data_list, zs, stack_info, show_scales=False,
+                                    ext_title='init', add_app=True, max_nyquist=True)
+
+        # plot.plot_supp_lms(PlotOpt, supp, a, stack_info, add_app=True, scale_in_leg=False)

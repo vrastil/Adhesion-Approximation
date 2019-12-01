@@ -113,13 +113,16 @@ def get_pipeline(db, app, info_type='sim_info', query=None):
             ("_id.box_opt%smesh_num" % sep_str, 1),
             ("_id.box_opt%smesh_num_pwr" % sep_str, 1),
             ("_id.box_opt%spar_num" % sep_str, 1),
-            ("_id.box_opt%sbox_size" % sep_str, 1)
+            ("_id.box_opt%sbox_size" % sep_str, 1),
+            ("_id.integ_opt%stime_step" % sep_str, 1)
             ])}
     ]
 
     if app == 'CHI':
         pipeline[2]["$sort"]["_id.chi_opt%sphi" % sep_str] = 1
         pipeline[2]["$sort"]["_id.chi_opt%sn" % sep_str] = 1
+    elif app == 'TZA':
+        pipeline[2]["$sort"]["_id.cosmo%ssmoothing_k" % sep_str] = 1
 
     return pipeline
 
@@ -148,6 +151,8 @@ def print_db_info(db, collection='data', info_type='sim_info'):
                     msg += ' (linear)'
                 else:
                     msg += ' (non-linear)'
+            elif app == 'TZA':
+                msg += ", k_G = %.1f" %  numpy.sqrt(_id["cosmo%ssmoothing_k" % sep_str])
             msg += ", num = %i" % doc['count']
 
             query = {'app' : app, 'type' : info_type, 'data.files.vel_pwr_spec' : {"$exists": True }}
@@ -310,3 +315,8 @@ def init_database(a_dir, host='localhost', port=27017, user='admin', init=True, 
 
     return db
     
+def add_smoothing_k_to_query(query, smoothing_k=0.25):
+    query['$or'] = [
+             {'cosmo.smoothing_k' : smoothing_k},
+             {'cosmo.smoothing_k' : 0}
+        ]

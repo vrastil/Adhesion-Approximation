@@ -61,27 +61,42 @@ fig_size_map = (14, 14)
 report_dir = "/home/michal/Documents/GIT/FastSim/report/clanek/"
 
 class PlotOptions(object):
-    def __init__(self, def_dir='auto', save=True, show=False, use_z_eff=False):
-        
+    def __init__(self, def_dir='auto', save=True, show=False, use_z_eff=False,
+                 ymin=None, ymax=None, xmin=None, xmax=None):
         self.save = save
         self.show = show
         self.use_z_eff = use_z_eff
         self.def_dir = def_dir
         self.out_dir = self.def_dir
+        self.ymin = ymin
+        self.ymax = ymax
+        self.xmin = xmin
+        self.xmax = xmax
 
-    def append_dir(self, a_dir):
+    def append_dir(self, a_dir, def_slash=True, out_slash=True):
         # make sure default directory ends with '/'
-        if not self.def_dir.endswith('/'):
+        if def_slash and not self.def_dir.endswith('/'):
             self.def_dir += '/'
         
         # append subdirectory
         self.out_dir = self.def_dir + a_dir
 
         # make sure subdirectory ends with '/'
-        if not self.out_dir.endswith('/'):
+        if out_slash and not self.out_dir.endswith('/'):
             self.out_dir += '/'
         return self
 
+    def set_range(self, ymin=None, ymax=None, xmin=None, xmax=None):
+        self.ymin = ymin
+        self.ymax = ymax
+        self.xmin = xmin
+        self.xmax = xmax
+
+    def reset_range(self):
+        self.ymin = None
+        self.ymax = None
+        self.xmin = None
+        self.xmax = None
 
 class FigOptions(object):
     def __init__(self, PlotOpt, figsize=fig_size):
@@ -94,21 +109,40 @@ class FigOptions(object):
     def ax(self):
         return plt.gca()
 
-    def legend(self, figtext="", ext_legen=None):
+    def legend(self, figtext="", ext_legen=None, ax=None):
         if ext_legen is None:
             ext_legen = {'mlt_col' : 0.75, 'ncol' : 4, 'half_page' : True}
-        self.ext_legen = legend_manipulation(self.ax, figtext=figtext, ext_legen=ext_legen)
+        if ax is None:
+            ax = self.ax
+        self.ext_legen = legend_manipulation(ax, figtext=figtext, ext_legen=ext_legen)
 
-    def close(self, file_name, figtext="", ext_legen=None):
+    def set_range(self, ax=None):
+        if ax is None:
+            ax = self.ax
+
+        ymin = self.PlotOpt.ymin
+        ymax = self.PlotOpt.ymax
+        xmin = self.PlotOpt.xmin
+        xmax = self.PlotOpt.xmax
+
+        ax.set_ylim(ymin, ymax)
+        ax.set_xlim(xmin, xmax)
+
+    def close(self, file_name, figtext="", ext_legen=None, ax=None, set_range=False):
+        # set x- and y-range if set
+        if set_range:
+            self.set_range(ax=ax)
+
         # create legend if not already done
-        if self.ext_legen is None:
-            self.legend(figtext=figtext, ext_legen=ext_legen)
+        self.legend(figtext=figtext, ext_legen=ext_legen, ax=ax)
 
         # append filename after directory
         file_name = self.PlotOpt.out_dir + file_name
 
         # save and close
         close_fig(file_name, self.fig, save=self.PlotOpt.save, show=self.PlotOpt.show, use_z_eff=self.PlotOpt.use_z_eff, ext_legen=self.ext_legen)
+
+
 
 class DataOptions(object):
     def __init__(self, a_sim_info=None, data=None):
@@ -329,13 +363,9 @@ def plot_pwr_spec(data, zs, a_sim_info, Pk_list_extrap,
     # close & save figure
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
-def plot_pwr_spec_comparison(Pk_list_extrap, data, zs, labels, cosmo, out_dir='auto',
-            save=True, show=False, use_z_eff=False, scale_to_lin=True, pk_type='dens', k_max=None, chi=False):
+def plot_pwr_spec_comparison(PlotOpt, Pk_list_extrap, data, zs, labels, cosmo, scale_to_lin=True, pk_type='dens', k_max=None, chi=False):
     """" Plot power spectrum -- points and extrapolated values,
     show 'true' linear Pk at the initial and final redshift """
-    if out_dir == 'auto':
-        out_dir = report_dir
-
     if pk_type == 'dens':
         out_file = 'pwr_spec'
     elif pk_type == 'vel':
@@ -344,8 +374,9 @@ def plot_pwr_spec_comparison(Pk_list_extrap, data, zs, labels, cosmo, out_dir='a
         raise KeyError("Uknown pk_type: %s" % pk_type)
     suptitle = "Power spectrum"
 
-    fig = plt.figure(figsize=fig_size)
-    ax = plt.gca()
+    Fig = FigOptions(PlotOpt)
+    fig = Fig.fig
+    ax = Fig.ax
     ax.set_yscale('log')
     ax.set_xscale('log')
 
@@ -386,22 +417,18 @@ def plot_pwr_spec_comparison(Pk_list_extrap, data, zs, labels, cosmo, out_dir='a
     ax.set_xlabel(r"$k [h{\rm Mpc}^{-1}]$")
     ax.set_ylabel(r"$P(k) [(h^{-1}{\rm Mpc})^3]$")
 
-    # LEGEND manipulation
+    # legend and closing
     if chi:
         ext_legen = {'mlt_col' : 0.5, 'ncol' : 3}
     else:
         ext_legen = {'mlt_col' : 0.7, 'ncol' : 4, 'half_page' : True}
-    fig_leg = legend_manipulation(ax, "", ext_legen=ext_legen)
 
-    # close & save figure
-    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff, ext_legen=fig_leg)
+    Fig.close(out_file, ext_legen=ext_legen)
 
-def plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo, out_dir='auto',
-        save=True, show=False, use_z_eff=False, scale_to_lin=True, pk_type='dens', k_max=None, chi=False):
+def plot_pwr_spec_comparison_ratio_nl(PlotOpt, Pk_list_extrap, data, zs, labels, cosmo, scale_to_lin=True, pk_type='dens',
+                                      k_max=None, chi=False, symlog=False, no_err=False):
     """" Plot power spectrum -- points and extrapolated values,
     show 'true' linear Pk at the initial and final redshift """
-    if out_dir == 'auto':
-        out_dir = report_dir
     if pk_type == 'dens':
         out_file = 'pwr_spec_ratio_nl'
     elif pk_type == 'vel':
@@ -411,10 +438,12 @@ def plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo, o
 
     suptitle = "Power spectrum"
 
-    fig = plt.figure(figsize=fig_size)
-    ax = plt.gca()
-    # ax.set_yscale('symlog', linthreshy=0.1, linscaley=1)
-    # ax.set_yscale('log')
+    Fig = FigOptions(PlotOpt)
+    fig = Fig.fig
+    ax = Fig.ax
+
+    if symlog:
+        ax.set_yscale('symlog', linthreshy=0.01, linscaley=2)
     ax.set_xscale('log')
 
     # get non-linear power spectra
@@ -439,8 +468,14 @@ def plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo, o
         else:
             P_k_tmp = P_k
 
-        ax.errorbar(k, P_k_tmp / P_0_nl, yerr=P_k_std/P_0_nl, fmt='o', label=lab)
-        # ax.plot(k, P_k_tmp / P_0_nl - 1, 'o', label=lab)
+        if symlog:
+            y = P_k_tmp / P_0_nl - 1
+        else:
+            y = P_k_tmp / P_0_nl
+        if no_err:
+            ax.plot(k, y, 'o', label=lab)
+        else:
+            ax.errorbar(k, y, yerr=P_k_std/P_0_nl, fmt='o', label=lab)
 
     # plot linear power spectra
     k_ = np.geomspace(k[0],k[-1], num=200)
@@ -448,7 +483,10 @@ def plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo, o
     P_0 = power.lin_pow_spec(a_0, k_, cosmo)
     P_0_nl_ = power.non_lin_pow_spec(a_0, k_, cosmo)
 
-    ax.plot(k_, P_0 / P_0_nl_, '-', label=r"$\Lambda$CDM (lin)")
+    if symlog:
+        ax.plot(k_, P_0 / P_0_nl_ - 1, '-', label=r"$\Lambda$CDM (lin)")
+    else:
+        ax.plot(k_, P_0 / P_0_nl_, '-', label=r"$\Lambda$CDM (lin)")
     
     fig_suptitle(fig, suptitle, y=0.95)
     ax.set_xlabel(r"$k [h{\rm Mpc}^{-1}]$")
@@ -457,12 +495,8 @@ def plot_pwr_spec_comparison_ratio_nl(Pk_list_extrap, data, zs, labels, cosmo, o
     #ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax.yaxis.grid(True)
 
-    # LEGEND manipulation
-    legend_manipulation(ax, "", ext_legen=True)
-
-    # close & save figure
-    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
-
+    # legend and closing
+    Fig.close(out_file, ext_legen=True, set_range=True)
 
 def plot_chi_pwr_spec(data_list_chi, zs_chi, a_sim_info, out_dir='auto', save=True, show=False, use_z_eff=False):
     if out_dir == 'auto':
@@ -579,24 +613,32 @@ def plot_chi_fp_map(data_array, zs, chi_info, out_dir='auto', save=True, show=Fa
         out_file += "_nl"
     close_fig(out_dir + out_file, fig, save=save, show=show, format='png')
 
-def plot_chi_fp_z(data_z, a_sim_info, labels, out_dir='auto', suptitle='auto', save=True, show=False, use_z_eff=False, max_nyquist=True):
-    if out_dir == 'auto':
-        out_dir = a_sim_info.res_dir
+def plot_chi_fp_z(PlotOpt, data_z, a_sim_info, labels, app_lab='FPA', suptitle='auto', max_nyquist=True, psl_ratio=False):
     bo = a_sim_info.box_opt
     app = a_sim_info.app.lower()
     out_file = '%s_pwr_diff_%im_%ip_%iM_%ib' % (app, bo["mesh_num"], bo["Ng"], bo["mesh_num_pwr"], bo["box_size"])
     # if suptitle == 'auto':
     #     suptitle = "Relative chameleon power spectrum"
 
-    fig = plt.figure(figsize=fig_size)
-    ax = plt.gca()
-    plt.xscale('log')
-    ymax = 1
-    ymin = 0.95
-    for data_chi, label in izip(data_z, labels): # each chi
+    Fig = FigOptions(PlotOpt)
+    fig = Fig.fig
+    ax = Fig.ax
+    ax.set_xscale('log')
+    ymax = PlotOpt.ymax
+    ymin = PlotOpt.ymin
+
+    i = 0
+    while i < len(data_z): # each chi
+        data_chi, label = data_z[i], labels[i]
         k = data_chi[0]
         Pk = data_chi[1]
-        # std = data_chi[2]
+        
+        if psl_ratio:
+            data_chi_lin = data_z[i+1]
+            Pk /= data_chi_lin[1]
+            i += 2
+        else:
+            i += 1
 
         if max_nyquist:
             idx = (np.abs(k - a_sim_info.k_nyquist["particle"])).argmin()
@@ -604,7 +646,6 @@ def plot_chi_fp_z(data_z, a_sim_info, labels, out_dir='auto', suptitle='auto', s
             Pk = Pk[0:idx]
             # std = std[0:idx]
 
-        ymax = max(ymax, np.max(Pk))
         if "(psl)" in label:
             color = ax.get_lines()[-1].get_color()
             ls = ":"
@@ -615,24 +656,26 @@ def plot_chi_fp_z(data_z, a_sim_info, labels, out_dir='auto', suptitle='auto', s
         # ax.errorbar(k, Pk, fmt='o', yerr=std, label=label)
         ax.plot(k, Pk, 'o', ls=ls, c=color, label=label)
 
+
     if not max_nyquist:
         add_nyquist_info(ax, a_sim_info)
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax.yaxis.grid(True)
 
-    ymax *= 1.1
     ax.set_ylim(ymin, ymax)
 
     fig_suptitle(fig, suptitle)
-    plt.xlabel(r"$k [h{\rm Mpc}^{-1}]$")
-    plt.ylabel(r"${P_\chi(k)}/{P_{\rm FP}(k)}$")
+    ax.set_xlabel(r"$k [h{\rm Mpc}^{-1}]$")
+    if psl_ratio:
+        ax.set_ylabel(r"${P_\chi(k)}/{P_{\chi\rm{,psl}}}(k)}$")
+        out_file += '_lin_ratio'
+    else:
+        ax.set_ylabel(r"${P_\chi(k)}/{P_{\rm " + app_lab + r"}(k)}$")
     #figtext = a_sim_info.info_tr().replace("FP: ", "")
-    ext_legen = {'mlt_col' : 0.6, 'ncol' : 2, 'half_page' : True, 'fontsize' : 25}
-    fig_leg = legend_manipulation(figtext="", ext_legen=ext_legen)
-    
 
-    # save & show (in jupyter)
-    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff, ext_legen=fig_leg)
+    # legend and closing
+    ext_legen = {'mlt_col' : 0.6, 'ncol' : 2, 'half_page' : False, 'fontsize' : 50}
+    Fig.close(out_file, ext_legen=ext_legen, set_range=True)
 
 
 def plot_chi_fp_res_ax(ax, data_chi, si, ymax):
@@ -644,13 +687,13 @@ def plot_chi_fp_res_ax(ax, data_chi, si, ymax):
     if si.chi_opt["linear"]:
         label += " (psl)"
         color = ax.get_lines()[-1].get_color()
-        ls = ":"
+        ls = "--"
     else:
         label += " (nl)"
         color = None
         ls = "-"
     # ax.errorbar(k, Pk, fmt='o', yerr=std, label=label)
-    ax.plot(k, Pk, 'o', ls=ls, label=label, c=color)
+    ax.plot(k, Pk, ls=ls, label=label, c=color)
     return ymax
 
 def plot_chi_fp_res(data_all, sim_infos, out_dir='auto', suptitle='auto', save=True, show=False):
@@ -856,7 +899,8 @@ def plot_corr_func_ratio(r, xi, r_lin, xi_lin, r_nl, xi_nl, lab, suptitle, ylabe
     close_fig(file_name, fig, save=save, show=show, use_z_eff=use_z_eff, ext_legen=fig_leg)
 
 def plot_corr_func_single(corr_data, lab, a_sim_info, corr_data_lin=None, corr_data_nl=None, out_dir='auto',
-                          save=True, show=False, use_z_eff=False, is_sigma=False, only_r2=True, pt_ratio=False, extra_data=None, peak_loc=None):
+                          save=True, show=False, use_z_eff=False, is_sigma=False, only_r2=True, pt_ratio=False,
+                          extra_data=None, peak_loc=None):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
     if is_sigma:
@@ -911,7 +955,8 @@ def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, sho
             save=save, show=show, is_sigma=is_sigma, only_r2=only_r2,
             extra_data=extra_data, peak_loc=peak_loc, use_z_eff=use_z_eff)
 
-def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False, ls=None, get_last_col=False, fp_comp=False, single=False, yrange=None, zs_cut=6):
+def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False, ls=None, get_last_col=False, fp_comp=False,
+                  single=False, yrange=None, zs_cut=6):
     # load all available data (GSL integration could have failed)
     peak_data = [x for x in a_sim_info.data["corr_func"]["par_peak"] if x["z"] != "init" and x["z"] < zs_cut]
     zs = [x["z"] for x in peak_data if x["z"] < zs_cut]
@@ -1123,6 +1168,9 @@ def plot_timesteps(PlotOpt, DataOpt):
     Fig.ax.set_xlabel(r'$N$')
     Fig.ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     Fig.ax.yaxis.grid(True)
+    Fig.ax.set_xscale('log')
+    Fig.ax.set_xticks([25, 50, 100, 200, 400])
+    Fig.ax.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
     # plot data
     for app, data in DataOpt.data.items():
         x = data[:,0]
@@ -1349,10 +1397,8 @@ def plot_pwr_spec_diff_from_data_mlt(data_lists, zs, sim_infos, out_dir='auto', 
     legend_manipulation(ax, "")
     close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff)
 
-def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', show_scales=True, pk_type='dens',
-                                 ext_title='par', save=True, show=False, use_z_eff=False, add_app=False, show_nyquist=True, max_nyquist=False, chi=False):
-    if out_dir == 'auto':
-        out_dir = a_sim_info.res_dir
+def plot_pwr_spec_diff_from_data(PlotOpt, data_list, zs, a_sim_info, show_scales=True, pk_type='dens',
+                                 ext_title='par', add_app=False, show_nyquist=True, max_nyquist=False, chi=False):
     if pk_type == "dens":
         out_file = 'pwr_spec_diff'
         suptitle = "Power spectrum difference"
@@ -1370,8 +1416,9 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', show
     if add_app:
         out_file += '_%s' % a_sim_info.app
 
-    fig = plt.figure(figsize=fig_size)
-    ax = plt.gca()
+    Fig = FigOptions(PlotOpt)
+    fig = Fig.fig
+    ax = Fig.ax
     plot_pwr_spec_diff_from_data_ax(ax, data_list, zs, a_sim_info, show_scales=show_scales, pk_type=pk_type,
                                     show_nyquist=show_nyquist, max_nyquist=max_nyquist)
     
@@ -1383,13 +1430,14 @@ def plot_pwr_spec_diff_from_data(data_list, zs, a_sim_info, out_dir='auto', show
     fig_suptitle(fig, suptitle)
     ax.set_xlabel(r"$k [h{\rm Mpc}^{-1}]$")
     ax.set_ylabel(r"$P(k)/P_{\rm lin}(k)-1$")
-    # legend_manipulation(ax, a_sim_info.info_tr())
+    
+    # legend and closing
     if max_nyquist:
         ext_legen = {'mlt_col' : 0.5, 'ncol' : 7}
     else:
         ext_legen = {'mlt_col' : 0.55, 'ncol' : 4}
-    fig_leg = legend_manipulation(ax, "", ext_legen=ext_legen)
-    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff, ext_legen=fig_leg)
+
+    Fig.close(out_file, ext_legen=ext_legen, set_range=True)
 
 def plot_pwr_spec_diff_emu(zs, a_sim_info, k=None, out_dir='auto', save=True, show=False, ymin=-1, ymax=0.6):
     if out_dir == 'auto':
@@ -1751,10 +1799,8 @@ def plot_dens_evol(files, zs, a_sim_info, out_dir='auto', save=True):
     plt.close(fig)
 
 
-def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=False, use_z_eff=False, k_scr=False):
+def plot_chi_evol(zs, a_sim_info, PlotOpt, chi_opt=None, k_scr=False):
     """" Plot evolution of chameleon background values -- Compton wavelength and screening potential """
-    if out_dir == 'auto':
-        out_dir = a_sim_info.res_dir
     out_file = 'chi_evol'
     suptitle = "Evolution of Chameleon"
 
@@ -1764,7 +1810,8 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
     x_fig_size, y_fig_size = fig_size
     y_fig_size *= N/3.
 
-    fig = plt.figure(figsize=(x_fig_size, y_fig_size))
+    Fig = FigOptions(PlotOpt, figsize=(x_fig_size, y_fig_size))
+
     cosmo = a_sim_info.sim.cosmo
     if chi_opt is None:
         chi_opt = [a_sim_info.chi_opt]
@@ -1813,22 +1860,19 @@ def plot_chi_evol(zs, a_sim_info, chi_opt=None, out_dir='auto', save=True, show=
             k_scr_data = power.chi_psi_k_a(a, cosmo, chi)
             ax4.plot(zs, k_scr_data)
     
-    fig_suptitle(fig, suptitle)
+    fig_suptitle(Fig.fig, suptitle)
     plt.setp(ax1.get_xticklabels(), visible=False)
     plt.setp(ax2.get_xticklabels(), visible=False)
     
     # plot from high redshift to 0
     ax1.invert_xaxis()
 
-    # LEGEND manipulation
-    ext_legen = {'mlt_col' : 0.75, 'ncol' : 2, 'half_page' : True}
-    fig_leg = legend_manipulation(ax=ax1, figtext="", ext_legen=ext_legen)
-
     # subplots
-    fig.subplots_adjust(hspace=0)
+    Fig.fig.subplots_adjust(hspace=0)
 
-    # close & save figure
-    close_fig(out_dir + out_file, fig, save=save, show=show, use_z_eff=use_z_eff, ext_legen=fig_leg)
+    # legend and closing
+    ext_legen = {'mlt_col' : 0.75, 'ncol' : 2, 'half_page' : True}
+    Fig.close(out_file, ext_legen=ext_legen, ax=ax1)
 
 
 def plot_supp_lms(supp, a, a_sim_info, out_dir='auto', pk_type='dens', suptitle='', save=True, show=False,
