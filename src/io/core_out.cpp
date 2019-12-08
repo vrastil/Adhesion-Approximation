@@ -324,18 +324,53 @@ void print_rho_map(const Mesh& delta, const Sim_Param &sim, std::string out_dir,
 	BOOST_LOG_TRIVIAL(debug) << "Writing density map into file " << file_name;
 	File << "# This file contains density map delta(x).\n";
     File << "# x [Mpc/h]\tz [Mpc/h]\tdelta\n";
-    #define HALF_THICKNESS 1
+
+    #define HALF_THICKNESS  2
+    #define MAX_SIZE        512
+    // create buffer into which we can write in parallel
+    // smear density field if we have very hight accuracy
     const size_t N = sim.box_opt.mesh_num_pwr;
-	for (size_t i = 0; i < N; i++){
-		for (size_t j = 0; j < N; j++){
+    const size_t N_step = N  > MAX_SIZE ? N / MAX_SIZE : 1;
+    std::vector<FTYPE_t> buffer(N/N_step*N/N_step);
+
+    // go throught one side (in parallel)
+    #pragma omp parallel for
+    for (size_t i = 0; i < N; i += N_step)
+    {
+        for (size_t j = 0; j < N; j += N_step)
+        {
+            // average over one side, add up 3rd dimension
             FTYPE_t proj_delta = 0;
-            for (int k = -HALF_THICKNESS; k < HALF_THICKNESS; j++){
-                proj_delta += delta(i, sim.box_opt.mesh_num_pwr/2 + k, j) + 1;
+            for (size_t i_xx = 0; i_xx < N_step; i_xx++)
+            {
+                for (size_t j_xx = 0; j_xx < N_step; j_xx++)
+                {
+                    for (int k = -HALF_THICKNESS; k < HALF_THICKNESS; k++)
+                    {
+                        // we are at [i+i_xx, N/2 + k, j+j_xx]
+                        proj_delta += delta(i+i_xx, sim.box_opt.mesh_num_pwr/2 + k, j+j_xx) + 1;
+                    }
+                }
             }
-            File << i*x_0 << "\t" << j*x_0 << "\t" << proj_delta - 1 << "\n";
-		}
-		File << "\n";
-	}
+            // average and save
+            proj_delta /= N_step*N_step;
+            proj_delta--;
+            size_t id = (i/N_step) * (N/N_step) + j/N_step;
+            buffer[id] = proj_delta;
+        }
+    }
+
+    // write into file
+    for (size_t i = 0; i < N; i += N_step)
+    {
+        for (size_t j = 0; j < N; j += N_step)
+        {
+            size_t id = (i/N_step) * (N/N_step) + j/N_step;
+            FTYPE_t proj_delta = buffer[id];
+            File << i*x_0 << "\t" << j*x_0 << "\t" << proj_delta << "\n";
+        }
+        File << "\n";
+    }
 }
 
 void print_projected_rho(const Mesh& delta, const Sim_Param &sim, std::string out_dir, std::string suffix)

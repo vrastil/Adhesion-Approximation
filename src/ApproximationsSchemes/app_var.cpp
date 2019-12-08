@@ -213,7 +213,7 @@ public:
         gen_rho_dist_k(APP.sim, APP.app_field[0], APP.p_F);
 
         /* Print input power spectrum (one realisation), before Zel`dovich push */
-        if (print_every) print_input_realisation(APP);
+        if (print_every && APP.sim.out_opt.print_pwr) print_input_realisation(APP);
         
         /* Computing initial potential in k-space */
         gen_pot_k(APP.app_field[0], APP.power_aux[0]);
