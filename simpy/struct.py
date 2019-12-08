@@ -316,6 +316,32 @@ class SimInfo(object):
                 {'$addToSet': {db_key : upd_doc}} # update
             )
 
+    def save_temp(self):
+        glob_key = self.doc_id['_id']
+        global ALL_STACK_INFOS
+
+        keys = self.data.keys()
+
+        if glob_key not in ALL_STACK_INFOS:
+            ALL_STACK_INFOS[glob_key] = {}
+
+        for key in keys:
+            if key not in ALL_STACK_INFOS[glob_key]:
+                ALL_STACK_INFOS[glob_key][key] = self.data[key]
+        # need to use the sam SimParam as in Extra_Pk, etc.
+        ALL_STACK_INFOS[glob_key]['_sim'] = self._sim
+
+    def load_temp(self):
+        glob_key = self.doc_id['_id']
+        global ALL_STACK_INFOS
+
+        if glob_key in ALL_STACK_INFOS:
+            keys = ALL_STACK_INFOS[glob_key].keys()
+            for key in keys:
+                self.data[key] = ALL_STACK_INFOS[glob_key][key]
+            # need to use the sam SimParam as in Extra_Pk, etc.
+            self._sim = ALL_STACK_INFOS[glob_key]['_sim']
+
 class StackInfo(SimInfo):
     def __getitem__(self, key):
         return self.sim_ids[key]
@@ -346,32 +372,6 @@ class StackInfo(SimInfo):
 
         # try to load data if we already save something during this run of program
         self.load_temp()
-
-    def save_temp(self):
-        glob_key = self.doc_id['_id']
-        global ALL_STACK_INFOS
-
-        keys = self.data.keys()
-
-        if glob_key not in ALL_STACK_INFOS:
-            ALL_STACK_INFOS[glob_key] = {}
-
-        for key in keys:
-            if key not in ALL_STACK_INFOS[glob_key]:
-                ALL_STACK_INFOS[glob_key][key] = self.data[key]
-        # need to use the sam SimParam as in Extra_Pk, etc.
-        ALL_STACK_INFOS[glob_key]['_sim'] = self._sim
-
-    def load_temp(self):
-        glob_key = self.doc_id['_id']
-        global ALL_STACK_INFOS
-
-        if glob_key in ALL_STACK_INFOS:
-            keys = ALL_STACK_INFOS[glob_key].keys()
-            for key in keys:
-                self.data[key] = ALL_STACK_INFOS[glob_key][key]
-            # need to use the sam SimParam as in Extra_Pk, etc.
-            self._sim = ALL_STACK_INFOS[glob_key]['_sim']
 
     def find_data_in_db(self):
         # get document with run information

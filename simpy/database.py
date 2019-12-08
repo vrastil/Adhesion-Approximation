@@ -205,7 +205,7 @@ def is_new_sim(sim_param, override):
             return datetime.datetime.strptime(sim_param["database"]["timestamp"], '%Y-%m-%d %H:%M:%S.%f') < override      
     return True
 
-def add_one_sim_data(a_file, db, collection='data', override=False):
+def add_one_sim_data(a_file, db, collection='data', override=False, collection_large='data_large'):
     """load simulation parameters with available data and save them into database,
     return true if the record was not in the database before"""
 
@@ -258,6 +258,32 @@ def add_one_sim_data(a_file, db, collection='data', override=False):
         if not data_files_dict[data_dir]:
             del data_files_dict[data_dir]
 
+    # large files for density maps save separately (may exceed 16MB limit for BSON)
+    large_key = 'rho_map'
+    if large_key in data_files_dict:
+        # copy doc except the data
+        data_large = {key : value for key, value in data.items() if key != 'data'}
+        # remove large data from original document
+        data_large['data'] = {
+            'files' : {
+                large_key : data_files_dict.pop(large_key)
+            },
+            'processed' : {}
+        }
+
+        # leave only one file
+        data_large_files_list = data_large['data']['files'][large_key]
+        low_z_data = min(data_large_files_list, key=lambda x: x['z'])
+        
+        # for rho_map we need only density, [x, z, rho]
+        rho = pickle.loads(low_z_data['data'])
+        rho = rho[2,:]
+        low_z_data['data'] = pickle.dumps(rho)
+
+        # save it into the database
+        data_large['data']['files'][large_key] = [low_z_data]
+        db[collection_large].find_one_and_update(data_large,  {"$set" : data_large}, upsert=True)
+
     # save eveyrthing into the database
     if db[collection].find_one_and_update(data,  {"$set" : data}, upsert=True) is None:
         new = True
@@ -287,7 +313,7 @@ def add_many_sim_data(a_dir, db, collection='data', a_file='sim_param.json', ver
 
     # find all simulations parameters and load data
     new_docs = 0
-    sim_files = ut.get_files_in_traverse_dir(a_dir, a_file)
+    sim_files = ut.get_files_in_traverse_dir_stop(a_dir, a_file, stop=True, verbose=verbose)
     length = len(sim_files)
     for i, sim_file in enumerate(sim_files):
         print("Adding simulation %i from %i\r" % (i + 1, length), end='')

@@ -66,13 +66,33 @@ def get_files_in_traverse_dir(a_dir, patterns):
     """ return list of all files in directory which matches 'patterns'
     support Unix filename pattern matching ('*', '?', [seq], [!seq])
     and multiple option in 'patterns' (space delimetered) """
-
     return list(set([ # throw away duplicate files
         os.path.join(root, name) # full file name
         for root, _, files in os.walk(a_dir) # go through all subdirectores
         for pattern in patterns.split() # if multiple patterns given
         for name in fnmatch.filter(files, pattern) # pattern matching
         ]))
+
+def get_files_in_traverse_dir_stop(a_dir, patterns, stop=False, verbose=False):
+    # type: (str, str) -> List[str]
+    """ return list of all files in directory which matches 'patterns'
+    support Unix filename pattern matching ('*', '?', [seq], [!seq])
+    and multiple option in 'patterns' (space delimetered) 
+    if 'stop' is true, do not go through nested subdirectories of the first match
+    """
+    if not stop:
+        return get_files_in_traverse_dir(a_dir, patterns)
+    #else:
+    res = []
+    for root, dirs, files in os.walk(a_dir):            # go through all subdirectores
+        if verbose and root.endswith('_run'):
+            print("Going through directory '%s' which has %i subdirectories." % (root, len(dirs)))
+        for pattern in patterns.split():                # if multiple patterns given
+            for name in fnmatch.filter(files, pattern): # pattern matching
+                res.append(os.path.join(root, name))    # full file name
+                dirs[:] = []                            # skip nested subdirectories
+
+    return list(set(res)) # throw away duplicate files
 
 def sort_lists(*lists):
     return zip(*sorted(zip(*lists), reverse=True))
