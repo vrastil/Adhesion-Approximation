@@ -128,7 +128,7 @@ class FigOptions(object):
         ax.set_ylim(ymin, ymax)
         ax.set_xlim(xmin, xmax)
 
-    def close(self, file_name, figtext="", ext_legen=None, ax=None, set_range=False):
+    def close(self, file_name, figtext="", ext_legen=None, ax=None, set_range=False, format='eps'):
         # set x- and y-range if set
         if set_range:
             self.set_range(ax=ax)
@@ -140,7 +140,7 @@ class FigOptions(object):
         file_name = self.PlotOpt.out_dir + file_name
 
         # save and close
-        close_fig(file_name, self.fig, save=self.PlotOpt.save, show=self.PlotOpt.show, use_z_eff=self.PlotOpt.use_z_eff, ext_legen=self.ext_legen)
+        close_fig(file_name, self.fig, save=self.PlotOpt.save, show=self.PlotOpt.show, use_z_eff=self.PlotOpt.use_z_eff, ext_legen=self.ext_legen, format=format)
 
 
 
@@ -1728,33 +1728,44 @@ def plot_par_evol(files, files_t, zs, a_sim_info, out_dir='auto', save=True):
 def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=False, use_z_eff=False):
     if out_dir == 'auto':
         out_dir = a_sim_info.res_dir
-    fig = plt.figure(figsize=(10, 10))
+    fig = plt.figure(figsize=fig_size_map)
     gs = gridspec.GridSpec(1, 15, wspace=0.5)
     ax = plt.subplot(gs[0, : -1])
     cbar_ax = plt.subplot(gs[0, -1])
 
-    plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
-                bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
-    ax.set_xlabel(r"$x [h^{-1}{\rm Mpc}]$")
-    ax.set_ylabel(r"$z [h^{-1}{\rm Mpc}]$")
+    # plt.figtext(0.5, 0.94, a_sim_info.info_tr(),
+    #            bbox={'facecolor': 'white', 'alpha': 0.2}, size=14, ha='center', va='top')
+    # ax.set_xlabel(r"$x [h^{-1}{\rm Mpc}]$")
+    # ax.set_ylabel(r"$z [h^{-1}{\rm Mpc}]$")
     L = int(np.sqrt(rho.shape[0]))
     rho.shape = L, L
     im = ax.imshow(rho, interpolation='bicubic', cmap='gnuplot',
                    norm=SymLogNorm(linthresh=1.0, linscale=1,
                                    vmin=-1, vmax=100), aspect='auto',
                    extent=[0, a_sim_info.box_opt["box_size"], 0, a_sim_info.box_opt["box_size"]])
-    fig_suptitle(fig, "Slice through simulation box (overdensity), z = %.2f" % z)
     cbar = fig.colorbar(im, cax=cbar_ax, ticks=[-1, 0, 1, 10, 100])
     cbar.ax.set_yticklabels(['-1', '0', '1', '10', '> 100'])
-    close_fig(out_dir + 'dens_z%.2f' % z, fig, save=save, show=show, use_z_eff=use_z_eff, format='png')
 
-def plot_dens_two_slices(files, zs, a_sim_info, out_dir='auto', save=True, show=False, use_z_eff=False):
-    half = len(files) // 2
-    rho, z = np.loadtxt(files[half])[:, 2], zs[half]
+    # hide ticks
+    ax.tick_params(which='both', labelbottom=False, labelleft=False,
+                  bottom=False, top=False, left=False, right=False)
+
+    # fig_suptitle(fig, "Slice through simulation box (overdensity), z = %.2f" % z)
+    bo = a_sim_info.box_opt
+    app = a_sim_info.app.lower()
+    close_fig(out_dir + '%s_dens_%im_%ip_%iM_%ib_z%.2f' % (app, bo["mesh_num"], bo["Ng"], bo["mesh_num_pwr"], bo["box_size"], z),
+              fig, save=save, show=show, use_z_eff=use_z_eff, format='png')
+    
+
+def plot_dens_two_slices(data, zs, a_sim_info, out_dir='auto', save=True, show=False, use_z_eff=False):
+    half = len(data) // 2
+    rho, z = data[half], zs[half]
     plot_dens_one_slice(rho, z, a_sim_info,
                         out_dir=out_dir, save=save, show=show, use_z_eff=use_z_eff)
-    rho, z = np.loadtxt(files[-1])[:, 2], zs[-1]
-    plot_dens_one_slice(rho, z, a_sim_info,
+
+    if len(data) > 1:
+        rho, z = data[-1], zs[-1]
+        plot_dens_one_slice(rho, z, a_sim_info,
                         out_dir=out_dir, save=save, show=show, use_z_eff=use_z_eff)
 
 

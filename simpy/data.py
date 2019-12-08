@@ -321,7 +321,8 @@ def get_plot_supp_map(data_list, zs, a_sim_info, pk_type='dens', **kwargs):
 def load_plot_pwr_spec_diff(data_list, zs, a_sim_info, **kwargs):
     data_array = check_data_consistency_diff(data_list)
     correct_tza(a_sim_info, data_array)
-    plot.plot_pwr_spec_diff_from_data(data_array, zs, a_sim_info, **kwargs)
+    PlotOpt = kwargs.get("PlotOpt", plot.PlotOptions(save=False, show=False))
+    plot.plot_pwr_spec_diff_from_data(PlotOpt, data_array, zs, a_sim_info, **kwargs)
 
 #
 # !!! TO-DO
@@ -461,7 +462,7 @@ def init_data(a_sim_info, z=None, get_pk=False, get_corr=False, get_sigma=False,
 
     return True
 
-def get_stack_infos(db, collection='data', query=None, chi_opt=None, Nt=100, **kwargs):
+def get_stack_infos(db, collection='data', query=None, chi_opt=None, Nt=100, InfoType=struct.StackInfo, **kwargs):
     if query is None:
         query = {'app' : NON_CHI, 'type' : 'stack_info'}
 
@@ -478,7 +479,7 @@ def get_stack_infos(db, collection='data', query=None, chi_opt=None, Nt=100, **k
     stack_infos = []
     cursor = db[collection].find(query, {'_id' : 1})
     for doc in cursor:
-        stack_info = struct.StackInfo(db, doc)
+        stack_info = InfoType(db, doc, collection=collection)
         stack_infos.append(stack_info)
     return stack_infos
 
@@ -503,7 +504,7 @@ def reinit_data(sim_infos, get_pk=True, get_corr=True, get_sigma=False):
 # RUN ANALYSIS -- SINGLE RUN *
 # ****************************
 
-def analyze_run(a_sim_info, rerun=None, skip=None):
+def analyze_run(a_sim_info, rerun=None, skip=None, **kwargs):
     # try to load data, if exists
     a_sim_info.get_data_from_db()
     a_sim_info.load_temp()
@@ -550,10 +551,11 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
     ]
 
     # perform all steps, skip step if Exception occurs
-    for key, patterns, plot_func, kwargs in all_steps:
+    for key, patterns, plot_func, step_kwargs in all_steps:
+        step_kwargs.update(kwargs)
         try:
             load_check_plot(a_sim_info, key, patterns, rerun,
-                            skip, plot_func, **kwargs)
+                            skip, plot_func, **step_kwargs)
         except KeyboardInterrupt:
             raise
         except Exception:
@@ -569,7 +571,7 @@ def analyze_run(a_sim_info, rerun=None, skip=None):
             ut.print_done()
     a_sim_info.save_temp()
 
-def analyze_all(db, collection='data', query=None, rerun=None, skip=None, only=None):
+def analyze_all(db, collection='data', query=None, rerun=None, skip=None, only=None, **kwargs):
     # filter database
     if query is None:
         query = {}
@@ -586,7 +588,7 @@ def analyze_all(db, collection='data', query=None, rerun=None, skip=None, only=N
     for a_sim_info in sim_infos:
         ut.print_info('Analyzing run: ' , math_mode=a_sim_info.info_tr(math_mode=True), app=a_sim_info.app)
         try:
-            analyze_run(a_sim_info, rerun=rerun, skip=skip)
+            analyze_run(a_sim_info, rerun=rerun, skip=skip, **kwargs)
         except KeyboardInterrupt:
             print('Exiting...')
             return
