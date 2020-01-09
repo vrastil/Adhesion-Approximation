@@ -44,7 +44,7 @@ protected:
 
 private:
     // no CIC correction for ZA
-    void pot_corr() override;
+    void pot_corr(std::vector<Mesh>& vel_field, Mesh& pot_k) override;
 
     // ZA with velocitites
     void upd_pos() override;

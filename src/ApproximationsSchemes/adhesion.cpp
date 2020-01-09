@@ -182,11 +182,11 @@ App_Var_AA::App_Var_AA(const Sim_Param &sim):
 
 App_Var_AA::~App_Var_AA() = default;
 
-void App_Var_AA::pot_corr()
+void App_Var_AA::pot_corr(std::vector<Mesh>& vel_field, Mesh& pot_k)
 {
     /* Computing initial expotential */
-	fftw_execute_dft_c2r(p_B, power_aux[0]);
-    gen_init_expot(power_aux[0], m_impl->expotential, sim.app_opt.nu);
+	fftw_execute_dft_c2r(p_B, pot_k);
+    gen_init_expot(pot_k, m_impl->expotential, sim.app_opt.nu);
 }
 
 void App_Var_AA::upd_pos()

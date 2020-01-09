@@ -163,14 +163,14 @@ App_Var_FP_mod::App_Var_FP_mod(const Sim_Param &sim):
 
 App_Var_FP_mod::~App_Var_FP_mod() = default;
 
-void App_Var_FP_mod::pot_corr()
+void App_Var_FP_mod::pot_corr(std::vector<Mesh>& vel_field, Mesh& pot_k)
 {
     /* Computing displacement in k-space with S2 shaped particles */
-	gen_displ_k_S2(app_field, power_aux[0], sim.app_opt.a);
+	gen_displ_k_S2(vel_field, pot_k, sim.app_opt.a);
     
     /* Computing force in q-space */
     BOOST_LOG_TRIVIAL(debug) << "Computing force in q-space...";
-    fftw_execute_dft_c2r_triple(p_B, app_field);
+    fftw_execute_dft_c2r_triple(p_B, vel_field);
 }
 
 void App_Var_FP_mod::upd_pos()

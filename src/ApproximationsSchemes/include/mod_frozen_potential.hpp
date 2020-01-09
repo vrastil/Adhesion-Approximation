@@ -44,7 +44,7 @@ private:
     const std::unique_ptr<FP_ppImpl> m_impl;
 
     // force interpolation corrections, long range potential for S2-shaped particles
-    void pot_corr() override;
+    void pot_corr(std::vector<Mesh>& vel_field, Mesh& pot_k) override;
 
     // Leapfrog method for modified frozen-potential
     void upd_pos() override;

@@ -45,7 +45,7 @@ private:
     const std::unique_ptr<AAImpl> m_impl;
 
     // initialize potentials for adhesion
-    void pot_corr() override;
+    void pot_corr(std::vector<Mesh>& vel_field, Mesh& pot_k) override;
 
     // Leapfrog method for adhesion
     void upd_pos() override;

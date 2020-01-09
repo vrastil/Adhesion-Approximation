@@ -21,7 +21,7 @@ void App_Var_ZA::upd_pos()
     set_pert_pos(sim, a(), particles, app_field);
 }
 
-void App_Var_ZA::pot_corr()
+void App_Var_ZA::pot_corr(std::vector<Mesh>& vel_field, Mesh& pot_k)
 {
     return;
 }

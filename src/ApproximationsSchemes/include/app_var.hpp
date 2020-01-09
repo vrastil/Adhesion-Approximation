@@ -77,8 +77,8 @@ protected:
 
     // METHODS THAT NEED TO BE OVERRIDEN IN DERIVED CLASSES
     virtual void print_output(); //< save info about simulation state
+    virtual void pot_corr(std::vector<Mesh>& vel_field, Mesh& pot_k); //< CIC correction by default
 private:
-    virtual void pot_corr(); //< CIC correction by default
     virtual void upd_pos() = 0;
 
     // IMPLEMENTATION

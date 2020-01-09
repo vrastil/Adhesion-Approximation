@@ -37,8 +37,27 @@ class App_Var_FP: public App_Var<Particle_v<FTYPE_t>>
 public:
 	// CONSTRUCTORS & DESTRUCTOR
 	App_Var_FP(const Sim_Param &sim);
+protected:
+	App_Var_FP(const Sim_Param &sim, const std::string& app_short, const std::string& app_long);
 
 private:
     // Leapfrog method for frozen-potential
+    void upd_pos() override;
+};
+
+
+/**
+ * @class:	App_Var_PM
+ * @brief:	class containing variables and methods for Particle-Mesh code
+ * @ingroup APP
+ */
+class App_Var_PM: public App_Var_FP
+{
+public:
+	// CONSTRUCTORS & DESTRUCTOR
+	App_Var_PM(const Sim_Param &sim);
+
+private:
+    // Leapfrog method
     void upd_pos() override;
 };

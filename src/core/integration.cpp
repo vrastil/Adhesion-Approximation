@@ -66,3 +66,25 @@ void kick_step_w_momentum(const Cosmo_Param &cosmo, const FTYPE_t a, const FTYPE
         particles[i].velocity += force*da;
     }
 }
+
+void kick_step_w_momentum_pm(const Cosmo_Param &cosmo, const FTYPE_t a, const FTYPE_t da, std::vector<Particle_v<FTYPE_t>>& particles, const std::vector< Mesh> &force_field)
+{
+    // classical 2nd order ODE
+    const size_t Np = particles.size();
+    Vec_3D<FTYPE_t> force;
+    const FTYPE_t D = growth_factor(a, cosmo);
+    const FTYPE_t OL = cosmo.Omega_L()*pow(a,3);
+    const FTYPE_t Om = cosmo.Omega_m;
+    // -3/2a represents usual EOM, the rest are LCDM corrections
+    const FTYPE_t f1 = 3/(2*a)*(Om+2*OL)/(Om+OL);
+    const FTYPE_t f2 = 3/(2*a)*Om/(Om+OL)/a;
+    
+    #pragma omp parallel for private(force)
+    for (size_t i = 0; i < Np; i++)
+	{
+        force.fill(0.);
+        assign_from(force_field, particles[i].position, force);
+        force = force*f2 - particles[i].velocity*f1;		
+        particles[i].velocity += force*da;
+    }
+}

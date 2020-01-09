@@ -487,7 +487,7 @@ void App_Var<T>::run_simulation()
     m_impl->set_init_cond(*this);
 
     // CIC correction of potential (if not overriden)
-    pot_corr();
+    pot_corr(app_field, power_aux[0]);
 
     // integration
     m_impl->integration(*this);
@@ -503,14 +503,14 @@ void App_Var<T>::update_cosmo(Cosmo_Param& cosmo)
 }
 
 template <class T>
-void App_Var<T>::pot_corr()
+void App_Var<T>::pot_corr(std::vector<Mesh>& vel_field, Mesh& pot_k)
 {
     /* Computing displacement in k-space with CIC opt */
-    gen_displ_k_cic(app_field, power_aux[0]);
+    gen_displ_k_cic(vel_field, pot_k);
 
     /* Computing force in q-space */
     BOOST_LOG_TRIVIAL(debug) << "Computing force in q-space...";
-    fftw_execute_dft_c2r_triple(p_B, app_field);
+    fftw_execute_dft_c2r_triple(p_B, vel_field);
 }
 
 template <class T> 

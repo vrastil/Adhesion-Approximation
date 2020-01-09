@@ -401,7 +401,7 @@ void Comp_App::reset()
 
 bool Comp_App::is_ready()
 {
-    return (ZA | TZA | FF | FP | AA | FP_pp | chi | chi_ff);
+    return (ZA | TZA | FF | FP | PM | AA | FP_pp | chi | chi_ff);
 }
 
 void App_Opt::init(const Box_Opt& box_opt)

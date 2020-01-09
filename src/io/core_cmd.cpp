@@ -71,6 +71,7 @@ void handle_cmd_line(int ac, const char* const av[], Sim_Param& sim){
         ("comp_TZA", po::value<bool>(&sim.comp_app.TZA)->default_value(false), "compute Truncated Zeldovich approximation")
         ("comp_FF", po::value<bool>(&sim.comp_app.FF)->default_value(false), "compute Frozen-flow approximation")
         ("comp_FP", po::value<bool>(&sim.comp_app.FP)->default_value(false), "compute Frozen-potential approximation")
+        ("comp_PM", po::value<bool>(&sim.comp_app.PM)->default_value(false), "compute Particle-mesh approximation")
         ("comp_AA", po::value<bool>(&sim.comp_app.AA)->default_value(false), "compute Adhesion approximation")
         ("comp_FP_pp", po::value<bool>(&sim.comp_app.FP_pp)->default_value(false),
                             "compute Frozen-potential approximation (particle-particle interaction)")

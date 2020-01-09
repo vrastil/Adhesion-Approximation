@@ -144,6 +144,9 @@ int main(int argc, char* argv[]){
         
             /* FROZEN-POTENTIAL APPROXIMATION */
             if(sim.comp_app.FP)	init_and_run_app<App_Var_FP>(sim);
+
+            /* PARTICLE-MESH APPROXIMATION */
+            if(sim.comp_app.PM)	init_and_run_app<App_Var_PM>(sim);
             
             /* ADHESION APPROXIMATION */
             if(sim.comp_app.AA)	init_and_run_app<App_Var_AA>(sim);
