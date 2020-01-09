@@ -1254,7 +1254,7 @@ def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=re
         # scale to linear
         if scale_to_lin:
             D_ratio = sim_info.data["eff_time"]["Pk"]["D_eff_ratio"][idx_eff]
-            xi /= pow(D_ratio, 2)
+            xi = np.copy(xi) / pow(D_ratio, 2)
         
         z_eff = sim_info.data["eff_time"]["Pk"]["z_eff"][idx_eff]
         lab = sim_info.app
@@ -1289,7 +1289,7 @@ def corr_func_comp_plot(db, doc_id, collection='data', sim_infos=None, outdir=re
     plot.plot_corr_func(data, [zs], sim_info, out_dir=outdir, save=True, show=show, extra_data=extra_data[:-1],
                         peak_loc=peak_loc, use_z_eff=use_z_eff)
 
-def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outdir=report_dir, plot_all=True, chi=False, yrange=None, show=True, reverse=False):
+def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outdir=report_dir, plot_all=True, chi=False, yrange=None, show=True, reverse=False, vline=None):
 
     # load struct.SimInfo and get correlation data
     if sim_infos is None:
@@ -1317,9 +1317,9 @@ def corr_func_comp_plot_peak(db, doc_id, collection='data', sim_infos=None, outd
     if plot_all:
         plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=show, use_z_eff=use_z_eff, chi=chi, yrange=yrange)
     else:
-        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=show, use_z_eff=use_z_eff, plot_loc=True, plot_amp=False, plot_width=False, single=True, chi=chi, yrange=yrange)
-        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=show, use_z_eff=use_z_eff, plot_loc=False, plot_amp=True, plot_width=False, single=True, chi=chi, yrange=yrange)
-        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=show, use_z_eff=use_z_eff, plot_loc=False, plot_amp=False, plot_width=True, single=True, chi=chi, yrange=yrange)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=show, use_z_eff=use_z_eff, plot_loc=True, plot_amp=False, plot_width=False, single=True, chi=chi, yrange=yrange, vline=vline)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=show, use_z_eff=use_z_eff, plot_loc=False, plot_amp=True, plot_width=False, single=True, chi=chi, yrange=yrange, vline=vline)
+        plot.plot_corr_peak(sim_infos, out_dir=outdir, save=True, show=show, use_z_eff=use_z_eff, plot_loc=False, plot_amp=False, plot_width=True, single=True, chi=chi, yrange=yrange, vline=vline)
 
 
 def corr_func_chi_fp_plot_peak(db, collection='data', query=None, app='FP', app_chi='CHI', out_dir=report_dir, use_group=None, z=None, plot_all=False, show=True, yrange=None, reverse=False, **kwargs):

@@ -956,7 +956,7 @@ def plot_corr_func(corr_data_all, zs, a_sim_info, out_dir='auto', save=True, sho
             extra_data=extra_data, peak_loc=peak_loc, use_z_eff=use_z_eff)
 
 def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False, ls=None, get_last_col=False, fp_comp=False,
-                  single=False, yrange=None, zs_cut=6):
+                  single=False, yrange=None, zs_cut=6, normalize=False):
     # load all available data (GSL integration could have failed)
     peak_data = [x for x in a_sim_info.data["corr_func"]["par_peak"] if x["z"] != "init" and x["z"] < zs_cut]
     zs = [x["z"] for x in peak_data if x["z"] < zs_cut]
@@ -972,7 +972,7 @@ def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False, ls=None, get_l
 
     # get last used color
     color = ax.get_lines()[-1].get_color() if get_last_col else None
-    
+
     # comparison to the non-linear prediction at z_eff
     if use_z_eff:
         corr = [power.corr_func(use_z_eff['sim'], z=z, non_lin=True) for z in use_z_eff['z'] if z < zs_cut]
@@ -992,27 +992,34 @@ def plot_peak_uni(a_sim_info, ax, bao_type, idx, use_z_eff=False, ls=None, get_l
         yrange = yrange.get(bao_type, None)
         ax.set_ylim(*yrange)
 
-    # plot simulation peak
     # ax.set_yscale('symlog', linthreshy=0.01, linscaley=0.5)
     if not single:
         label += ' (%s)' % bao_type
 
+    # normalization
+    if normalize:
+        data -= data[0] - data_nl[0]
+
+    # plot simulation peak
     ax.errorbar(zs, data / data_nl - 1, yerr=data_err / data_nl, ls=ls, label=label, color=color)
     
 
 def plot_peak_loc(a_sim_info, ax, use_z_eff=False, get_last_col=False, fp_comp=False, single=False, yrange=None, zs_cut=6):
     """ plot peak location to the given axis """
     plot_peak_uni(a_sim_info, ax, "loc", 1, use_z_eff=use_z_eff, ls='-', get_last_col=get_last_col, fp_comp=fp_comp, single=single, yrange=yrange, zs_cut=zs_cut)
+    ax.set_ylabel(r"$r_0/r_{0,\rm nl}-1$")
 
 def plot_peak_amp(a_sim_info, ax, use_z_eff=False, get_last_col=False, fp_comp=False, single=False, yrange=None, zs_cut=6):
     """ plot peak amplitude to the given axis """
     plot_peak_uni(a_sim_info, ax, "amp", 0, use_z_eff=use_z_eff, ls=':', get_last_col=get_last_col, fp_comp=fp_comp, single=single, yrange=yrange, zs_cut=zs_cut)
+    ax.set_ylabel(r"$A/A_{\rm nl}-1$")
 
 def plot_peak_width(a_sim_info, ax, use_z_eff=False, get_last_col=False, fp_comp=False, single=False, yrange=None, zs_cut=6):
     """ plot peak amplitude to the given axis """
     plot_peak_uni(a_sim_info, ax, "width", 2, use_z_eff=use_z_eff, ls='--', get_last_col=get_last_col, fp_comp=fp_comp, single=single, yrange=yrange, zs_cut=zs_cut)
+    ax.set_ylabel(r"$\sigma/\sigma_{\rm nl}-1$")
 
-def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=False, plot_loc=True, plot_amp=True, plot_width=True, fp_comp=False, single=False, chi=False, yrange=None, zs_cut=4):
+def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=False, plot_loc=True, plot_amp=True, plot_width=True, fp_comp=False, single=False, chi=False, yrange=None, zs_cut=4, vline=None):
     # output
     if out_dir == 'auto':
         if len(sim_infos) == 1:
@@ -1068,6 +1075,10 @@ def plot_corr_peak(sim_infos, out_dir='auto', save=True, show=False, use_z_eff=F
 
     # plot from high redshift to 0
     ax.invert_xaxis()
+
+    # add vline
+    if vline is not None:
+        ax.axvline(x=vline, ls='--', c='k')
 
     # labels
     plt.xlabel(r"$z$")
@@ -1754,7 +1765,7 @@ def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=Fals
     bo = a_sim_info.box_opt
     app = a_sim_info.app.lower()
     close_fig(out_dir + '%s_dens_%im_%ip_%iM_%ib_z%.2f' % (app, bo["mesh_num"], bo["Ng"], bo["mesh_num_pwr"], bo["box_size"], z),
-              fig, save=save, show=show, use_z_eff=use_z_eff, format='png')
+              fig, save=save, show=show, use_z_eff=use_z_eff, format='png', dpi=50)
     
 
 def plot_dens_two_slices(data, zs, a_sim_info, out_dir='auto', save=True, show=False, use_z_eff=False):
