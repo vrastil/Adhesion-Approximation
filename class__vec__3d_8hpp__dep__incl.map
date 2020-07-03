@@ -1,0 +1,35 @@
+<map id="src/data/include/class_vec_3d.hpp" name="src/data/include/class_vec_3d.hpp">
+<area shape="rect" id="node2" href="$core__mesh_8h.html" title="basic functions to work with mesh " alt="" coords="811,273,966,315"/>
+<area shape="rect" id="node18" href="$class__mesh_8hpp.html" title="define container Mesh " alt="" coords="997,95,1156,136"/>
+<area shape="rect" id="node32" href="$class__particles_8hpp.html" title="define container Particle (with and without velocity) " alt="" coords="1499,184,1657,225"/>
+<area shape="rect" id="node34" href="$test__vec__3d_8cpp.html" title="src/data/tests/test\l_vec_3d.cpp" alt="" coords="1231,95,1370,136"/>
+<area shape="rect" id="node3" href="$adhesion_8cpp.html" title="ahesion approximation implementation " alt="" coords="2082,363,2287,404"/>
+<area shape="rect" id="node4" href="$app__var_8cpp.html" title="classes handling approximations data " alt="" coords="351,363,557,404"/>
+<area shape="rect" id="node6" href="$chameleon_8cpp.html" title="chameleon model of gravity implementation " alt="" coords="978,363,1183,404"/>
+<area shape="rect" id="node8" href="$frozen__flow_8cpp.html" title="frozen&#45;flow approximation implementation " alt="" coords="1394,363,1599,404"/>
+<area shape="rect" id="node9" href="$frozen__potential_8cpp.html" title="frozen&#45;potential approximation implementation " alt="" coords="1853,363,2058,404"/>
+<area shape="rect" id="node10" href="$mod__frozen__potential_8cpp.html" title="modified frozen&#45;potential approximation implementation " alt="" coords="1623,363,1829,404"/>
+<area shape="rect" id="node12" href="$zeldovich_8cpp.html" title="Zel`dovich approximation implementation. " alt="" coords="2311,363,2517,404"/>
+<area shape="rect" id="node13" href="$core__app_8cpp.html" title="implementation for common functions for all types of approximations " alt="" coords="1207,370,1370,397"/>
+<area shape="rect" id="node14" href="$core__mesh_8cpp.html" title="basic functions to work with mesh " alt="" coords="581,370,756,397"/>
+<area shape="rect" id="node16" href="$integration_8cpp.html" title="functions for integration of particle trajectories " alt="" coords="781,370,954,397"/>
+<area shape="rect" id="node17" href="$params_8cpp.html" title=": various parameter classes definitions " alt="" coords="173,370,327,397"/>
+<area shape="rect" id="node5" href="$test__app__var_8cpp.html" title="src/ApproximationsSchemes\l/tests/test_app_var.cpp" alt="" coords="351,459,557,501"/>
+<area shape="rect" id="node7" href="$test__chameleon_8cpp.html" title="src/ApproximationsSchemes\l/tests/test_chameleon.cpp" alt="" coords="978,459,1183,501"/>
+<area shape="rect" id="node11" href="$test__mod__frozen__potential_8cpp.html" title="src/ApproximationsSchemes\l/tests/test_mod_frozen\l_potential.cpp" alt="" coords="1623,452,1829,508"/>
+<area shape="rect" id="node15" href="$test__core__mesh_8cpp.html" title="src/core/tests/test\l_core_mesh.cpp" alt="" coords="599,459,738,501"/>
+<area shape="rect" id="node19" href="$app__var_8hpp.html" title="classes handling approximations data " alt="" coords="1807,184,2013,225"/>
+<area shape="rect" id="node28" href="$integration_8hpp.html" title="functions for integration of particle trajectories " alt="" coords="989,281,1212,307"/>
+<area shape="rect" id="node29" href="$test__mesh_8cpp.html" title="src/data/tests/test\l_mesh.cpp" alt="" coords="1114,184,1253,225"/>
+<area shape="rect" id="node30" href="$core__out_8h.html" title="functions handling output of the program " alt="" coords="385,273,523,315"/>
+<area shape="rect" id="node20" href="$adhesion_8hpp.html" title="ahesion approximation interface " alt="" coords="2535,273,2741,315"/>
+<area shape="rect" id="node22" href="$chameleon_8hpp.html" title="chameleon model of gravity interface " alt="" coords="1578,273,1783,315"/>
+<area shape="rect" id="node23" href="$frozen__flow_8hpp.html" title="frozen&#45;flow approximation interface " alt="" coords="1807,273,2013,315"/>
+<area shape="rect" id="node24" href="$frozen__potential_8hpp.html" title="Frozen&#45;potential approximation interface. " alt="" coords="2304,273,2511,315"/>
+<area shape="rect" id="node25" href="$mod__frozen__potential_8hpp.html" title="modified frozen&#45;potential approximation interface " alt="" coords="2037,273,2279,315"/>
+<area shape="rect" id="node26" href="$zeldovich_8hpp.html" title="Zel`dovich approximation interface. " alt="" coords="2765,273,2970,315"/>
+<area shape="rect" id="node27" href="$core__app_8h.html" title="interface for common functions for all types of approximations " alt="" coords="1399,273,1554,315"/>
+<area shape="rect" id="node21" href="$main_8cpp.html" title="main file " alt="" coords="2541,370,2681,397"/>
+<area shape="rect" id="node31" href="$core__out_8cpp.html" title="functions handling output of the program " alt="" coords="5,370,148,397"/>
+<area shape="rect" id="node33" href="$test__particles_8cpp.html" title="src/data/tests/test\l_particles.cpp" alt="" coords="1237,273,1375,315"/>
+</map>

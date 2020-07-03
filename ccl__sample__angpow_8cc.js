@@ -1,0 +1,25 @@
+var ccl__sample__angpow_8cc =
+[
+    [ "HH", "ccl__sample__angpow_8cc.html#a98e0283d49017dc771669a2a07dbdcf8", null ],
+    [ "NEFF", "ccl__sample__angpow_8cc.html#a50e9c85897ac7de6995f91d7af5beb60", null ],
+    [ "NL", "ccl__sample__angpow_8cc.html#a4fc34b120ed3bd1120c1eb36abbcd6af", null ],
+    [ "NORMPS", "ccl__sample__angpow_8cc.html#a8227d0bc109d5ae83bb618b472a83ec8", null ],
+    [ "NS", "ccl__sample__angpow_8cc.html#a06c201f90533d5b49cd039c960327968", null ],
+    [ "NZ", "ccl__sample__angpow_8cc.html#a693aee47b2103d0a7fcd3a0a0dd4fb57", null ],
+    [ "OB", "ccl__sample__angpow_8cc.html#ad2d5f875cdc6d696735f20fa23a895c3", null ],
+    [ "OC", "ccl__sample__angpow_8cc.html#a9742ab6c30cea70a694a7eace4d161b3", null ],
+    [ "OK", "ccl__sample__angpow_8cc.html#aba51915c87d64af47fb1cc59348961c9", null ],
+    [ "ON", "ccl__sample__angpow_8cc.html#ad76d1750a6cdeebd506bfcd6752554d2", null ],
+    [ "PS", "ccl__sample__angpow_8cc.html#ad7f630556c2cd30d8d8976e0f6e7f749", null ],
+    [ "SZ1_GC", "ccl__sample__angpow_8cc.html#a21ed97645bf86efc69fde5bdac3f4fba", null ],
+    [ "SZ_GC", "ccl__sample__angpow_8cc.html#a5fb3f8aa50737d5de474407e53c8aa9b", null ],
+    [ "SZ_SH", "ccl__sample__angpow_8cc.html#a8e4224a9c336004956fa9f6a6a947ac1", null ],
+    [ "W0", "ccl__sample__angpow_8cc.html#a5d94134ae98ebb688dc6b0f6d6131b42", null ],
+    [ "WA", "ccl__sample__angpow_8cc.html#aa85719abd4650c5dba5e18ba2e861fda", null ],
+    [ "Z0_GC", "ccl__sample__angpow_8cc.html#ae81d28e00ed46e5be53aed81ead37bc2", null ],
+    [ "Z0_SH", "ccl__sample__angpow_8cc.html#acd07541a1db3e1831296a95a060ccd05", null ],
+    [ "Z1_GC", "ccl__sample__angpow_8cc.html#a35dc1cee4f11bec6a550562ac3f187a9", null ],
+    [ "ZD", "ccl__sample__angpow_8cc.html#ad8e5684db22b8b875b4dfc5a05d37841", null ],
+    [ "main", "ccl__sample__angpow_8cc.html#a3c04138a5bfe5d72780bb7e82a18e627", null ],
+    [ "print_params", "ccl__sample__angpow_8cc.html#a0e8ee4ca40b330f81da89ee56dd8449a", null ]
+];

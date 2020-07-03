@@ -1,0 +1,10 @@
+<map id="src/core/include/integration.hpp" name="src/core/include/integration.hpp">
+<area shape="rect" id="node2" href="$adhesion_8cpp.html" title="ahesion approximation implementation " alt="" coords="5,80,211,121"/>
+<area shape="rect" id="node3" href="$chameleon_8cpp.html" title="chameleon model of gravity implementation " alt="" coords="235,80,440,121"/>
+<area shape="rect" id="node5" href="$frozen__flow_8cpp.html" title="frozen&#45;flow approximation implementation " alt="" coords="464,80,669,121"/>
+<area shape="rect" id="node6" href="$frozen__potential_8cpp.html" title="frozen&#45;potential approximation implementation " alt="" coords="693,80,899,121"/>
+<area shape="rect" id="node7" href="$mod__frozen__potential_8cpp.html" title="modified frozen&#45;potential approximation implementation " alt="" coords="923,80,1128,121"/>
+<area shape="rect" id="node9" href="$integration_8cpp.html" title="functions for integration of particle trajectories " alt="" coords="1152,87,1325,114"/>
+<area shape="rect" id="node4" href="$test__chameleon_8cpp.html" title="src/ApproximationsSchemes\l/tests/test_chameleon.cpp" alt="" coords="235,177,440,218"/>
+<area shape="rect" id="node8" href="$test__mod__frozen__potential_8cpp.html" title="src/ApproximationsSchemes\l/tests/test_mod_frozen\l_potential.cpp" alt="" coords="923,169,1128,225"/>
+</map>

@@ -1,0 +1,17 @@
+<map id="src/ApproximationsSchemes/app_var.cpp" name="src/ApproximationsSchemes/app_var.cpp">
+<area shape="rect" id="node2" href="$app__var_8hpp.html" title="classes handling approximations data " alt="" coords="599,169,699,196"/>
+<area shape="rect" id="node16" href="$core__out_8h.html" title="functions handling output of the program " alt="" coords="484,169,575,196"/>
+<area shape="rect" id="node29" href="$core__app_8h.html" title="interface for common functions for all types of approximations " alt="" coords="737,95,831,121"/>
+<area shape="rect" id="node31" href="$core__mesh_8h.html" title="basic functions to work with mesh " alt="" coords="798,169,903,196"/>
+<area shape="rect" id="node3" href="$stdafx_8h.html" title="system include files and for project&#45;specific include files that are used frequently but are changed ..." alt="" coords="355,319,429,345"/>
+<area shape="rect" id="node11" href="$precision_8hpp.html" title="single / double / long double definitions " alt="" coords="997,319,1104,345"/>
+<area shape="rect" id="node12" href="$class__data__vec_8hpp.html" title="define container Data_Vec " alt="" coords="317,244,464,271"/>
+<area shape="rect" id="node14" href="$class__mesh_8hpp.html" title="define container Mesh " alt="" coords="539,244,664,271"/>
+<area shape="rect" id="node15" href="$class__vec__3d_8hpp.html" title="define container Vec_3D " alt="" coords="691,319,826,345"/>
+<area shape="rect" id="node18" href="$params_8hpp.html" title="various simulation parameters " alt="" coords="1189,244,1288,271"/>
+<area shape="rect" id="node28" href="$core__power_8h.html" title="handle cosmological functions like power spectrum, growth, etc. " alt="" coords="907,244,1013,271"/>
+<area shape="rect" id="node19" href="$ccl__defs_8h.html" title="ccl_defs.h" alt="" coords="1435,319,1520,345"/>
+<area shape="rect" id="node20" href="$ccl__config_8h.html" title="ccl_config.h" alt="" coords="1128,319,1224,345"/>
+<area shape="rect" id="node21" href="$ccl__core_8h.html" title="ccl_core.h" alt="" coords="1249,319,1335,345"/>
+<area shape="rect" id="node30" href="$class__particles_8hpp.html" title="define container Particle (with and without velocity) " alt="" coords="689,244,831,271"/>
+</map>

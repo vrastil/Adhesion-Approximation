@@ -1,0 +1,5 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classInterp__obj.html" title=": linear interpolation (Steffen) of data [x, y] " alt="" coords="5,5,91,32"/>
+<area shape="rect" id="node2" href="$classExtrap__Pk.html" title=": linear interpolation of data [k, P(k)] within &#39;useful&#39; range fit to primordial P_i(k) below the &#39;us..." alt="" coords="139,5,279,32"/>
+<area shape="rect" id="node3" href="$classExtrap__Pk__Nl.html" title=": creates Extrapolate object (linear power spectrum) from data and store non&#45;linear parameters call &#39;..." alt="" coords="327,5,487,32"/>
+</map>

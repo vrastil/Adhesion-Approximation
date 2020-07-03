@@ -1,0 +1,38 @@
+<map id="src/main/include/precision.hpp" name="src/main/include/precision.hpp">
+<area shape="rect" id="node2" href="$app__var_8hpp.html" title="classes handling approximations data " alt="" coords="2400,169,2605,211"/>
+<area shape="rect" id="node5" href="$adhesion_8hpp.html" title="ahesion approximation interface " alt="" coords="2668,259,2873,300"/>
+<area shape="rect" id="node8" href="$chameleon_8hpp.html" title="chameleon model of gravity interface " alt="" coords="2209,259,2415,300"/>
+<area shape="rect" id="node11" href="$frozen__flow_8hpp.html" title="frozen&#45;flow approximation interface " alt="" coords="2897,259,3103,300"/>
+<area shape="rect" id="node13" href="$frozen__potential_8hpp.html" title="Frozen&#45;potential approximation interface. " alt="" coords="3127,259,3334,300"/>
+<area shape="rect" id="node15" href="$mod__frozen__potential_8hpp.html" title="modified frozen&#45;potential approximation interface " alt="" coords="3359,259,3601,300"/>
+<area shape="rect" id="node18" href="$zeldovich_8hpp.html" title="Zel`dovich approximation interface. " alt="" coords="2439,259,2644,300"/>
+<area shape="rect" id="node20" href="$core__app_8h.html" title="interface for common functions for all types of approximations " alt="" coords="1583,259,1737,300"/>
+<area shape="rect" id="node22" href="$core__power_8h.html" title="handle cosmological functions like power spectrum, growth, etc. " alt="" coords="703,169,857,211"/>
+<area shape="rect" id="node29" href="$core__mesh_8h.html" title="basic functions to work with mesh " alt="" coords="1127,259,1281,300"/>
+<area shape="rect" id="node32" href="$integration_8hpp.html" title="functions for integration of particle trajectories " alt="" coords="1811,266,2034,293"/>
+<area shape="rect" id="node33" href="$class__mesh_8hpp.html" title="define container Mesh " alt="" coords="1355,80,1514,121"/>
+<area shape="rect" id="node35" href="$params_8hpp.html" title="various simulation parameters " alt="" coords="1455,177,1659,203"/>
+<area shape="rect" id="node37" href="$test__particles_8cpp.html" title="src/data/tests/test\l_particles.cpp" alt="" coords="2832,80,2971,121"/>
+<area shape="rect" id="node3" href="$app__var_8cpp.html" title="classes handling approximations data " alt="" coords="712,348,917,389"/>
+<area shape="rect" id="node4" href="$test__app__var_8cpp.html" title="src/ApproximationsSchemes\l/tests/test_app_var.cpp" alt="" coords="712,445,917,486"/>
+<area shape="rect" id="node6" href="$adhesion_8cpp.html" title="ahesion approximation implementation " alt="" coords="1787,348,1992,389"/>
+<area shape="rect" id="node7" href="$main_8cpp.html" title="main file " alt="" coords="2705,355,2845,382"/>
+<area shape="rect" id="node9" href="$chameleon_8cpp.html" title="chameleon model of gravity implementation " alt="" coords="1141,348,1347,389"/>
+<area shape="rect" id="node10" href="$test__chameleon_8cpp.html" title="src/ApproximationsSchemes\l/tests/test_chameleon.cpp" alt="" coords="1141,445,1347,486"/>
+<area shape="rect" id="node12" href="$frozen__flow_8cpp.html" title="frozen&#45;flow approximation implementation " alt="" coords="2016,348,2221,389"/>
+<area shape="rect" id="node14" href="$frozen__potential_8cpp.html" title="frozen&#45;potential approximation implementation " alt="" coords="2245,348,2451,389"/>
+<area shape="rect" id="node16" href="$mod__frozen__potential_8cpp.html" title="modified frozen&#45;potential approximation implementation " alt="" coords="2475,348,2680,389"/>
+<area shape="rect" id="node17" href="$test__mod__frozen__potential_8cpp.html" title="src/ApproximationsSchemes\l/tests/test_mod_frozen\l_potential.cpp" alt="" coords="2475,437,2680,493"/>
+<area shape="rect" id="node19" href="$zeldovich_8cpp.html" title="Zel`dovich approximation implementation. " alt="" coords="1557,348,1763,389"/>
+<area shape="rect" id="node21" href="$core__app_8cpp.html" title="implementation for common functions for all types of approximations " alt="" coords="1371,355,1533,382"/>
+<area shape="rect" id="node23" href="$core__power_8cpp.html" title="definitions of cosmological functions like power spectrum, growth, etc. " alt="" coords="409,266,585,293"/>
+<area shape="rect" id="node25" href="$integration_8cpp.html" title="functions for integration of particle trajectories " alt="" coords="515,355,688,382"/>
+<area shape="rect" id="node26" href="$params_8cpp.html" title=": various parameter classes definitions " alt="" coords="336,355,491,382"/>
+<area shape="rect" id="node27" href="$core__out_8h.html" title="functions handling output of the program " alt="" coords="711,259,849,300"/>
+<area shape="rect" id="node24" href="$test__core__power_8cpp.html" title="src/core/tests/test\l_core_power.cpp" alt="" coords="5,348,144,389"/>
+<area shape="rect" id="node28" href="$core__out_8cpp.html" title="functions handling output of the program " alt="" coords="169,355,311,382"/>
+<area shape="rect" id="node30" href="$core__mesh_8cpp.html" title="basic functions to work with mesh " alt="" coords="942,355,1117,382"/>
+<area shape="rect" id="node31" href="$test__core__mesh_8cpp.html" title="src/core/tests/test\l_core_mesh.cpp" alt="" coords="960,445,1099,486"/>
+<area shape="rect" id="node34" href="$test__mesh_8cpp.html" title="src/data/tests/test\l_mesh.cpp" alt="" coords="1292,169,1431,211"/>
+<area shape="rect" id="node36" href="$core__cmd_8cpp.html" title="command line arguments manipulation " alt="" coords="1407,266,1558,293"/>
+</map>

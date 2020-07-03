@@ -1,0 +1,12 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classApp__Var.html" title="App_Var\&lt; Particle_v\l\&lt; double \&gt; \&gt;" alt="" coords="5,125,156,166"/>
+<area shape="rect" id="node2" href="$classApp__Var__AA.html" title=": class containing variables and methods for adhesion approximation " alt="" coords="221,5,321,32"/>
+<area shape="rect" id="node3" href="$classApp__Var__Chi.html" title="&lt; end of anonymous namespace (private definitions) " alt="" coords="219,56,322,83"/>
+<area shape="rect" id="node5" href="$classApp__Var__FF.html" title=": class containing variables and methods for Frozen&#45;flow approximation " alt="" coords="223,107,319,133"/>
+<area shape="rect" id="node6" href="$classApp__Var__FP.html" title=": class containing variables and methods for Frozen&#45;potential approximation " alt="" coords="222,157,319,184"/>
+<area shape="rect" id="node8" href="$classApp__Var__FP__mod.html" title=": class containing variables and methods for modified Frozen&#45;potential approximation ..." alt="" coords="204,208,337,235"/>
+<area shape="rect" id="node9" href="$classApp__Var__ZA.html" title=": class containing variables and methods for Zel`dovich approximation " alt="" coords="220,259,321,285"/>
+<area shape="rect" id="node4" href="$classApp__Var__Chi__FF.html" title=": class containing variables and methods for chameleon gravity " alt="" coords="385,56,508,83"/>
+<area shape="rect" id="node7" href="$classApp__Var__PM.html" title=": class containing variables and methods for Particle&#45;Mesh code " alt="" coords="396,157,497,184"/>
+<area shape="rect" id="node10" href="$classApp__Var__TZA.html" title="App_Var_TZA" alt="" coords="393,259,501,285"/>
+</map>

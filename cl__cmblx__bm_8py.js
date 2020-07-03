@@ -1,0 +1,28 @@
+var cl__cmblx__bm_8py =
+[
+    [ "Power_Spectra", "classcl__cmblx__bm_1_1Power__Spectra.html", "classcl__cmblx__bm_1_1Power__Spectra" ],
+    [ "bias_g", "cl__cmblx__bm_8py.html#a55eec3cd1dee55a14fc5fb6dfe7c31a9", null ],
+    [ "c", "cl__cmblx__bm_8py.html#ae57dd5b3b3c00ef28af47a464702a0de", null ],
+    [ "ccl_pk_bbks", "cl__cmblx__bm_8py.html#aee4815676b741329dec9714379c37be2", null ],
+    [ "cl_g_cmb", "cl__cmblx__bm_8py.html#a65839b00df61f7d2547b4813d34041ee", null ],
+    [ "cosmo", "cl__cmblx__bm_8py.html#a8695a8838e1b499d963c3aead0b7e99e", null ],
+    [ "cosmo_fid", "cl__cmblx__bm_8py.html#a30db6b1ebd9e21ab806d0684048d3a9e", null ],
+    [ "cosmo_h", "cl__cmblx__bm_8py.html#aff47a44c9f980df4b2a3924856129e9d", null ],
+    [ "fmt", "cl__cmblx__bm_8py.html#a2b2921f38403961b08d93b0476416f0f", null ],
+    [ "l", "cl__cmblx__bm_8py.html#aed3b4fb162488bc1ffd3eefc7e9990bd", null ],
+    [ "n_zl", "cl__cmblx__bm_8py.html#a495f02b69e3308768e2da32f9ebbd244", null ],
+    [ "p_zg", "cl__cmblx__bm_8py.html#a2d98379be2657c87f0d1e8f9ba5d3282", null ],
+    [ "p_zs", "cl__cmblx__bm_8py.html#ad03a3605e88e969faf9cbae299dcd80b", null ],
+    [ "p_zs2", "cl__cmblx__bm_8py.html#a3ea232c77a3fb9f7ef95a65fb7c47340", null ],
+    [ "pk_func", "cl__cmblx__bm_8py.html#a1d665b3fede3e526b0bec44552438238", null ],
+    [ "pk_params", "cl__cmblx__bm_8py.html#a6bda11d918841d2584edf1dab60dd54b", null ],
+    [ "PS", "cl__cmblx__bm_8py.html#ae1e5d7f5caf96aad2a64b495e5275c7d", null ],
+    [ "pza", "cl__cmblx__bm_8py.html#ae521a1bb9e736472f9b1b9b0bc71061e", null ],
+    [ "sigz1", "cl__cmblx__bm_8py.html#afee7528311d33da3ada945373c76d33a", null ],
+    [ "za", "cl__cmblx__bm_8py.html#a52618255677ce8babdb58a05225941d4", null ],
+    [ "zav", "cl__cmblx__bm_8py.html#a563bfd28410281b7ea8cfd020955d57d", null ],
+    [ "zg", "cl__cmblx__bm_8py.html#a459fdbdf9d422ece764593861665b0af", null ],
+    [ "zl_max", "cl__cmblx__bm_8py.html#ab027ace19f3a2f4a704f2902ce18f3c4", null ],
+    [ "zs", "cl__cmblx__bm_8py.html#a29c06a622fc96860333d516575c125f8", null ],
+    [ "zs2", "cl__cmblx__bm_8py.html#ab9befd32cb07de134e865bd65e019770", null ]
+];

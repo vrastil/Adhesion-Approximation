@@ -1,0 +1,20 @@
+<map id="src/core/include/core_power.h" name="src/core/include/core_power.h">
+<area shape="rect" id="node2" href="$chameleon_8cpp.html" title="chameleon model of gravity implementation " alt="" coords="352,184,557,225"/>
+<area shape="rect" id="node4" href="$core__power_8cpp.html" title="definitions of cosmological functions like power spectrum, growth, etc. " alt="" coords="1129,102,1305,129"/>
+<area shape="rect" id="node6" href="$core__app_8h.html" title="interface for common functions for all types of approximations " alt="" coords="951,95,1105,136"/>
+<area shape="rect" id="node16" href="$integration_8cpp.html" title="functions for integration of particle trajectories " alt="" coords="1329,102,1503,129"/>
+<area shape="rect" id="node17" href="$params_8cpp.html" title=": various parameter classes definitions " alt="" coords="5,191,160,218"/>
+<area shape="rect" id="node18" href="$core__out_8h.html" title="functions handling output of the program " alt="" coords="386,95,523,136"/>
+<area shape="rect" id="node3" href="$test__chameleon_8cpp.html" title="src/ApproximationsSchemes\l/tests/test_chameleon.cpp" alt="" coords="352,281,557,322"/>
+<area shape="rect" id="node5" href="$test__core__power_8cpp.html" title="src/core/tests/test\l_core_power.cpp" alt="" coords="2144,184,2283,225"/>
+<area shape="rect" id="node7" href="$adhesion_8cpp.html" title="ahesion approximation implementation " alt="" coords="1456,184,1661,225"/>
+<area shape="rect" id="node8" href="$app__var_8cpp.html" title="classes handling approximations data " alt="" coords="581,184,787,225"/>
+<area shape="rect" id="node10" href="$frozen__flow_8cpp.html" title="frozen&#45;flow approximation implementation " alt="" coords="1685,184,1891,225"/>
+<area shape="rect" id="node11" href="$frozen__potential_8cpp.html" title="frozen&#45;potential approximation implementation " alt="" coords="1915,184,2120,225"/>
+<area shape="rect" id="node12" href="$mod__frozen__potential_8cpp.html" title="modified frozen&#45;potential approximation implementation " alt="" coords="811,184,1016,225"/>
+<area shape="rect" id="node14" href="$zeldovich_8cpp.html" title="Zel`dovich approximation implementation. " alt="" coords="1040,184,1245,225"/>
+<area shape="rect" id="node15" href="$core__app_8cpp.html" title="implementation for common functions for all types of approximations " alt="" coords="1269,191,1432,218"/>
+<area shape="rect" id="node9" href="$test__app__var_8cpp.html" title="src/ApproximationsSchemes\l/tests/test_app_var.cpp" alt="" coords="581,281,787,322"/>
+<area shape="rect" id="node13" href="$test__mod__frozen__potential_8cpp.html" title="src/ApproximationsSchemes\l/tests/test_mod_frozen\l_potential.cpp" alt="" coords="811,273,1016,329"/>
+<area shape="rect" id="node19" href="$core__out_8cpp.html" title="functions handling output of the program " alt="" coords="185,191,327,218"/>
+</map>

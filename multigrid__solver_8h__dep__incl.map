@@ -1,0 +1,11 @@
+<map id="src/3party/MultiGridSolver/src/multigrid_solver.h" name="src/3party/MultiGridSolver/src/multigrid_solver.h">
+<area shape="rect" id="node2" href="$poisson__solver_8h.html" title="src/3party/MultiGridSolver\l/example_complex_poisson\l/poisson_solver.h" alt="" coords="5,95,204,151"/>
+<area shape="rect" id="node4" href="$continuity__solver_8h.html" title="src/3party/MultiGridSolver\l/example_continuity_equation\l/continuity_solver.h" alt="" coords="229,95,442,151"/>
+<area shape="rect" id="node6" href="$fofr__solver_8h.html" title="src/3party/MultiGridSolver\l/example_fofr_gravity/fofr\l_solver.h" alt="" coords="466,95,653,151"/>
+<area shape="rect" id="node8" href="$multigrid__solver_8cpp.html" title="src/3party/MultiGridSolver\l/src/multigrid_solver.cpp" alt="" coords="677,102,863,143"/>
+<area shape="rect" id="node9" href="$chameleon_8cpp.html" title="chameleon model of gravity implementation " alt="" coords="887,102,1093,143"/>
+<area shape="rect" id="node3" href="$poisson_8cpp.html" title="src/3party/MultiGridSolver\l/example_complex_poisson\l/poisson.cpp" alt="" coords="5,199,204,255"/>
+<area shape="rect" id="node5" href="$continuity_8cpp.html" title="src/3party/MultiGridSolver\l/example_continuity_equation\l/continuity.cpp" alt="" coords="229,199,442,255"/>
+<area shape="rect" id="node7" href="$fofr_8cpp.html" title="src/3party/MultiGridSolver\l/example_fofr_gravity/fofr.cpp" alt="" coords="466,206,677,247"/>
+<area shape="rect" id="node10" href="$test__chameleon_8cpp.html" title="src/ApproximationsSchemes\l/tests/test_chameleon.cpp" alt="" coords="887,206,1093,247"/>
+</map>
