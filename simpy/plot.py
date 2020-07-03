@@ -1765,7 +1765,7 @@ def plot_dens_one_slice(rho, z, a_sim_info, out_dir='auto', save=True, show=Fals
     bo = a_sim_info.box_opt
     app = a_sim_info.app.lower()
     close_fig(out_dir + '%s_dens_%im_%ip_%iM_%ib_z%.2f' % (app, bo["mesh_num"], bo["Ng"], bo["mesh_num_pwr"], bo["box_size"], z),
-              fig, save=save, show=show, use_z_eff=use_z_eff, format='png', dpi=50)
+              fig, save=save, show=show, use_z_eff=use_z_eff, format='png', dpi=500)
     
 
 def plot_dens_two_slices(data, zs, a_sim_info, out_dir='auto', save=True, show=False, use_z_eff=False):
